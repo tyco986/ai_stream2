@@ -1,0 +1,49 @@
+---
+description: Django 后端通用编码规范 — 代码风格、分层架构、错误处理
+globs: backend/**/*.py
+alwaysApply: false
+---
+
+# Django 编码规范
+
+## 分层原则
+
+- **View / ViewSet**：只做参数校验、权限检查、调用 Service，不写业务逻辑
+- **Service (services/)**：业务逻辑集中地，跨 Model 操作放在这里
+- **Model**：数据定义、字段校验、简单的单表查询方法
+- **Serializer**：请求反序列化 + 响应序列化，复杂校验用 `validate_<field>` 或 `validate`
+
+```python
+# ✅ View 薄，Service 厚
+class CameraViewSet(ModelViewSet):
+    def perform_create(self, serializer):
+        camera = serializer.save()
+        camera_service.register_to_deepstream(camera)
+
+# ❌ 业务逻辑堆在 View 里
+class CameraViewSet(ModelViewSet):
+    def perform_create(self, serializer):
+        camera = serializer.save()
+        resp = httpx.post(f"{DS_URL}/api/v1/stream/add", json={...})
+        if resp.status_code != 200:
+            camera.delete()
+            raise ...
+```
+
+## 错误处理
+
+- 业务异常继承自定义 `ServiceError`，由 DRF 全局异常处理器统一捕获并格式化响应
+- 让异常自然抛出，不要在 View 或 Service 中 try-except（参见 code-style 规则）
+- `ServiceError` 携带 `code` 和 `message`，异常处理器映射为统一响应格式
+
+## 查询优化
+
+- 列表接口必须用 `select_related` / `prefetch_related` 预加载关联对象
+- 禁止在循环中执行查询（N+1 问题）
+- 大批量写入用 `bulk_create` / `bulk_update`
+
+## 命名
+
+- App 名用小写单数复数皆可但项目内统一：`cameras`, `alerts`
+- Service 函数命名：`动词_名词`，如 `register_camera`, `process_detection`
+- 配置常量放 `config/settings.py`，通过 `django.conf.settings` 访问

@@ -1,0 +1,8 @@
+# Tracker config — references the built-in NvDCF perf preset.
+# Override DS_TRACKER_CONFIG to point to a custom tracker config.
+#
+# Default path used by pipeline_builder.py:
+#   /opt/nvidia/deepstream/deepstream/samples/configs/deepstream-app/config_tracker_NvDCF_perf.yml
+#
+# This file exists as a documentation placeholder.  The actual tracker
+# configuration lives inside the DeepStream container image.

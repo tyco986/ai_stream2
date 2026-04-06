@@ -1,0 +1,7 @@
+[message-broker]
+# librdkafka producer tuning
+producer-proto-cfg = "queue.buffering.max.messages=200000;message.send.max.retries=3"
+# Partition key — matches nvmsgconv minimal-schema field name
+partition-key = sensorId
+# Share single Kafka connection across all sources
+share-connection = 1

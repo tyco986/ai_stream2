@@ -1,0 +1,72 @@
+---
+description: Django Channels WebSocket 规范 — 连接管理、消息格式、分组推送
+globs: backend/**/consumers.py, backend/**/routing.py, backend/**/ws_*.py
+alwaysApply: false
+---
+
+# WebSocket 规范
+
+## 技术选型
+
+使用 Django Channels + Redis 作为 channel layer。ASGI 服务器用 Daphne 或 uvicorn。
+
+## 连接认证
+
+WebSocket 连接必须携带 JWT token 进行认证，在 `connect()` 中校验：
+
+```python
+from channels.generic.websocket import AsyncJsonWebsocketConsumer
+from channels.db import database_sync_to_async
+
+class BaseConsumer(AsyncJsonWebsocketConsumer):
+    async def connect(self):
+        token = self.scope["query_string"].decode().split("token=")[-1]
+        self.user = await self._authenticate(token)
+        if not self.user:
+            await self.close(code=4001)
+            return
+        await self.accept()
+```
+
+## 路由
+
+WebSocket 路由统一前缀 `/ws/`：
+
+```
+ws://host/ws/detections/      # 检测结果实时推送
+ws://host/ws/cameras/status/   # 摄像头状态变更
+ws://host/ws/alerts/           # 报警事件推送
+```
+
+## 消息格式
+
+所有 WebSocket 消息使用统一 JSON 格式：
+
+```json
+{"type": "detection.new", "data": {"camera_id": "xxx", "objects": [...]}}
+{"type": "camera.status_changed", "data": {"camera_id": "xxx", "status": "offline"}}
+{"type": "alert.triggered", "data": {"alert_id": "xxx", "rule_name": "入侵检测"}}
+```
+
+`type` 字段用 `资源.动作` 格式（点分隔），与 Channels 的 type routing 一致。
+
+## 分组管理
+
+- 按功能分组：`detections`、`camera_status`、`alerts`
+- 需要按权限过滤时，用 `user_{user_id}` 或 `org_{org_id}` 分组
+- 用户断开时必须在 `disconnect()` 中移出所有 group
+
+## 从 Kafka Consumer 推送到 WebSocket
+
+Kafka Consumer 通过 `channel_layer` 向 group 广播，不要直接操作 WebSocket 连接：
+
+```python
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+
+channel_layer = get_channel_layer()
+async_to_sync(channel_layer.group_send)(
+    "detections",
+    {"type": "detection.new", "data": detection_data}
+)
+```

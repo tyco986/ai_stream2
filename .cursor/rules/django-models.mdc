@@ -1,0 +1,58 @@
+---
+description: Django Model 设计规范 — 基类、字段、索引、查询管理器
+globs: backend/**/models.py, backend/**/models/*.py
+alwaysApply: false
+---
+
+# Model 设计规范
+
+## 基类
+
+所有 Model 必须继承项目 BaseModel：
+
+```python
+import uuid
+from django.db import models
+
+class BaseModel(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        abstract = True
+        ordering = ["-created_at"]
+```
+
+## 字段规范
+
+- 必须显式声明 `verbose_name`（用中文，方便 Admin 展示）
+- 可空字段统一 `null=True, blank=True`；字符串字段仅 `blank=True`，用空字符串代替 NULL
+- 外键统一 `on_delete=models.CASCADE`，除非有明确保留需求则用 `PROTECT` 或 `SET_NULL`
+- 检测元数据等结构不固定的内容用 `JSONField`
+
+## 索引
+
+- 高频查询字段加 `db_index=True`
+- 组合查询加 `Meta.indexes`，不要依赖隐式索引
+- 时间范围查询的字段（如 `detected_at`）必须加索引
+
+## 软删除
+
+需要保留历史的 Model（如 Camera、Alert）添加 `is_deleted` 字段 + 自定义 Manager：
+
+```python
+class ActiveManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(is_deleted=False)
+
+class Camera(BaseModel):
+    is_deleted = models.BooleanField(default=False)
+    objects = ActiveManager()
+    all_objects = models.Manager()
+```
+
+## 命名
+
+- Model 名单数：`Camera`、`Detection`、`AlertRule`
+- 多对多中间表显式定义，不用 Django 自动生成

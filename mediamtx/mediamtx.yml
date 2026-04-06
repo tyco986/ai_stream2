@@ -1,0 +1,4 @@
+paths:
+  preview:
+    source: rtsp://deepstream:8554/preview
+    sourceOnDemand: true

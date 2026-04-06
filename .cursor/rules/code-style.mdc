@@ -1,0 +1,110 @@
+---
+description: 全局代码风格 — 适用于项目所有 Python 代码
+alwaysApply: true
+---
+
+# 代码风格
+
+## 异常处理
+
+不要随意使用 try-except，让异常自然抛出以便调试。只在以下场景允许 try：
+- 外部 I/O 有明确恢复策略（如 HTTP 重试、Kafka 重连）
+- 框架要求捕获（如 DRF 全局异常处理器）
+
+```python
+# ✅ 让异常自然抛出
+def get_camera(camera_id):
+    return Camera.objects.get(id=camera_id)
+
+# ❌ 吞掉异常
+def get_camera(camera_id):
+    try:
+        return Camera.objects.get(id=camera_id)
+    except Camera.DoesNotExist:
+        return None
+```
+
+## 禁止 global
+
+禁止使用 `global` 关键字。需要共享状态时使用类属性、依赖注入或 Django settings。
+
+## import
+
+所有 import 必须置于文件开头，按以下顺序分组，组间空一行：
+1. 标准库
+2. 第三方库
+3. Django / DRF
+4. 项目内部模块
+
+禁止函数内部 import（除非解决循环依赖，且必须加注释说明原因）。
+
+## 面向对象
+
+优先使用类封装逻辑，便于复用和测试。Service 层、Client 层必须是类，不要写散落的函数集合。
+
+```python
+# ✅ 类封装，可复用可测试
+class DeepStreamClient:
+    def __init__(self, base_url):
+        self.base_url = base_url
+
+    async def add_stream(self, camera_id, rtsp_url):
+        ...
+
+# ❌ 散落函数，难以复用和 mock
+async def add_stream_to_deepstream(camera_id, rtsp_url):
+    base_url = settings.DEEPSTREAM_URL
+    ...
+```
+
+## 语言
+
+代码中除注释外一律使用英文（变量名、函数名、类名、字符串 key）。
+注释使用中文或英文均可，但同一文件内保持一致。
+
+## 简洁
+
+- 避免不必要的 if 分支，善用早返回、字典映射、`or` 默认值
+- 不要写只有一个分支的 if-else
+
+```python
+# ✅ 早返回
+def get_status_label(status):
+    if status == "offline":
+        return "离线"
+    return STATUS_MAP.get(status, "未知")
+
+# ❌ 多余的 else
+def get_status_label(status):
+    if status == "offline":
+        return "离线"
+    else:
+        return STATUS_MAP.get(status, "未知")
+```
+
+## 禁止嵌套函数定义
+
+不要在函数内部定义函数。需要辅助逻辑时提取为类的私有方法或模块级函数。
+
+```python
+# ✅ 提取为方法
+class AlertEngine:
+    def evaluate(self, detection):
+        score = self._calculate_score(detection)
+        ...
+
+    def _calculate_score(self, detection):
+        ...
+
+# ❌ 函数内定义函数
+def evaluate(detection):
+    def calculate_score(d):
+        ...
+    score = calculate_score(detection)
+```
+
+## 复用
+
+- 重复逻辑超过两次必须提取为公共方法或 mixin
+- 跨 app 的公共逻辑放 `services/` 或 `utils/`
+- DRF 通用行为用 mixin 封装，不要在每个 ViewSet 里重复

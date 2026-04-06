@@ -1,0 +1,49 @@
+---
+description: Kafka 消费规范 — 消费 DeepStream 检测结果的模式、容错、性能
+globs: backend/**/kafka*.py, backend/**/consumer*.py, backend/**/management/commands/*kafka*.py
+alwaysApply: false
+---
+
+# Kafka 消费规范
+
+## 客户端
+
+使用 `confluent-kafka-python`（librdkafka 封装），不要用 `kafka-python`。
+原因：DeepStream 的 nvmsgbroker 底层也是 librdkafka，协议兼容性最好，性能高 5-10 倍。
+
+## 运行方式
+
+以 Django management command 独立进程运行，不要嵌入 Django 请求生命周期：
+
+```python
+# backend/apps/detections/management/commands/run_kafka_consumer.py
+from django.core.management.base import BaseCommand
+
+class Command(BaseCommand):
+    help = "消费 DeepStream Kafka 检测结果"
+
+    def handle(self, *args, **options):
+        from services.kafka_consumer import DetectionConsumer
+        consumer = DetectionConsumer()
+        consumer.run()
+```
+
+## 消费后三步处理
+
+收到消息后，按顺序执行：
+1. **反序列化** JSON → 写入 `Detection` 表（使用 `bulk_create` 批量入库）
+2. **规则匹配** → 调用 AlertEngine 判断是否触发报警 → 命中则写入 `Alert` 表
+3. **实时推送** → 通过 Django Channels `channel_layer.group_send()` 推到前端 WebSocket
+
+## 批量与性能
+
+- 攒够 N 条（如 100 条）或超过 T 秒（如 2 秒）再批量入库，减少 DB 压力
+- 使用 `consumer.poll()` 而非 `consume()`，可控超时
+
+## 容错（此处是允许 try-except 的合法场景：长驻进程 + 外部 I/O）
+
+- 反序列化失败：记录原始消息到死信表 `KafkaDeadLetter`，继续消费，不能因单条坏消息中断整个消费循环
+- 数据库写入失败：重试 3 次后记入死信表
+- 消费进程崩溃：Docker `restart: always` 自动重启
+- 手动提交 offset（`enable.auto.commit=false`），确保消息处理完才提交
+- 异常必须 log 完整 traceback，禁止静默 pass

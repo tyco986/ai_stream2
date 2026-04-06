@@ -1,0 +1,46 @@
+---
+description: DRF API 设计规范 — 路由、序列化、响应格式、分页、权限
+globs: backend/**/views.py, backend/**/views/*.py, backend/**/serializers.py, backend/**/serializers/*.py, backend/**/urls.py
+alwaysApply: false
+---
+
+# API 设计规范
+
+## 路由
+
+- 所有 API 统一前缀 `/api/v1/`
+- URL 用 kebab-case：`/api/v1/alert-rules/`，不用 snake_case 或 camelCase
+- 使用 DRF `DefaultRouter` 注册 ViewSet，手动注册的用 `path()`
+- 非 CRUD 操作用 `@action` 装饰器：`POST /api/v1/cameras/{id}/start-stream/`
+
+## 统一响应格式
+
+所有接口必须使用统一响应包装，通过自定义 Renderer 或中间件实现：
+
+```json
+{"code": 200, "message": "success", "data": { ... }}
+{"code": 400, "message": "摄像头地址不可达", "data": null}
+```
+
+分页响应：
+
+```json
+{"code": 200, "message": "success", "data": {"count": 100, "results": [...]}}
+```
+
+## Serializer
+
+- 读写分离：列表/详情用 `ReadSerializer`（含嵌套关联），创建/更新用 `WriteSerializer`（只含 ID）
+- 敏感字段（password）用 `write_only=True`
+- 枚举字段响应中同时返回 value 和 display：`"status": "online", "status_display": "在线"`
+
+## 权限
+
+- 默认全局 `IsAuthenticated`（settings 配置）
+- 公开接口显式 `permission_classes = [AllowAny]`
+- 按资源归属校验：只能操作自己组织下的摄像头/规则
+
+## 分页
+
+- 默认 `PageNumberPagination`，`page_size=20`
+- 大数据量接口（检测记录）用 `CursorPagination` 避免深翻页性能问题

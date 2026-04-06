@@ -1,0 +1,52 @@
+---
+description: 三端解耦架构规则 — 所有开发必须遵守的通信契约与职责边界
+alwaysApply: true
+---
+
+# 项目架构
+
+三个独立 Docker 容器，通过网络协议解耦：
+
+- **Frontend** (Vue 3 + TypeScript + Element Plus + Vite + Nginx) → 只与 Backend 通信
+- **Backend** (Django + DRF + Channels) → 编排层，唯一 API 网关
+- **DeepStream** (NVIDIA DeepStream 9.0) → 纯推理引擎 + 视频分析（nvdsanalytics）
+
+## 通信契约
+
+```
+Frontend ←── REST + WebSocket ──→ Backend (Django :8000)
+Backend  ─── HTTP Proxy ────────→ DeepStream 内置 REST (:9000)
+DeepStream ─ Kafka ─────────────→ Backend (Kafka Consumer)
+```
+
+- 前端**禁止**直连 DeepStream 或 Kafka
+- 后端通过 `httpx` (async) 代理 DeepStream REST API，禁止自己实现流管理逻辑
+- DeepStream 检测 + 分析结果通过 Kafka 推送，后端用 `confluent-kafka` 消费后写入 PostgreSQL
+- 区域入侵/越线/拥挤等分析由 DeepStream `nvdsanalytics` 在管道内完成，后端只读结果，**不做几何运算**
+- 实时推送使用 Django Channels WebSocket → 前端
+
+## 后端技术栈
+
+Django 5.x / DRF / Django Channels + Redis / PostgreSQL / Celery + Redis / confluent-kafka / httpx / simplejwt
+
+## 后端项目结构
+
+```
+backend/
+├── config/          # settings, urls, asgi, celery
+├── apps/
+│   ├── accounts/    # 用户、角色、JWT 认证
+│   ├── cameras/     # 摄像头 CRUD + DeepStream 代理 + 分析区域配置
+│   ├── pipelines/   # 管道/模型配置管理
+│   ├── detections/  # 检测结果存储与查询
+│   ├── alerts/      # 报警规则、报警记录、通知
+│   └── dashboard/   # 仪表盘聚合 API
+├── services/        # 跨 app 业务逻辑 (deepstream_client, kafka, notification)
+└── manage.py
+```
+
+## 禁止事项
+
+- 不要在 Backend 中实现视频解码、推理、流管理等 DeepStream 职责
+- 不要在 DeepStream 容器中写业务逻辑、数据库操作或用户认证
+- 不要让前端绕过 Backend 直接访问任何后端服务

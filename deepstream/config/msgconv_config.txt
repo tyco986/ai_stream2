@@ -1,0 +1,21 @@
+[sensor0]
+enable=1
+type=Camera
+id=default
+location=0.0;0.0;0.0
+coordinate=0.0;0.0;0.0
+description=default sensor
+
+[place0]
+enable=1
+id=default
+type=default
+name=default
+location=0.0;0.0;0.0
+coordinate=0.0;0.0;0.0
+
+[analytics0]
+enable=1
+id=default
+source=default
+description=default analytics
