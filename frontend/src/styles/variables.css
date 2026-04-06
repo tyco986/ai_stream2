@@ -1,0 +1,8 @@
+:root {
+  --el-color-primary: #409eff;
+  --el-color-success: #67c23a;
+  --el-color-warning: #e6a23c;
+  --el-color-danger: #f56c6c;
+  --el-border-radius-base: 4px;
+  --el-font-size-base: 14px;
+}

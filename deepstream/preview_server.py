@@ -1,10 +1,5 @@
 import logging
 
-import gi
-
-gi.require_version("GstRtspServer", "1.0")
-from gi.repository import GstRtspServer  # noqa: E402
-
 logger = logging.getLogger(__name__)
 
 
@@ -31,6 +26,18 @@ class PreviewServer:
         Must be called **before** ``pipeline.wait()`` since ``wait()``
         runs the GLib main loop that the server hooks into.
         """
+        try:
+            import gi
+
+            gi.require_version("GstRtspServer", "1.0")
+            from gi.repository import GstRtspServer
+        except ModuleNotFoundError:
+            logger.warning(
+                "python3-gi is not available, skip RTSP preview server startup "
+                "(REST/Kafka pipeline remains available)."
+            )
+            return
+
         self._server = GstRtspServer.RTSPServer.new()
         self._server.set_property("service", str(self._rtsp_port))
 

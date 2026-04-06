@@ -1,0 +1,8 @@
+{
+  "key": "sensor",
+  "value": {
+    "camera_id": "cam_test_64460400",
+    "camera_url": "file:///app/example_data/video1_bf0.mp4",
+    "change": "camera_remove"
+  }
+}

@@ -1,0 +1,4 @@
+{
+  "action": "stop_rolling",
+  "source_id": "test_camera"
+}

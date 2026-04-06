@@ -1,0 +1,8 @@
+{
+  "key": "sensor",
+  "value": {
+    "camera_id": "cam_test_64958062",
+    "camera_url": "rtsp://ai-stream2-video2rtsp:8554/video1",
+    "change": "camera_remove"
+  }
+}

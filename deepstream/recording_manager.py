@@ -51,7 +51,7 @@ class RollingRecordManager:
     def stop_rolling(self, source_id: int):
         self._rolling_sources.discard(source_id)
         self._recording_type.pop(source_id, None)
-        self._sr.emit("stop-sr", source_id)
+        self._emit_stop(source_id)
         logger.info("Rolling recording stopped for source_id=%d", source_id)
 
     # ------------------------------------------------------------------
@@ -60,7 +60,7 @@ class RollingRecordManager:
 
     def start_event_recording(self, source_id: int, duration: int = 20):
         self._recording_type[source_id] = "event"
-        self._sr.emit("start-sr", source_id, duration)
+        self._emit_start(source_id, duration)
         logger.info("Event recording started: source_id=%d duration=%ds", source_id, duration)
 
     # ------------------------------------------------------------------
@@ -69,11 +69,11 @@ class RollingRecordManager:
 
     def start_manual_recording(self, source_id: int):
         self._recording_type[source_id] = "manual"
-        self._sr.emit("start-sr", source_id, 0)
+        self._emit_start(source_id, 0)
         logger.info("Manual recording started: source_id=%d", source_id)
 
     def stop_recording(self, source_id: int):
-        self._sr.emit("stop-sr", source_id)
+        self._emit_stop(source_id)
         logger.info("Recording stopped: source_id=%d", source_id)
 
     # ------------------------------------------------------------------
@@ -105,4 +105,22 @@ class RollingRecordManager:
     # ------------------------------------------------------------------
 
     def _start_segment(self, source_id: int):
-        self._sr.emit("start-sr", source_id, self.SEGMENT_DURATION)
+        self._emit_start(source_id, self.SEGMENT_DURATION)
+
+    def _emit_start(self, source_id: int, duration: int):
+        if hasattr(self._sr, "emit"):
+            self._sr.emit("start-sr", source_id, duration)
+            return
+        logger.warning(
+            "SmartRecord start is not supported by current pyservicemaker node (source_id=%d)",
+            source_id,
+        )
+
+    def _emit_stop(self, source_id: int):
+        if hasattr(self._sr, "emit"):
+            self._sr.emit("stop-sr", source_id)
+            return
+        logger.warning(
+            "SmartRecord stop is not supported by current pyservicemaker node (source_id=%d)",
+            source_id,
+        )

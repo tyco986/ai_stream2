@@ -1,0 +1,6 @@
+{
+  "action": "start_recording",
+  "source_id": "test_camera",
+  "duration": 0,
+  "type": "manual"
+}

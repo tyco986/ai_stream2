@@ -104,16 +104,11 @@ def run_pipeline():
     )
 
     # ── wire sr-done signal for chain recording / file locking ──────
-    # SmartRecord sr-done callback:  nvmultiurisrcbin emits the
-    # "sr-done" GObject signal when a recording segment finishes.
-    # The native Kafka notification is handled by SmartRecordConfig's
-    # proto_lib automatically; this Python-side callback handles:
-    #   1. moving event/manual recordings to locked/
-    #   2. chaining the next rolling segment
-    pipeline.attach("src", "smart_recording_signal", "sr", "sr-done")
-    # TODO(integration): verify that the above built-in wiring triggers
-    # on_sr_done.  If pyservicemaker doesn't expose a Python callback
-    # for sr-done, use CommonFactory as fallback (plan Section 5B).
+    # Some pyservicemaker builds do not expose the "sr-done" signal.
+    # Keep it opt-in to avoid startup failure in test environments.
+    enable_sr_done_signal = os.environ.get("DS_ENABLE_SR_DONE_SIGNAL", "0") == "1"
+    if enable_sr_done_signal:
+        pipeline.attach("src", "smart_recording_signal", "sr", "sr-done")
 
     # ── performance monitor ─────────────────────────────────────────
     max_batch = int(os.environ.get("DS_MAX_BATCH_SIZE", "16"))
@@ -177,9 +172,11 @@ def run_pipeline():
     # ── start pipeline ──────────────────────────────────────────────
     logger.info("Preparing pipeline …")
     pipeline.prepare(msg_handler)
+    logger.info("Pipeline prepare completed")
 
     logger.info("Activating pipeline …")
     pipeline.activate()
+    logger.info("Pipeline activate completed")
 
     logger.info(
         "Pipeline running. REST API at http://0.0.0.0:%s  RTSP at rtsp://0.0.0.0:%s/preview",

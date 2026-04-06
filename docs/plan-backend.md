@@ -315,6 +315,10 @@ CREATE TABLE detection_2026_04 PARTITION OF detection
 > 5. Django `managed = True` 保留，但后续分区相关的 DDL 变更（加字段等）
 >    需确认变更能正确传播到所有子分区（PostgreSQL 声明式分区默认继承父表 DDL）
 >
+> **实现约束（避免 ORM 认知偏差）**：
+> Django 逻辑层仍以 `id` 为对象标识（`pk`），数据库物理层使用 `(id, detected_at)` 复合主键服务分区。
+> 团队需固定迁移模板（含 `RunSQL`）并在评审中检查分区 DDL 兼容性，避免把该模型当普通单表处理。
+>
 > 模型 `Meta` 中不声明 `unique_together` 或 `constraints` 涉及非分区键的列
 >（分区表的唯一约束必须包含分区键 `detected_at`）。
 
@@ -332,7 +336,10 @@ class Meta:
 
 - 假设 16 路摄像头，每秒 1 条 → 每天约 140 万条
 - 使用 PostgreSQL 声明式分区（按月），清理时直接 `DROP` 过期分区，瞬间完成，无需逐行 DELETE
-- Celery Beat 定时任务：创建下月分区 + DROP 超过 `DETECTION_RETENTION_DAYS` 的旧分区
+- Celery Beat 定时任务：创建下月分区 + DROP 超过 `DETECTION_RETENTION_MONTHS` 的旧分区
+
+> **保留策略说明**：按月分区无法精确到"天"。为避免语义歧义，运维参数使用 `DETECTION_RETENTION_MONTHS`（整月粒度）。
+> 若业务必须按天精确保留，需改为按日分区（分区数量和维护成本显著上升）。
 
 **KafkaDeadLetter** — Kafka 消费失败的死信记录：
 
@@ -560,8 +567,34 @@ class Meta:
 | GET | `/api/v1/deepstream/streams/` | 当前流信息（代理） |
 
 > 健康检查拆分为 Liveness / Readiness 两个端点（详见第 15 节）。
-> Docker HEALTHCHECK 指向 `/api/v1/health/ready/`，K8s livenessProbe 指向 `/live/`。
+> backend API 容器的 Docker HEALTHCHECK 指向 `/api/v1/health/ready/`，K8s livenessProbe 指向 `/live/`。
 > 两个端点均为公开接口（`AllowAny`）。
+
+### 5.9 详细 API 文档编写规范（OpenAPI + 业务语义）
+
+为保证前后端联调、测试脚本编写、线上排障的一致性，每个 API 端点都必须补齐“可执行文档”，不仅有路径，还要有业务语义。
+
+**每个端点文档必须包含**：
+
+1. 接口基础信息：`summary`、`description`、标签（tag）、鉴权方式（JWT/AllowAny）
+2. 请求定义：Path 参数、Query 参数、Request Body schema、字段必填性、默认值、枚举值
+3. 响应定义：成功响应 schema（200/201）+ 常见失败响应（400/401/403/404/429/503）
+4. 业务错误码：与 `ServiceError.code` 对齐（如 `CAMERA_NOT_FOUND`、`DEEPSTREAM_UNAVAILABLE`）
+5. 权限与多租户说明：哪个角色可调用、跨组织访问的预期结果（一般为 404）
+6. 副作用说明：是否触发外部调用（DeepStream/Kafka/Celery）、是否幂等、是否异步最终一致
+7. 示例：至少 1 个请求示例 + 1 个成功响应示例 + 1 个失败响应示例
+
+**推荐实现方式（文档层约束）**：
+
+- DRF ViewSet/View 上使用 `drf-spectacular` 的 `@extend_schema` / `@extend_schema_view`
+- 公共错误响应抽成可复用 `OpenApiResponse` 片段，避免各端点重复且不一致
+- 对 `start-stream`、`stop-stream`、`deploy`、`acknowledge`、`resolve` 这类动作型端点，必须单独写清幂等性和状态流转
+
+**完成标准（DoD）**：
+
+- `openapi.json` 中所有业务端点都有 `summary + description + response schema`
+- Swagger UI 中每个端点都能看见参数说明和示例
+- 业务错误码在文档与实际响应一致，不允许“文档写 A、返回 B”
 
 ---
 
@@ -712,6 +745,7 @@ import time
 import structlog
 from confluent_kafka import Consumer
 from django.conf import settings
+from django.db import transaction
 
 logger = structlog.get_logger(__name__)
 
@@ -816,9 +850,12 @@ def _parse_message(self, msg):
     camera = self._get_camera(data["sensorId"])
     if camera is None:
         return None
+    detected_at = parse_datetime(data["@timestamp"])
+    if detected_at is None:
+        raise ValueError("Invalid @timestamp")
     return Detection(
         camera=camera,
-        detected_at=parse_datetime(data["@timestamp"]),
+        detected_at=detected_at,
         frame_number=data.get("frame_number"),
         object_count=len(data.get("objects", [])),
         objects=data.get("objects", []),
@@ -828,7 +865,8 @@ def _parse_message(self, msg):
 def _flush_detections(self, buffer):
     valid = [d for d in buffer if d is not None]
     if valid:
-        Detection.objects.bulk_create(valid)
+        with transaction.atomic():
+            Detection.objects.bulk_create(valid)
         # PostgreSQL bulk_create 通过 RETURNING 子句回填自增 id 到实例上，
         # 后续 AlertEngine 和 WebSocket 推送可直接使用 detection.id。
         # 注意：ignore_conflicts=True 或 MySQL 后端不回填 id，如有迁移需调整。
@@ -861,6 +899,8 @@ def _safe_parse(self, msg):
 
 > **原则**：单条消息解析失败不影响整个 batch，写入死信表后继续消费。
 > 死信表供运维排查 DeepStream 消息格式变更或版本不兼容问题。
+> `@timestamp` 解析失败（`parse_datetime` 返回 `None`）也按坏消息处理，进入死信，不允许带 `NULL detected_at` 进入 batch。
+> `_flush_detections` 需包裹 `transaction.atomic()`，确保批量写入失败时整批回滚，与"整批成功才 commit"语义一致。
 
 ### bulk_create 失败时的 commit 语义
 
@@ -932,6 +972,8 @@ def _safe_parse(self, msg):
 ### 设计
 
 ```python
+from datetime import timedelta
+
 from django.utils.timezone import now
 
 class AlertEngine:
@@ -947,6 +989,7 @@ class AlertEngine:
 
     def __init__(self):
         self._last_triggered = {}   # (rule_id, camera_id) → datetime
+        self._cache_ttl_seconds = 86400
 
     def evaluate_detection(self, detection, active_rules):
         """评估 Detection（PGIE + nvdsanalytics）触发的规则。
@@ -977,6 +1020,13 @@ class AlertEngine:
             return True
         elapsed = (now() - last_time).total_seconds()
         return elapsed >= rule.cooldown_seconds
+
+    def _prune_cooldown_cache(self):
+        """定期清理过旧 key，避免内存字典无限增长。"""
+        threshold = now() - timedelta(seconds=self._cache_ttl_seconds)
+        self._last_triggered = {
+            key: ts for key, ts in self._last_triggered.items() if ts >= threshold
+        }
 ```
 
 > **为什么不能每次查数据库**：原版 `_cooldown_passed` 对每条检测 × 每条规则执行
@@ -993,6 +1043,9 @@ class AlertEngine:
 >    `Redis SET NX EX` 做分布式锁式冷却，代价是每次规则匹配多一次 Redis RTT（~0.5ms）。
 >
 > 初版单 consumer 不需改动；扩展时优先走路径 1。
+>
+> **缓存清理建议**：在 consumer 主循环每 N 轮调用一次 `_prune_cooldown_cache()`（如每 1000 条消息或每 5 分钟），
+> 并在规则删除/禁用后按 `rule_id` 清理对应 key，避免 `_last_triggered` 随历史规则无限增长。
 
 ### 支持的规则类型（初版）
 
@@ -1049,7 +1102,10 @@ ws://host:8000/ws/detections/?token=<access_token>
 
 ```python
 from channels.db import database_sync_to_async
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import AccessToken
+
+from apps.accounts.models import User
 
 class JWTAuthMiddleware:
     def __init__(self, app):
@@ -1072,9 +1128,11 @@ class JWTAuthMiddleware:
 
     @database_sync_to_async
     def _get_user(self, token_str):
-        token = AccessToken(token_str)
-        from apps.accounts.models import User
-        return User.objects.get(id=token["user_id"])
+        try:
+            token = AccessToken(token_str)
+            return User.objects.get(id=token["user_id"])
+        except (TokenError, User.DoesNotExist, KeyError, ValueError):
+            return None
 ```
 
 > **安全说明**：token 在 URL 中可能被日志记录。生产环境确保 Nginx/反向代理不记录 query string，
@@ -1185,7 +1243,7 @@ class OrganizationFilterMixin:
 | 任务 | 触发方式 | 说明 |
 |------|---------|------|
 | `send_alert_notification` | 报警触发时 | 发送邮件/Webhook 通知 |
-| `cleanup_old_detections` | Celery Beat 每日 | DROP 超过 N 天的 Detection 分区 |
+| `cleanup_old_detections` | Celery Beat 每日 | DROP 超过 `DETECTION_RETENTION_MONTHS` 的 Detection 分区（整月粒度） |
 | `cleanup_dead_letters` | Celery Beat 每日 | 删除超过 `DEAD_LETTER_RETENTION_DAYS` 的 KafkaDeadLetter 记录 |
 | `create_next_partition` | Celery Beat 每月25日 | 创建下月 Detection 分区 |
 | `sync_camera_status` | Celery Beat 每分钟 | 向 DeepStream 查询流状态，同步到数据库（通过 `async_to_sync` 桥接 httpx） |
@@ -1264,10 +1322,10 @@ def send_alert_notification(self, alert_id):
 
 - 后端有**独立的 Dockerfile**，构建上下文为 `backend/` 目录
 - `docker build ./backend` 即可独立构建，不依赖项目根目录
-- Dockerfile 含三个 target：`builder`（编译依赖）、`test`（跑测试）、`production`（生产运行）
+- Dockerfile 含四个 target：`builder`（编译依赖）、`test`（跑测试）、`dev`（本地热重载开发）、`production`（生产运行）
 - 后端有独立的 `docker-compose.dev.yml`，只含后端 + 基础设施（无 DeepStream）
 
-### backend/Dockerfile（多阶段：base → build → test → production）
+### backend/Dockerfile（多阶段：base → build → test → dev → production）
 
 ```dockerfile
 # ---- Base Stage（国内镜像，所有阶段共用） ----
@@ -1300,6 +1358,16 @@ COPY . .
 
 CMD ["pytest", "--tb=short", "-q"]
 
+# ---- Dev Stage ----
+FROM base AS dev
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /install /usr/local
+WORKDIR /app
+COPY . .
+CMD ["uvicorn", "config.asgi:application", "--reload", "--host", "0.0.0.0", "--port", "8000"]
+
 # ---- Production Stage ----
 FROM base AS production
 
@@ -1326,6 +1394,11 @@ CMD ["gunicorn", "config.asgi:application", \
      "--workers", "4", \
      "--access-logfile", "-"]
 ```
+
+> **健康检查边界**：上述 `HEALTHCHECK` 仅适用于 `backend` API 容器。
+> `celery-worker` / `celery-beat` / `kafka-consumer` 不暴露 HTTP 8000，不能复用该检查。
+> 在 compose 中需对这些容器关闭 Dockerfile 继承的 healthcheck（`healthcheck: { disable: true }`）
+> 或覆盖为各自进程级检查命令。
 
 ### 独立构建 & 测试命令
 
@@ -1359,6 +1432,7 @@ x-backend-env: &backend-env
   DJANGO_SETTINGS_MODULE: config.settings.development
   DATABASE_URL: postgres://postgres:postgres@postgres:5432/ai_stream
   REDIS_URL: redis://redis:6379
+  HEALTH_CHECK_KAFKA: "false"          # API / Worker / Beat 不依赖 Kafka readiness
   DEEPSTREAM_MOCK: "true"
   KAFKA_BOOTSTRAP_SERVERS: kafka:9092
   KAFKA_DETECTION_TOPIC: deepstream-detections
@@ -1408,11 +1482,13 @@ services:
   backend:
     build:
       context: .
-      target: production
+      target: dev
     ports:
       - "8000:8000"
     environment:
       <<: *backend-env
+    volumes:
+      - .:/app
     depends_on:
       postgres:
         condition: service_healthy
@@ -1432,6 +1508,8 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+    healthcheck:
+      disable: true
 
   celery-beat:
     build:
@@ -1443,6 +1521,8 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+    healthcheck:
+      disable: true
 
   kafka-consumer:
     build:
@@ -1451,11 +1531,14 @@ services:
     command: python manage.py run_kafka_consumer
     environment:
       <<: *backend-env
+      HEALTH_CHECK_KAFKA: "true"       # Consumer 必须对 Kafka 强校验
     depends_on:
       - backend
       - kafka
     restart: always
     stop_grace_period: 30s
+    healthcheck:
+      disable: true
 
   # ---- 测试 runner（按需启动） ----
   test:
@@ -1508,6 +1591,7 @@ x-backend-env: &backend-env
   DJANGO_SETTINGS_MODULE: config.settings.production
   DATABASE_URL: postgres://user:pass@postgres:5432/ai_stream
   REDIS_URL: redis://redis:6379
+  HEALTH_CHECK_KAFKA: "false"          # API / Worker / Beat 不依赖 Kafka readiness
   DEEPSTREAM_REST_URL: http://deepstream:9000
   KAFKA_BOOTSTRAP_SERVERS: kafka:9092
   KAFKA_DETECTION_TOPIC: deepstream-detections
@@ -1541,6 +1625,8 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+    healthcheck:
+      disable: true
 
   celery-beat:
     build:
@@ -1552,6 +1638,8 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+    healthcheck:
+      disable: true
 
   kafka-consumer:
     build:
@@ -1560,15 +1648,20 @@ services:
     command: python manage.py run_kafka_consumer
     environment:
       <<: *backend-env
+      HEALTH_CHECK_KAFKA: "true"       # Consumer 必须对 Kafka 强校验
     depends_on:
       - backend
+      - kafka
     restart: always
     stop_grace_period: 30s
+    healthcheck:
+      disable: true
 ```
 
 > 项目根目录的 compose 里 `context: ./backend` 指向后端目录，
 > 后端自己的 `docker-compose.dev.yml` 里 `context: .` 指向自身。
 > **同一个 Dockerfile，两种入口，构建结果完全一致。**
+> 开发 compose 的 `backend` 走 `dev` target + 代码挂载；生产 compose 走 `production` target（不可变镜像）。
 
 ### 进程清单
 
@@ -1598,8 +1691,9 @@ services:
 | `KAFKA_EVENT_TOPIC` | `deepstream-events` | DeepStream 事件 topic（录制完成/截图完成） |
 | `KAFKA_COMMAND_TOPIC` | `deepstream-commands` | 后端→DeepStream 命令 topic |
 | `KAFKA_CONSUMER_GROUP` | `backend-consumer` | Kafka consumer group |
+| `HEALTH_CHECK_KAFKA` | `true` | Readiness 是否检查 Kafka（API 建议设 `false`，仅 kafka-consumer 设 `true`） |
+| `DETECTION_RETENTION_MONTHS` | `1` | Detection 分区保留月数（按月分区时建议使用该参数） |
 | `ACCESS_TOKEN_LIFETIME_MINUTES` | `30` | JWT access token 有效期 |
-| `DETECTION_RETENTION_DAYS` | `30` | 检测记录保留天数 |
 | `DEAD_LETTER_RETENTION_DAYS` | `90` | Kafka 死信记录保留天数（排障用，应长于检测数据；死信量极小，多留无存储压力） |
 
 ### 环境变量解析
@@ -1613,7 +1707,7 @@ env = environ.Env(
     DEBUG=(bool, False),
     DEEPSTREAM_MOCK=(bool, False),
     ACCESS_TOKEN_LIFETIME_MINUTES=(int, 30),
-    DETECTION_RETENTION_DAYS=(int, 30),
+    DETECTION_RETENTION_MONTHS=(int, 1),
     DEAD_LETTER_RETENTION_DAYS=(int, 90),
 )
 
@@ -1693,6 +1787,15 @@ class CameraNotFoundError(ServiceError):
 
 ```python
 def custom_exception_handler(exc, context):
+    status_code_to_code = {
+        400: "VALIDATION_ERROR",
+        401: "UNAUTHORIZED",
+        403: "FORBIDDEN",
+        404: "NOT_FOUND",
+        429: "THROTTLED",
+        503: "SERVICE_UNAVAILABLE",
+    }
+
     if isinstance(exc, ServiceError):
         return Response(
             {"code": exc.code, "message": exc.message, "data": None},
@@ -1701,9 +1804,9 @@ def custom_exception_handler(exc, context):
     response = exception_handler(exc, context)
     if response:
         return Response(
-            {"code": "VALIDATION_ERROR" if response.status_code == 400 else "SERVER_ERROR",
+            {"code": status_code_to_code.get(response.status_code, "SERVER_ERROR"),
              "message": str(exc),
-             "data": response.data if response.status_code == 400 else None},
+             "data": response.data if response.status_code in (400, 401, 403, 404, 429) else None},
             status=response.status_code,
         )
     return None
@@ -1737,6 +1840,7 @@ structlog.configure(
 ```python
 import uuid
 import structlog
+from structlog.contextvars import clear_contextvars
 
 class RequestIDMiddleware:
     def __init__(self, get_response):
@@ -1746,9 +1850,12 @@ class RequestIDMiddleware:
         request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
         request.request_id = request_id
         structlog.contextvars.bind_contextvars(request_id=request_id)
-        response = self.get_response(request)
-        response["X-Request-ID"] = request_id
-        return response
+        try:
+            response = self.get_response(request)
+            response["X-Request-ID"] = request_id
+            return response
+        finally:
+            clear_contextvars()
 ```
 
 > **用途**：前端/运维拿到 `X-Request-ID` 可在日志系统中快速定位整条请求链路。
@@ -1764,7 +1871,7 @@ K8s 和负载均衡器的高频探针（每 5-10 秒）如果每次都探测 DB 
 | `/api/v1/health/live/` | **Liveness**（进程存活） | 固定返回 200 | 高频（K8s livenessProbe） |
 | `/api/v1/health/ready/` | **Readiness**（服务就绪） | DB + Redis + Kafka 连通性 | 低频（K8s readinessProbe / 负载均衡） |
 
-> Docker HEALTHCHECK 和 Dockerfile 中指向 `/api/v1/health/ready/`（每 30 秒一次，可接受）。
+> backend API 容器的 Docker HEALTHCHECK 指向 `/api/v1/health/ready/`（每 30 秒一次，可接受）。
 > 如果上 K8s，livenessProbe 指向 `/live/`，readinessProbe 指向 `/ready/`。
 > Kafka 检查可通过环境变量 `HEALTH_CHECK_KAFKA=true/false` 控制是否启用。
 >
@@ -1917,6 +2024,183 @@ drf-spectacular 自动生成的 Swagger UI 用于：
 > **不依赖 Swagger 做回归测试**——改了代码不可能每次手动把所有接口点一遍。
 > 回归测试由上述 pytest 自动化覆盖。
 
+### Swagger 测试规范（必须执行的文档验收）
+
+Swagger 不替代自动化回归，但必须作为**接口文档完整性 + 基础可用性**验收入口。
+
+#### 测试目标
+
+- 验证 OpenAPI schema 完整：参数、响应、错误码、鉴权标注齐全
+- 验证关键端点可在 Swagger 中完成最小闭环调用（登录 → 鉴权 → 读写）
+- 验证文档与真实行为一致（状态码、字段名、必填规则）
+
+#### 最小 Swagger 测试清单
+
+1. 文档加载：Swagger UI 可访问，`openapi.json` 可导出
+2. 鉴权流程：`/auth/login/` 获取 token，`Authorize` 后调用受保护接口成功
+3. 参数校验：至少抽查 5 个端点，验证必填字段/枚举校验与文档一致
+4. 错误码校验：抽查 `400/401/403/404/429/503` 响应是否符合统一响应结构
+5. 动作型端点：抽查 `start-stream`、`deploy`、`acknowledge` 等端点的响应与幂等描述一致
+6. 多租户校验：在 Swagger 下用不同组织账号验证隔离行为（越权访问应返回 404/403）
+
+#### 与脚本测试的关系
+
+- Swagger 测试用于“文档质量 + 人工抽样验证”
+- `backend/test/test_{api_name}.py` + `test_all.py` 用于“可重复自动回归”
+- 发布前要求二者都通过：**Swagger 抽样通过 + 脚本全量通过**
+
+### 脚本化全 API 回归测试计划（`requests + argparse`，暂不实现）
+
+> **当前阶段约束**：本节仅定义落地规范与目录结构，**不开始实现代码**。
+
+#### 目录与命名约定
+
+- 所有 API 测试脚本放在 `backend/test/`
+- 每个 API 一份脚本，命名统一为 `test_{api_name}.py`
+- 全量入口脚本为 `backend/test/test_all.py`
+- 测试数据文件放在 `backend/example_data/`
+
+#### 单脚本统一接口约定
+
+每个 `test_{api_name}.py` 脚本统一实现：
+
+- 使用 `argparse` 解析参数：`--base-url`、`--username`、`--password`、`--timeout`、`--verbose`、`--strict`
+- 使用 `requests.Session` 复用连接和认证头
+- 输出结构化结果：`PASS` / `FAIL`、HTTP 状态码、关键断言信息
+- 脚本内自生成最小必要数据（例如随机名称、时间戳），不依赖人工预置数据库
+- 出错时返回非 0 退出码，便于被 `test_all.py` 汇总
+
+#### 全量入口脚本约定（`test_all.py`）
+
+- 自动发现 `backend/test/` 下所有 `test_*.py`（排除 `test_all.py`）
+- 支持按标签或名称过滤：`--include` / `--exclude`
+- 串行执行并收集结果，最后输出汇总（总数、通过、失败、耗时、失败清单）
+- 默认执行全量 API 脚本；`--fail-fast` 可在首个失败时中断
+
+#### API 脚本清单（按端点拆分）
+
+| API 端点 | 脚本文件 |
+|---|---|
+| `POST /api/v1/auth/login/` | `test_auth_login.py` |
+| `POST /api/v1/auth/refresh/` | `test_auth_refresh.py` |
+| `GET /api/v1/auth/me/` | `test_auth_me.py` |
+| `GET /api/v1/cameras/` | `test_cameras_list.py` |
+| `POST /api/v1/cameras/` | `test_cameras_create.py` |
+| `GET /api/v1/cameras/{id}/` | `test_cameras_detail.py` |
+| `PATCH /api/v1/cameras/{id}/` | `test_cameras_update.py` |
+| `DELETE /api/v1/cameras/{id}/` | `test_cameras_delete.py` |
+| `POST /api/v1/cameras/{id}/start-stream/` | `test_cameras_start_stream.py` |
+| `POST /api/v1/cameras/{id}/stop-stream/` | `test_cameras_stop_stream.py` |
+| `GET /api/v1/camera-groups/` | `test_camera_groups_list.py` |
+| `POST /api/v1/camera-groups/` | `test_camera_groups_create.py` |
+| `GET /api/v1/detections/` | `test_detections_list.py` |
+| `GET /api/v1/detections/stats/` | `test_detections_stats.py` |
+| `GET /api/v1/alert-rules/` | `test_alert_rules_list.py` |
+| `POST /api/v1/alert-rules/` | `test_alert_rules_create.py` |
+| `PATCH /api/v1/alert-rules/{id}/` | `test_alert_rules_update.py` |
+| `DELETE /api/v1/alert-rules/{id}/` | `test_alert_rules_delete.py` |
+| `GET /api/v1/alerts/` | `test_alerts_list.py` |
+| `POST /api/v1/alerts/{id}/acknowledge/` | `test_alerts_acknowledge.py` |
+| `POST /api/v1/alerts/{id}/resolve/` | `test_alerts_resolve.py` |
+| `GET /api/v1/ai-models/` | `test_ai_models_list.py` |
+| `POST /api/v1/ai-models/` | `test_ai_models_create.py` |
+| `GET /api/v1/ai-models/{id}/` | `test_ai_models_detail.py` |
+| `PATCH /api/v1/ai-models/{id}/` | `test_ai_models_update.py` |
+| `DELETE /api/v1/ai-models/{id}/` | `test_ai_models_delete.py` |
+| `GET /api/v1/pipeline-profiles/` | `test_pipeline_profiles_list.py` |
+| `POST /api/v1/pipeline-profiles/` | `test_pipeline_profiles_create.py` |
+| `GET /api/v1/pipeline-profiles/{id}/` | `test_pipeline_profiles_detail.py` |
+| `PATCH /api/v1/pipeline-profiles/{id}/` | `test_pipeline_profiles_update.py` |
+| `DELETE /api/v1/pipeline-profiles/{id}/` | `test_pipeline_profiles_delete.py` |
+| `POST /api/v1/pipeline-profiles/{id}/deploy/` | `test_pipeline_profiles_deploy.py` |
+| `GET /api/v1/cameras/{id}/pipeline/` | `test_cameras_pipeline_get.py` |
+| `PUT /api/v1/cameras/{id}/pipeline/` | `test_cameras_pipeline_put.py` |
+| `GET /api/v1/cameras/{id}/analytics-zones/` | `test_analytics_zones_list.py` |
+| `POST /api/v1/cameras/{id}/analytics-zones/` | `test_analytics_zones_create.py` |
+| `PATCH /api/v1/cameras/{id}/analytics-zones/{zone_id}/` | `test_analytics_zones_update.py` |
+| `DELETE /api/v1/cameras/{id}/analytics-zones/{zone_id}/` | `test_analytics_zones_delete.py` |
+| `GET /api/v1/dashboard/overview/` | `test_dashboard_overview.py` |
+| `GET /api/v1/dashboard/detection-trend/` | `test_dashboard_detection_trend.py` |
+| `GET /api/v1/dashboard/camera-status/` | `test_dashboard_camera_status.py` |
+| `GET /api/v1/health/live/` | `test_health_live.py` |
+| `GET /api/v1/health/ready/` | `test_health_ready.py` |
+| `GET /api/v1/deepstream/health/` | `test_deepstream_health.py` |
+| `GET /api/v1/deepstream/streams/` | `test_deepstream_streams.py` |
+
+#### `backend/example_data/` 数据规划（用于脚本输入）
+
+| 文件 | 用途 |
+|---|---|
+| `users.json` | 测试账号（admin/operator/viewer）与组织信息 |
+| `camera_groups.json` | 摄像头分组模板 |
+| `cameras.json` | 摄像头模板（使用可替换 rtsp 示例） |
+| `analytics_zones.json` | ROI/越线/拥挤/方向区域模板 |
+| `ai_models.json` | detector/tracker 模型模板 |
+| `pipeline_profiles.json` | 管道配置模板 |
+| `alert_rules.json` | 报警规则模板 |
+| `detections_query.json` | 检测查询参数模板（时间范围/过滤） |
+| `dashboard_query.json` | 仪表盘查询参数模板 |
+
+#### 测试数据生成原则
+
+- 固定模板 + 运行时动态字段（随机后缀、当前时间、UUID）
+- 先创建依赖，再测目标 API，再按需清理（避免污染）
+- 对幂等 API（如 `start-stream`）至少覆盖一次重复调用断言
+- 对多租户 API 默认生成双组织数据（Org A / Org B）验证隔离
+
+#### 需与你确认的特殊数据/模型（实现前讨论）
+
+1. **DeepStream 可用性模式**：默认走 `DEEPSTREAM_MOCK=true`，还是提供一套接真实 DeepStream 的冒烟参数。
+2. **RTSP 测试源**：是否统一使用 `mediamtx + 本地样例视频` 作为稳定输入源。
+3. **AI 模型样例**：`ai_models.json` 使用占位路径，还是绑定一套可实际部署的最小模型文件。
+4. **数据清理策略**：脚本执行后是“保留现场便于排障”还是“自动清理恢复”。
+
+### API 文档与 Swagger 测试计划（暂不实现）
+
+#### 详细 API 文档编写要求
+
+- 每个端点需补齐：功能说明、权限要求、请求参数、请求示例、响应示例、错误码说明
+- 文档结构按资源拆分：认证、摄像头、检测、报警、模型、管道、仪表盘、系统状态
+- 每个端点必须声明多租户边界（按 `organization` 隔离）与幂等语义（如 `start-stream`）
+- 统一错误码词典：`code`、HTTP 状态码、前端处理建议
+- 对高风险接口补充操作注意事项（例如 `deploy` 会触发重启、短暂中断）
+
+#### Swagger（drf-spectacular）增强要求
+
+- 为所有 ViewSet/Action 补齐 `summary`、`description`、`tags`
+- 使用 `extend_schema` 明确请求体与响应体 schema（含 4xx/5xx 错误响应）
+- 为分页列表、过滤参数、枚举字段补齐 OpenAPI 参数说明
+- 保证 Swagger UI 中每个端点都可直接调试（开发环境）
+- OpenAPI 文档变更纳入评审：接口变化必须同步更新 schema
+
+#### Swagger 测试纳入策略
+
+- 在 `backend/test/` 增加 `test_swagger_schema.py`（校验关键路径与 schema 完整性）
+- 在 `test_all.py` 中加入 Swagger 测试步骤（默认启用，可通过参数关闭）
+- 最低校验项：文档可访问、核心端点存在、请求/响应字段与实现一致
+- 对新增 API 设门禁：未补 Swagger 描述和示例时不通过测试
+
+### 编写详细 README（暂不实现）
+
+> 要求在实现阶段同步编写并维护 `backend/README.md`，作为后端单体入口文档。
+
+#### README 章节结构要求
+
+1. 项目简介与架构定位（Backend 作为唯一 API 网关）
+2. 环境依赖与本地启动（含 Docker 与非 Docker）
+3. 配置说明（环境变量清单 + 示例）
+4. 数据库迁移与初始化数据
+5. API 文档入口（Swagger/OpenAPI 链接）
+6. 测试说明（单脚本、`test_all.py`、Swagger 测试）
+7. 常见问题与排障（Kafka、DeepStream、Redis、权限）
+8. 开发规范与提交流程
+
+#### README 质量标准
+
+- 新同学 30 分钟内可按文档跑起后端并完成一次 API 调试
+- 所有命令可直接复制执行，避免省略关键参数
+- 与 `docs/plan-backend.md` 保持一致，出现冲突以最新实现为准并及时回写
+
 ---
 
 ## 17. 开发流程
@@ -1964,13 +2248,13 @@ celery -A config beat -l info
 | # | 坑 | 现象 | 解决 |
 |---|-----|------|------|
 | 1 | N+1 查询 | 列表接口响应慢 | `select_related` / `prefetch_related` |
-| 2 | Detection 表膨胀 | 磁盘爆满 | **Day 1 分区** + Celery Beat DROP 过期分区 |
+| 2 | Detection 表膨胀 | 磁盘爆满 | **Day 1 分区** + 按 `DETECTION_RETENTION_MONTHS` DROP 过期分区 |
 | 3 | Detection UUID 主键 | 高频写入性能差 | 改用 `BigAutoField` |
 | 4 | Kafka Consumer 单线程瓶颈 | 消息积压 | 增加 Kafka partition 数 + 多 consumer 实例 |
 | 5 | WebSocket 推送风暴 | 前端卡死 | 聚合摘要推送，不逐帧推 |
 | 6 | JWT token 过期 | 前端 401 | 前端拦截 401 自动 refresh |
 | 7 | 开发环境无 DeepStream | 摄像头功能不可用 | `DEEPSTREAM_MOCK=true` |
-| 8 | Celery Worker 未启动 | 通知发不出去 | Docker `restart: unless-stopped` + HEALTHCHECK |
+| 8 | Celery Worker 未启动 | 通知发不出去 | Docker `restart: unless-stopped` + 进程日志告警（worker/beat/consumer 不走 HTTP healthcheck） |
 | 9 | Camera.status 不一致 | 前端状态与实际不符 | Celery Beat 定期 sync + Kafka 事件驱动更新 |
 | 10 | 时区问题 | 时间显示错乱 | Django `USE_TZ=True`，Kafka 时间戳统一 UTC |
 | 11 | httpx 连接泄漏 | DeepStream 代理响应变慢 | 复用 AsyncClient 单例，禁止每次新建 |

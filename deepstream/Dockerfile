@@ -9,6 +9,7 @@ RUN pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/we
 RUN pip install --break-system-packages \
     /opt/nvidia/deepstream/deepstream/service-maker/python/pyservicemaker*.whl \
     pyyaml \
+    requests \
     confluent-kafka \
     pynvml
 
@@ -16,7 +17,7 @@ RUN pip install --break-system-packages \
 RUN apt-get update && apt-get install -y \
     librdkafka-dev \
     libgstrtspserver-1.0-dev \
-    gir1.2-gstrtspserver-1.0 \
+    gir1.2-gst-rtsp-server-1.0 \
     curl \
     && rm -rf /var/lib/apt/lists/*
 

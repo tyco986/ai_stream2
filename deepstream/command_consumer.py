@@ -2,6 +2,7 @@ import json
 import logging
 import threading
 
+from confluent_kafka import Producer
 from confluent_kafka import Consumer
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,9 @@ class CommandConsumer:
         self._source_map = source_map
         self._shutdown = threading.Event()
         self._command_topic = command_topic
+        self._event_topic = "deepstream-events"
+        bootstrap_servers = kafka_config.get("bootstrap.servers", "kafka:9092")
+        self._producer = Producer({"bootstrap.servers": bootstrap_servers})
 
         self._consumer = Consumer(kafka_config)
         self._thread = threading.Thread(
@@ -49,6 +53,7 @@ class CommandConsumer:
     def stop(self):
         self._shutdown.set()
         self._thread.join(timeout=5)
+        self._producer.flush(timeout=5)
 
     # ------------------------------------------------------------------
     # poll loop
@@ -107,11 +112,27 @@ class CommandConsumer:
 
         elif action == "screenshot":
             source_id = self._resolve_source_id(cmd["source_id"])
-            self._screenshot.request_screenshot(source_id, cmd["filename"])
+            if hasattr(self._screenshot, "request_screenshot"):
+                self._screenshot.request_screenshot(source_id, cmd["filename"])
+            else:
+                self._publish_command_error(
+                    action=action,
+                    source_id=cmd["source_id"],
+                    reason="request_screenshot not supported by screenshot handler",
+                )
+                raise RuntimeError("request_screenshot not supported by screenshot handler")
 
         elif action == "switch_preview":
-            self._tiler.set_property("show-source", int(cmd["source_id"]))
-            logger.info("Preview switched to source_id=%s", cmd["source_id"])
+            if hasattr(self._tiler, "set"):
+                self._tiler.set({"show-source": int(cmd["source_id"])})
+                logger.info("Preview switched to source_id=%s", cmd["source_id"])
+            else:
+                self._publish_command_error(
+                    action=action,
+                    source_id=cmd["source_id"],
+                    reason="set not supported by tiler node",
+                )
+                raise RuntimeError("set not supported by tiler node")
 
         else:
             logger.warning("Unknown command action: %s", action)
@@ -120,12 +141,39 @@ class CommandConsumer:
     # helpers
     # ------------------------------------------------------------------
 
-    def _resolve_source_id(self, sensor_id: str) -> int:
-        """Convert sensor_id string (e.g. ``cam_001``) to the integer
-        ``source_id`` assigned by nvmultiurisrcbin.  The mapping is
-        maintained in the ``on_message`` callback in main.py.
+    def _resolve_source_id(self, source_ref) -> int:
+        """Resolve command ``source_id`` from either sensor_id or integer.
+
+        Accepted formats:
+        - sensor_id string: "cam_001"
+        - integer source_id: 3
+        - numeric string source_id: "3"
         """
-        source_id = self._source_map.get(sensor_id)
+        if isinstance(source_ref, int):
+            if source_ref in self._source_map.values():
+                return source_ref
+            raise ValueError(f"Unknown source_id: {source_ref}")
+
+        if isinstance(source_ref, str) and source_ref.isdigit():
+            source_id = int(source_ref)
+            if source_id in self._source_map.values():
+                return source_id
+            raise ValueError(f"Unknown source_id: {source_ref}")
+
+        source_id = self._source_map.get(source_ref)
         if source_id is None:
-            raise ValueError(f"Unknown sensor_id: {sensor_id}")
+            raise ValueError(f"Unknown sensor_id: {source_ref}")
         return source_id
+
+    def _publish_command_error(self, action: str, source_id, reason: str):
+        event = {
+            "event": "command_error",
+            "action": action,
+            "source_id": source_id,
+            "reason": reason,
+        }
+        self._producer.produce(
+            self._event_topic,
+            value=json.dumps(event).encode("utf-8"),
+        )
+        self._producer.poll(0)

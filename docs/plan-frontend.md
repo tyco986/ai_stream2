@@ -26,6 +26,7 @@
 | WebSocket | 原生 WebSocket | 轻量封装，自动重连 |
 | 图表 | ECharts | Dashboard 检测趋势、统计图 |
 | 图标 | @element-plus/icons-vue | Element Plus 配套图标 |
+| 按需引入 | unplugin-vue-components + unplugin-auto-import | Element Plus 组件自动注册，减小打包体积 |
 | CSS 方案 | Element Plus 内置 + CSS 变量 | 主题通过 CSS 变量定制 |
 | 代码规范 | ESLint + Prettier | 统一代码风格 |
 | 容器部署 | Nginx | 静态文件托管 + 反向代理 |
@@ -46,12 +47,15 @@ frontend/
 │   │   ├── detections.ts            # 检测结果查询
 │   │   ├── alerts.ts                # 报警规则 + 报警记录
 │   │   ├── pipelines.ts             # AI 模型 + 管道配置 CRUD + 部署
+│   │   ├── recordings.ts            # 录像列表 + 手动录制控制
+│   │   ├── screenshots.ts           # 截图列表 + 手动截图
 │   │   ├── dashboard.ts             # 仪表盘聚合
-│   │   └── deepstream.ts            # DeepStream 状态（代理）
+│   │   └── deepstream.ts            # DeepStream 代理（状态/预览/录制/截图命令）
 │   ├── composables/                 # 可复用逻辑（Composition API）
 │   │   ├── useAuth.ts               # JWT 认证状态
-│   │   ├── useWebSocket.ts          # WebSocket 连接管理
-│   │   └── usePermission.ts         # 权限判断
+│   │   ├── useWebSocket.ts          # WebSocket 连接管理（生命周期绑定）
+│   │   ├── usePermission.ts         # 权限判断
+│   │   └── useLoading.ts            # 表格/操作 loading 状态管理
 │   ├── components/                  # 公共组件
 │   │   ├── layout/
 │   │   │   ├── AppLayout.vue        # 主布局（侧边栏 + 顶栏 + 内容区）
@@ -59,9 +63,12 @@ frontend/
 │   │   │   └── Navbar.vue
 │   │   ├── common/
 │   │   │   ├── PageHeader.vue       # 页面标题 + 面包屑
-│   │   │   └── StatusTag.vue        # 状态标签（online/offline/error）
+│   │   │   ├── StatusTag.vue        # 状态标签（online/offline/error）
+│   │   │   └── StaleConfigBanner.vue # analytics_config_stale 持久警告条
 │   │   ├── analytics/
 │   │   │   └── ZoneDrawer.vue       # Canvas 绘制组件（ROI 多边形 / 越线线段）
+│   │   ├── preview/
+│   │   │   └── WhepPlayer.vue       # WebRTC WHEP 播放器（对接 MediaMTX）
 │   │   └── charts/
 │   │       ├── DetectionTrend.vue   # 检测趋势折线图
 │   │       └── CameraStatusPie.vue  # 摄像头状态饼图
@@ -72,12 +79,17 @@ frontend/
 │   │   │   └── DashboardView.vue
 │   │   ├── cameras/
 │   │   │   ├── CameraListView.vue
-│   │   │   └── CameraDetailView.vue
+│   │   │   ├── CameraDetailView.vue
+│   │   │   └── CameraPreviewView.vue  # 多画面/单路实时预览
 │   │   ├── pipelines/
 │   │   │   ├── AIModelListView.vue        # AI 模型注册与管理
 │   │   │   └── PipelineProfileView.vue    # 管道配置（模型编排）
 │   │   ├── detections/
 │   │   │   └── DetectionListView.vue
+│   │   ├── recordings/
+│   │   │   └── RecordingListView.vue    # 录像列表 + 回放
+│   │   ├── screenshots/
+│   │   │   └── ScreenshotListView.vue   # 截图列表 + 查看
 │   │   ├── alerts/
 │   │   │   ├── AlertRuleListView.vue
 │   │   │   └── AlertListView.vue
@@ -86,6 +98,7 @@ frontend/
 │   ├── stores/                      # Pinia 状态管理
 │   │   ├── auth.ts                  # 用户 + token
 │   │   ├── camera.ts                # 摄像头列表 + 状态
+│   │   ├── alert.ts                 # 未处理报警计数 + 铃铛角标
 │   │   └── notification.ts          # 实时通知（WebSocket）
 │   ├── router/
 │   │   └── index.ts                 # 路由配置 + 导航守卫
@@ -99,7 +112,9 @@ frontend/
 │   │   ├── detection.ts
 │   │   ├── alert.ts
 │   │   ├── analytics.ts            # AnalyticsZone 类型
-│   │   └── pipeline.ts             # AIModel, PipelineProfile 类型
+│   │   ├── pipeline.ts             # AIModel, PipelineProfile 类型
+│   │   ├── recording.ts            # Recording 类型
+│   │   └── screenshot.ts           # Screenshot 类型
 │   ├── styles/
 │   │   ├── variables.css            # Element Plus CSS 变量覆盖
 │   │   └── global.css               # 全局样式
@@ -128,10 +143,13 @@ frontend/
 ├────────┬─────────────────────────────────────┤
 │        │                                     │
 │ 仪表盘  │          内容区                     │
-│ 摄像头  │                                     │
+│ 摄像头  │  ├ 摄像头列表                        │
+│        │  └ 实时预览                          │
 │ AI管道  │  ├ 模型管理                          │
 │        │  └ 管道配置                          │
 │ 检测记录│                                     │
+│ 录像回放│                                     │
+│ 截图管理│                                     │
 │ 报警规则│                                     │
 │ 报警记录│                                     │
 │ 系统管理│                                     │
@@ -147,13 +165,16 @@ frontend/
 |------|------|------|---------|
 | 登录 | `/login` | 公开 | 用户名 + 密码登录 |
 | 仪表盘 | `/dashboard` | viewer+ | 在线摄像头数、今日检测数、未处理报警数、检测趋势图 |
-| 摄像头列表 | `/cameras` | viewer+ | 表格/卡片视图、状态筛选、启停流操作 |
-| 摄像头详情 | `/cameras/:id` | viewer+ | 基本信息、当前状态、**关联管道配置**、**分析区域绘制（ROI/越线/拥挤/方向）**、最近检测记录 |
+| 摄像头列表 | `/cameras` | viewer+ | 表格/卡片视图、状态筛选、启停流操作、**analytics_config_stale 警告条** |
+| 摄像头详情 | `/cameras/:id` | viewer+ | **实时预览**、基本信息、当前状态、**关联管道配置**、**分析区域绘制（ROI/越线/拥挤/方向）**、最近检测记录 |
+| **实时预览** | `/cameras/preview` | viewer+ | 多画面总览（4×4 tiler）、点击单路放大（show-source 切换）、WebRTC WHEP 播放 |
 | **AI 模型管理** | `/pipelines/models` | operator+ | 模型注册/编辑/删除，按类型筛选 |
 | **管道配置** | `/pipelines/profiles` | operator+ | 管道配置 CRUD，模型编排，一键部署到 DeepStream |
 | 检测记录 | `/detections` | viewer+ | 时间范围筛选、摄像头筛选、分页列表（含分析结果） |
+| **录像回放** | `/recordings` | viewer+ | 录像列表（滚动/事件/手动）、按摄像头/时间/类型筛选、在线回放、下载 |
+| **截图管理** | `/screenshots` | viewer+ | 截图列表、按摄像头/时间筛选、图片预览、下载 |
 | 报警规则 | `/alert-rules` | operator+ | 规则 CRUD（**含分析规则**）、启用/禁用 |
-| 报警记录 | `/alerts` | viewer+ | 报警列表、确认/解决操作、状态筛选 |
+| 报警记录 | `/alerts` | viewer+ | 报警列表、确认/解决操作、状态筛选、**关联事件录像** |
 | 用户管理 | `/system/users` | admin | 用户列表、角色分配 |
 
 ### 4.3 AI 模型管理页面
@@ -189,14 +210,16 @@ frontend/
 ┌─────────────────────────────────────────────────────────────┐
 │ 管道配置              [+ 新建管道]                           │
 ├─────────────────────────────────────────────────────────────┤
-│ 名称             │ 检测器    │ 跟踪器     │ 分类器  │ 动作  │
-│─────────────────│──────────│───────────│────────│─────  │
-│ 交通监控-标准    │ yolov8n  │ NvDCF_perf│ 车辆分类│  -    │
-│ 安防监控-高级    │ yolov8n  │ NvDCF_acc │ 人体属性│ SlowFast│
+│ 名称             │ 检测器    │ 跟踪器     │ 视频分析 │ 操作  │
+│─────────────────│──────────│───────────│─────────│─────  │
+│ 交通监控-标准    │ yolov8n  │ NvDCF_perf│ ✅ 启用  │ 编辑|部署│
+│ 安防监控-高级    │ yolov8n  │ NvDCF_acc │ ✅ 启用  │ 编辑|部署│
 ├─────────────────────────────────────────────────────────────┤
 │ [部署到 DeepStream]  ← 选中配置后点击部署                     │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+> **扩展预留**：后续版本在表格中增加"分类器"和"动作识别"列。
 
 **新建/编辑管道配置弹窗**：
 
@@ -223,12 +246,22 @@ frontend/
 
 ### 4.5 摄像头详情页增强
 
-在摄像头详情页增加"管道配置"和"分析区域"卡片：
+在摄像头详情页增加"实时预览"、"管道配置"和"分析区域"卡片：
 
 ```
 ┌──────────────────────────────────────────────────────┐
+│ ⚠ 摄像头集合已变更，分析区域配置可能不准确，请重新部署管道  │  ← analytics_config_stale 警告条
+│                                       [重新部署]      │     （仅 analytics_config_stale=true 时显示）
+├──────────────────────────────────────────────────────┤
 │ 📷 Front Door Camera                                 │
 │ 状态: 🟢 在线   RTSP: rtsp://...                     │
+├──────────────────────────────────────────────────────┤
+│ 实时预览                                              │
+│ ┌──────────────────────────────────────────┐         │
+│ │  WhepPlayer (WebRTC)                      │         │
+│ │  对接 MediaMTX WHEP 端点                   │         │
+│ │  摄像头在线时自动播放，离线时显示占位图       │         │
+│ └──────────────────────────────────────────┘         │
 ├──────────────────────────────────────────────────────┤
 │ 管道配置                                              │
 │ 当前管道: 安防监控-标准                                 │
@@ -243,6 +276,10 @@ frontend/
 │ │  └──────┘                        │  大厅    │ 拥挤  │
 │ │  (1920×1080 坐标系)              │  [部署生效] │
 │ └─────────────────────────────────┘                  │
+├──────────────────────────────────────────────────────┤
+│ 录制与截图                                             │
+│ [📹 开始录制] [📹 停止录制]  [📸 截图]                  │
+│ 录制状态: ⏺ 录制中 (00:03:45)   ← 仅录制中显示          │
 ├──────────────────────────────────────────────────────┤
 │ 最近检测记录                                           │
 │ ┌───────────────────────────────────────────┐        │
@@ -299,6 +336,91 @@ interface ZoneDrawerProps {
 > **扩展预留**：后续版本新增 `classifier_match`（SGIE 分类匹配）和
 > `action_detected`（动作标签 + 置信度阈值）规则类型。
 
+### 4.8 实时预览页面（WebRTC WHEP）
+
+**架构**：DeepStream → RTSP :8554 → MediaMTX → WebRTC WHEP :8889 → 前端 `<video>` 标签。
+前端**不直连** DeepStream，连的是 MediaMTX 的 WHEP 端点。预览 URL 从后端 API 获取。
+
+**多画面总览页**（`/cameras/preview`）：
+
+```
+┌──────────────────────────────────────────────────────┐
+│ 实时预览                              [返回列表]      │
+├──────────────────────────────────────────────────────┤
+│ ┌────────────┬────────────┬────────────┬───────────┐ │
+│ │ cam_001    │ cam_002    │ cam_003    │ cam_004   │ │
+│ │ (WhepPlayer)│           │            │           │ │
+│ ├────────────┼────────────┼────────────┼───────────┤ │
+│ │ cam_005    │ cam_006    │ ...        │           │ │
+│ │            │            │            │           │ │
+│ └────────────┴────────────┴────────────┴───────────┘ │
+│ 点击任一画面 → 发送 switch_preview 命令切换单路全分辨率  │
+│ 点击「返回总览」→ switch_preview(source_id=-1) 恢复拼接 │
+└──────────────────────────────────────────────────────┘
+```
+
+> **初版 SLA**：消费级 GPU 下只支持 tiler 模式（单 RTSP 输出端点），
+> 多画面/单路切换通过 tiler 的 `show-source` 属性实现，前端只对接一个 WHEP 端点。
+> 预览 URL 通过 `GET /api/v1/cameras/preview-url/` 从后端获取，不硬编码 MediaMTX 地址。
+
+**WhepPlayer 组件 Props**：
+
+```typescript
+interface WhepPlayerProps {
+  url: string                     // WHEP 端点（如 http://mediamtx:8889/preview/whep）
+  autoplay?: boolean              // 默认 true
+  muted?: boolean                 // 默认 true（浏览器要求自动播放必须静音）
+}
+```
+
+**WhepPlayer 核心逻辑**：
+
+```typescript
+async function startWhep(url: string, videoEl: HTMLVideoElement) {
+  const pc = new RTCPeerConnection()
+  pc.ontrack = (event) => {
+    videoEl.srcObject = event.streams[0]
+  }
+  pc.addTransceiver('video', { direction: 'recvonly' })
+
+  const offer = await pc.createOffer()
+  await pc.setLocalDescription(offer)
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/sdp' },
+    body: offer.sdp,
+  })
+  await pc.setRemoteDescription({
+    type: 'answer',
+    sdp: await res.text(),
+  })
+  return pc
+}
+```
+
+> **生命周期管理**：`onUnmounted` 时必须 `pc.close()` 释放 WebRTC 连接，
+> 否则 MediaMTX 认为客户端仍在观看，`sourceOnDemand` 不生效。
+
+### 4.9 analytics_config_stale 警告条
+
+**触发条件**：后端 `PipelineProfile.analytics_config_stale = true`（摄像头集合变更后自动标记）。
+
+**展示位置**：摄像头列表页顶部 + 摄像头详情页顶部。
+
+**UI 设计**：
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ ⚠ 摄像头集合已变更，分析区域配置可能不准确，请重新部署管道配置    │
+│                                              [重新部署]       │
+└──────────────────────────────────────────────────────────────┘
+```
+
+- 使用 `ElAlert` 组件，`type="warning"`，`closable=false`（持久显示，不可关闭）
+- "重新部署"按钮触发 `POST /api/v1/pipeline-profiles/{id}/deploy/`，含二次确认
+- 部署成功后 `analytics_config_stale` 标记清除，警告条消失
+
 ---
 
 ## 5. API 对接层
@@ -307,6 +429,7 @@ interface ZoneDrawerProps {
 
 ```typescript
 import axios from 'axios'
+import type { AxiosRequestConfig } from 'axios'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
 
@@ -324,18 +447,58 @@ request.interceptors.request.use((config) => {
   return config
 })
 
-// 响应拦截：统一错误处理 + 自动 refresh
+// ---- 并发 refresh 保护 ----
+// 多个请求同时 401 时，只发一次 refresh，其他请求排队等待结果后重试。
+// 后端开启了 BLACKLIST_AFTER_ROTATION，重复 refresh 会使旧 token 失效导致登出。
+let isRefreshing = false
+let pendingQueue: Array<{
+  resolve: (config: AxiosRequestConfig) => void
+  reject: (error: any) => void
+}> = []
+
+function onRefreshed() {
+  pendingQueue.forEach(({ resolve }) => resolve({} as AxiosRequestConfig))
+  pendingQueue = []
+}
+
+function onRefreshFailed(error: any) {
+  pendingQueue.forEach(({ reject }) => reject(error))
+  pendingQueue = []
+}
+
+// 响应拦截：统一错误处理 + 自动 refresh（含并发保护）
 request.interceptors.response.use(
   (response) => response.data,
   async (error) => {
-    if (error.response?.status === 401) {
-      const auth = useAuthStore()
-      const refreshed = await auth.refreshToken()
-      if (refreshed) {
-        return request(error.config)  // 用新 token 重试原请求
+    const originalConfig = error.config
+    if (error.response?.status === 401 && !originalConfig._retry) {
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          pendingQueue.push({ resolve, reject })
+        }).then(() => {
+          return request(originalConfig)
+        })
       }
-      auth.logout()
-      return Promise.reject(error)
+
+      originalConfig._retry = true
+      isRefreshing = true
+      const auth = useAuthStore()
+      try {
+        const refreshed = await auth.refreshToken()
+        if (refreshed) {
+          onRefreshed()
+          return request(originalConfig)
+        }
+        onRefreshFailed(error)
+        auth.logout()
+        return Promise.reject(error)
+      } catch (refreshError) {
+        onRefreshFailed(refreshError)
+        auth.logout()
+        return Promise.reject(refreshError)
+      } finally {
+        isRefreshing = false
+      }
     }
     const message = error.response?.data?.message || '请求失败'
     ElMessage.error(message)
@@ -482,11 +645,32 @@ export const cameraPipelineApi = {
 }
 ```
 
+### DeepStream 代理 API 模块
+
+```typescript
+// src/api/deepstream.ts
+import request from '@/utils/request'
+import type { ApiResponse } from '@/types/api'
+
+export const deepstreamApi = {
+  previewUrl: () =>
+    request.get<any, ApiResponse<{ url: string }>>('/deepstream/preview-url/'),
+
+  switchPreview: (sourceId: number) =>
+    request.post<any, ApiResponse<null>>('/deepstream/switch-preview/', { source_id: sourceId }),
+
+  status: () =>
+    request.get<any, ApiResponse<{ running: boolean; uptime: number }>>('/deepstream/status/'),
+}
+```
+
 ### Pipeline TypeScript 类型
 
 ```typescript
 // src/types/pipeline.ts
-export type ModelType = 'detector' | 'classifier' | 'tracker' | 'action'
+
+// 初版只支持 detector 和 tracker，扩展预留 classifier / action
+export type ModelType = 'detector' | 'tracker'
 
 export interface AIModel {
   id: string
@@ -520,8 +704,8 @@ export interface PipelineProfile {
   description: string
   detector: AIModel
   tracker: AIModel | null
-  classifiers: AIModel[]
-  action_model: AIModel | null
+  analytics_enabled: boolean        // 是否启用 nvdsanalytics 视频分析
+  analytics_config_stale: boolean   // 摄像头集合变更后标记为 true，需重部署
   is_active: boolean
   created_at: string
   updated_at: string
@@ -532,10 +716,13 @@ export interface PipelineProfileCreate {
   description?: string
   detector_id: string
   tracker_id?: string
-  classifier_ids?: string[]
-  action_model_id?: string
+  analytics_enabled?: boolean
 }
 ```
+
+> **扩展预留**：后续版本 `ModelType` 增加 `'classifier' | 'action'`，
+> `PipelineProfile` 增加 `classifiers: AIModel[]` 和 `action_model: AIModel | null`，
+> `PipelineProfileCreate` 增加 `classifier_ids?: string[]` 和 `action_model_id?: string`。
 
 ### TypeScript 类型定义
 
@@ -563,6 +750,7 @@ export interface Camera {
   organization: string
   group: string | null
   status: 'offline' | 'connecting' | 'online' | 'error'
+  pipeline_profile: string | null   // 关联的 PipelineProfile ID
   config: Record<string, any>
   created_at: string
   updated_at: string
@@ -587,46 +775,79 @@ import { useAuthStore } from '@/stores/auth'
 
 export class ReconnectingWebSocket {
   private ws: WebSocket | null = null
-  private url: string
-  private reconnectInterval = 3000
+  private path: string
+  private baseReconnectInterval = 1000
+  private maxReconnectInterval = 30000
   private maxReconnectAttempts = 10
   private attempts = 0
-  private handlers: Map<string, ((data: any) => void)[]> = new Map()
+  private handlers: Map<string, Set<(data: any) => void>> = new Map()
+  private closed = false               // 主动 close 后不再重连
 
   constructor(path: string) {
-    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const auth = useAuthStore()
-    this.url = `${protocol}//${location.host}/ws/${path}?token=${auth.accessToken}`
+    this.path = path
   }
 
   connect() {
-    this.ws = new WebSocket(this.url)
+    if (this.closed) return
+
+    // 每次连接时动态获取最新 token，避免 refresh 后重连用旧 token
+    const auth = useAuthStore()
+    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const url = `${protocol}//${location.host}/ws/${this.path}?token=${auth.accessToken}`
+
+    this.ws = new WebSocket(url)
+
+    this.ws.onopen = () => {
+      this.attempts = 0                 // 连接成功重置计数
+    }
 
     this.ws.onmessage = (event) => {
       const message = JSON.parse(event.data)
-      const callbacks = this.handlers.get(message.type) || []
-      callbacks.forEach(cb => cb(message.data))
+      const callbacks = this.handlers.get(message.type)
+      if (callbacks) {
+        callbacks.forEach(cb => cb(message.data))
+      }
     }
 
     this.ws.onclose = () => {
+      if (this.closed) return
       if (this.attempts < this.maxReconnectAttempts) {
+        const delay = Math.min(
+          this.baseReconnectInterval * Math.pow(2, this.attempts),
+          this.maxReconnectInterval,
+        )
         this.attempts++
-        setTimeout(() => this.connect(), this.reconnectInterval)
+        setTimeout(() => this.connect(), delay)
       }
     }
   }
 
   on(type: string, callback: (data: any) => void) {
-    const list = this.handlers.get(type) || []
-    list.push(callback)
-    this.handlers.set(type, list)
+    const set = this.handlers.get(type) || new Set()
+    set.add(callback)
+    this.handlers.set(type, set)
+  }
+
+  off(type: string, callback: (data: any) => void) {
+    const set = this.handlers.get(type)
+    if (set) {
+      set.delete(callback)
+      if (set.size === 0) this.handlers.delete(type)
+    }
   }
 
   close() {
+    this.closed = true
+    this.handlers.clear()
     this.ws?.close()
   }
 }
 ```
+
+> **`composables/useWebSocket.ts` 与 `utils/websocket.ts` 的分工**：
+> `utils/websocket.ts` 是底层封装（上方代码），只管连接、重连、消息分发。
+> `composables/useWebSocket.ts` 是 Vue 生命周期集成层，在 `onMounted` 中 `connect()`，
+> `onUnmounted` 中 `close()`，确保组件卸载后自动断开且不泄漏 handler。
 
 ### 使用场景
 
@@ -667,8 +888,18 @@ const routes: RouteRecordRaw[] = [
         meta: { roles: ['admin', 'operator', 'viewer'] },
       },
       {
+        path: 'cameras/preview',
+        component: () => import('@/views/cameras/CameraPreviewView.vue'),
+        meta: { roles: ['admin', 'operator', 'viewer'] },
+      },
+      {
         path: 'cameras/:id',
         component: () => import('@/views/cameras/CameraDetailView.vue'),
+        meta: { roles: ['admin', 'operator', 'viewer'] },
+      },
+      {
+        path: 'detections',
+        component: () => import('@/views/detections/DetectionListView.vue'),
         meta: { roles: ['admin', 'operator', 'viewer'] },
       },
       {
@@ -733,6 +964,11 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isLoggedIn = computed(() => !!accessToken.value)
 
+  async function fetchUser() {
+    const res = await authApi.me()
+    user.value = res.data
+  }
+
   async function login(username: string, password: string) {
     const res = await authApi.login({ username, password })
     accessToken.value = res.data.access
@@ -759,9 +995,31 @@ export const useAuthStore = defineStore('auth', () => {
     router.push('/login')
   }
 
-  return { accessToken, user, isLoggedIn, login, refreshToken, logout }
+  return { accessToken, user, isLoggedIn, login, fetchUser, refreshToken, logout }
 })
 ```
+
+### alert store
+
+```typescript
+export const useAlertStore = defineStore('alert', () => {
+  const unacknowledgedCount = ref(0)
+
+  function increment() {
+    unacknowledgedCount.value++
+  }
+
+  function setCount(count: number) {
+    unacknowledgedCount.value = count
+  }
+
+  return { unacknowledgedCount, increment, setCount }
+})
+```
+
+> `unacknowledgedCount` 用于顶栏铃铛角标显示。
+> WebSocket `/ws/alerts/` 收到 `alert.triggered` 时调用 `increment()`，
+> 用户进入报警列表页时通过 API 查询真实数量后调用 `setCount()` 校准。
 
 ---
 
@@ -844,7 +1102,7 @@ server {
     location /ws/ {
         proxy_pass http://backend:8000;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade $websocket_upgrade;
+        proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -960,10 +1218,16 @@ WebSocket /ws/alerts/ 收到 alert.triggered
 
 ```
 任意 API 请求返回 401
-  → Axios 拦截器自动 POST /api/v1/auth/refresh/
-  → 成功：存新 token，用新 token 重试原请求（用户无感知）
-  → 失败：清除 token，跳转登录页
+  → Axios 拦截器检测 isRefreshing 标志
+    → 已有 refresh 在飞：当前请求进入 pendingQueue 等待
+    → 无 refresh 在飞：发起 POST /api/v1/auth/refresh/
+  → refresh 成功：存新 token，pendingQueue 中所有请求用新 token 重试（用户无感知）
+  → refresh 失败：清除 token，pendingQueue 全部 reject，跳转登录页
 ```
+
+> **为什么需要并发保护**：后端开启了 `BLACKLIST_AFTER_ROTATION`，
+> 第二个并发 refresh 请求使用的旧 refresh token 已被拉黑，导致所有请求失败 → 登出。
+> `isRefreshing` + Promise 队列确保只发一次 refresh。
 
 ### 12.5 分析区域配置
 
@@ -1001,26 +1265,52 @@ WebSocket /ws/alerts/ 收到 alert.triggered
   → 失败：ElMessage.error("部署失败: ...") + 按钮恢复
 ```
 
+### 12.7 实时预览
+
+```
+用户进入「实时预览」页面 (/cameras/preview)
+  → GET /api/v1/cameras/preview-url/ 获取 WHEP 端点 URL
+  → WhepPlayer 组件发起 WebRTC WHEP 协商
+  → 默认显示 4×4 多画面总览（tiler show-source=-1）
+
+用户点击某路画面 → 切换单路全分辨率
+  → POST /api/v1/deepstream/switch-preview/ { source_id: N }
+    → 后端发送 Kafka 命令 { action: "switch_preview", source_id: N }
+  → tiler 切换到该路全分辨率，WhepPlayer 画面自动更新
+
+用户点击「返回总览」
+  → POST /api/v1/deepstream/switch-preview/ { source_id: -1 }
+  → 恢复 4×4 拼接画面
+```
+
+> 预览切换延迟约 ~200ms（Kafka 传输 + tiler 切换），低于人眼反应时间，体感无延迟。
+
 ---
 
 ## 13. 踩坑预防清单
 
 | # | 坑 | 现象 | 解决 |
 |---|-----|------|------|
-| 1 | WebSocket 断线不重连 | 切换网络后实时数据停止 | `ReconnectingWebSocket` 自动重连 + 指数退避 |
+| 1 | WebSocket 断线不重连 | 切换网络后实时数据停止 | `ReconnectingWebSocket` 自动重连 + 指数退避（1s → 2s → 4s → ...，上限 30s） |
 | 2 | JWT 过期导致白屏 | 用户操作中突然跳登录页 | Axios 拦截 401 自动 refresh，无感续期 |
 | 3 | 大列表渲染卡顿 | 检测记录几千条时页面卡 | 后端分页 + 前端不缓存全量数据 |
 | 4 | WebSocket 推送风暴 | 检测结果高频刷新导致 UI 卡顿 | 后端已做聚合推送，前端用 `requestAnimationFrame` 节流渲染 |
 | 5 | Nginx SPA 路由 404 | 刷新页面 404 | `try_files $uri $uri/ /index.html` |
 | 6 | 开发环境跨域 | API 请求被浏览器拦截 | Vite `proxy` 配置代理 |
-| 7 | Element Plus 按需引入 | 打包体积过大 | `unplugin-vue-components` + `unplugin-auto-import` |
+| 7 | Element Plus 按需引入 | 打包体积过大 | `unplugin-vue-components` + `unplugin-auto-import`（已在技术栈列入） |
 | 8 | 多租户数据串扰 | 前端缓存了 A 组织数据，切换到 B | 切换用户时清空所有 Pinia store |
 | 9 | ECharts 容器 resize | 窗口缩放后图表不自适应 | `ResizeObserver` 监听容器变化调用 `chart.resize()` |
 | 10 | TypeScript 类型与后端不一致 | API 返回字段改了前端没同步 | 类型定义集中在 `types/` 目录，API 变更时同步更新 |
 | 11 | 管道部署未确认就执行 | 用户误点导致所有视频流中断 | `ElMessageBox.confirm` 二次确认 + 明确提示"将重启 DeepStream" |
 | 12 | 模型配置表单不随类型切换 | 用户切换 model_type 后表单字段没变 | `watch(modelType)` 动态切换表单 schema，清空旧值 |
 | 13 | Canvas 坐标超出范围 | 用户拖拽到 Canvas 外导致坐标为负或超 1920×1080 | `clamp` 坐标到有效范围，绘制时限制在 Canvas 边界内 |
+| 14 | 并发 401 触发多次 refresh | 后端开启 `BLACKLIST_AFTER_ROTATION`，第二次 refresh 用旧 token 被拒 → 全量登出 | `isRefreshing` 标志 + Promise 队列，确保只发一次 refresh，其他请求排队等待后重试 |
 | 15 | Canvas 坐标系不匹配 | 绘制的 ROI 在 DeepStream 中位置偏移 | Canvas 显示宽度与 1920×1080 配置坐标系做等比映射 |
 | 16 | 分析区域修改后忘记重部署 | 修改了 ROI 但 DeepStream 仍用旧配置 | 区域变更后显示持久提示条，强调"需重新部署" |
 | 17 | 报警规则选择不存在的区域名 | 规则永远不触发 | 区域名称从摄像头的 AnalyticsZone 动态加载，不允许手动输入 |
 | 18 | ZoneDrawer 未销毁 Canvas 事件 | 切换页面后内存泄漏 | `onUnmounted` 中移除所有 Canvas 事件监听 |
+| 19 | WebSocket 重连用旧 token | JWT refresh 后 WebSocket 重连仍带旧 token → 4001 关闭 → 永不恢复 | `connect()` 中每次动态获取最新 `accessToken`，不在构造函数缓存 URL |
+| 20 | analytics_config_stale 未展示 | 摄像头增删后分析区域作用于错误摄像头，用户不知道需要重部署 | 摄像头列表/详情页检测 `analytics_config_stale=true` 时显示 `ElAlert` 持久警告条 |
+| 21 | WebRTC ICE 协商失败 | 内网/NAT 环境下预览无画面 | MediaMTX 配置 STUN/TURN 服务器，或确保前端与 MediaMTX 在同一网络 |
+| 22 | WhepPlayer 未释放 PeerConnection | 切换页面后 MediaMTX 仍认为有人观看，`sourceOnDemand` 不生效 | `onUnmounted` 中 `pc.close()` 释放 WebRTC 连接 |
+| 23 | 首次加载无 loading 指示 | 页面白屏数秒，用户以为卡死 | 表格/卡片列表统一使用 `v-loading` 指令 + 骨架屏占位 |

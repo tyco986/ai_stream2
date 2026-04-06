@@ -1,12 +1,12 @@
 property:
   gpu-id: 0
   net-scale-factor: 0.00392156862745098
-  onnx-file: /opt/models/yolov8n.onnx
-  model-engine-file: /opt/models/yolov8n.onnx_b16_gpu0_fp16.engine
-  labelfile-path: /opt/models/labels.txt
-  batch-size: 16
+  onnx-file: /opt/nvidia/deepstream/deepstream/samples/models/Primary_Detector/resnet18_trafficcamnet_pruned.onnx
+  model-engine-file: /app/config/resnet18_trafficcamnet_pruned_b1_gpu0_fp16.engine
+  labelfile-path: /opt/nvidia/deepstream/deepstream/samples/models/Primary_Detector/labels.txt
+  batch-size: 1
   network-mode: 1
-  num-detected-classes: 80
+  num-detected-classes: 4
   process-mode: 1
   interval: 0
   cluster-mode: 2

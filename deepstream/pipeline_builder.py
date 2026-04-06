@@ -2,7 +2,7 @@ import os
 import logging
 
 from pyservicemaker import (
-    Pipeline, Probe, Receiver, SmartRecordConfig,
+    Pipeline, Probe, Receiver, RecordConfig,
 )
 
 from analytics_probe import AnalyticsMetadataProbe
@@ -56,6 +56,7 @@ class PipelineBuilder:
         self._tiler_cols = int(os.environ.get("DS_PREVIEW_TILER_COLS", "4"))
         self._empty_frame_filter = int(os.environ.get("DS_EMPTY_FRAME_FILTER", "1"))
         self._udpsink_port = 5400
+        self._light_pipeline = os.environ.get("DS_LIGHT_PIPELINE", "1") == "1"
 
     # ------------------------------------------------------------------
     # public
@@ -86,11 +87,11 @@ class PipelineBuilder:
     def _add_source(self, pipeline: Pipeline, comp: PipelineComponents):
         kafka_conn = self._kafka_broker.replace(":", ";")
 
-        sr_config = SmartRecordConfig(
-            smart_rec_cache=self._recording_cache_sec,
-            smart_rec_container=0,
-            smart_rec_dir_path=self._rolling_dir,
-            smart_rec_mode=1,
+        sr_config = RecordConfig(
+            rec_cache=self._recording_cache_sec,
+            rec_container=0,
+            rec_dir_path=self._rolling_dir,
+            rec_mode=1,
             proto_lib="/opt/nvidia/deepstream/deepstream/lib/libnvds_kafka_proto.so",
             conn_str=kafka_conn,
             msgconv_config_file="/app/config/msgconv_config.txt",
@@ -110,18 +111,11 @@ class PipelineBuilder:
             "async-handling": 1,
             "select-rtp-protocol": 0,
             "latency": 100,
-            "smart-rec-cache": sr_config.smart_rec_cache,
-            "smart-rec-container": sr_config.smart_rec_container,
-            "smart-rec-dir-path": sr_config.smart_rec_dir_path,
-            "smart-rec-mode": sr_config.smart_rec_mode,
-            # SmartRecord native Kafka notification: sr-done events are
-            # published to deepstream-events topic automatically via
-            # libnvds_kafka_proto.so — no Python-side Kafka Producer needed.
-            "smart-rec-proto-lib": sr_config.proto_lib,
-            "smart-rec-conn-str": sr_config.conn_str,
-            "smart-rec-msgconv-config-file": sr_config.msgconv_config_file,
-            "smart-rec-proto-config-file": sr_config.proto_config_file,
-            "smart-rec-topic-list": sr_config.topic_list,
+            "file-loop": 1,
+            "smart-rec-cache": sr_config.rec_cache,
+            "smart-rec-container": sr_config.rec_container,
+            "smart-rec-dir-path": sr_config.rec_dir_path,
+            "smart-rec-mode": sr_config.rec_mode,
         }
 
         pipeline.add("nvmultiurisrcbin", "src", source_props)
@@ -132,6 +126,9 @@ class PipelineBuilder:
     # ------------------------------------------------------------------
 
     def _add_inference(self, pipeline: Pipeline):
+        if self._light_pipeline:
+            pipeline.add("identity", "pgie")
+            return
         pipeline.add("nvinfer", "pgie", {
             "config-file-path": self._pgie_config,
             "batch-size": self._max_batch,
@@ -142,6 +139,9 @@ class PipelineBuilder:
     # ------------------------------------------------------------------
 
     def _add_tracker(self, pipeline: Pipeline):
+        if self._light_pipeline:
+            pipeline.add("identity", "tracker")
+            return
         pipeline.add("nvtracker", "tracker", {
             "ll-lib-file": "/opt/nvidia/deepstream/deepstream/lib/libnvds_nvmultiobjecttracker.so",
             "ll-config-file": self._tracker_ll_config,
@@ -177,6 +177,13 @@ class PipelineBuilder:
     # ------------------------------------------------------------------
 
     def _add_kafka_branch(self, pipeline: Pipeline, analytics_enabled: bool):
+        if self._light_pipeline:
+            pipeline.add("queue", "queue_meta")
+            pipeline.add("fakesink", "msgbroker", {"sync": 0, "async": 0})
+            pipeline.link(("tee", "queue_meta"), ("src_%u", ""))
+            pipeline.link("queue_meta", "msgbroker")
+            return
+
         pipeline.add("queue", "queue_meta")
 
         kafka_conn = self._kafka_broker.replace(":", ";")
@@ -250,9 +257,7 @@ class PipelineBuilder:
 
         pipeline.add("nvv4l2h264enc", "encoder", {
             "bitrate": self._preview_bitrate,
-            "preset-level": 1,
             "iframeinterval": 30,
-            "maxperf-enable": 1,
         })
 
         pipeline.add("rtph264pay", "rtppay", {"pt": 96})

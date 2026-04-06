@@ -1,0 +1,8 @@
+{
+  "key": "sensor",
+  "value": {
+    "camera_id": "cam_test_48589316",
+    "camera_url": "rtsp://127.0.0.1:8554/video1",
+    "change": "camera_remove"
+  }
+}

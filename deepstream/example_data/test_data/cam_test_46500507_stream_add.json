@@ -1,0 +1,9 @@
+{
+  "key": "sensor",
+  "value": {
+    "camera_id": "cam_test_46500507",
+    "camera_name": "API Test Camera",
+    "camera_url": "rtsp://127.0.0.1:8554/video1",
+    "change": "camera_add"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "key": "sensor",
+  "value": {
+    "camera_id": "cam_test_48810535",
+    "camera_name": "API Test Camera",
+    "camera_url": "file:///app/example_data/video1_bf0.mp4",
+    "change": "camera_add"
+  }
+}

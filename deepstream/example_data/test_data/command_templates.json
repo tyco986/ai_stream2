@@ -1,0 +1,39 @@
+{
+  "start_rolling": {
+    "action": "start_rolling",
+    "source_id": "cam_test_template"
+  },
+  "stop_rolling": {
+    "action": "stop_rolling",
+    "source_id": "cam_test_template"
+  },
+  "start_recording_event": {
+    "action": "start_recording",
+    "source_id": "cam_test_template",
+    "duration": 20,
+    "type": "event"
+  },
+  "start_recording_manual": {
+    "action": "start_recording",
+    "source_id": "cam_test_template",
+    "duration": 0,
+    "type": "manual"
+  },
+  "stop_recording": {
+    "action": "stop_recording",
+    "source_id": "cam_test_template"
+  },
+  "screenshot": {
+    "action": "screenshot",
+    "source_id": "cam_test_template",
+    "filename": "cam_test_template.jpg"
+  },
+  "switch_preview_single": {
+    "action": "switch_preview",
+    "source_id": 0
+  },
+  "switch_preview_multi": {
+    "action": "switch_preview",
+    "source_id": -1
+  }
+}

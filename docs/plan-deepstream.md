@@ -1981,3 +1981,177 @@ deepstream-gpu1:
 | RTX 3090 | 24GB | 16-24 | FP16 |
 | A100 | 40/80GB | 32-64 | FP16 |
 | Jetson Orin | 8-64GB | 4-16 | FP16 |
+
+---
+
+## 14. API 测试脚本与 video2rtsp 工具
+
+### 14.1 目标与范围
+
+为 DeepStream 提供一组可独立运行的黑盒测试脚本，覆盖：
+
+- 内置 REST API（`:9000`）
+- 命令通道 API（Kafka topic: `deepstream-commands`）
+- 全量测试入口脚本（一次性执行全部测试并汇总结果）
+
+测试脚本统一使用 `requests + argparse`，不强依赖 pytest。
+
+### 14.2 测试脚本目录与命名约定
+
+测试脚本放在 `deepstream/test/`，文件命名统一为 `test_{api名称}.py`。
+
+建议文件清单：
+
+- `test_health_get_dsready_state.py`
+- `test_stream_add.py`
+- `test_stream_remove.py`
+- `test_stream_get_stream_info.py`
+- `test_command_start_rolling.py`
+- `test_command_stop_rolling.py`
+- `test_command_start_recording_event.py`
+- `test_command_start_recording_manual.py`
+- `test_command_stop_recording.py`
+- `test_command_screenshot.py`
+- `test_command_switch_preview.py`
+- `test_all.py`
+
+### 14.3 REST API 测试范围
+
+覆盖以下 4 个端点：
+
+- `GET /api/v1/health/get-dsready-state`
+- `POST /api/v1/stream/add`
+- `POST /api/v1/stream/remove`
+- `GET /api/v1/stream/get-stream-info`
+
+最小断言要求：
+
+- `health`：服务可达且返回 ready 状态字段
+- `stream/add`：添加后 `get-stream-info` 可见该流
+- `stream/remove`：移除后 `get-stream-info` 不再包含该流
+- `get-stream-info`：返回结构稳定、可解析
+
+### 14.4 命令通道 API 测试范围
+
+命令消息主题：`deepstream-commands`（JSON UTF-8）。
+
+覆盖动作：
+
+- `start_rolling`
+- `stop_rolling`
+- `start_recording`（`type=event`）
+- `start_recording`（`type=manual`）
+- `stop_recording`
+- `screenshot`
+- `switch_preview`
+
+命令消息格式参考：
+
+```json
+{"action": "start_recording", "source_id": "cam_001", "duration": 20, "type": "event"}
+{"action": "start_recording", "source_id": "cam_001", "duration": 0, "type": "manual"}
+{"action": "stop_recording", "source_id": "cam_001"}
+{"action": "screenshot", "source_id": "cam_001", "filename": "cam001_snap.jpg"}
+{"action": "start_rolling", "source_id": "cam_001"}
+{"action": "stop_rolling", "source_id": "cam_001"}
+{"action": "switch_preview", "source_id": -1}
+```
+
+说明：
+
+- 除 `switch_preview` 外，`source_id` 使用 `camera_id/sensor_id` 字符串（如 `cam_001`）
+- `switch_preview` 使用整数 `source_id`（`-1` 表示多画面）
+- 测试前需确保目标流已成功 `add`，并建立 `sensor_id -> source_id` 映射
+
+### 14.5 test_all.py 运行策略
+
+`test_all.py` 负责全量执行所有 `test_*.py` 脚本并汇总结果：
+
+- 默认策略：**continue_all**（单个失败不阻断后续脚本）
+- 编排策略：先一次性准备持久测试源（固定 `camera_id`），命令测试阶段复用该源，避免每个脚本重复 add/remove 导致动态源抖动
+- 执行顺序：`stream/remove` 放在最后，防止在命令测试前移除唯一输入源
+- 参数下发：仅命令测试脚本接收 Kafka 参数（`--kafka-broker`、`--command-topic`），REST 脚本只接收 REST 相关参数
+- 最终输出：通过数、失败数、失败脚本列表、总耗时
+- 退出码：有失败则返回非 0，全部通过返回 0
+
+### 14.6 参数约定（argparse）
+
+建议所有测试脚本支持统一参数：
+
+- `--base-url`（默认 `http://127.0.0.1:9000`）
+- `--kafka-broker`（默认 `127.0.0.1:9092`）
+- `--command-topic`（默认 `deepstream-commands`）
+- `--camera-id`（默认自动生成，避免冲突）
+- `--camera-url`（测试流 URL）
+- `--timeout`（HTTP/Kafka 等待超时）
+- `--verbose`（输出调试日志）
+
+命令测试脚本额外支持：
+
+- `--no-prepare`：跳过该脚本内的 `prepare_camera`，用于在 `test_all.py` 中复用已准备好的持久源
+
+补充说明：
+
+- 命令通道中，`start/stop rolling`、`start/stop recording`、`screenshot` 的 `source_id` 字段传 `sensor_id(camera_id)` 字符串；
+- `switch_preview` 仍使用整数 `source_id`（如 `-1` 多画面或指定单路）。
+
+### 14.6.1 pyservicemaker 截图兼容说明
+
+不同 pyservicemaker 版本在 `Buffer` 接口上存在差异（如 `source_id`、`get_data` 可能缺失）。为保证命令链路可测试：
+
+- 若版本支持原始 JPEG 提取，则按实时帧写入截图；
+- 若版本不支持原始提取接口，则写入兼容 fallback JPEG，并保持 `screenshot_done` 事件流程不变；
+- 该兼容策略用于保证测试稳定性与接口契约一致性，不影响后续升级到完整帧导出实现。
+
+### 14.7 测试数据放置规则
+
+测试数据统一放在 `deepstream/example_data/`：
+
+- 现有视频：
+  - `deepstream/example_data/video1_bf0.mp4`
+  - `deepstream/example_data/video2_bf0.mp4`
+- 新增测试数据目录：
+  - `deepstream/example_data/test_data/`
+
+`test_data/` 用于存放：
+
+- 动态生成的测试 payload 样例
+- 截图文件名模板
+- 运行过程中的临时测试元数据（如 camera_id）
+
+### 14.8 video2rtsp.py（测试流发布工具）
+
+脚本路径：`deepstream/script/video2rtsp.py`
+
+用途：将 `example_data` 里的两个本地视频发布成 RTSP 测试流，便于 REST `stream/add` 与命令通道测试复用。
+
+默认映射：
+
+- `/video1` -> `video1_bf0.mp4`
+- `/video2` -> `video2_bf0.mp4`
+
+默认地址：
+
+- `rtsp://127.0.0.1:8554/video1`
+- `rtsp://127.0.0.1:8554/video2`
+
+运行方式：
+
+```bash
+python3 deepstream/script/video2rtsp.py
+```
+
+可选参数：
+
+```bash
+python3 deepstream/script/video2rtsp.py \
+  --port 8555 \
+  --video1 /path/to/video_a.mp4 \
+  --video2 /path/to/video_b.mp4
+```
+
+实现说明：
+
+- 基于 `GstRtspServer` 创建多个 mount point
+- 使用 `filesrc -> qtdemux -> h264parse -> rtph264pay` 发布流
+- 适用于 MP4(H.264) 测试视频
