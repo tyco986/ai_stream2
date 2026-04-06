@@ -1,5 +1,6 @@
 """Detection API tests — list, filtering, cursor pagination, stats."""
 from datetime import timedelta
+from urllib.parse import urlparse
 
 import pytest
 from django.utils.timezone import now
@@ -55,3 +56,50 @@ class TestDetectionList:
         resp = viewer_client.get("/api/v1/detections/stats/")
         assert resp.status_code == 200
         assert "data" in resp.data
+
+    def test_unauthenticated_access_denied(self, api_client, camera):
+        DetectionFactory(camera=camera)
+        resp = api_client.get("/api/v1/detections/")
+        assert resp.status_code == 401
+
+
+@pytest.mark.django_db
+class TestDetectionPagination:
+    def test_empty_result_set(self, viewer_client):
+        resp = viewer_client.get("/api/v1/detections/")
+        assert resp.status_code == 200
+        assert len(resp.data["results"]) == 0
+        assert resp.data["next"] is None
+
+    def test_follow_next_cursor_link(self, viewer_client, camera):
+        for _ in range(5):
+            DetectionFactory(camera=camera)
+
+        all_ids = set()
+        resp = viewer_client.get("/api/v1/detections/?page_size=2")
+        assert resp.status_code == 200
+        all_ids.update(r["id"] for r in resp.data["results"])
+
+        while resp.data["next"]:
+            next_path = urlparse(resp.data["next"]).path
+            next_query = urlparse(resp.data["next"]).query
+            resp = viewer_client.get(f"{next_path}?{next_query}")
+            assert resp.status_code == 200
+            all_ids.update(r["id"] for r in resp.data["results"])
+
+        assert len(all_ids) == 5
+
+    def test_single_page_has_no_next(self, viewer_client, camera):
+        DetectionFactory(camera=camera)
+        resp = viewer_client.get("/api/v1/detections/?page_size=10")
+        assert resp.status_code == 200
+        assert len(resp.data["results"]) == 1
+        assert resp.data["next"] is None
+
+    def test_stats_not_affected_by_pagination(self, viewer_client, camera):
+        for _ in range(5):
+            DetectionFactory(camera=camera)
+        resp = viewer_client.get("/api/v1/detections/stats/")
+        assert resp.status_code == 200
+        total = sum(item["count"] for item in resp.data["data"])
+        assert total == 5

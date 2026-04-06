@@ -11,6 +11,7 @@ from _common import (
     camera_exists,
     create_parser,
     fetch_stream_info,
+    find_source_id_by_camera_id,
     prepare_camera,
     verbose_print,
 )
@@ -18,9 +19,16 @@ from _common import (
 
 def main():
     parser = create_parser("Test DeepStream stream/add API")
+    parser.add_argument("--no-prepare", action="store_true", help="Skip reset; assume camera already added")
     args = parser.parse_args()
 
-    source_id = prepare_camera(args.base_url, args.timeout, args.camera_id, args.camera_name, args.camera_url)
+    if args.no_prepare:
+        _, info_data = fetch_stream_info(args.base_url, args.timeout)
+        source_id = find_source_id_by_camera_id(info_data, args.camera_id)
+        if source_id is None:
+            raise AssertionError(f"--no-prepare but camera {args.camera_id} not found in stream info")
+    else:
+        source_id = prepare_camera(args.base_url, args.timeout, args.camera_id, args.camera_name, args.camera_url)
 
     info_response, info_data = fetch_stream_info(args.base_url, args.timeout)
     assert_status(info_response, {200}, "stream/get-stream-info after add")

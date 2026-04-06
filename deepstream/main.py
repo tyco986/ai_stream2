@@ -2,6 +2,7 @@ import logging
 import os
 import signal
 import threading
+import uuid
 from multiprocessing import Process
 
 from pyservicemaker import (
@@ -137,6 +138,7 @@ def run_pipeline():
     kafka_broker = os.environ.get("KAFKA_BROKER", "kafka:9092")
     command_topic = os.environ.get("KAFKA_COMMAND_TOPIC", "deepstream-commands")
 
+    cmd_group_id = f"deepstream-cmd-{uuid.uuid4().hex[:8]}"
     cmd_consumer = CommandConsumer(
         rolling_manager=rolling_manager,
         sr_controller=comp.sr_controller,
@@ -145,8 +147,10 @@ def run_pipeline():
         source_map=source_map,
         kafka_config={
             "bootstrap.servers": kafka_broker,
-            "group.id": "deepstream-cmd-consumer",
+            "group.id": cmd_group_id,
             "auto.offset.reset": "latest",
+            "session.timeout.ms": 6000,
+            "heartbeat.interval.ms": 2000,
         },
         command_topic=command_topic,
     )

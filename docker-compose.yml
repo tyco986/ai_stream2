@@ -106,6 +106,26 @@ services:
     healthcheck:
       disable: true
 
+  backend-test:
+    build:
+      context: ./backend
+      target: test
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.development
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/ai_stream_test
+      REDIS_URL: redis://redis:6379
+      DEEPSTREAM_REST_URL: http://deepstream:9000
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      HEALTH_CHECK_KAFKA: "false"
+      SECRET_KEY: test-secret-key
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - test
+
   # ---- DeepStream ----
   deepstream:
     build:
