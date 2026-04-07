@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
-"""Common helpers for DeepStream black-box API tests."""
+"""Shared helpers for DeepStream black-box API tests."""
 
-import argparse
 import json
 import os
 import time
@@ -31,33 +29,7 @@ class DeliveryReporter:
         self.delivered += 1
 
 
-def create_parser(description: str, include_kafka: bool = False) -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description=description)
-    parser.add_argument("--base-url", default="http://127.0.0.1:9000", help="DeepStream REST base URL")
-    parser.add_argument("--timeout", type=int, default=15, help="Request timeout seconds")
-    parser.add_argument("--camera-id", default=generate_camera_id(), help="Camera ID used in tests")
-    parser.add_argument(
-        "--camera-url",
-        default="file:///app/example_data/video2_bf0.mp4",
-        help="Camera stream URL used for stream/add",
-    )
-    parser.add_argument("--camera-name", default="API Test Camera", help="Camera display name")
-    parser.add_argument("--verbose", action="store_true", help="Print response payloads")
-    if include_kafka:
-        parser.add_argument("--kafka-broker", default="127.0.0.1:9092", help="Kafka bootstrap server")
-        parser.add_argument("--command-topic", default="deepstream-commands", help="Kafka command topic")
-        parser.add_argument(
-            "--event-topic",
-            default="deepstream-events",
-            help="Kafka events topic (reserved for future validation)",
-        )
-    return parser
-
-
-def generate_camera_id() -> str:
-    suffix = int(time.time() * 1000) % 100000000
-    return f"cam_test_{suffix}"
-
+# --------------- file / path helpers ---------------
 
 def ensure_test_data_dir() -> Path:
     TEST_DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -69,6 +41,36 @@ def write_test_payload(name: str, payload: dict[str, Any]) -> Path:
     target.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return target
 
+
+def get_screenshots_dir() -> Path:
+    env_value = os.environ.get("DS_SCREENSHOTS_DIR")
+    if env_value:
+        return Path(env_value)
+    return DEEPSTREAM_DIR / "screenshots"
+
+
+def get_recordings_dirs() -> tuple[Path, Path]:
+    rolling = Path(os.environ.get("DS_ROLLING_DIR", str(DEEPSTREAM_DIR / "recordings" / "rolling")))
+    locked = Path(os.environ.get("DS_LOCKED_DIR", str(DEEPSTREAM_DIR / "recordings" / "locked")))
+    return rolling, locked
+
+
+def count_files(path: Path) -> int:
+    if not path.exists() or not path.is_dir():
+        return 0
+    return sum(1 for item in path.iterdir() if item.is_file())
+
+
+def wait_for_file(path: Path, wait_seconds: int = 20) -> bool:
+    started = time.time()
+    while time.time() - started < wait_seconds:
+        if path.exists() and path.is_file() and path.stat().st_size > 0:
+            return True
+        time.sleep(1)
+    return False
+
+
+# --------------- payload builders ---------------
 
 def build_stream_add_payload(camera_id: str, camera_name: str, camera_url: str) -> dict[str, Any]:
     return {
@@ -93,6 +95,8 @@ def build_stream_remove_payload(camera_id: str, camera_url: str) -> dict[str, An
     }
 
 
+# --------------- HTTP helpers ---------------
+
 def build_rest_url(base_url: str, endpoint: str) -> str:
     return f"{base_url.rstrip('/')}{endpoint}"
 
@@ -111,7 +115,6 @@ def http_post_json(base_url: str, endpoint: str, payload: dict[str, Any], timeou
 
 def _request_with_retry(method: str, url: str, timeout: int, json: dict[str, Any] | None = None) -> requests.Response:
     session = requests.Session()
-    # Controlled retries for transient connection resets/timeouts from DS REST.
     attempts = 4
     for idx in range(attempts):
         try:
@@ -137,10 +140,7 @@ def assert_status(response: requests.Response, expected_codes: set[int], context
     )
 
 
-def verbose_print(enabled: bool, title: str, data: Any):
-    if enabled:
-        print(f"[DEBUG] {title}: {json.dumps(data, ensure_ascii=False)}")
-
+# --------------- Kafka helpers ---------------
 
 def build_producer(kafka_broker: str) -> Producer:
     return Producer({"bootstrap.servers": kafka_broker})
@@ -158,6 +158,8 @@ def send_command(producer: Producer, topic: str, payload: dict[str, Any], timeou
         )
 
 
+# --------------- stream info helpers ---------------
+
 def fetch_stream_info(base_url: str, timeout: int) -> tuple[requests.Response, Any]:
     return http_get_json(base_url, "/api/v1/stream/get-stream-info", timeout)
 
@@ -174,31 +176,11 @@ def get_stream_entries(stream_info_payload: Any) -> list[dict[str, Any]]:
     return [entry for entry in entries if isinstance(entry, dict)]
 
 
-def reset_streams(base_url: str, timeout: int, camera_url: str):
-    response, data = fetch_stream_info(base_url, timeout)
-    assert_status(response, {200}, "stream/get-stream-info for reset")
-    entries = get_stream_entries(data)
-    for entry in entries:
-        camera_id = first_existing_value(entry, ["camera_id", "cameraId", "sensor_id", "sensorId", "id"])
-        if camera_id is None:
-            continue
-        remove_payload = build_stream_remove_payload(str(camera_id), camera_url)
-        remove_response, _ = http_post_json(base_url, "/api/v1/stream/remove", remove_payload, timeout)
-        assert_status(remove_response, {200, 201, 404}, "stream/remove during reset")
-
-
-def ensure_camera_added(base_url: str, timeout: int, camera_id: str, camera_name: str, camera_url: str):
-    payload = build_stream_add_payload(camera_id, camera_name, camera_url)
-    response, data = http_post_json(base_url, "/api/v1/stream/add", payload, timeout)
-    assert_status(response, {200, 201}, "stream/add")
-    verbose_print(False, "stream/add response", data)
-
-
-def ensure_camera_removed(base_url: str, timeout: int, camera_id: str, camera_url: str):
-    payload = build_stream_remove_payload(camera_id, camera_url)
-    response, data = http_post_json(base_url, "/api/v1/stream/remove", payload, timeout)
-    assert_status(response, {200, 201, 404}, "stream/remove")
-    verbose_print(False, "stream/remove response", data)
+def first_existing_value(data: dict[str, Any], keys: list[str]) -> Any:
+    for key in keys:
+        if key in data:
+            return data[key]
+    return None
 
 
 def flatten_dict_candidates(obj: Any) -> list[dict[str, Any]]:
@@ -243,11 +225,11 @@ def camera_exists(stream_info: Any, camera_id: str) -> bool:
     return False
 
 
-def first_existing_value(data: dict[str, Any], keys: list[str]) -> Any:
-    for key in keys:
-        if key in data:
-            return data[key]
-    return None
+def parse_source_id(stream_info_payload: Any, camera_id: str) -> int:
+    source_id = find_source_id_by_camera_id(stream_info_payload, camera_id)
+    if source_id is None:
+        raise AssertionError(f"source_id not found for camera_id={camera_id}")
+    return source_id
 
 
 def wait_for_source_id(base_url: str, timeout: int, camera_id: str, wait_seconds: int = 60) -> int:
@@ -261,43 +243,28 @@ def wait_for_source_id(base_url: str, timeout: int, camera_id: str, wait_seconds
     raise AssertionError(f"Timed out waiting for source_id mapped from camera_id={camera_id}")
 
 
+# --------------- high-level orchestration ---------------
+
+def reset_streams(base_url: str, timeout: int, camera_url: str):
+    response, data = fetch_stream_info(base_url, timeout)
+    assert_status(response, {200}, "stream/get-stream-info for reset")
+    entries = get_stream_entries(data)
+    for entry in entries:
+        camera_id = first_existing_value(entry, ["camera_id", "cameraId", "sensor_id", "sensorId", "id"])
+        if camera_id is None:
+            continue
+        remove_payload = build_stream_remove_payload(str(camera_id), camera_url)
+        remove_response, _ = http_post_json(base_url, "/api/v1/stream/remove", remove_payload, timeout)
+        assert_status(remove_response, {200, 201, 404}, "stream/remove during reset")
+
+
+def ensure_camera_added(base_url: str, timeout: int, camera_id: str, camera_name: str, camera_url: str):
+    payload = build_stream_add_payload(camera_id, camera_name, camera_url)
+    response, data = http_post_json(base_url, "/api/v1/stream/add", payload, timeout)
+    assert_status(response, {200, 201}, "stream/add")
+
+
 def prepare_camera(base_url: str, timeout: int, camera_id: str, camera_name: str, camera_url: str) -> int:
     reset_streams(base_url, timeout, camera_url)
     ensure_camera_added(base_url, timeout, camera_id, camera_name, camera_url)
     return wait_for_source_id(base_url, timeout, camera_id)
-
-
-def parse_source_id(stream_info_payload: Any, camera_id: str) -> int:
-    source_id = find_source_id_by_camera_id(stream_info_payload, camera_id)
-    if source_id is None:
-        raise AssertionError(f"source_id not found for camera_id={camera_id}")
-    return source_id
-
-
-def wait_for_file(path: Path, wait_seconds: int = 20) -> bool:
-    started = time.time()
-    while time.time() - started < wait_seconds:
-        if path.exists() and path.is_file() and path.stat().st_size > 0:
-            return True
-        time.sleep(1)
-    return False
-
-
-def get_screenshots_dir() -> Path:
-    env_value = os.environ.get("DS_SCREENSHOTS_DIR")
-    if env_value:
-        return Path(env_value)
-    return DEEPSTREAM_DIR / "screenshots"
-
-
-def get_recordings_dirs() -> tuple[Path, Path]:
-    rolling = Path(os.environ.get("DS_ROLLING_DIR", str(DEEPSTREAM_DIR / "recordings" / "rolling")))
-    locked = Path(os.environ.get("DS_LOCKED_DIR", str(DEEPSTREAM_DIR / "recordings" / "locked")))
-    return rolling, locked
-
-
-def count_files(path: Path) -> int:
-    if not path.exists() or not path.is_dir():
-        return 0
-    return sum(1 for item in path.iterdir() if item.is_file())
-

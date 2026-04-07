@@ -2,7 +2,6 @@ import logging
 import os
 import signal
 import threading
-import uuid
 from multiprocessing import Process
 
 from pyservicemaker import (
@@ -70,7 +69,7 @@ class MessageHandler:
                 "Stream added: sensor_id=%s source_id=%d uri=%s",
                 msg.sensor_id, msg.source_id, msg.uri,
             )
-            self._rolling.start_rolling(msg.source_id)
+            self._rolling.start_rolling(msg.source_id, msg.uri)
         else:
             self._source_map.pop(msg.sensor_id, None)
             self._perf.remove_stream(msg.source_id)
@@ -98,18 +97,11 @@ def run_pipeline():
     segment_sec = int(os.environ.get("DS_RECORDING_SEGMENT_SEC", "300"))
 
     rolling_manager = RollingRecordManager(
-        sr_controller=comp.sr_controller,
         rolling_dir=rolling_dir,
         locked_dir=locked_dir,
         segment_duration=segment_sec,
+        source_element=comp.source_element,
     )
-
-    # ── wire sr-done signal for chain recording / file locking ──────
-    # Some pyservicemaker builds do not expose the "sr-done" signal.
-    # Keep it opt-in to avoid startup failure in test environments.
-    enable_sr_done_signal = os.environ.get("DS_ENABLE_SR_DONE_SIGNAL", "0") == "1"
-    if enable_sr_done_signal:
-        pipeline.attach("src", "smart_recording_signal", "sr", "sr-done")
 
     # ── performance monitor ─────────────────────────────────────────
     max_batch = int(os.environ.get("DS_MAX_BATCH_SIZE", "16"))
@@ -138,19 +130,15 @@ def run_pipeline():
     kafka_broker = os.environ.get("KAFKA_BROKER", "kafka:9092")
     command_topic = os.environ.get("KAFKA_COMMAND_TOPIC", "deepstream-commands")
 
-    cmd_group_id = f"deepstream-cmd-{uuid.uuid4().hex[:8]}"
     cmd_consumer = CommandConsumer(
         rolling_manager=rolling_manager,
-        sr_controller=comp.sr_controller,
         screenshot_retriever=comp.screenshot_retriever,
         tiler_element=comp.tiler_element,
         source_map=source_map,
         kafka_config={
             "bootstrap.servers": kafka_broker,
-            "group.id": cmd_group_id,
+            "group.id": "deepstream-cmd-consumer",
             "auto.offset.reset": "latest",
-            "session.timeout.ms": 6000,
-            "heartbeat.interval.ms": 2000,
         },
         command_topic=command_topic,
     )
@@ -171,7 +159,16 @@ def run_pipeline():
     threading.Thread(target=gpu_monitor.run, daemon=True, name="gpu-monitor").start()
 
     # ── graceful shutdown ───────────────────────────────────────────
-    GracefulShutdown(pipeline, on_shutdown=cmd_consumer.stop)
+    class ShutdownActions:
+        """Bundles all shutdown actions to avoid a nested function."""
+        def __init__(self, cmd, rec):
+            self._cmd = cmd
+            self._rec = rec
+        def __call__(self):
+            self._cmd.stop()
+            self._rec.shutdown()
+
+    GracefulShutdown(pipeline, on_shutdown=ShutdownActions(cmd_consumer, rolling_manager))
 
     # ── start pipeline ──────────────────────────────────────────────
     logger.info("Preparing pipeline …")

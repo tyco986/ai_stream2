@@ -138,6 +138,10 @@ services:
       KAFKA_TOPIC: deepstream-detections
       KAFKA_EVENT_TOPIC: deepstream-events
       KAFKA_COMMAND_TOPIC: deepstream-commands
+      DS_RECORDER_BACKEND: ${DS_RECORDER_BACKEND:-gi}
+    volumes:
+      - ./deepstream/screenshots:/app/screenshots
+      - ./deepstream/recordings:/app/recordings
     depends_on:
       - kafka
     restart: unless-stopped

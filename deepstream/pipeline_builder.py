@@ -1,9 +1,7 @@
 import os
 import logging
 
-from pyservicemaker import (
-    Pipeline, Probe, Receiver, RecordConfig,
-)
+from pyservicemaker import Pipeline, Probe, Receiver
 
 from analytics_probe import AnalyticsMetadataProbe
 from empty_frame_filter import EmptyFrameFilter
@@ -17,11 +15,11 @@ class PipelineComponents:
 
     def __init__(self):
         self.pipeline = None
-        self.sr_controller = None
         self.screenshot_retriever = None
         self.tiler_element = None
         self.pgie_element = None
         self.tracker_element = None
+        self.source_element = None
 
 
 class PipelineBuilder:
@@ -46,10 +44,7 @@ class PipelineBuilder:
             "/opt/nvidia/deepstream/deepstream/samples/configs/deepstream-app/config_tracker_NvDCF_perf.yml",
         )
         self._analytics_config = os.environ.get("DS_ANALYTICS_CONFIG", "")
-        self._rolling_dir = os.environ.get("DS_ROLLING_DIR", "/app/recordings/rolling")
-        self._locked_dir = os.environ.get("DS_LOCKED_DIR", "/app/recordings/locked")
         self._screenshot_dir = os.environ.get("DS_SCREENSHOT_DIR", "/app/screenshots")
-        self._recording_cache_sec = int(os.environ.get("DS_RECORDING_CACHE_SEC", "30"))
         self._rtsp_port = os.environ.get("DS_RTSP_PORT", "8554")
         self._preview_bitrate = int(os.environ.get("DS_PREVIEW_BITRATE", "4000000"))
         self._tiler_rows = int(os.environ.get("DS_PREVIEW_TILER_ROWS", "4"))
@@ -57,6 +52,11 @@ class PipelineBuilder:
         self._empty_frame_filter = int(os.environ.get("DS_EMPTY_FRAME_FILTER", "1"))
         self._udpsink_port = 5400
         self._light_pipeline = os.environ.get("DS_LIGHT_PIPELINE", "1") == "1"
+
+        self._recorder_backend = os.environ.get("DS_RECORDER_BACKEND", "gi")
+        self._recording_dir = os.environ.get("DS_ROLLING_DIR", "/app/recordings/rolling")
+        self._sr_cache = int(os.environ.get("DS_SR_CACHE_SEC", "30"))
+        self._sr_default_duration = int(os.environ.get("DS_SR_DEFAULT_DURATION", "20"))
 
     # ------------------------------------------------------------------
     # public
@@ -85,20 +85,6 @@ class PipelineBuilder:
     # ------------------------------------------------------------------
 
     def _add_source(self, pipeline: Pipeline, comp: PipelineComponents):
-        kafka_conn = self._kafka_broker.replace(":", ";")
-
-        sr_config = RecordConfig(
-            rec_cache=self._recording_cache_sec,
-            rec_container=0,
-            rec_dir_path=self._rolling_dir,
-            rec_mode=1,
-            proto_lib="/opt/nvidia/deepstream/deepstream/lib/libnvds_kafka_proto.so",
-            conn_str=kafka_conn,
-            msgconv_config_file="/app/config/msgconv_config.txt",
-            proto_config_file="/app/config/kafka_broker_config.txt",
-            topic_list=self._kafka_event_topic,
-        )
-
         source_props = {
             "ip-address": "0.0.0.0",
             "port": self._rest_port,
@@ -112,14 +98,20 @@ class PipelineBuilder:
             "select-rtp-protocol": 0,
             "latency": 100,
             "file-loop": 1,
-            "smart-rec-cache": sr_config.rec_cache,
-            "smart-rec-container": sr_config.rec_container,
-            "smart-rec-dir-path": sr_config.rec_dir_path,
-            "smart-rec-mode": sr_config.rec_mode,
         }
 
+        if self._recorder_backend == "smartrecord":
+            source_props.update({
+                "smart-record": 2,
+                "smart-rec-dir-path": self._recording_dir,
+                "smart-rec-file-prefix": "sr",
+                "smart-rec-cache": self._sr_cache,
+                "smart-rec-default-duration": self._sr_default_duration,
+                "smart-rec-container": 0,
+            })
+
         pipeline.add("nvmultiurisrcbin", "src", source_props)
-        comp.sr_controller = pipeline["src"]
+        comp.source_element = pipeline["src"]
 
     # ------------------------------------------------------------------
     # inference
@@ -222,11 +214,11 @@ class PipelineBuilder:
         pipeline.add("queue", "queue_snap")
         pipeline.add("valve", "snap_valve", {"drop": True})
         pipeline.add("nvvideoconvert", "snap_convert")
-        pipeline.add("jpegenc", "snap_jpegenc", {"quality": 95})
+        pipeline.add("capsfilter", "snap_caps", {"caps": "video/x-raw(memory:NVMM),format=RGB"})
         pipeline.add("appsink", "snap_sink", {"emit-signals": True, "sync": 0, "async": 0})
 
         pipeline.link(("tee", "queue_snap"), ("src_%u", ""))
-        pipeline.link("queue_snap", "snap_valve", "snap_convert", "snap_jpegenc", "snap_sink")
+        pipeline.link("queue_snap", "snap_valve", "snap_convert", "snap_caps", "snap_sink")
 
         screenshot_retriever = ScreenshotRetriever(
             output_dir=self._screenshot_dir,

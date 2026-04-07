@@ -1,8 +1,10 @@
 FROM nvcr.io/nvidia/deepstream:9.0-triton-multiarch
 
-# China mirror acceleration (DeepStream image is Ubuntu-based)
-RUN sed -i 's|archive.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list && \
-    sed -i 's|security.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
+# China mirror acceleration (Ubuntu 24.04 uses DEB822 format)
+RUN sed -i 's|http://archive.ubuntu.com/ubuntu/|http://mirrors.tuna.tsinghua.edu.cn/ubuntu/|g' \
+        /etc/apt/sources.list.d/ubuntu.sources && \
+    sed -i 's|http://security.ubuntu.com/ubuntu/|http://mirrors.tuna.tsinghua.edu.cn/ubuntu/|g' \
+        /etc/apt/sources.list.d/ubuntu.sources
 RUN pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
 
 # Install pyservicemaker (wheel ships inside the container) + Python deps
@@ -11,18 +13,25 @@ RUN pip install --break-system-packages \
     pyyaml \
     requests \
     confluent-kafka \
-    pynvml
+    nvidia-ml-py \
+    Pillow
 
-# Kafka protocol adapter + GStreamer RTSP Server bindings
-RUN apt-get update && apt-get install -y \
-    librdkafka-dev \
-    libgstrtspserver-1.0-dev \
+# Runtime C libs + GStreamer RTSP typelib + PyGObject + pkg-config for C ext build
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    librdkafka1 \
     gir1.2-gst-rtsp-server-1.0 \
+    python3-gi \
     curl \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY . /app
+
+# Build the SmartRecord C extension (nvdssr_ext)
+RUN cd /app/ext && python3 setup.py build_ext --inplace \
+    && cp nvdssr_ext*.so /app/ \
+    && cd /app && rm -rf ext/build
 
 RUN mkdir -p /app/recordings/rolling /app/recordings/locked /app/screenshots
 

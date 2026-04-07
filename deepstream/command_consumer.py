@@ -26,11 +26,10 @@ class CommandConsumer:
     directly (``-1`` = multi-view, ``N`` = single source).
     """
 
-    def __init__(self, rolling_manager, sr_controller,
+    def __init__(self, rolling_manager,
                  screenshot_retriever, tiler_element,
                  source_map, kafka_config, command_topic):
         self._rolling = rolling_manager
-        self._sr = sr_controller
         self._screenshot = screenshot_retriever
         self._tiler = tiler_element
         self._source_map = source_map

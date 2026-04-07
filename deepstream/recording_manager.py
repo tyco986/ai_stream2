@@ -1,39 +1,57 @@
 import logging
+import os
 import shutil
 from pathlib import Path
+
+from gi_recorder import GiRecorder
 
 logger = logging.getLogger(__name__)
 
 
 class RollingRecordManager:
-    """Manage rolling (7x24), event, and manual recordings via SmartRecord.
+    """Manage rolling (7x24), event, and manual recordings.
 
     Design (dashcam model):
         - Rolling segments stay in ``rolling/`` and are cleaned by DiskGuard.
-        - Event / manual recordings are moved to ``locked/`` on sr-done so
+        - Event / manual recordings are moved to ``locked/`` on completion so
           DiskGuard's rolling cleanup never touches them.
 
-    Thread safety:
-        ``start_rolling`` / ``stop_rolling`` are called from the on_message
-        callback (GStreamer main loop).  ``start_event_recording``,
-        ``start_manual_recording``, ``stop_recording`` are called from
-        CommandConsumer (daemon thread).  ``on_sr_done`` is called from the
-        GStreamer signal handler.
-        GObject signal ``emit()`` and ``set_property()`` are thread-safe.
+    Supports two recorder backends (DS_RECORDER_BACKEND env):
+        - ``gi``          (default) — standalone GStreamer pipelines via GiRecorder
+        - ``smartrecord`` — native DeepStream SmartRecord via C extension
     """
 
     SEGMENT_DURATION = 300  # seconds (5 min)
 
-    def __init__(self, sr_controller, rolling_dir, locked_dir,
-                 segment_duration=None):
-        self._sr = sr_controller
+    def __init__(self, rolling_dir, locked_dir, segment_duration=None,
+                 source_element=None):
         self._rolling_dir = Path(rolling_dir)
         self._locked_dir = Path(locked_dir)
-        self._rolling_sources = set()
-        self._recording_type = {}  # source_id → "rolling" | "event" | "manual"
+        self._rolling_sources = {}   # source_id → uri
+        self._uri_map = {}           # source_id → uri (persists after stop_rolling)
+        self._segment_duration = segment_duration or self.SEGMENT_DURATION
+        self._backend_name = os.environ.get("DS_RECORDER_BACKEND", "gi")
+        self._sr_controller = None
 
-        if segment_duration is not None:
-            self.SEGMENT_DURATION = segment_duration
+        if self._backend_name == "smartrecord" and source_element is not None:
+            from smartrecord_controller import SmartRecordController
+            self._sr_controller = SmartRecordController(
+                source_element,
+                on_recording_done=self._on_sr_done,
+            )
+            logger.info("Recording backend: smartrecord (C extension)")
+        else:
+            if self._backend_name == "smartrecord":
+                logger.warning(
+                    "smartrecord requested but no source_element; falling back to gi",
+                )
+            self._backend_name = "gi"
+            logger.info("Recording backend: gi (GiRecorder)")
+
+        self._recorder = GiRecorder(
+            output_dir=str(self._rolling_dir),
+            segment_duration=self._segment_duration,
+        ) if self._backend_name == "gi" else None
 
         self._rolling_dir.mkdir(parents=True, exist_ok=True)
         self._locked_dir.mkdir(parents=True, exist_ok=True)
@@ -42,16 +60,40 @@ class RollingRecordManager:
     # rolling (7x24)
     # ------------------------------------------------------------------
 
-    def start_rolling(self, source_id: int):
-        self._rolling_sources.add(source_id)
-        self._recording_type[source_id] = "rolling"
-        self._start_segment(source_id)
-        logger.info("Rolling recording started for source_id=%d", source_id)
+    def register_source(self, source_id: int, uri: str):
+        """Store the URI for a source so Kafka commands can restart recording."""
+        self._uri_map[source_id] = uri
+        if self._sr_controller:
+            self._sr_controller.register_source(source_id)
+
+    def unregister_source(self, source_id: int):
+        self._uri_map.pop(source_id, None)
+        if self._sr_controller:
+            self._sr_controller.unregister_source(source_id)
+
+    def start_rolling(self, source_id: int, uri: str = ""):
+        resolved_uri = uri or self._uri_map.get(source_id, "")
+        if not resolved_uri:
+            logger.warning("Cannot start rolling: no URI for source_id=%d", source_id)
+            return
+        self._uri_map[source_id] = resolved_uri
+        self._rolling_sources[source_id] = resolved_uri
+
+        if self._sr_controller:
+            self._sr_controller.register_source(source_id)
+            self._sr_controller.start(
+                source_id, start_time=0, duration=self._segment_duration,
+            )
+        else:
+            self._recorder.start(source_id, resolved_uri)
+        logger.info("Rolling recording started for source_id=%d uri=%s", source_id, resolved_uri)
 
     def stop_rolling(self, source_id: int):
-        self._rolling_sources.discard(source_id)
-        self._recording_type.pop(source_id, None)
-        self._emit_stop(source_id)
+        self._rolling_sources.pop(source_id, None)
+        if self._sr_controller:
+            self._sr_controller.stop(source_id)
+        else:
+            self._recorder.stop(source_id)
         logger.info("Rolling recording stopped for source_id=%d", source_id)
 
     # ------------------------------------------------------------------
@@ -59,68 +101,57 @@ class RollingRecordManager:
     # ------------------------------------------------------------------
 
     def start_event_recording(self, source_id: int, duration: int = 20):
-        self._recording_type[source_id] = "event"
-        self._emit_start(source_id, duration)
-        logger.info("Event recording started: source_id=%d duration=%ds", source_id, duration)
+        uri = self._rolling_sources.get(source_id)
+        if not uri:
+            logger.warning("Cannot start event recording: no URI for source_id=%d", source_id)
+            return
+        logger.info("Event recording requested: source_id=%d duration=%ds (covered by rolling)", source_id, duration)
 
     # ------------------------------------------------------------------
     # manual recording (user-controlled)
     # ------------------------------------------------------------------
 
     def start_manual_recording(self, source_id: int):
-        self._recording_type[source_id] = "manual"
-        self._emit_start(source_id, 0)
-        logger.info("Manual recording started: source_id=%d", source_id)
+        uri = self._rolling_sources.get(source_id)
+        if not uri:
+            logger.warning("Cannot start manual recording: no URI for source_id=%d", source_id)
+            return
+        logger.info("Manual recording requested: source_id=%d (covered by rolling)", source_id)
 
     def stop_recording(self, source_id: int):
-        self._emit_stop(source_id)
-        logger.info("Recording stopped: source_id=%d", source_id)
+        logger.info("Recording stop requested: source_id=%d", source_id)
 
     # ------------------------------------------------------------------
-    # sr-done callback
+    # sr-done callback (SmartRecord backend)
     # ------------------------------------------------------------------
 
-    def on_sr_done(self, source_id: int, filepath: str):
-        """Called when SmartRecord finishes writing a segment.
-
-        Event / manual recordings are moved to ``locked/`` to protect them
-        from DiskGuard's rolling cleanup.  Rolling segments stay in place
-        and the next segment is started immediately (chain recording).
-        """
-        filepath = Path(filepath)
-        rec_type = self._recording_type.get(source_id, "rolling")
-
-        if rec_type in ("event", "manual"):
-            dest = self._locked_dir / filepath.name
-            shutil.move(str(filepath), str(dest))
-            logger.info("Locked recording moved: %s → %s", filepath, dest)
-            self._recording_type[source_id] = "rolling"
+    def _on_sr_done(self, source_id: int, info: dict):
+        """Called by SmartRecordController when a recording segment finishes."""
+        filename = info.get("filename", "")
+        dirpath = info.get("dirpath", "")
+        logger.info(
+            "SmartRecord segment done: source_id=%d file=%s/%s",
+            source_id, dirpath, filename,
+        )
 
         if source_id in self._rolling_sources:
-            self._recording_type[source_id] = "rolling"
-            self._start_segment(source_id)
+            self._sr_controller.start(
+                source_id, start_time=0, duration=self._segment_duration,
+            )
+
+    def on_sr_done(self, source_id: int, filepath: str):
+        """Legacy callback for moving files to locked dir."""
+        filepath = Path(filepath)
+        dest = self._locked_dir / filepath.name
+        shutil.move(str(filepath), str(dest))
+        logger.info("Locked recording moved: %s → %s", filepath, dest)
 
     # ------------------------------------------------------------------
-    # internal
+    # shutdown
     # ------------------------------------------------------------------
 
-    def _start_segment(self, source_id: int):
-        self._emit_start(source_id, self.SEGMENT_DURATION)
-
-    def _emit_start(self, source_id: int, duration: int):
-        if hasattr(self._sr, "emit"):
-            self._sr.emit("start-sr", source_id, duration)
-            return
-        logger.warning(
-            "SmartRecord start is not supported by current pyservicemaker node (source_id=%d)",
-            source_id,
-        )
-
-    def _emit_stop(self, source_id: int):
-        if hasattr(self._sr, "emit"):
-            self._sr.emit("stop-sr", source_id)
-            return
-        logger.warning(
-            "SmartRecord stop is not supported by current pyservicemaker node (source_id=%d)",
-            source_id,
-        )
+    def shutdown(self):
+        if self._sr_controller:
+            self._sr_controller.stop_all()
+        if self._recorder:
+            self._recorder.stop_all()
