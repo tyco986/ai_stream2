@@ -20,18 +20,21 @@ class CommandConsumer:
         {"action": "start_rolling",   "source_id": "cam_001"}
         {"action": "stop_rolling",    "source_id": "cam_001"}
         {"action": "switch_preview",  "source_id": -1}
+        {"action": "toggle_osd",      "show": true}
 
     ``source_id`` is the **sensor_id string** for most commands (resolved to
     int via ``_resolve_source_id``).  ``switch_preview`` uses an **integer**
     directly (``-1`` = multi-view, ``N`` = single source).
+    ``toggle_osd`` controls whether the preview stream includes AI overlays.
     """
 
     def __init__(self, rolling_manager,
                  screenshot_retriever, tiler_element,
-                 source_map, kafka_config, command_topic):
+                 osd_toggle, source_map, kafka_config, command_topic):
         self._rolling = rolling_manager
         self._screenshot = screenshot_retriever
         self._tiler = tiler_element
+        self._osd_toggle = osd_toggle
         self._source_map = source_map
         self._shutdown = threading.Event()
         self._command_topic = command_topic
@@ -132,6 +135,10 @@ class CommandConsumer:
                     reason="set not supported by tiler node",
                 )
                 raise RuntimeError("set not supported by tiler node")
+
+        elif action == "toggle_osd":
+            show = cmd.get("show", True)
+            self._osd_toggle.set_overlay(bool(show))
 
         else:
             logger.warning("Unknown command action: %s", action)

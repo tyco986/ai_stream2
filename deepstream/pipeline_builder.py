@@ -5,6 +5,7 @@ from pyservicemaker import Pipeline, Probe, Receiver
 
 from analytics_probe import AnalyticsMetadataProbe
 from empty_frame_filter import EmptyFrameFilter
+from osd_toggle_probe import OsdToggle
 from screenshot_handler import ScreenshotRetriever
 
 logger = logging.getLogger(__name__)
@@ -20,16 +21,18 @@ class PipelineComponents:
         self.pgie_element = None
         self.tracker_element = None
         self.source_element = None
+        self.osd_toggle = None
 
 
 class PipelineBuilder:
     """Construct the DeepStream pipeline from environment variables and config files.
 
-    Pipeline topology (see docs/plan-deepstream.md Section 2):
+    Pipeline topology:
         nvmultiurisrcbin -> nvinfer(PGIE) -> nvtracker -> [nvdsanalytics] -> tee
             ├─ queue_meta   -> EmptyFrameFilter(probe) -> nvmsgconv -> nvmsgbroker (Kafka)
             ├─ queue_snap   -> valve -> nvvideoconvert -> jpegenc -> appsink (screenshot)
-            └─ queue_preview -> tiler -> nvosd -> nvvideoconvert -> nvv4l2h264enc -> rtppay -> udpsink (RTSP)
+            └─ queue_preview -> tiler -> nvosd (OSD toggle via display-bbox/text) -> nvvideoconvert
+                              -> nvv4l2h264enc -> rtph264pay -> udpsink (→ MediaMTX RTP source)
     """
 
     def __init__(self):
@@ -45,15 +48,13 @@ class PipelineBuilder:
         )
         self._analytics_config = os.environ.get("DS_ANALYTICS_CONFIG", "")
         self._screenshot_dir = os.environ.get("DS_SCREENSHOT_DIR", "/app/screenshots")
-        self._rtsp_port = os.environ.get("DS_RTSP_PORT", "8554")
         self._preview_bitrate = int(os.environ.get("DS_PREVIEW_BITRATE", "4000000"))
         self._tiler_rows = int(os.environ.get("DS_PREVIEW_TILER_ROWS", "4"))
         self._tiler_cols = int(os.environ.get("DS_PREVIEW_TILER_COLS", "4"))
         self._empty_frame_filter = int(os.environ.get("DS_EMPTY_FRAME_FILTER", "1"))
-        self._udpsink_port = 5400
         self._light_pipeline = os.environ.get("DS_LIGHT_PIPELINE", "1") == "1"
+        self._preview_rtp_port = int(os.environ.get("DS_PREVIEW_RTP_PORT", "5400"))
 
-        self._recorder_backend = os.environ.get("DS_RECORDER_BACKEND", "gi")
         self._recording_dir = os.environ.get("DS_ROLLING_DIR", "/app/recordings/rolling")
         self._sr_cache = int(os.environ.get("DS_SR_CACHE_SEC", "30"))
         self._sr_default_duration = int(os.environ.get("DS_SR_DEFAULT_DURATION", "20"))
@@ -100,15 +101,14 @@ class PipelineBuilder:
             "file-loop": 1,
         }
 
-        if self._recorder_backend == "smartrecord":
-            source_props.update({
-                "smart-record": 2,
-                "smart-rec-dir-path": self._recording_dir,
-                "smart-rec-file-prefix": "sr",
-                "smart-rec-cache": self._sr_cache,
-                "smart-rec-default-duration": self._sr_default_duration,
-                "smart-rec-container": 0,
-            })
+        source_props.update({
+            "smart-record": 2,
+            "smart-rec-dir-path": self._recording_dir,
+            "smart-rec-file-prefix": "sr",
+            "smart-rec-cache": self._sr_cache,
+            "smart-rec-default-duration": self._sr_default_duration,
+            "smart-rec-container": 0,
+        })
 
         pipeline.add("nvmultiurisrcbin", "src", source_props)
         comp.source_element = pipeline["src"]
@@ -256,7 +256,7 @@ class PipelineBuilder:
 
         pipeline.add("udpsink", "preview_udpsink", {
             "host": "127.0.0.1",
-            "port": self._udpsink_port,
+            "port": self._preview_rtp_port,
             "sync": 0,
             "async": 0,
         })
@@ -268,3 +268,4 @@ class PipelineBuilder:
         )
 
         comp.tiler_element = pipeline["tiler"]
+        comp.osd_toggle = OsdToggle(pipeline["osd"])

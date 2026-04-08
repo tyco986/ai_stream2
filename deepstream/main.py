@@ -1,6 +1,7 @@
 import logging
 import os
 import signal
+import subprocess
 import threading
 from multiprocessing import Process
 
@@ -9,7 +10,6 @@ from pyservicemaker import (
 )
 
 from pipeline_builder import PipelineBuilder
-from preview_server import PreviewServer
 from recording_manager import RollingRecordManager
 from command_consumer import CommandConsumer
 from disk_guard import DiskGuard
@@ -118,10 +118,14 @@ def run_pipeline():
     engine_file = comp.pgie_element.get("model-engine-file") or ""
     engine_monitor = utils.EngineFileMonitor(comp.pgie_element, engine_file) if engine_file else None
 
-    # ── RTSP preview server ─────────────────────────────────────────
-    rtsp_port = os.environ.get("DS_RTSP_PORT", "8554")
-    preview_server = PreviewServer(rtsp_port=rtsp_port, udpsrc_port=5400)
-    preview_server.start()
+    # ── MediaMTX RTSP/WebRTC server ─────────────────────────────────
+    mediamtx_cfg = os.environ.get("DS_MEDIAMTX_CONFIG", "/app/config/mediamtx.yml")
+    mediamtx_proc = subprocess.Popen(
+        ["mediamtx", mediamtx_cfg],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+    logger.info("MediaMTX started (pid=%d, config=%s)", mediamtx_proc.pid, mediamtx_cfg)
 
     # ── message callback ────────────────────────────────────────────
     msg_handler = MessageHandler(source_map, perf_monitor, engine_monitor, rolling_manager)
@@ -134,6 +138,7 @@ def run_pipeline():
         rolling_manager=rolling_manager,
         screenshot_retriever=comp.screenshot_retriever,
         tiler_element=comp.tiler_element,
+        osd_toggle=comp.osd_toggle,
         source_map=source_map,
         kafka_config={
             "bootstrap.servers": kafka_broker,
@@ -161,14 +166,16 @@ def run_pipeline():
     # ── graceful shutdown ───────────────────────────────────────────
     class ShutdownActions:
         """Bundles all shutdown actions to avoid a nested function."""
-        def __init__(self, cmd, rec):
+        def __init__(self, cmd, rec, mtx_proc):
             self._cmd = cmd
             self._rec = rec
+            self._mtx = mtx_proc
         def __call__(self):
             self._cmd.stop()
             self._rec.shutdown()
+            self._mtx.terminate()
 
-    GracefulShutdown(pipeline, on_shutdown=ShutdownActions(cmd_consumer, rolling_manager))
+    GracefulShutdown(pipeline, on_shutdown=ShutdownActions(cmd_consumer, rolling_manager, mediamtx_proc))
 
     # ── start pipeline ──────────────────────────────────────────────
     logger.info("Preparing pipeline …")
@@ -180,9 +187,8 @@ def run_pipeline():
     logger.info("Pipeline activate completed")
 
     logger.info(
-        "Pipeline running. REST API at http://0.0.0.0:%s  RTSP at rtsp://0.0.0.0:%s/preview",
+        "Pipeline running. REST API at http://0.0.0.0:%s  MediaMTX at rtsp://0.0.0.0:8554/preview",
         os.environ.get("DS_REST_PORT", "9000"),
-        rtsp_port,
     )
     pipeline.wait()
     logger.info("Pipeline stopped.")

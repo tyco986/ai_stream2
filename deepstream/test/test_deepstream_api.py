@@ -132,6 +132,15 @@ class TestDeepStreamAPI:
         send_command(kafka_producer, ds.command_topic, payload_single, ds.timeout)
         send_command(kafka_producer, ds.command_topic, payload_multi, ds.timeout)
 
+    def test_command_toggle_osd(self, ds, prepared_camera, kafka_producer):
+        payload_off = {"action": "toggle_osd", "show": False}
+        payload_on = {"action": "toggle_osd", "show": True}
+        write_test_payload(f"{ds.camera_id}_command_toggle_osd_off.json", payload_off)
+        write_test_payload(f"{ds.camera_id}_command_toggle_osd_on.json", payload_on)
+
+        send_command(kafka_producer, ds.command_topic, payload_off, ds.timeout)
+        send_command(kafka_producer, ds.command_topic, payload_on, ds.timeout)
+
     # ---- stream remove (must be last) ----
 
     def test_stream_remove(self, ds, prepared_camera, kafka_producer):

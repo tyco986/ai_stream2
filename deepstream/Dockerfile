@@ -16,14 +16,21 @@ RUN pip install --break-system-packages \
     nvidia-ml-py \
     Pillow
 
-# Runtime C libs + GStreamer RTSP typelib + PyGObject + pkg-config for C ext build
+# Runtime C libs + pkg-config for C ext build
 RUN apt-get update && apt-get install -y --no-install-recommends \
     librdkafka1 \
-    gir1.2-gst-rtsp-server-1.0 \
-    python3-gi \
     curl \
     pkg-config \
+    xz-utils \
     && rm -rf /var/lib/apt/lists/*
+
+# Static FFmpeg for recording tools; MediaMTX as RTSP/WebRTC server
+RUN curl -fsSL "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz" \
+    | tar xJ --strip-components=1 -C /usr/local/bin --wildcards '*/ffmpeg' '*/ffprobe'
+ARG MEDIAMTX_VERSION=1.17.1
+RUN curl -fsSL \
+    "https://gh.llkk.cc/https://github.com/bluenviron/mediamtx/releases/download/v${MEDIAMTX_VERSION}/mediamtx_v${MEDIAMTX_VERSION}_linux_amd64.tar.gz" \
+    | tar xz -C /usr/local/bin mediamtx
 
 WORKDIR /app
 COPY . /app
@@ -37,6 +44,6 @@ RUN mkdir -p /app/recordings/rolling /app/recordings/locked /app/screenshots
 
 ENV NVIDIA_DRIVER_CAPABILITIES=${NVIDIA_DRIVER_CAPABILITIES},video
 
-EXPOSE 9000 8554
+EXPOSE 9000 8554 8889
 
 ENTRYPOINT ["python3", "main.py"]
