@@ -1,8 +1,8 @@
 <template>
-  <el-container style="height: 100%">
-    <Sidebar :collapsed="isCollapsed" />
-    <el-container>
-      <Navbar :collapsed="isCollapsed" @toggle-sidebar="isCollapsed = !isCollapsed" />
+  <el-container style="height: 100%; flex-direction: column">
+    <Navbar />
+    <el-container style="flex: 1; overflow: hidden">
+      <Sidebar />
       <el-main style="background: #f5f7fa; padding: 20px; overflow-y: auto">
         <router-view />
       </el-main>
@@ -11,9 +11,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import Sidebar from './Sidebar.vue'
 import Navbar from './Navbar.vue'
-
-const isCollapsed = ref(false)
 </script>

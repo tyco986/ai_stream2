@@ -38,7 +38,7 @@ def has_b_frames(video_path: str) -> bool:
             check=True,
         )
         value = result.stdout.strip()
-        return value == "1"
+        return value not in ("", "0")
     except (subprocess.CalledProcessError, FileNotFoundError):
         # If ffprobe fails or not found, assume B-frames may exist (fail safe)
         return True
@@ -75,6 +75,21 @@ def build_ffmpeg_cmd(
         rtsp_url,
     ]
     return cmd
+
+
+class _ProcessShutdown:
+    """Signal handler that terminates a list of subprocesses."""
+
+    def __init__(self, processes: List[subprocess.Popen]):
+        self._processes = processes
+
+    def __call__(self, sig, frame):
+        print("\nShutting down...")
+        for p in self._processes:
+            p.terminate()
+        for p in self._processes:
+            p.wait(timeout=5)
+        sys.exit(0)
 
 
 def main() -> None:
@@ -114,14 +129,7 @@ def main() -> None:
 
     processes: List[subprocess.Popen] = []
 
-    def shutdown(sig, frame):
-        print("\nShutting down...")
-        for p in processes:
-            p.terminate()
-        for p in processes:
-            p.wait(timeout=5)
-        sys.exit(0)
-
+    shutdown = _ProcessShutdown(processes)
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)
 

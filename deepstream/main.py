@@ -9,11 +9,11 @@ from pyservicemaker import (
     DynamicSourceMessage, PipelineState, StateTransitionMessage, utils,
 )
 
-from pipeline_builder import PipelineBuilder
-from recording_manager import RollingRecordManager
-from command_consumer import CommandConsumer
-from disk_guard import DiskGuard
-from gpu_monitor import GpuMemoryMonitor
+from pipeline.builder import PipelineBuilder
+from recording.manager import RollingRecordManager
+from daemons.command_consumer import CommandConsumer
+from daemons.disk_guard import DiskGuard
+from daemons.gpu_monitor import GpuMemoryMonitor
 
 logging.basicConfig(
     level=logging.INFO,
@@ -83,6 +83,24 @@ class MessageHandler:
                 logger.info("Engine file monitor started")
 
 
+class ShutdownActions:
+    """Callable that bundles all cleanup actions for graceful shutdown."""
+
+    def __init__(self, cmd_consumer, recording_manager):
+        self._cmd = cmd_consumer
+        self._rec = recording_manager
+        self._mtx = None
+
+    def set_mediamtx(self, mtx_proc):
+        self._mtx = mtx_proc
+
+    def __call__(self):
+        self._cmd.stop()
+        self._rec.shutdown()
+        if self._mtx:
+            self._mtx.terminate()
+
+
 def run_pipeline():
     builder = PipelineBuilder()
     comp = builder.build()
@@ -93,12 +111,10 @@ def run_pipeline():
 
     # ── recording manager ───────────────────────────────────────────
     rolling_dir = os.environ.get("DS_ROLLING_DIR", "/app/recordings/rolling")
-    locked_dir = os.environ.get("DS_LOCKED_DIR", "/app/recordings/locked")
     segment_sec = int(os.environ.get("DS_RECORDING_SEGMENT_SEC", "300"))
 
     rolling_manager = RollingRecordManager(
         rolling_dir=rolling_dir,
-        locked_dir=locked_dir,
         segment_duration=segment_sec,
         source_element=comp.source_element,
     )
@@ -119,13 +135,9 @@ def run_pipeline():
     engine_monitor = utils.EngineFileMonitor(comp.pgie_element, engine_file) if engine_file else None
 
     # ── MediaMTX RTSP/WebRTC server ─────────────────────────────────
+    # NOTE: MediaMTX is started AFTER pipeline activation to avoid port
+    # conflicts with the preview udpsink during GStreamer state transitions.
     mediamtx_cfg = os.environ.get("DS_MEDIAMTX_CONFIG", "/app/config/mediamtx.yml")
-    mediamtx_proc = subprocess.Popen(
-        ["mediamtx", mediamtx_cfg],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
-    )
-    logger.info("MediaMTX started (pid=%d, config=%s)", mediamtx_proc.pid, mediamtx_cfg)
 
     # ── message callback ────────────────────────────────────────────
     msg_handler = MessageHandler(source_map, perf_monitor, engine_monitor, rolling_manager)
@@ -150,32 +162,19 @@ def run_pipeline():
 
     disk_guard = DiskGuard(
         rolling_dir=rolling_dir,
-        locked_dir=locked_dir,
+        locked_dir=os.environ.get("DS_LOCKED_DIR", "/app/recordings/locked"),
         max_usage_percent=int(os.environ.get("DS_DISK_MAX_USAGE_PCT", "85")),
         locked_max_age_days=int(os.environ.get("DS_LOCKED_MAX_AGE_DAYS", "30")),
         check_interval=int(os.environ.get("DS_DISK_CHECK_INTERVAL", "60")),
     )
     threading.Thread(target=disk_guard.run, daemon=True, name="disk-guard").start()
 
-    gpu_monitor = GpuMemoryMonitor(
-        interval=30,
-        gpu_index=0,
-    )
-    threading.Thread(target=gpu_monitor.run, daemon=True, name="gpu-monitor").start()
+    # NOTE: GpuMemoryMonitor uses pynvml which conflicts with nvinfer's CUDA
+    # init during prepare(). Start it AFTER pipeline activation.
 
     # ── graceful shutdown ───────────────────────────────────────────
-    class ShutdownActions:
-        """Bundles all shutdown actions to avoid a nested function."""
-        def __init__(self, cmd, rec, mtx_proc):
-            self._cmd = cmd
-            self._rec = rec
-            self._mtx = mtx_proc
-        def __call__(self):
-            self._cmd.stop()
-            self._rec.shutdown()
-            self._mtx.terminate()
-
-    GracefulShutdown(pipeline, on_shutdown=ShutdownActions(cmd_consumer, rolling_manager, mediamtx_proc))
+    shutdown_actions = ShutdownActions(cmd_consumer, rolling_manager)
+    GracefulShutdown(pipeline, on_shutdown=shutdown_actions)
 
     # ── start pipeline ──────────────────────────────────────────────
     logger.info("Preparing pipeline …")
@@ -185,6 +184,19 @@ def run_pipeline():
     logger.info("Activating pipeline …")
     pipeline.activate()
     logger.info("Pipeline activate completed")
+
+    # ── Start GPU monitor after pipeline is active (avoids pynvml/CUDA conflict) ──
+    gpu_monitor = GpuMemoryMonitor(interval=30, gpu_index=0)
+    threading.Thread(target=gpu_monitor.run, daemon=True, name="gpu-monitor").start()
+
+    # ── Start MediaMTX after pipeline is active ───────────────────
+    mediamtx_proc = subprocess.Popen(
+        ["mediamtx", mediamtx_cfg],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    logger.info("MediaMTX started (pid=%d, config=%s)", mediamtx_proc.pid, mediamtx_cfg)
+    shutdown_actions.set_mediamtx(mediamtx_proc)
 
     logger.info(
         "Pipeline running. REST API at http://0.0.0.0:%s  MediaMTX at rtsp://0.0.0.0:8554/preview",

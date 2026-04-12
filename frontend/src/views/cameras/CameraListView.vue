@@ -3,6 +3,7 @@
     <PageHeader title="摄像头列表" subtitle="管理所有摄像头及其流状态" />
 
     <el-alert
+      v-if="hasStaleConfig"
       title="部分摄像头分析配置已过期，请前往详情页重新同步管道配置"
       type="warning"
       show-icon
@@ -81,6 +82,8 @@ const filteredCameras = computed(() => {
   if (!statusFilter.value) return cameras.value
   return cameras.value.filter(c => c.status === statusFilter.value)
 })
+
+const hasStaleConfig = computed(() => false)
 
 function filterCameras() { /* triggered by el-select @change */ }
 

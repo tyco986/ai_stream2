@@ -1,13 +1,9 @@
 <template>
   <div>
-    <el-row justify="space-between" align="middle" style="margin-bottom: 20px">
-      <el-col :span="12">
-        <PageHeader title="实时预览" subtitle="4×4 多路摄像头实时监控" />
-      </el-col>
-      <el-col :span="12" style="text-align: right">
-        <el-button @click="handleBack">返回总览</el-button>
-      </el-col>
-    </el-row>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px">
+      <PageHeader title="实时预览" subtitle="4×4 多路摄像头实时监控" style="margin-bottom: 0" />
+      <el-button @click="handleBack">返回总览</el-button>
+    </div>
 
     <el-row :gutter="8">
       <el-col v-for="(cell, idx) in gridCells" :key="idx" :span="6" style="margin-bottom: 8px">

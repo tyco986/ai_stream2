@@ -1,7 +1,7 @@
 <template>
   <div>
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px">
-      <PageHeader title="报警规则" />
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px">
+      <PageHeader title="报警规则" style="margin-bottom: 0" />
       <el-button type="primary" :icon="Plus" @click="openCreateDialog">新建规则</el-button>
     </div>
 

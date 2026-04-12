@@ -1,7 +1,7 @@
 <template>
   <div>
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px">
-      <PageHeader title="用户管理" />
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px">
+      <PageHeader title="用户管理" style="margin-bottom: 0" />
       <el-button type="primary" :icon="Plus" disabled>新建用户</el-button>
     </div>
 
