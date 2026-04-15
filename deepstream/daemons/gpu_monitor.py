@@ -1,5 +1,5 @@
 import logging
-import time
+import threading
 
 import pynvml
 
@@ -17,6 +17,7 @@ class GpuMemoryMonitor:
     def __init__(self, interval=30, gpu_index=0):
         self._interval = interval
         self._gpu_index = gpu_index
+        self._shutdown = threading.Event()
 
     # ------------------------------------------------------------------
     # main loop (called via daemon thread)
@@ -28,7 +29,7 @@ class GpuMemoryMonitor:
         name = pynvml.nvmlDeviceGetName(handle)
         logger.info("GpuMemoryMonitor started: GPU %d (%s)", self._gpu_index, name)
 
-        while True:
+        while not self._shutdown.wait(timeout=self._interval):
             try:
                 info = pynvml.nvmlDeviceGetMemoryInfo(handle)
                 used_mb = info.used / (1024 * 1024)
@@ -47,4 +48,6 @@ class GpuMemoryMonitor:
                     )
             except Exception:
                 logger.exception("Failed to read GPU memory stats")
-            time.sleep(self._interval)
+
+    def stop(self):
+        self._shutdown.set()

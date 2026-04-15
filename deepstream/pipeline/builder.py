@@ -9,6 +9,7 @@ from pipeline.analytics_probe import AnalyticsMetadataProbe
 from pipeline.osd_toggle import OsdToggle
 from pipeline.screenshot import ScreenshotRetriever
 from pipeline.yolo_postprocessor import YoloV10Postprocessor
+from utils.storage import StorageManager
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,8 @@ class PipelineBuilder:
                               -> nvv4l2h264enc -> rtph264pay -> udpsink (→ MediaMTX RTP source)
     """
 
-    def __init__(self):
+    def __init__(self, storage: StorageManager):
+        self._storage = storage
         self._kafka_broker = os.environ.get("KAFKA_BROKER", "kafka:9092")
         self._kafka_topic = os.environ.get("KAFKA_TOPIC", "deepstream-detections")
         self._kafka_event_topic = os.environ.get("KAFKA_EVENT_TOPIC", "deepstream-events")
@@ -51,7 +53,6 @@ class PipelineBuilder:
             "/opt/nvidia/deepstream/deepstream/samples/configs/deepstream-app/config_tracker_NvDCF_perf.yml",
         )
         self._analytics_config = os.environ.get("DS_ANALYTICS_CONFIG", "")
-        self._screenshot_dir = os.environ.get("DS_SCREENSHOT_DIR", "/app/screenshots")
         self._preview_bitrate = int(os.environ.get("DS_PREVIEW_BITRATE", "4000000"))
         self._tiler_rows = int(os.environ.get("DS_PREVIEW_TILER_ROWS", "4"))
         self._tiler_cols = int(os.environ.get("DS_PREVIEW_TILER_COLS", "4"))
@@ -61,7 +62,7 @@ class PipelineBuilder:
         self._yolo_threshold = float(os.environ.get("DS_YOLO_THRESHOLD", "0.3"))
         self._labels_path = os.environ.get("DS_LABELS_PATH", "/app/models/coco_labels.txt")
 
-        self._recording_dir = os.environ.get("DS_ROLLING_DIR", "/app/recordings/rolling")
+        self._recording_dir = str(storage.buffer_dir)
         self._sr_cache = int(os.environ.get("DS_SR_CACHE_SEC", "30"))
         self._sr_default_duration = int(os.environ.get("DS_SR_DEFAULT_DURATION", "20"))
 
@@ -239,7 +240,7 @@ class PipelineBuilder:
         pipeline.link("queue_snap", "snap_valve", "snap_convert", "snap_caps", "snap_sink")
 
         screenshot_retriever = ScreenshotRetriever(
-            output_dir=self._screenshot_dir,
+            storage=self._storage,
             valve_element=pipeline["snap_valve"],
             kafka_broker=self._kafka_broker,
             kafka_topic=self._kafka_event_topic,

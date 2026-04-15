@@ -97,9 +97,10 @@ class CommandConsumer:
             self._rolling.stop_rolling(source_id)
 
         elif action == "screenshot":
+            camera_id = self._resolve_camera_id(cmd["source_id"])
             source_id = self._resolve_source_id(cmd["source_id"])
             if hasattr(self._screenshot, "request_screenshot"):
-                self._screenshot.request_screenshot(source_id, cmd["filename"])
+                self._screenshot.request_screenshot(source_id, camera_id, cmd["filename"])
             else:
                 self._publish_command_error(
                     action=action,
@@ -154,6 +155,23 @@ class CommandConsumer:
         if source_id is None:
             raise ValueError(f"Unknown sensor_id: {source_ref}")
         return source_id
+
+    def _resolve_camera_id(self, source_ref) -> str:
+        """Resolve the camera_id (sensor_id string) from a command source_ref.
+
+        If source_ref is already a sensor_id string, return it directly.
+        If it is an integer or numeric string, reverse-lookup from source_map.
+        """
+        if isinstance(source_ref, str) and not source_ref.isdigit():
+            if source_ref in self._source_map:
+                return source_ref
+            raise ValueError(f"Unknown sensor_id: {source_ref}")
+
+        int_id = int(source_ref)
+        for sensor_id, src_id in self._source_map.items():
+            if src_id == int_id:
+                return sensor_id
+        raise ValueError(f"Cannot resolve camera_id for source_id: {source_ref}")
 
     def _publish_command_error(self, action: str, source_id, reason: str):
         event = {

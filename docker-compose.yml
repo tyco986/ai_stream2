@@ -143,13 +143,15 @@ services:
       DS_RECORDING_SEGMENT_SEC: ${DS_RECORDING_SEGMENT_SEC:-300}
       DS_SR_DEFAULT_DURATION: ${DS_SR_DEFAULT_DURATION:-300}
       DS_LIGHT_PIPELINE: ${DS_LIGHT_PIPELINE:-1}
+      DS_STORAGE_DIR: /app/storage
+      DS_DISK_MAX_STORAGE_GB: ${DS_DISK_MAX_STORAGE_GB:-}
+      DS_DISK_MAX_USAGE_PCT: ${DS_DISK_MAX_USAGE_PCT:-85}
       DS_PGIE_CONFIG: ${DS_PGIE_CONFIG:-/app/config/pgie_yolov10_config.yml}
       DS_YOLO_PERSON_ONLY: ${DS_YOLO_PERSON_ONLY:-1}
       DS_YOLO_THRESHOLD: ${DS_YOLO_THRESHOLD:-0.3}
       DS_LABELS_PATH: /app/models/coco_labels.txt
     volumes:
-      - ./deepstream/screenshots:/app/screenshots
-      - ./deepstream/recordings:/app/recordings
+      - ./deepstream/storage:/app/storage
       - ./deepstream/models:/app/models
     depends_on:
       - kafka

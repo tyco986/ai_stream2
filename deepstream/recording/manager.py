@@ -1,7 +1,9 @@
 import logging
+import shutil
 from pathlib import Path
 
 from recording.smartrecord import SmartRecordController
+from utils.storage import StorageManager
 
 logger = logging.getLogger(__name__)
 
@@ -9,16 +11,19 @@ logger = logging.getLogger(__name__)
 class RollingRecordManager:
     """Manage rolling (7x24) recordings via SmartRecord.
 
-    Rolling segments stay in ``rolling/`` and are cleaned by DiskGuard.
+    SmartRecord writes segments to a global buffer directory.  When a
+    segment finishes (``_on_sr_done``), the file is moved to the
+    per-camera archive: ``storage/{camera_id}/recordings/``.
     """
 
     SEGMENT_DURATION = 300  # seconds (5 min)
 
-    def __init__(self, rolling_dir, segment_duration=None,
+    def __init__(self, storage: StorageManager, segment_duration=None,
                  source_element=None):
-        self._rolling_dir = Path(rolling_dir)
+        self._storage = storage
         self._rolling_sources = {}   # source_id → uri
         self._uri_map = {}           # source_id → uri (persists after stop_rolling)
+        self._camera_map = {}        # source_id → camera_id
         self._segment_duration = segment_duration or self.SEGMENT_DURATION
 
         self._sr_controller = SmartRecordController(
@@ -27,20 +32,24 @@ class RollingRecordManager:
         )
         logger.info("Recording backend: smartrecord (C extension)")
 
-        self._rolling_dir.mkdir(parents=True, exist_ok=True)
-
     # ------------------------------------------------------------------
-    # rolling (7x24)
+    # source lifecycle
     # ------------------------------------------------------------------
 
-    def register_source(self, source_id: int, uri: str):
-        """Store the URI for a source so Kafka commands can restart recording."""
+    def register_source(self, source_id: int, camera_id: str, uri: str):
         self._uri_map[source_id] = uri
+        self._camera_map[source_id] = camera_id
+        self._storage.ensure_dirs(camera_id)
         self._sr_controller.register_source(source_id)
 
     def unregister_source(self, source_id: int):
         self._uri_map.pop(source_id, None)
+        self._camera_map.pop(source_id, None)
         self._sr_controller.unregister_source(source_id)
+
+    # ------------------------------------------------------------------
+    # rolling (7x24)
+    # ------------------------------------------------------------------
 
     def start_rolling(self, source_id: int, uri: str = ""):
         resolved_uri = uri or self._uri_map.get(source_id, "")
@@ -66,13 +75,25 @@ class RollingRecordManager:
     # ------------------------------------------------------------------
 
     def _on_sr_done(self, source_id: int, info: dict):
-        """Called by SmartRecordController when a recording segment finishes."""
         filename = info.get("filename", "")
         dirpath = info.get("dirpath", "")
-        logger.info(
-            "SmartRecord segment done: source_id=%d file=%s/%s",
-            source_id, dirpath, filename,
-        )
+        src_path = Path(dirpath) / filename if dirpath and filename else None
+
+        camera_id = self._camera_map.get(source_id)
+        if src_path and src_path.exists() and camera_id:
+            dest_dir = self._storage.recordings_dir(camera_id)
+            dest_dir.mkdir(parents=True, exist_ok=True)
+            dest_path = dest_dir / filename
+            shutil.move(str(src_path), str(dest_path))
+            logger.info(
+                "Recording archived: source_id=%d camera=%s file=%s",
+                source_id, camera_id, dest_path,
+            )
+        else:
+            logger.info(
+                "SmartRecord segment done: source_id=%d file=%s/%s (no archive)",
+                source_id, dirpath, filename,
+            )
 
         if source_id in self._rolling_sources:
             self._sr_controller.start(

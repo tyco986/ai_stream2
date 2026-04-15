@@ -109,7 +109,7 @@ class TestDeepStreamAPI:
         send_command(kafka_producer, ds.command_topic, payload, ds.timeout)
 
     def test_command_screenshot(self, ds, prepared_camera, kafka_producer):
-        screenshot_dir = get_screenshots_dir()
+        screenshot_dir = get_screenshots_dir(ds.camera_id)
         screenshot_dir.mkdir(parents=True, exist_ok=True)
         filename = f"{ds.camera_id}_{int(time.time())}.jpg"
         expected_file = screenshot_dir / filename

@@ -42,17 +42,26 @@ def write_test_payload(name: str, payload: dict[str, Any]) -> Path:
     return target
 
 
-def get_screenshots_dir() -> Path:
-    env_value = os.environ.get("DS_SCREENSHOTS_DIR")
-    if env_value:
-        return Path(env_value)
-    return DEEPSTREAM_DIR / "screenshots"
+def get_screenshots_dir(camera_id: str = "") -> Path:
+    storage_dir = os.environ.get("DS_STORAGE_DIR")
+    if storage_dir and camera_id:
+        return Path(storage_dir) / camera_id / "screenshots"
+    if storage_dir:
+        return Path(storage_dir)
+    if camera_id:
+        return DEEPSTREAM_DIR / "storage" / camera_id / "screenshots"
+    return DEEPSTREAM_DIR / "storage"
 
 
-def get_recordings_dirs() -> tuple[Path, Path]:
-    rolling = Path(os.environ.get("DS_ROLLING_DIR", str(DEEPSTREAM_DIR / "recordings" / "rolling")))
-    locked = Path(os.environ.get("DS_LOCKED_DIR", str(DEEPSTREAM_DIR / "recordings" / "locked")))
-    return rolling, locked
+def get_recordings_dir(camera_id: str = "") -> Path:
+    storage_dir = os.environ.get("DS_STORAGE_DIR")
+    if storage_dir and camera_id:
+        return Path(storage_dir) / camera_id / "recordings"
+    if storage_dir:
+        return Path(storage_dir)
+    if camera_id:
+        return DEEPSTREAM_DIR / "storage" / camera_id / "recordings"
+    return DEEPSTREAM_DIR / "storage"
 
 
 def count_files(path: Path) -> int:

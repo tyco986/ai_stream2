@@ -1,6 +1,6 @@
 # DeepStream API Test Guide
 
-This directory contains black-box tests for DeepStream REST APIs and Kafka command channel APIs.
+This directory contains black-box integration tests and unit tests for the DeepStream service.
 
 ## Scope
 
@@ -17,32 +17,12 @@ This directory contains black-box tests for DeepStream REST APIs and Kafka comma
   - `screenshot`
   - `switch_preview`
 
-## Test Scripts
+## Test Files
 
-- `test_health_get_dsready_state.py`
-- `test_stream_get_stream_info.py`
-- `test_stream_add.py`
-- `test_stream_remove.py`
-- `test_command_start_rolling.py`
-- `test_command_stop_rolling.py`
-- `test_command_start_recording_event.py`
-- `test_command_start_recording_manual.py`
-- `test_command_stop_recording.py`
-- `test_command_screenshot.py`
-- `test_command_switch_preview.py`
-- `test_all.py`
-
-## Runtime Strategy (`test_all.py`)
-
-`test_all.py` uses a stateful orchestration strategy for stability:
-
-1. Prepare one persistent test camera once.
-2. Run command tests with `--no-prepare` to reuse the same camera.
-3. Run `stream/remove` at the end.
-4. Always continue all tests and print a summary.
-5. Return non-zero if any case failed.
-
-This avoids repeated add/remove churn on dynamic sources.
+- `test_deepstream_api.py` — Integration tests (requires running DeepStream container)
+- `test_unit.py` — Unit tests for StorageManager, DiskGuard, recording archival, resolve helpers (no container needed)
+- `conftest.py` — pytest fixtures for integration tests
+- `_common.py` — Shared helpers (HTTP, Kafka, path utilities)
 
 ## Command Payload Contract
 
@@ -51,43 +31,54 @@ This avoids repeated add/remove churn on dynamic sources.
 - For `switch_preview`:
   - `source_id` is an integer (`-1` for multi-view).
 
-## Quick Start (inside DeepStream container)
+## Storage Layout
 
-Run all tests:
+Tests expect the new per-camera storage structure:
 
-```bash
-python3 /app/test/test_all.py \
-  --base-url http://127.0.0.1:9000 \
-  --kafka-broker ai-stream2-kafka:9092 \
-  --command-topic deepstream-commands \
-  --camera-url file:///app/example_data/video2_bf0.mp4 \
-  --timeout 40
+```
+storage/
+├── recordings/              ← SmartRecord buffer (temporary)
+├── {camera_id}/
+│   ├── recordings/          ← Archived recording segments
+│   └── screenshots/         ← Screenshots
 ```
 
-Run one command test with persistent source reuse:
+## Quick Start
+
+### Unit tests (local, no container)
 
 ```bash
-python3 /app/test/test_command_screenshot.py \
-  --base-url http://127.0.0.1:9000 \
-  --kafka-broker ai-stream2-kafka:9092 \
-  --command-topic deepstream-commands \
-  --camera-id test_camera \
-  --camera-url file:///app/example_data/video2_bf0.mp4 \
-  --timeout 40 \
-  --no-prepare
+cd deepstream
+python -m pytest test/test_unit.py --noconftest -v
 ```
 
-## Common Parameters
+### Integration tests (inside DeepStream container)
 
-- `--base-url`: DeepStream REST base URL.
-- `--timeout`: HTTP/Kafka timeout in seconds.
-- `--camera-id`: camera identifier used by tests.
-- `--camera-name`: camera display name.
-- `--camera-url`: input stream URL.
-- `--kafka-broker`: Kafka bootstrap server (command tests only).
+```bash
+pytest /app/test/test_deepstream_api.py -v \
+  --base-url http://127.0.0.1:9000 \
+  --kafka-broker kafka:9092 \
+  --command-topic deepstream-commands \
+  --camera-url rtsp://127.0.0.1:8554/video1
+```
+
+### Integration tests (from host)
+
+```bash
+pytest deepstream/test/test_deepstream_api.py -v \
+  --base-url http://127.0.0.1:9000 \
+  --kafka-broker 127.0.0.1:19092 \
+  --camera-url rtsp://127.0.0.1:8555/video1
+```
+
+## CLI Options
+
+- `--base-url`: DeepStream REST API base URL.
+- `--kafka-broker`: Kafka bootstrap server.
 - `--command-topic`: Kafka command topic (command tests only).
-- `--verbose`: print debug payloads.
-- `--no-prepare`: skip per-script stream preparation (command tests only).
+- `--camera-url`: RTSP URL of the test video stream.
+- `--camera-id`: Camera sensor ID (default: `test_cam_001`).
+- `--timeout`: HTTP request timeout in seconds (default: 10).
 
 ## Screenshot Compatibility Note
 

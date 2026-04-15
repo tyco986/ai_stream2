@@ -40,7 +40,7 @@ RUN cd /app/ext && python3 setup.py build_ext --inplace \
     && cp nvdssr_ext*.so /app/ \
     && cd /app && rm -rf ext/build
 
-RUN mkdir -p /app/recordings/rolling /app/recordings/locked /app/screenshots
+RUN mkdir -p /app/storage/recordings
 
 ENV NVIDIA_DRIVER_CAPABILITIES=${NVIDIA_DRIVER_CAPABILITIES},video
 

@@ -7,6 +7,8 @@ from confluent_kafka import Producer
 from PIL import Image
 from pyservicemaker import BufferRetriever
 
+from utils.storage import StorageManager
+
 logger = logging.getLogger(__name__)
 
 JPEG_QUALITY = 95
@@ -26,14 +28,14 @@ class ScreenshotRetriever(BufferRetriever):
     GPU→CPU path:  buffer.extract(0).clone()  →  cupy.from_dlpack  →  cupy.asnumpy
     """
 
-    def __init__(self, output_dir="/app/screenshots",
+    def __init__(self, storage: StorageManager,
                  valve_element=None,
                  kafka_broker="kafka:9092",
                  kafka_topic="deepstream-events"):
         super().__init__()
-        self._output_dir = output_dir
+        self._storage = storage
         self._valve = valve_element
-        self._pending = {}           # source_id(int) → output_path(str)
+        self._pending = {}           # source_id(int) → (camera_id, output_path)
         self._lock = threading.Lock()
 
         self._kafka_broker = kafka_broker
@@ -44,12 +46,15 @@ class ScreenshotRetriever(BufferRetriever):
     # public API (called from CommandConsumer thread)
     # ------------------------------------------------------------------
 
-    def request_screenshot(self, source_id: int, filename: str):
-        output_path = f"{self._output_dir}/{filename}"
+    def request_screenshot(self, source_id: int, camera_id: str, filename: str):
+        output_dir = self._storage.screenshots_dir(camera_id)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = str(output_dir / filename)
+
         with self._lock:
-            self._pending[source_id] = output_path
+            self._pending[source_id] = (camera_id, output_path)
             self._valve.set({"drop": False})
-        logger.info("Screenshot requested: source_id=%d filename=%s", source_id, filename)
+        logger.info("Screenshot requested: source_id=%d camera=%s filename=%s", source_id, camera_id, filename)
 
     # ------------------------------------------------------------------
     # BufferRetriever callback (GStreamer streaming thread)
@@ -58,17 +63,19 @@ class ScreenshotRetriever(BufferRetriever):
     def consume(self, buffer):
         with self._lock:
             source_id = getattr(buffer, "source_id", None)
-            output_path = None
+            entry = None
             if source_id is not None:
-                output_path = self._pending.pop(source_id, None)
+                entry = self._pending.pop(source_id, None)
             elif len(self._pending) == 1:
-                source_id, output_path = self._pending.popitem()
+                source_id, entry = self._pending.popitem()
             should_close = len(self._pending) == 0
             if should_close:
                 self._valve.set({"drop": True})
 
-        if output_path is None:
+        if entry is None:
             return 1
+
+        _camera_id, output_path = entry
 
         tensor = buffer.extract(0).clone()
         np_arr = cupy.asnumpy(cupy.from_dlpack(tensor))

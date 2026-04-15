@@ -46,8 +46,7 @@ staticfiles/
 media/
 
 # DeepStream runtime data
-deepstream/recordings/
-deepstream/screenshots/
+deepstream/storage/
 
 # DeepStream build artifacts & large binary files
 *.so

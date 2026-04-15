@@ -14,6 +14,7 @@ from recording.manager import RollingRecordManager
 from daemons.command_consumer import CommandConsumer
 from daemons.disk_guard import DiskGuard
 from daemons.gpu_monitor import GpuMemoryMonitor
+from utils.storage import StorageManager
 
 logging.basicConfig(
     level=logging.INFO,
@@ -69,11 +70,13 @@ class MessageHandler:
                 "Stream added: sensor_id=%s source_id=%d uri=%s",
                 msg.sensor_id, msg.source_id, msg.uri,
             )
+            self._rolling.register_source(msg.source_id, msg.sensor_id, msg.uri)
             self._rolling.start_rolling(msg.source_id, msg.uri)
         else:
             self._source_map.pop(msg.sensor_id, None)
             self._perf.remove_stream(msg.source_id)
             self._rolling.stop_rolling(msg.source_id)
+            self._rolling.unregister_source(msg.source_id)
             logger.info("Stream removed: source_id=%d", msg.source_id)
 
     def _handle_state_transition(self, msg):
@@ -102,24 +105,28 @@ class ShutdownActions:
 
 
 def run_pipeline():
-    builder = PipelineBuilder()
+    # ── storage manager ──────────────────────────────────────────────
+    storage_dir = os.environ.get("DS_STORAGE_DIR", "/app/storage")
+    storage = StorageManager(base_dir=storage_dir)
+
+    # ── build pipeline ───────────────────────────────────────────────
+    builder = PipelineBuilder(storage)
     comp = builder.build()
     pipeline = comp.pipeline
 
-    # ── shared state ────────────────────────────────────────────────
+    # ── shared state ─────────────────────────────────────────────────
     source_map = {}   # sensor_id(str) → source_id(int)
 
-    # ── recording manager ───────────────────────────────────────────
-    rolling_dir = os.environ.get("DS_ROLLING_DIR", "/app/recordings/rolling")
+    # ── recording manager ────────────────────────────────────────────
     segment_sec = int(os.environ.get("DS_RECORDING_SEGMENT_SEC", "300"))
 
     rolling_manager = RollingRecordManager(
-        rolling_dir=rolling_dir,
+        storage=storage,
         segment_duration=segment_sec,
         source_element=comp.source_element,
     )
 
-    # ── performance monitor ─────────────────────────────────────────
+    # ── performance monitor ──────────────────────────────────────────
     max_batch = int(os.environ.get("DS_MAX_BATCH_SIZE", "16"))
 
     perf_monitor = utils.PerfMonitor(
@@ -130,19 +137,17 @@ def run_pipeline():
     )
     perf_monitor.apply(comp.tracker_element, "src")
 
-    # ── engine file monitor ─────────────────────────────────────────
+    # ── engine file monitor ──────────────────────────────────────────
     engine_file = comp.pgie_element.get("model-engine-file") or ""
     engine_monitor = utils.EngineFileMonitor(comp.pgie_element, engine_file) if engine_file else None
 
-    # ── MediaMTX RTSP/WebRTC server ─────────────────────────────────
-    # NOTE: MediaMTX is started AFTER pipeline activation to avoid port
-    # conflicts with the preview udpsink during GStreamer state transitions.
+    # ── MediaMTX RTSP/WebRTC server ──────────────────────────────────
     mediamtx_cfg = os.environ.get("DS_MEDIAMTX_CONFIG", "/app/config/mediamtx.yml")
 
-    # ── message callback ────────────────────────────────────────────
+    # ── message callback ─────────────────────────────────────────────
     msg_handler = MessageHandler(source_map, perf_monitor, engine_monitor, rolling_manager)
 
-    # ── daemon threads ──────────────────────────────────────────────
+    # ── daemon threads ───────────────────────────────────────────────
     kafka_broker = os.environ.get("KAFKA_BROKER", "kafka:9092")
     command_topic = os.environ.get("KAFKA_COMMAND_TOPIC", "deepstream-commands")
 
@@ -160,23 +165,22 @@ def run_pipeline():
         command_topic=command_topic,
     )
 
+    max_storage_gb = os.environ.get("DS_DISK_MAX_STORAGE_GB", "")
+    max_storage_bytes = int(float(max_storage_gb) * (1024 ** 3)) if max_storage_gb else 0
+
     disk_guard = DiskGuard(
-        rolling_dir=rolling_dir,
-        locked_dir=os.environ.get("DS_LOCKED_DIR", "/app/recordings/locked"),
+        storage=storage,
         max_usage_percent=int(os.environ.get("DS_DISK_MAX_USAGE_PCT", "85")),
-        locked_max_age_days=int(os.environ.get("DS_LOCKED_MAX_AGE_DAYS", "30")),
+        max_storage_bytes=max_storage_bytes,
         check_interval=int(os.environ.get("DS_DISK_CHECK_INTERVAL", "60")),
     )
     threading.Thread(target=disk_guard.run, daemon=True, name="disk-guard").start()
 
-    # NOTE: GpuMemoryMonitor uses pynvml which conflicts with nvinfer's CUDA
-    # init during prepare(). Start it AFTER pipeline activation.
-
-    # ── graceful shutdown ───────────────────────────────────────────
+    # ── graceful shutdown ────────────────────────────────────────────
     shutdown_actions = ShutdownActions(cmd_consumer, rolling_manager)
     GracefulShutdown(pipeline, on_shutdown=shutdown_actions)
 
-    # ── start pipeline ──────────────────────────────────────────────
+    # ── start pipeline ───────────────────────────────────────────────
     logger.info("Preparing pipeline …")
     pipeline.prepare(msg_handler)
     logger.info("Pipeline prepare completed")
@@ -189,7 +193,7 @@ def run_pipeline():
     gpu_monitor = GpuMemoryMonitor(interval=30, gpu_index=0)
     threading.Thread(target=gpu_monitor.run, daemon=True, name="gpu-monitor").start()
 
-    # ── Start MediaMTX after pipeline is active ───────────────────
+    # ── Start MediaMTX after pipeline is active ──────────────────────
     mediamtx_proc = subprocess.Popen(
         ["mediamtx", mediamtx_cfg],
         stdout=subprocess.DEVNULL,

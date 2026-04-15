@@ -548,7 +548,7 @@ from pyservicemaker import SmartRecordConfig
 sr_config = SmartRecordConfig(
     smart_rec_cache=30,           # 预缓存 30 秒（事件录制包含报警前画面）
     smart_rec_container=0,        # 0=MP4, 1=MKV
-    smart_rec_dir_path="/app/recordings/rolling",
+    smart_rec_dir_path="/app/storage/recordings",
     smart_rec_mode=1,             # 1=仅视频（无音频）
     # ★ 原生 Kafka 通知：录制完成后 SmartRecord 自动发送事件到 Kafka
     proto_lib="/opt/nvidia/deepstream/deepstream/lib/libnvds_kafka_proto.so",
@@ -725,7 +725,7 @@ class ScreenshotRetriever(BufferRetriever):
     和 consume（GStreamer streaming 线程）之间的竞态。
     """
 
-    def __init__(self, output_dir="/app/screenshots", valve_element=None):
+    def __init__(self, storage, valve_element=None):
         super().__init__()
         self._output_dir = output_dir
         self._valve = valve_element
@@ -781,14 +781,14 @@ pipeline.add("jpegenc", "snap_jpegenc", {"quality": 95})   # JPEG 编码
 pipeline.add("appsink", "snap_sink", {"sync": 0, "async": 0})
 
 screenshot_retriever = ScreenshotRetriever(
-    output_dir=os.environ.get("DS_SCREENSHOT_DIR", "/app/screenshots"),
+    storage=storage_manager,
     valve_element=pipeline["snap_valve"],
 )
 pipeline.attach("snap_sink", Receiver("snap-receiver", screenshot_retriever))
 # 无需 probe：source_id 过滤在 ScreenshotRetriever.consume() 中完成
 ```
 
-截图结果保存在共享卷 `/app/screenshots/`，后端提供下载 API。
+截图结果保存在 `storage/{camera_id}/screenshots/`，后端提供下载 API。
 
 ### Kafka 命令通道（后端 → DeepStream）
 
@@ -825,7 +825,7 @@ Backend ←── consume ──────────────────
 截图完成事件由 ScreenshotRetriever 通过 Python Producer 发送：
 
 ```json
-{"event": "screenshot_done", "source_id": "cam_001", "filepath": "/app/screenshots/cam001_20260405_103000.jpg"}
+{"event": "screenshot_done", "source_id": "cam_001", "filepath": "/app/storage/cam_001/screenshots/cam001_20260405_103000.jpg"}
 {"event": "recording_error", "source_id": "cam_001", "error": "disk_full"}
 ```
 
@@ -919,74 +919,57 @@ class CommandConsumer:
 > 如同行车记录仪——正常行驶录像循环覆盖，碰撞录像锁定保护。
 > 后端只做**录像元数据记录**（消费 Kafka 事件写数据库），不参与磁盘管理。
 
-**双目录架构**：
+**Per-camera 存储架构**：
 
 ```
-/app/recordings/
-├── rolling/          ← DiskGuard 自动清理，循环覆盖（滚动录制）
-│   ├── rolling_cam001_20260405_100000.mp4
-│   ├── rolling_cam001_20260405_100500.mp4
-│   └── ...
-└── locked/           ← 报警/手动录像，长期保留，仅按超龄清理
-    ├── event_cam001_20260405_103215.mp4
-    └── manual_cam003_20260405_114530.mp4
+/app/storage/
+├── recordings/              ← SmartRecord 全局缓冲区（临时）
+├── {camera_id}/
+│   ├── recordings/          ← 归档后的录像段（DiskGuard 自动清理）
+│   │   ├── rolling_cam001_20260405_100000.mp4
+│   │   ├── rolling_cam001_20260405_100500.mp4
+│   │   └── ...
+│   └── screenshots/         ← 截图
+└── ...
 ```
 
 | 目录 | 写入来源 | 清理策略 | 说明 |
 |------|---------|---------|------|
-| `rolling/` | 滚动录制 `sr-done` | 磁盘使用率 > 阈值时删最老文件 | 循环覆盖，最老的先删 |
-| `locked/` | 事件/手动录制 `sr-done` 后 `move` 进入 | 超过 N 天的文件才删除 | 报警录像受保护，不被滚动清理误删 |
+| `recordings/` (buffer) | SmartRecord 直接写入 | sr-done 后立即 move 到 per-camera 目录 | 临时缓冲区 |
+| `{camera_id}/recordings/` | sr-done 归档 | 磁盘使用率 > 阈值 或 总容量 > 上限时删最老文件 | 循环覆盖，最老的先删 |
 
 **DiskGuard — 本地磁盘自保护守护线程**：
 
 ```python
 import shutil
+import threading
 import time
 from pathlib import Path
 
+from utils.storage import StorageManager
+
 class DiskGuard:
-    """行车记录仪模型：rolling/ 循环覆盖，locked/ 长期保留。
+    """双阈值磁盘自保护：百分比 + 绝对容量，先触发者生效。
     零外部依赖——不需要 Redis、Kafka、数据库，纯本地文件系统操作。
+    使用 Event.wait(timeout) 实现可中断的定时循环。
     """
 
-    def __init__(self, rolling_dir, locked_dir,
-                 max_usage_percent=85, locked_max_age_days=30,
-                 check_interval=60):
-        self._rolling_dir = Path(rolling_dir)
-        self._locked_dir = Path(locked_dir)
-        self._max_usage_percent = max_usage_percent
-        self._locked_max_age_days = locked_max_age_days
-        self._check_interval = check_interval
+    def __init__(self, storage, max_usage_percent=85,
+                 max_storage_bytes=0, check_interval=60):
+        self._storage = storage
+        self._max_pct = max_usage_percent
+        self._max_bytes = max_storage_bytes
+        self._interval = check_interval
+        self._shutdown = threading.Event()
 
     def run(self):
-        """守护线程主循环，在 main.py 中以 daemon thread 启动。"""
-        while True:
-            time.sleep(self._check_interval)
-            self._cleanup_locked_by_age()
-            self._cleanup_rolling_by_usage()
+        while not self._shutdown.wait(timeout=self._interval):
+            self._cleanup_buffer()
+            self._cleanup_by_usage()
+            self._cleanup_by_capacity()
 
-    def _cleanup_rolling_by_usage(self):
-        """磁盘使用率超限时，从 rolling/ 删最老文件。
-        跳过最近 60 秒内修改的文件，避免删除 SmartRecord 正在写入的活跃文件。
-        """
-        cutoff = time.time() - 60
-        files = sorted(
-            (f for f in self._rolling_dir.glob("*.mp4") if f.stat().st_mtime < cutoff),
-            key=lambda f: f.stat().st_mtime,
-        )
-        while files and self._disk_over_limit():
-            files.pop(0).unlink()
-
-    def _cleanup_locked_by_age(self):
-        """locked/ 下超龄文件清理（默认 30 天）。"""
-        cutoff = time.time() - self._locked_max_age_days * 86400
-        for f in self._locked_dir.glob("*.mp4"):
-            if f.stat().st_mtime < cutoff:
-                f.unlink()
-
-    def _disk_over_limit(self):
-        usage = shutil.disk_usage(self._rolling_dir)
-        return usage.used / usage.total * 100 > self._max_usage_percent
+    def stop(self):
+        self._shutdown.set()
 ```
 
 **启动方式**（`main.py` 中）：
@@ -994,13 +977,14 @@ class DiskGuard:
 ```python
 import threading
 
+storage = StorageManager(base_dir=os.environ.get("DS_STORAGE_DIR", "/app/storage"))
+
 disk_guard = DiskGuard(
-    rolling_dir=os.environ.get("DS_ROLLING_DIR", "/app/recordings/rolling"),
-    locked_dir=os.environ.get("DS_LOCKED_DIR", "/app/recordings/locked"),
+    storage=storage,
     max_usage_percent=int(os.environ.get("DS_DISK_MAX_USAGE_PCT", "85")),
-    locked_max_age_days=int(os.environ.get("DS_LOCKED_MAX_AGE_DAYS", "30")),
+    max_storage_bytes=int(float(os.environ.get("DS_DISK_MAX_STORAGE_GB", "0")) * (1024 ** 3)),
 )
-threading.Thread(target=disk_guard.run, daemon=True).start()
+threading.Thread(target=disk_guard.run, daemon=True, name="disk-guard").start()
 ```
 
 **存储容量预估**：
