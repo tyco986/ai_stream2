@@ -12,8 +12,7 @@ This directory contains black-box integration tests and unit tests for the DeepS
 - Command channel:
   - `start_rolling`
   - `stop_rolling`
-  - `start_recording` (event/manual)
-  - `stop_recording`
+  - `start_recording` / `stop_recording` (UTC window: `request_id`, `start_ts`, `end_ts`)
   - `screenshot`
   - `switch_preview`
 
@@ -21,13 +20,16 @@ This directory contains black-box integration tests and unit tests for the DeepS
 
 - `test_deepstream_api.py` — Integration tests (requires running DeepStream container)
 - `test_unit.py` — Unit tests for StorageManager, DiskGuard, recording archival, resolve helpers (no container needed)
+- `test_clip_extraction_e2e.py` — End-to-end clip extraction: generates real MP4s in `rolling/`, runs `RollingClipExtractor`, asserts output under `locked/` (requires **ffmpeg** + **ffprobe** on `PATH` or `/usr/local/bin/`)
 - `conftest.py` — pytest fixtures for integration tests
 - `_common.py` — Shared helpers (HTTP, Kafka, path utilities)
 
 ## Command Payload Contract
 
-- For `start_rolling`, `stop_rolling`, `start_recording`, `stop_recording`, `screenshot`:
+- For `start_rolling`, `stop_rolling`, `screenshot`:
   - `source_id` field carries `sensor_id`/`camera_id` string.
+- For `start_recording` / `stop_recording` (rolling → locked clip extraction):
+  - `source_id`, `request_id` (pairing), `start_ts` / `end_ts` (ISO8601 UTC).
 - For `switch_preview`:
   - `source_id` is an integer (`-1` for multi-view).
 
@@ -39,7 +41,8 @@ Tests expect the new per-camera storage structure:
 storage/
 ├── recordings/              ← SmartRecord buffer (temporary)
 ├── {camera_id}/
-│   ├── recordings/          ← Archived recording segments
+│   ├── rolling/             ← Archived rolling segments
+│   ├── locked/              ← Clips from start_recording/stop_recording window
 │   └── screenshots/         ← Screenshots
 ```
 
@@ -50,6 +53,13 @@ storage/
 ```bash
 cd deepstream
 python -m pytest test/test_unit.py --noconftest -v
+```
+
+### Clip e2e (local, requires ffmpeg/ffprobe)
+
+```bash
+cd deepstream
+python -m pytest test/test_clip_extraction_e2e.py -v
 ```
 
 ### Integration tests (inside DeepStream container)

@@ -1,4 +1,5 @@
 import logging
+import os
 import shutil
 import threading
 import time
@@ -16,14 +17,18 @@ class DiskGuard:
 
     1. **Percentage** -- when the partition holding the storage directory
        exceeds ``max_usage_percent``, delete the oldest ``.mp4`` files
-       across all per-camera recording directories until usage drops.
+       under per-camera **rolling** (and legacy **recordings/**) dirs only
+       until usage drops. **locked/** is never touched here.
 
-    2. **Absolute capacity** -- when the total size of all recording
-       files exceeds ``max_storage_bytes``, delete the oldest files
-       until total size drops below the limit.
+    2. **Absolute capacity** -- when the total size of those rolling
+       (plus legacy flat) archive files exceeds ``max_storage_bytes``,
+       delete the oldest files until total size drops below the limit.
 
-    Files modified in the last 60 s are skipped (active writes).
-    The SmartRecord buffer directory is also cleaned of stale files.
+    Files modified in the last 60 s are skipped (active writes), except
+    **0-byte** placeholders: removed after ``DS_BUFFER_EMPTY_MAX_AGE_SEC`` (default 30s)
+    when no decoder output reached SmartRecord (no RTSP frames, etc.).
+
+    The SmartRecord buffer directory is also cleaned of stale non-empty files.
     """
 
     ACTIVE_WRITE_GRACE_SEC = 60
@@ -65,8 +70,17 @@ class DiskGuard:
 
     def _cleanup_buffer(self):
         now = time.time()
+        empty_max_age = float(os.environ.get("DS_BUFFER_EMPTY_MAX_AGE_SEC", "30"))
         for path in self._storage.buffer_dir.glob("*.mp4"):
-            if now - path.stat().st_mtime > self.ACTIVE_WRITE_GRACE_SEC:
+            try:
+                st = path.stat()
+            except OSError:
+                continue
+            if st.st_size == 0 and now - st.st_mtime > empty_max_age:
+                path.unlink()
+                logger.info("Deleted empty buffer file: %s", path)
+                continue
+            if now - st.st_mtime > self.ACTIVE_WRITE_GRACE_SEC:
                 path.unlink()
                 logger.info("Deleted stale buffer file: %s", path)
 
@@ -120,7 +134,7 @@ class DiskGuard:
         """Collect all .mp4 files across per-camera dirs, sorted oldest first."""
         now = time.time()
         files = []
-        for rec_dir in self._storage.all_recording_dirs():
+        for rec_dir in self._storage.dirs_for_disk_guard_cleanup():
             for path in rec_dir.glob("*.mp4"):
                 if now - path.stat().st_mtime < self.ACTIVE_WRITE_GRACE_SEC:
                     continue
@@ -130,7 +144,7 @@ class DiskGuard:
 
     def _total_recording_size(self) -> int:
         total = 0
-        for rec_dir in self._storage.all_recording_dirs():
+        for rec_dir in self._storage.dirs_for_disk_guard_cleanup():
             for path in rec_dir.glob("*.mp4"):
                 total += path.stat().st_size
         return total

@@ -54,13 +54,14 @@ def get_screenshots_dir(camera_id: str = "") -> Path:
 
 
 def get_recordings_dir(camera_id: str = "") -> Path:
+    """Rolling-record archive directory (7x24 segments)."""
     storage_dir = os.environ.get("DS_STORAGE_DIR")
     if storage_dir and camera_id:
-        return Path(storage_dir) / camera_id / "recordings"
+        return Path(storage_dir) / camera_id / "rolling"
     if storage_dir:
         return Path(storage_dir)
     if camera_id:
-        return DEEPSTREAM_DIR / "storage" / camera_id / "recordings"
+        return DEEPSTREAM_DIR / "storage" / camera_id / "rolling"
     return DEEPSTREAM_DIR / "storage"
 
 

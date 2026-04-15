@@ -9,6 +9,8 @@ methods in definition order, which matters because:
 """
 
 import time
+import uuid
+from datetime import datetime, timedelta, timezone
 
 from _common import (
     assert_status,
@@ -76,35 +78,50 @@ class TestDeepStreamAPI:
         send_command(kafka_producer, ds.command_topic, payload, ds.timeout)
 
     def test_command_start_recording_event(self, ds, prepared_camera, kafka_producer):
+        request_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc)
+        start_ts = (now - timedelta(minutes=10)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
         payload = {
             "action": "start_recording",
             "source_id": ds.camera_id,
-            "duration": 20,
-            "type": "event",
+            "request_id": request_id,
+            "start_ts": start_ts,
         }
         write_test_payload(f"{ds.camera_id}_command_start_recording_event.json", payload)
         send_command(kafka_producer, ds.command_topic, payload, ds.timeout)
 
     def test_command_start_recording_manual(self, ds, prepared_camera, kafka_producer):
+        request_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc)
+        start_ts = (now - timedelta(minutes=10)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
         payload = {
             "action": "start_recording",
             "source_id": ds.camera_id,
-            "duration": 0,
-            "type": "manual",
+            "request_id": request_id,
+            "start_ts": start_ts,
         }
         write_test_payload(f"{ds.camera_id}_command_start_recording_manual.json", payload)
         send_command(kafka_producer, ds.command_topic, payload, ds.timeout)
 
     def test_command_stop_recording(self, ds, prepared_camera, kafka_producer):
+        request_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc)
+        start_ts = (now - timedelta(minutes=10)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        end_ts = (now - timedelta(minutes=5)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
         start_payload = {
             "action": "start_recording",
             "source_id": ds.camera_id,
-            "duration": 0,
-            "type": "manual",
+            "request_id": request_id,
+            "start_ts": start_ts,
         }
         send_command(kafka_producer, ds.command_topic, start_payload, ds.timeout)
 
-        payload = {"action": "stop_recording", "source_id": ds.camera_id}
+        payload = {
+            "action": "stop_recording",
+            "source_id": ds.camera_id,
+            "request_id": request_id,
+            "end_ts": end_ts,
+        }
         write_test_payload(f"{ds.camera_id}_command_stop_recording.json", payload)
         send_command(kafka_producer, ds.command_topic, payload, ds.timeout)
 

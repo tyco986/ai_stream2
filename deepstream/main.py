@@ -151,6 +151,8 @@ def run_pipeline():
     kafka_broker = os.environ.get("KAFKA_BROKER", "kafka:9092")
     command_topic = os.environ.get("KAFKA_COMMAND_TOPIC", "deepstream-commands")
 
+    event_topic = os.environ.get("KAFKA_EVENT_TOPIC", "deepstream-events")
+
     cmd_consumer = CommandConsumer(
         rolling_manager=rolling_manager,
         screenshot_retriever=comp.screenshot_retriever,
@@ -163,6 +165,8 @@ def run_pipeline():
             "auto.offset.reset": "latest",
         },
         command_topic=command_topic,
+        storage=storage,
+        event_topic=event_topic,
     )
 
     max_storage_gb = os.environ.get("DS_DISK_MAX_STORAGE_GB", "")

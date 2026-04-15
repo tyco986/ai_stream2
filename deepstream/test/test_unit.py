@@ -1,4 +1,4 @@
-"""Unit tests for StorageManager, DiskGuard, recording archival, and resolve helpers.
+"""Unit tests for StorageManager, DiskGuard, recording archival, resolve helpers, and clip extraction.
 
 These tests use ``tmp_path`` to simulate the file system and do NOT
 require a running DeepStream container.
@@ -8,6 +8,7 @@ import os
 import shutil
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -17,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from utils.storage import StorageManager
 from daemons.disk_guard import DiskGuard
+from recording.clip_extractor import ClipExtractionError, RollingClipExtractor, parse_utc_iso
 
 
 # =====================================================================
@@ -33,32 +35,42 @@ class TestStorageManager:
     def test_ensure_dirs_creates_per_camera(self, tmp_path):
         sm = StorageManager(base_dir=str(tmp_path / "storage"))
         sm.ensure_dirs("cam_001")
-        assert sm.recordings_dir("cam_001").is_dir()
+        assert sm.rolling_dir("cam_001").is_dir()
+        assert sm.locked_dir("cam_001").is_dir()
         assert sm.screenshots_dir("cam_001").is_dir()
 
     def test_ensure_dirs_idempotent(self, tmp_path):
         sm = StorageManager(base_dir=str(tmp_path / "storage"))
         sm.ensure_dirs("cam_001")
         sm.ensure_dirs("cam_001")
-        assert sm.recordings_dir("cam_001").is_dir()
+        assert sm.rolling_dir("cam_001").is_dir()
 
-    def test_all_recording_dirs(self, tmp_path):
+    def test_dirs_for_disk_guard_cleanup(self, tmp_path):
         sm = StorageManager(base_dir=str(tmp_path / "storage"))
         sm.ensure_dirs("cam_001")
         sm.ensure_dirs("cam_002")
-        dirs = sm.all_recording_dirs()
+        dirs = sm.dirs_for_disk_guard_cleanup()
         names = sorted(d.parent.name for d in dirs)
         assert names == ["cam_001", "cam_002"]
 
-    def test_all_recording_dirs_excludes_buffer(self, tmp_path):
+    def test_dirs_for_disk_guard_cleanup_excludes_buffer(self, tmp_path):
         sm = StorageManager(base_dir=str(tmp_path / "storage"))
         sm.ensure_dirs("cam_001")
-        dirs = sm.all_recording_dirs()
+        dirs = sm.dirs_for_disk_guard_cleanup()
         assert all(d.parent.name != "recordings" for d in dirs)
+
+    def test_dirs_for_disk_guard_includes_legacy_only(self, tmp_path):
+        sm = StorageManager(base_dir=str(tmp_path / "storage"))
+        leg = sm.legacy_recordings_dir("legacy_cam")
+        leg.mkdir(parents=True)
+        dirs = sm.dirs_for_disk_guard_cleanup()
+        assert leg in dirs
 
     def test_paths(self, tmp_path):
         sm = StorageManager(base_dir=str(tmp_path / "s"))
-        assert sm.recordings_dir("x") == tmp_path / "s" / "x" / "recordings"
+        assert sm.rolling_dir("x") == tmp_path / "s" / "x" / "rolling"
+        assert sm.locked_dir("x") == tmp_path / "s" / "x" / "locked"
+        assert sm.legacy_recordings_dir("x") == tmp_path / "s" / "x" / "recordings"
         assert sm.screenshots_dir("x") == tmp_path / "s" / "x" / "screenshots"
 
 
@@ -89,6 +101,15 @@ class TestDiskGuardBuffer:
         guard._cleanup_buffer()
         assert recent.exists()
 
+    def test_empty_buffer_files_deleted_after_grace(self, tmp_path):
+        guard, sm = self._make_guard(tmp_path)
+        empty = sm.buffer_dir / "dead_sr.mp4"
+        empty.write_bytes(b"")
+        os.utime(empty, (time.time() - 90, time.time() - 90))
+
+        guard._cleanup_buffer()
+        assert not empty.exists()
+
 
 # =====================================================================
 # DiskGuard — capacity-based cleanup
@@ -100,7 +121,7 @@ class TestDiskGuardCapacity:
         sm = StorageManager(base_dir=str(tmp_path / "storage"))
         sm.ensure_dirs("cam_001")
 
-        rec_dir = sm.recordings_dir("cam_001")
+        rec_dir = sm.rolling_dir("cam_001")
         for i in range(5):
             f = rec_dir / f"seg_{i:03d}.mp4"
             f.write_bytes(b"\x00" * 1000)
@@ -122,7 +143,7 @@ class TestDiskGuardCapacity:
         sm = StorageManager(base_dir=str(tmp_path / "storage"))
         sm.ensure_dirs("cam_001")
 
-        rec_dir = sm.recordings_dir("cam_001")
+        rec_dir = sm.rolling_dir("cam_001")
         for i in range(3):
             f = rec_dir / f"seg_{i:03d}.mp4"
             f.write_bytes(b"\x00" * 100)
@@ -142,9 +163,9 @@ class TestDiskGuardCapacity:
     def test_no_cleanup_when_disabled(self, tmp_path):
         sm = StorageManager(base_dir=str(tmp_path / "storage"))
         sm.ensure_dirs("cam_001")
-        (sm.recordings_dir("cam_001") / "seg.mp4").write_bytes(b"\x00" * 9999)
+        (sm.rolling_dir("cam_001") / "seg.mp4").write_bytes(b"\x00" * 9999)
         os.utime(
-            sm.recordings_dir("cam_001") / "seg.mp4",
+            sm.rolling_dir("cam_001") / "seg.mp4",
             (time.time() - 120, time.time() - 120),
         )
 
@@ -155,7 +176,7 @@ class TestDiskGuardCapacity:
             check_interval=9999,
         )
         guard._cleanup_by_capacity()
-        assert (sm.recordings_dir("cam_001") / "seg.mp4").exists()
+        assert (sm.rolling_dir("cam_001") / "seg.mp4").exists()
 
 
 # =====================================================================
@@ -169,11 +190,11 @@ class TestDiskGuardMultiCamera:
         sm.ensure_dirs("cam_A")
         sm.ensure_dirs("cam_B")
 
-        old_file = sm.recordings_dir("cam_A") / "old.mp4"
+        old_file = sm.rolling_dir("cam_A") / "old.mp4"
         old_file.write_bytes(b"\x00" * 2000)
         os.utime(old_file, (time.time() - 600, time.time() - 600))
 
-        new_file = sm.recordings_dir("cam_B") / "new.mp4"
+        new_file = sm.rolling_dir("cam_B") / "new.mp4"
         new_file.write_bytes(b"\x00" * 2000)
         os.utime(new_file, (time.time() - 120, time.time() - 120))
 
@@ -243,7 +264,7 @@ class TestRecordingArchival:
         })
 
         assert not src_file.exists(), "Source file should be moved"
-        dest = sm.recordings_dir("cam_001") / "segment_0000.mp4"
+        dest = sm.rolling_dir("cam_001") / "segment_0000.mp4"
         assert dest.exists(), "File should appear in per-camera dir"
         assert dest.stat().st_size == 500
 
@@ -329,3 +350,27 @@ class TestResolveHelpers:
     def test_resolve_camera_id_unknown_sensor(self):
         with pytest.raises(ValueError):
             self._resolve_camera_id({"cam_001": 0}, "cam_999")
+
+
+# =====================================================================
+# Mode A: parse_utc_iso + RollingClipExtractor
+# =====================================================================
+
+class TestParseUtcIso:
+
+    def test_z_suffix(self):
+        t = parse_utc_iso("2026-06-15T12:30:00Z")
+        assert t.tzinfo is not None
+        assert t.hour == 12 and t.minute == 30
+
+
+class TestRollingClipExtractorEmpty:
+
+    def test_no_segments_raises(self, tmp_path):
+        sm = StorageManager(base_dir=str(tmp_path / "storage"))
+        sm.ensure_dirs("c1")
+        ex = RollingClipExtractor(sm)
+        ws = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        we = datetime(2026, 1, 1, 1, tzinfo=timezone.utc)
+        with pytest.raises(ClipExtractionError):
+            ex.extract("c1", ws, we, "rid-1")
