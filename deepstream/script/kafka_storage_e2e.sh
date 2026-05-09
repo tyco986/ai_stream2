@@ -45,6 +45,14 @@ kafka_send_json() {
   printf '%s\n' "${payload}" | docker compose exec -T kafka rpk topic produce "${KAFKA_TOPIC}"
 }
 
+stop_rolling_on_exit() {
+  if [[ "${ROLLING_STARTED:-0}" != "1" ]]; then
+    return
+  fi
+  echo "=> Cleanup: Kafka stop_rolling"
+  kafka_send_json "$(python3 -c "import json; print(json.dumps({'action':'stop_rolling','source_id':'${CAMERA_ID}'}))")" >/dev/null || true
+}
+
 ds_ready() {
   curl -sS --connect-timeout 3 "http://127.0.0.1:9000/api/v1/health/get-dsready-state" \
     | grep -q '"ds-ready"[[:space:]]*:[[:space:]]*"YES"'
@@ -93,6 +101,8 @@ mkdir -p "${STORAGE}/${CAMERA_ID}/rolling" "${STORAGE}/${CAMERA_ID}/screenshots"
 
 echo "=> [1/6] Kafka: start_rolling (auto / rolling archive)"
 kafka_send_json "$(python3 -c "import json; print(json.dumps({'action':'start_rolling','source_id':'${CAMERA_ID}'}))")"
+ROLLING_STARTED=1
+trap stop_rolling_on_exit EXIT
 
 echo "=> [2/6] Wait for at least one rolling segment under storage ..."
 wait_until "first rolling MP4" "${WAIT_FIRST_SEGMENT_SEC}" bash -c 'n=$(find "'"${STORAGE}/${CAMERA_ID}"'/rolling" -maxdepth 1 -name "*.mp4" -type f 2>/dev/null | wc -l); [[ "${n}" -ge 1 ]]'

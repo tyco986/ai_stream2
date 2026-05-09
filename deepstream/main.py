@@ -71,7 +71,6 @@ class MessageHandler:
                 msg.sensor_id, msg.source_id, msg.uri,
             )
             self._rolling.register_source(msg.source_id, msg.sensor_id, msg.uri)
-            self._rolling.start_rolling(msg.source_id, msg.uri)
         else:
             self._source_map.pop(msg.sensor_id, None)
             self._perf.remove_stream(msg.source_id)

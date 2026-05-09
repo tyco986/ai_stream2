@@ -194,6 +194,19 @@ class SmartRecordController:
             source_id, session_id,
         )
 
+    def mark_done(self, source_id: int, session_id: int | None = None):
+        with self._lock:
+            current_session = self._sessions.get(source_id)
+            if current_session is None:
+                return
+            if session_id is not None and current_session != session_id:
+                logger.warning(
+                    "mark_done: session mismatch for source_id=%d current=%d done=%d",
+                    source_id, current_session, session_id,
+                )
+                return
+            self._sessions.pop(source_id, None)
+
     def stop_all(self):
         with self._lock:
             pairs = list(self._sessions.items())

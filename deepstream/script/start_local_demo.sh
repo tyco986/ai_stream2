@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# One-shot local demo: Kafka + DeepStream (YOLOv10), ffmpeg RTSP publish, REST stream/add.
+# One-shot local demo: Kafka + DeepStream (YOLOv10), publish test RTSP streams from inside deepstream container, REST stream/add.
 # Run from anywhere:  bash deepstream/script/start_local_demo.sh
-# Requires: docker compose, python3, ffmpeg, ffprobe; NVIDIA GPU for DeepStream.
+# Requires: docker compose, curl; NVIDIA GPU for DeepStream.
 
 set -euo pipefail
 
@@ -10,7 +10,7 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 cd "${PROJECT_ROOT}"
 
 export DS_LIGHT_PIPELINE="${DS_LIGHT_PIPELINE:-0}"
-# Test/demo: short rolling segments (override for production-style long segments)
+# Keep rolling segments short for Kafka E2E tests that start rolling explicitly.
 export DS_RECORDING_SEGMENT_SEC="${DS_RECORDING_SEGMENT_SEC:-30}"
 export REBUILD="${REBUILD:-0}"
 
@@ -30,6 +30,7 @@ CAMERA_NAME2="${CAMERA_NAME2:-Demo Cam 2}"
 
 LOG_FILE="${PROJECT_ROOT}/deepstream/storage/video2rtsp.log"
 PID_FILE="${PROJECT_ROOT}/deepstream/storage/.video2rtsp.pid"
+DEEPSTREAM_SERVICE="${DEEPSTREAM_SERVICE:-deepstream}"
 
 require_cmd() {
   command -v "$1" >/dev/null 2>&1 || {
@@ -39,17 +40,34 @@ require_cmd() {
 }
 
 require_cmd docker
-require_cmd python3
-require_cmd ffmpeg
-require_cmd ffprobe
 require_cmd curl
 
-if [[ ! -f "${VIDEO1}" || ! -f "${VIDEO2}" ]]; then
-  echo "Video files not found. Expected:" >&2
-  echo "  ${VIDEO1}" >&2
-  echo "  ${VIDEO2}" >&2
-  exit 1
-fi
+ds_ready() {
+  curl -sS --connect-timeout 3 "${DS_REST}/api/v1/health/get-dsready-state" \
+    | grep -q '"ds-ready"[[:space:]]*:[[:space:]]*"YES"'
+}
+
+remove_stream() {
+  local camera_id="$1"
+  local camera_url="$2"
+  curl -sS -X POST "${DS_REST}/api/v1/stream/remove" \
+    -H 'Content-Type: application/json' \
+    -d "{\"key\":\"sensor\",\"value\":{\"camera_id\":\"${camera_id}\",\"camera_url\":\"${camera_url}\",\"change\":\"camera_remove\"}}" \
+    >/dev/null || true
+}
+
+add_stream() {
+  local camera_id="$1"
+  local camera_name="$2"
+  local camera_url="$3"
+  curl -sS -X POST "${DS_REST}/api/v1/stream/add" \
+    -H 'Content-Type: application/json' \
+    -d "{\"key\":\"sensor\",\"value\":{\"camera_id\":\"${camera_id}\",\"camera_name\":\"${camera_name}\",\"camera_url\":\"${camera_url}\",\"change\":\"camera_add\"}}" \
+    | head -c 200
+  echo
+}
+
+mkdir -p "${PROJECT_ROOT}/deepstream/storage"
 
 if [[ "${REBUILD}" == "1" ]]; then
   echo "=> docker compose build deepstream ..."
@@ -61,8 +79,10 @@ DS_LIGHT_PIPELINE="${DS_LIGHT_PIPELINE}" DS_RECORDING_SEGMENT_SEC="${DS_RECORDIN
 
 echo "=> Waiting for ds-ready (timeout ${READY_TIMEOUT_SEC}s, TensorRT may build on first run) ..."
 elapsed=0
+ready=0
 while [[ "${elapsed}" -lt "${READY_TIMEOUT_SEC}" ]]; do
-  if curl -sS --connect-timeout 3 "${DS_REST}/api/v1/health/get-dsready-state" | grep -q '"ds-ready"[[:space:]]*:[[:space:]]*"YES"'; then
+  if ds_ready; then
+    ready=1
     echo "ds-ready: YES"
     break
   fi
@@ -71,26 +91,34 @@ while [[ "${elapsed}" -lt "${READY_TIMEOUT_SEC}" ]]; do
   echo "  ... ${elapsed}s (still waiting)"
 done
 
-if ! curl -sS --connect-timeout 3 "${DS_REST}/api/v1/health/get-dsready-state" | grep -q '"ds-ready"[[:space:]]*:[[:space:]]*"YES"'; then
+if [[ "${ready}" != "1" ]]; then
   echo "Timed out waiting for ds-ready. Check: docker logs \$(docker compose ps -q deepstream)" >&2
   exit 1
 fi
 
-if [[ -f "${PID_FILE}" ]] && kill -0 "$(cat "${PID_FILE}")" 2>/dev/null; then
-  echo "Stopping previous video2rtsp (PID $(cat "${PID_FILE}")) ..."
-  kill -TERM "$(cat "${PID_FILE}")" 2>/dev/null || true
-  sleep 1
+if [[ -x "${SCRIPT_DIR}/stop_local_demo.sh" ]]; then
+  "${SCRIPT_DIR}/stop_local_demo.sh" >/dev/null 2>&1 || true
 fi
 
-mkdir -p "${PROJECT_ROOT}/deepstream/storage"
-echo "=> Starting video2rtsp (log: ${LOG_FILE}) ..."
-nohup python3 "${PROJECT_ROOT}/deepstream/script/video2rtsp.py" \
-  --input "${VIDEO1}:${STREAM1}" "${VIDEO2}:${STREAM2}" \
+VIDEO1_IN_CONTAINER="/app/example_data/$(basename "${VIDEO1}")"
+VIDEO2_IN_CONTAINER="/app/example_data/$(basename "${VIDEO2}")"
+
+echo "=> Starting video2rtsp inside container ${DEEPSTREAM_SERVICE} (log: ${LOG_FILE}) ..."
+container_pid="$(
+  docker compose exec -T "${DEEPSTREAM_SERVICE}" sh -lc "nohup python3 /app/script/video2rtsp.py \
+  --input \"${VIDEO1_IN_CONTAINER}:${STREAM1}\" \"${VIDEO2_IN_CONTAINER}:${STREAM2}\" \
   --loop \
-  --mediamtx "${MEDIAMTX_RTSP_BASE}" \
+  --mediamtx \"${MEDIAMTX_RTSP_BASE}\" \
   --mode webrtc \
-  >>"${LOG_FILE}" 2>&1 &
-echo $! >"${PID_FILE}"
+  >/app/storage/video2rtsp.log 2>&1 & echo \$!"
+)"
+
+if ! docker compose exec -T "${DEEPSTREAM_SERVICE}" sh -lc "kill -0 ${container_pid}" >/dev/null 2>&1; then
+  echo "Failed to start video2rtsp inside container. Check /app/storage/video2rtsp.log in deepstream container." >&2
+  exit 1
+fi
+
+echo "container:${container_pid}" >"${PID_FILE}"
 
 sleep "${PUBLISH_WAIT_SEC:-5}"
 
@@ -99,23 +127,10 @@ RTSP2="${MEDIAMTX_RTSP_BASE%/}/${STREAM2}"
 
 echo "=> stream/remove (ignore errors) + stream/add ..."
 
-curl -sS -X POST "${DS_REST}/api/v1/stream/remove" \
-  -H 'Content-Type: application/json' \
-  -d "{\"key\":\"sensor\",\"value\":{\"camera_id\":\"${CAMERA_ID1}\",\"camera_url\":\"${RTSP1}\",\"change\":\"camera_remove\"}}" \
-  >/dev/null || true
-curl -sS -X POST "${DS_REST}/api/v1/stream/remove" \
-  -H 'Content-Type: application/json' \
-  -d "{\"key\":\"sensor\",\"value\":{\"camera_id\":\"${CAMERA_ID2}\",\"camera_url\":\"${RTSP2}\",\"change\":\"camera_remove\"}}" \
-  >/dev/null || true
-
-curl -sS -X POST "${DS_REST}/api/v1/stream/add" \
-  -H 'Content-Type: application/json' \
-  -d "{\"key\":\"sensor\",\"value\":{\"camera_id\":\"${CAMERA_ID1}\",\"camera_name\":\"${CAMERA_NAME1}\",\"camera_url\":\"${RTSP1}\",\"change\":\"camera_add\"}}" | head -c 200
-echo
-curl -sS -X POST "${DS_REST}/api/v1/stream/add" \
-  -H 'Content-Type: application/json' \
-  -d "{\"key\":\"sensor\",\"value\":{\"camera_id\":\"${CAMERA_ID2}\",\"camera_name\":\"${CAMERA_NAME2}\",\"camera_url\":\"${RTSP2}\",\"change\":\"camera_add\"}}" | head -c 200
-echo
+remove_stream "${CAMERA_ID1}" "${RTSP1}"
+remove_stream "${CAMERA_ID2}" "${RTSP2}"
+add_stream "${CAMERA_ID1}" "${CAMERA_NAME1}" "${RTSP1}"
+add_stream "${CAMERA_ID2}" "${CAMERA_NAME2}" "${RTSP2}"
 
 echo
 echo "Done."

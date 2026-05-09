@@ -1,4 +1,4 @@
-"""Unit tests for StorageManager, DiskGuard, recording archival, resolve helpers, and clip extraction.
+"""Unit tests for MessageHandler, StorageManager, DiskGuard, recording archival, resolve helpers, and clip extraction.
 
 These tests use ``tmp_path`` to simulate the file system and do NOT
 require a running DeepStream container.
@@ -19,6 +19,64 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from utils.storage import StorageManager
 from daemons.disk_guard import DiskGuard
 from recording.clip_extractor import ClipExtractionError, RollingClipExtractor, parse_utc_iso
+
+
+# =====================================================================
+# Dynamic source message handling
+# =====================================================================
+
+class TestMessageHandler:
+
+    def _make_handler(self, monkeypatch):
+        import types
+
+        source_map = {}
+        perf = MagicMock()
+        rolling = MagicMock()
+        engine_monitor = MagicMock(started=False)
+
+        mock_psm = types.ModuleType("pyservicemaker")
+        mock_psm.DynamicSourceMessage = type("DynamicSourceMessage", (), {})
+        mock_psm.StateTransitionMessage = type("StateTransitionMessage", (), {})
+        mock_psm.PipelineState = types.SimpleNamespace(PLAYING="PLAYING")
+        mock_psm.utils = types.SimpleNamespace()
+        monkeypatch.setitem(sys.modules, "pyservicemaker", mock_psm)
+        monkeypatch.setitem(sys.modules, "pipeline.builder", types.SimpleNamespace(PipelineBuilder=object))
+        monkeypatch.setitem(sys.modules, "recording.manager", types.SimpleNamespace(RollingRecordManager=object))
+        monkeypatch.setitem(sys.modules, "daemons.command_consumer", types.SimpleNamespace(CommandConsumer=object))
+        monkeypatch.setitem(sys.modules, "daemons.disk_guard", types.SimpleNamespace(DiskGuard=object))
+        monkeypatch.setitem(sys.modules, "daemons.gpu_monitor", types.SimpleNamespace(GpuMemoryMonitor=object))
+
+        if "main" in sys.modules:
+            monkeypatch.delitem(sys.modules, "main")
+
+        from main import MessageHandler
+
+        handler = MessageHandler(source_map, perf, engine_monitor, rolling)
+        return handler, source_map, perf, rolling, mock_psm
+
+    def test_source_add_registers_without_starting_rolling(self, monkeypatch):
+        handler, source_map, perf, rolling, mock_psm = self._make_handler(monkeypatch)
+        message = mock_psm.DynamicSourceMessage()
+        message.source_added = True
+        message.source_id = 0
+        message.sensor_id = "cam_001"
+        message.sensor_name = "Camera 1"
+        message.uri = "rtsp://example/cam_001"
+
+        handler(message)
+
+        assert source_map == {"cam_001": 0}
+        perf.add_stream.assert_called_once_with(
+            source_id=0,
+            uri="rtsp://example/cam_001",
+            sensor_id="cam_001",
+            sensor_name="Camera 1",
+        )
+        rolling.register_source.assert_called_once_with(
+            0, "cam_001", "rtsp://example/cam_001",
+        )
+        rolling.start_rolling.assert_not_called()
 
 
 # =====================================================================
@@ -222,15 +280,18 @@ class TestRecordingArchival:
 
         class FakeSmartRecordController:
             def __init__(self, *args, **kwargs):
-                pass
+                self.start_calls = []
+                self.done_calls = []
             def register_source(self, *args, **kwargs):
                 pass
             def unregister_source(self, *args, **kwargs):
                 pass
             def start(self, *args, **kwargs):
-                pass
+                self.start_calls.append((args, kwargs))
             def stop(self, *args, **kwargs):
                 pass
+            def mark_done(self, *args, **kwargs):
+                self.done_calls.append((args, kwargs))
             def stop_all(self):
                 pass
 
@@ -267,6 +328,28 @@ class TestRecordingArchival:
         dest = sm.rolling_dir("cam_001") / "segment_0000.mp4"
         assert dest.exists(), "File should appear in per-camera dir"
         assert dest.stat().st_size == 500
+
+    def test_on_sr_done_marks_session_done_before_restart(self, tmp_path):
+        sm = StorageManager(base_dir=str(tmp_path / "storage"))
+        sm.ensure_dirs("cam_001")
+        mgr = self._make_manager(sm)
+        mgr._camera_map[0] = "cam_001"
+        mgr._rolling_sources[0] = "rtsp://example/cam_001"
+
+        src_file = sm.buffer_dir / "sr_0_00000.mp4"
+        src_file.write_bytes(b"\x00" * 500)
+
+        mgr._on_sr_done(0, {
+            "filename": "sr_0_00000.mp4",
+            "dirpath": str(sm.buffer_dir),
+            "session_id": 7,
+        })
+
+        assert mgr._sr_controller.done_calls == [((0, 7), {})]
+        assert mgr._sr_controller.start_calls == [((0,), {
+            "start_time": 0,
+            "duration": 300,
+        })]
 
     def test_on_sr_done_no_camera_mapping(self, tmp_path):
         sm = StorageManager(base_dir=str(tmp_path / "storage"))

@@ -153,6 +153,7 @@ services:
     volumes:
       - ./deepstream/storage:/app/storage
       - ./deepstream/models:/app/models
+      - ./deepstream/config:/app/config
     depends_on:
       - kafka
     restart: unless-stopped

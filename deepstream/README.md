@@ -99,7 +99,7 @@
 
 - 上游通过 **内置 REST** 向 `nvmultiurisrcbin` 注册 RTSP/文件等 URI（端口由 `DS_REST_PORT` 控制，默认 9000）。  
 - `main.py` 中 `MessageHandler` 处理 `DynamicSourceMessage`：维护 **`sensor_id`（字符串）↔ `source_id`（整数）** 映射，供 `PerfMonitor`、滚动录像、`CommandConsumer` 解析命令使用。  
-- 流加入后：`RollingRecordManager.register_source` + `start_rolling`（按 `DS_RECORDING_SEGMENT_SEC` 分段 SmartRecord）。
+- 流加入后：只调用 `RollingRecordManager.register_source` 建立 source 与 camera 的映射，**不会自动开启 rolling**；需要滚动录像时通过 Kafka `start_rolling` 显式开启。
 
 ### 5.2 Kafka：检测结果
 
@@ -192,11 +192,11 @@
 | `models/coco_labels.txt` | 默认类别标签 |
 | `ext/` | `nvdssr_ext` C 源码与 `setup.py` |
 | `test/` | 单元测试、REST/Kafka 集成、`test_clip_extraction_e2e.py`（裁剪/拼接，需本机 ffmpeg） |
-| `script/video2rtsp.py` | 开发/测试：用 ffmpeg 将本地 MP4 推到 MediaMTX RTSP |
-| `script/start_local_demo.sh` | 一键：`compose up` kafka+deepstream、推流、`stream/add`（见 §9） |
-| `script/stop_local_demo.sh` | 停止本机 `video2rtsp` 子进程 |
-| `script/kafka_storage_e2e.sh` | Kafka 命令 + 存储目录校验（滚动/截图/手动裁剪） |
-| `script/kafka_commands_misc_e2e.sh` | Kafka：`stop_rolling`/`start_rolling`、`switch_preview`、`toggle_osd`、孤立 `stop_recording` → `clip_failed`（见 §9） |
+| `script/video2rtsp.py` | 开发/测试：用 ffmpeg 将 MP4 推到 MediaMTX RTSP |
+| `script/start_local_demo.sh` | 一键：`compose up` kafka+deepstream、容器内推流、`stream/add`（见 §9） |
+| `script/stop_local_demo.sh` | 停止本地 demo 服务：`deepstream` + `kafka` |
+| `script/kafka_storage_e2e.sh` | Kafka 命令 + 存储目录校验（滚动/截图/手动裁剪），退出时发送 `stop_rolling` |
+| `script/kafka_commands_misc_e2e.sh` | Kafka：`stop_rolling`/`start_rolling`、`switch_preview`、`toggle_osd`、孤立 `stop_recording` → `clip_failed`，退出时发送 `stop_rolling`（见 §9） |
 | `example_data/` | 示例视频与 JSON 测试数据 |
 
 ---
@@ -209,7 +209,7 @@
   - 若需在容器内仅运行 Python 脚本（例如自检），需 **`docker run --entrypoint python3 ...`**，否则会执行 `main.py` 并加载 CUDA/pyservicemaker。  
 - **暴露端口**：`9000`（REST）、`8554` / `8889`（与 MediaMTX 配置一致，用于 RTSP/WebRTC）  
 - **环境**：`NVIDIA_DRIVER_CAPABILITIES` 含 `video`；运行需要 **NVIDIA Container Toolkit** 与 GPU。  
-- **镜像与仓库同步**：`Dockerfile` 使用 `COPY . /app`，**PGIE 等配置文件在构建时打进镜像**。若你更新了 `config/pgie_yolov10_config.yml` 或默认 `DS_PGIE_CONFIG` 指向的路径，需执行 **`docker compose build deepstream`（或 `docker build ./deepstream`）** 后再启动容器；仅改主机文件而不重建镜像时，容器内 `/app/config/` 仍可能是旧内容，易导致 nvinfer 报 **`bad file: ...pgie_....yml`**。
+- **配置与模型挂载**：`docker-compose.yml` 将 `deepstream/config` 挂载到 `/app/config`，将 `deepstream/models` 挂载到 `/app/models`。修改 PGIE 配置（如 `config/pgie_yolov10_config.yml`）或切换 `DS_PGIE_CONFIG` 后，通常只需 **重启 `deepstream` 容器**，不需要重建镜像；修改 Python/C 扩展源码或 Dockerfile 依赖时才需要 `docker compose build deepstream`。
 
 ---
 
@@ -262,16 +262,16 @@
 
 ### `script/start_local_demo.sh` / `stop_local_demo.sh`
 
-- **start**：`docker compose up` kafka + deepstream（默认 `DS_LIGHT_PIPELINE=0`、`DS_RECORDING_SEGMENT_SEC=30` 等）、等待 `ds-ready`、后台启动 `video2rtsp`、REST 注册两路示例流。  
-- **stop**：结束本机 `video2rtsp`（不停止容器）。  
+- **start**：`docker compose up` kafka + deepstream（默认 `DS_LIGHT_PIPELINE=0`、`DS_RECORDING_SEGMENT_SEC=30` 等）、等待 `ds-ready`、在 DeepStream 容器内后台启动 `video2rtsp.py`、REST 注册两路示例流。注册流后不会自动开启 rolling；后续测试需要 rolling 时由 Kafka 命令显式开启。  
+- **stop**：从任意目录切回项目根，执行 `docker compose stop deepstream kafka`，并清理 `deepstream/storage/.video2rtsp.pid`。不会删除 storage 产物。
 
 ### `script/kafka_storage_e2e.sh`
 
-向 `deepstream-commands` 发送 `start_rolling`、`screenshot`、`start_recording`/`stop_recording` 等，并检查 `storage/<camera_id>/` 下 `rolling/`、`screenshots/`、`locked/`；可选覆盖「双段 concat」路径（需足够等待或第二段 rolling 已归档）。在项目根执行：`./deepstream/script/kafka_storage_e2e.sh`。
+向 `deepstream-commands` 发送 `start_rolling`、`screenshot`、`start_recording`/`stop_recording` 等，并检查 `storage/<camera_id>/` 下 `rolling/`、`screenshots/`、`locked/`；可选覆盖「双段 concat」路径（需足够等待或第二段 rolling 已归档）。脚本退出时会发送 `stop_rolling`，避免测试结束后继续写 rolling MP4。在项目根执行：`./deepstream/script/kafka_storage_e2e.sh`。
 
 ### `script/kafka_commands_misc_e2e.sh`
 
-不等待 rolling 落盘，专门覆盖 **`kafka_storage_e2e.sh` 未测的 Kafka 行为**：`stop_rolling` → `start_rolling`；`switch_preview`（先单路数值 `source_id`，再 `-1` 多画面）；`toggle_osd`（关/开）；以及**无对应 `start_recording` 的** `stop_recording`（期望 `clip_failed`，脚本通过 **`docker compose logs deepstream`** 匹配 `Published clip_failed request_id=…`，避免 `rpk consume` 读到历史事件误判）。前置条件与 `kafka_storage_e2e.sh` 相同（`kafka` + `deepstream` 已起、流已注册）。执行：`./deepstream/script/kafka_commands_misc_e2e.sh`，可选 `CAMERA_ID=demo_cam1`。
+不等待 rolling 落盘，专门覆盖 **`kafka_storage_e2e.sh` 未测的 Kafka 行为**：`stop_rolling` → `start_rolling`；`switch_preview`（先单路数值 `source_id`，再 `-1` 多画面）；`toggle_osd`（关/开）；以及**无对应 `start_recording` 的** `stop_recording`（期望 `clip_failed`，脚本通过 **`docker compose logs deepstream`** 匹配 `Published clip_failed request_id=…`，避免 `rpk consume` 读到历史事件误判）。脚本退出时会发送 `stop_rolling`。前置条件与 `kafka_storage_e2e.sh` 相同（`kafka` + `deepstream` 已起、流已注册）。执行：`./deepstream/script/kafka_commands_misc_e2e.sh`，可选 `CAMERA_ID=demo_cam1`。
 
 ---
 
@@ -279,7 +279,7 @@
 
 | 内容 | 位置 | 依赖 |
 |------|------|------|
-| 单元测试：`StorageManager`、`DiskGuard`、归档逻辑、解析辅助 | `test/test_unit.py` | 仅 Python，**无需** GPU 容器 |
+| 单元测试：`MessageHandler`、`StorageManager`、`DiskGuard`、归档逻辑、解析辅助 | `test/test_unit.py` | 仅 Python，**无需** GPU 容器 |
 | 裁剪/拼接（ffmpeg） | `test/test_clip_extraction_e2e.py` | 本机 `ffmpeg`/`ffprobe`，**无需** GPU |
 | REST + Kafka 集成 | `test/test_deepstream_api.py` | 运行中的 DeepStream、可达的 Kafka、测试用 RTSP |
 | 共享逻辑与 CLI | `test/conftest.py`、`test/_common.py` | — |

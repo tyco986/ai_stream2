@@ -35,6 +35,14 @@ kafka_send_json() {
   printf '%s\n' "${payload}" | docker compose exec -T kafka rpk topic produce "${KAFKA_TOPIC}"
 }
 
+stop_rolling_on_exit() {
+  if [[ "${ROLLING_STARTED:-0}" != "1" ]]; then
+    return
+  fi
+  echo "=> Cleanup: Kafka stop_rolling"
+  kafka_send_json "$(python3 -c "import json; print(json.dumps({'action':'stop_rolling','source_id':'${CAMERA_ID}'}))")" >/dev/null || true
+}
+
 ds_ready() {
   curl -sS --connect-timeout 3 "http://127.0.0.1:9000/api/v1/health/get-dsready-state" \
     | grep -q '"ds-ready"[[:space:]]*:[[:space:]]*"YES"'
@@ -97,6 +105,8 @@ echo "=> [1/5] Kafka: stop_rolling then start_rolling"
 kafka_send_json "$(python3 -c "import json; print(json.dumps({'action':'stop_rolling','source_id':'${CAMERA_ID}'}))")"
 sleep 1
 kafka_send_json "$(python3 -c "import json; print(json.dumps({'action':'start_rolling','source_id':'${CAMERA_ID}'}))")"
+ROLLING_STARTED=1
+trap stop_rolling_on_exit EXIT
 
 echo "=> [2/5] Kafka: switch_preview (single source ${SOURCE_NUM}, then mosaic -1)"
 kafka_send_json "$(python3 -c "import json; print(json.dumps({'action':'switch_preview','source_id':${SOURCE_NUM}}))")"

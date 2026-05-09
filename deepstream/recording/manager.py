@@ -126,6 +126,7 @@ class RollingRecordManager:
                 source_id, dirpath, filename,
             )
 
+        self._sr_controller.mark_done(source_id, info.get("session_id"))
         if source_id in self._rolling_sources:
             self._sr_controller.start(
                 source_id, start_time=0, duration=self._segment_duration,
