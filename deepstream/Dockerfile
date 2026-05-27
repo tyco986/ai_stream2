@@ -24,21 +24,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xz-utils \
     && rm -rf /var/lib/apt/lists/*
 
-# Static FFmpeg for recording tools; MediaMTX as RTSP/WebRTC server
-RUN curl -fsSL "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz" \
-    | tar xJ --strip-components=1 -C /usr/local/bin --wildcards '*/ffmpeg' '*/ffprobe'
-ARG MEDIAMTX_VERSION=1.17.1
-RUN curl -fsSL \
-    "https://gh.llkk.cc/https://github.com/bluenviron/mediamtx/releases/download/v${MEDIAMTX_VERSION}/mediamtx_v${MEDIAMTX_VERSION}_linux_amd64.tar.gz" \
-    | tar xz -C /usr/local/bin mediamtx
+# Static FFmpeg for recording tools (place ffmpeg-release-amd64-static.tar.xz next to this Dockerfile)
+COPY ffmpeg-release-amd64-static.tar.xz /tmp/ffmpeg.tar.xz
+RUN tar xJ -f /tmp/ffmpeg.tar.xz --strip-components=1 -C /usr/local/bin \
+    --wildcards '*/ffmpeg' '*/ffprobe' && rm -f /tmp/ffmpeg.tar.xz
+# Place mediamtx_v1.17.1_linux_amd64.tar.gz next to this Dockerfile before build.
+COPY mediamtx_v1.17.1_linux_amd64.tar.gz /tmp/mediamtx.tar.gz
+RUN tar xzf /tmp/mediamtx.tar.gz -C /usr/local/bin mediamtx && rm -f /tmp/mediamtx.tar.gz
 
 WORKDIR /app
 COPY . /app
+RUN rm -f /app/mediamtx_v*_linux_amd64.tar.gz /app/ffmpeg-release-amd64-static.tar.xz
 
-# Build the SmartRecord C extension (nvdssr_ext)
 RUN cd /app/ext && python3 setup.py build_ext --inplace \
     && cp nvdssr_ext*.so /app/ \
-    && cd /app && rm -rf ext/build
+    && rm -rf ext/build
 
 RUN mkdir -p /app/storage/recordings
 
@@ -46,4 +46,6 @@ ENV NVIDIA_DRIVER_CAPABILITIES=${NVIDIA_DRIVER_CAPABILITIES},video
 
 EXPOSE 9000 8554 8889
 
-ENTRYPOINT ["python3", "main.py"]
+# ENTRYPOINT ["python3", "main.py"]
+ENTRYPOINT ["sleep"]
+CMD ["infinity"]
