@@ -1,29 +1,4 @@
 {
-  "start_rolling": {
-    "action": "start_rolling",
-    "source_id": "cam_test_template"
-  },
-  "stop_rolling": {
-    "action": "stop_rolling",
-    "source_id": "cam_test_template"
-  },
-  "start_recording": {
-    "action": "start_recording",
-    "source_id": "cam_test_template",
-    "request_id": "550e8400-e29b-41d4-a716-446655440000",
-    "start_ts": "2026-01-15T10:00:00Z"
-  },
-  "stop_recording": {
-    "action": "stop_recording",
-    "source_id": "cam_test_template",
-    "request_id": "550e8400-e29b-41d4-a716-446655440000",
-    "end_ts": "2026-01-15T10:05:00Z"
-  },
-  "screenshot": {
-    "action": "screenshot",
-    "source_id": "cam_test_template",
-    "filename": "cam_test_template.jpg"
-  },
   "switch_preview_single": {
     "action": "switch_preview",
     "source_id": 0
@@ -31,5 +6,13 @@
   "switch_preview_multi": {
     "action": "switch_preview",
     "source_id": -1
+  },
+  "toggle_osd_on": {
+    "action": "toggle_osd",
+    "show": true
+  },
+  "toggle_osd_off": {
+    "action": "toggle_osd",
+    "show": false
   }
 }

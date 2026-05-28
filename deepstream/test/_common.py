@@ -1,7 +1,6 @@
 """Shared helpers for DeepStream black-box API tests."""
 
 import json
-import os
 import time
 from pathlib import Path
 from typing import Any
@@ -29,8 +28,6 @@ class DeliveryReporter:
         self.delivered += 1
 
 
-# --------------- file / path helpers ---------------
-
 def ensure_test_data_dir() -> Path:
     TEST_DATA_DIR.mkdir(parents=True, exist_ok=True)
     return TEST_DATA_DIR
@@ -41,46 +38,6 @@ def write_test_payload(name: str, payload: dict[str, Any]) -> Path:
     target.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return target
 
-
-def get_screenshots_dir(camera_id: str = "") -> Path:
-    storage_dir = os.environ.get("DS_STORAGE_DIR")
-    if storage_dir and camera_id:
-        return Path(storage_dir) / camera_id / "screenshots"
-    if storage_dir:
-        return Path(storage_dir)
-    if camera_id:
-        return DEEPSTREAM_DIR / "storage" / camera_id / "screenshots"
-    return DEEPSTREAM_DIR / "storage"
-
-
-def get_recordings_dir(camera_id: str = "") -> Path:
-    """Rolling-record archive directory (7x24 segments)."""
-    storage_dir = os.environ.get("DS_STORAGE_DIR")
-    if storage_dir and camera_id:
-        return Path(storage_dir) / camera_id / "rolling"
-    if storage_dir:
-        return Path(storage_dir)
-    if camera_id:
-        return DEEPSTREAM_DIR / "storage" / camera_id / "rolling"
-    return DEEPSTREAM_DIR / "storage"
-
-
-def count_files(path: Path) -> int:
-    if not path.exists() or not path.is_dir():
-        return 0
-    return sum(1 for item in path.iterdir() if item.is_file())
-
-
-def wait_for_file(path: Path, wait_seconds: int = 20) -> bool:
-    started = time.time()
-    while time.time() - started < wait_seconds:
-        if path.exists() and path.is_file() and path.stat().st_size > 0:
-            return True
-        time.sleep(1)
-    return False
-
-
-# --------------- payload builders ---------------
 
 def build_stream_add_payload(camera_id: str, camera_name: str, camera_url: str) -> dict[str, Any]:
     return {
@@ -104,8 +61,6 @@ def build_stream_remove_payload(camera_id: str, camera_url: str) -> dict[str, An
         },
     }
 
-
-# --------------- HTTP helpers ---------------
 
 def build_rest_url(base_url: str, endpoint: str) -> str:
     return f"{base_url.rstrip('/')}{endpoint}"
@@ -150,8 +105,6 @@ def assert_status(response: requests.Response, expected_codes: set[int], context
     )
 
 
-# --------------- Kafka helpers ---------------
-
 def build_producer(kafka_broker: str) -> Producer:
     return Producer({"bootstrap.servers": kafka_broker})
 
@@ -167,8 +120,6 @@ def send_command(producer: Producer, topic: str, payload: dict[str, Any], timeou
             f"Kafka command not fully delivered: delivered={reporter.delivered}, pending={pending}"
         )
 
-
-# --------------- stream info helpers ---------------
 
 def fetch_stream_info(base_url: str, timeout: int) -> tuple[requests.Response, Any]:
     return http_get_json(base_url, "/api/v1/stream/get-stream-info", timeout)
@@ -252,8 +203,6 @@ def wait_for_source_id(base_url: str, timeout: int, camera_id: str, wait_seconds
         time.sleep(1)
     raise AssertionError(f"Timed out waiting for source_id mapped from camera_id={camera_id}")
 
-
-# --------------- high-level orchestration ---------------
 
 def reset_streams(base_url: str, timeout: int, camera_url: str):
     response, data = fetch_stream_info(base_url, timeout)

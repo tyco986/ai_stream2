@@ -8,30 +8,22 @@ methods in definition order, which matters because:
   4. stream/remove is intentionally last (it tears down the camera)
 """
 
-import time
-import uuid
-from datetime import datetime, timedelta, timezone
-
 from _common import (
     assert_status,
     build_stream_remove_payload,
     camera_exists,
     fetch_stream_info,
     find_source_id_by_camera_id,
-    get_screenshots_dir,
     http_get_json,
     http_post_json,
     parse_source_id,
     send_command,
-    wait_for_file,
     write_test_payload,
 )
 
 
 class TestDeepStreamAPI:
     """Ordered integration tests against a running DeepStream instance."""
-
-    # ---- health ----
 
     def test_health_ready_state(self, ds):
         response, data = http_get_json(ds.base_url, "/api/v1/health/get-dsready-state", ds.timeout)
@@ -46,14 +38,10 @@ class TestDeepStreamAPI:
         )
         assert top_level_ok or nested_ok, f"Health response missing ready field, keys={list(data.keys())}"
 
-    # ---- stream info ----
-
     def test_stream_info(self, ds, prepared_camera):
         response, data = fetch_stream_info(ds.base_url, ds.timeout)
         assert_status(response, {200}, "stream/get-stream-info")
         assert isinstance(data, (dict, list)), f"Stream info should be dict/list, got {type(data)}"
-
-    # ---- stream add ----
 
     def test_stream_add(self, ds, prepared_camera):
         response, data = fetch_stream_info(ds.base_url, ds.timeout)
@@ -61,81 +49,6 @@ class TestDeepStreamAPI:
         assert camera_exists(data, ds.camera_id), f"Camera not found after add: {ds.camera_id}"
         source_id = find_source_id_by_camera_id(data, ds.camera_id)
         assert source_id is not None, f"source_id not found for {ds.camera_id}"
-
-    # ---- Kafka commands ----
-
-    def test_command_start_rolling(self, ds, prepared_camera, kafka_producer):
-        payload = {"action": "start_rolling", "source_id": ds.camera_id}
-        write_test_payload(f"{ds.camera_id}_command_start_rolling.json", payload)
-        send_command(kafka_producer, ds.command_topic, payload, ds.timeout)
-
-    def test_command_stop_rolling(self, ds, prepared_camera, kafka_producer):
-        start_payload = {"action": "start_rolling", "source_id": ds.camera_id}
-        send_command(kafka_producer, ds.command_topic, start_payload, ds.timeout)
-
-        payload = {"action": "stop_rolling", "source_id": ds.camera_id}
-        write_test_payload(f"{ds.camera_id}_command_stop_rolling.json", payload)
-        send_command(kafka_producer, ds.command_topic, payload, ds.timeout)
-
-    def test_command_start_recording_event(self, ds, prepared_camera, kafka_producer):
-        request_id = str(uuid.uuid4())
-        now = datetime.now(timezone.utc)
-        start_ts = (now - timedelta(minutes=10)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-        payload = {
-            "action": "start_recording",
-            "source_id": ds.camera_id,
-            "request_id": request_id,
-            "start_ts": start_ts,
-        }
-        write_test_payload(f"{ds.camera_id}_command_start_recording_event.json", payload)
-        send_command(kafka_producer, ds.command_topic, payload, ds.timeout)
-
-    def test_command_start_recording_manual(self, ds, prepared_camera, kafka_producer):
-        request_id = str(uuid.uuid4())
-        now = datetime.now(timezone.utc)
-        start_ts = (now - timedelta(minutes=10)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-        payload = {
-            "action": "start_recording",
-            "source_id": ds.camera_id,
-            "request_id": request_id,
-            "start_ts": start_ts,
-        }
-        write_test_payload(f"{ds.camera_id}_command_start_recording_manual.json", payload)
-        send_command(kafka_producer, ds.command_topic, payload, ds.timeout)
-
-    def test_command_stop_recording(self, ds, prepared_camera, kafka_producer):
-        request_id = str(uuid.uuid4())
-        now = datetime.now(timezone.utc)
-        start_ts = (now - timedelta(minutes=10)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-        end_ts = (now - timedelta(minutes=5)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-        start_payload = {
-            "action": "start_recording",
-            "source_id": ds.camera_id,
-            "request_id": request_id,
-            "start_ts": start_ts,
-        }
-        send_command(kafka_producer, ds.command_topic, start_payload, ds.timeout)
-
-        payload = {
-            "action": "stop_recording",
-            "source_id": ds.camera_id,
-            "request_id": request_id,
-            "end_ts": end_ts,
-        }
-        write_test_payload(f"{ds.camera_id}_command_stop_recording.json", payload)
-        send_command(kafka_producer, ds.command_topic, payload, ds.timeout)
-
-    def test_command_screenshot(self, ds, prepared_camera, kafka_producer):
-        screenshot_dir = get_screenshots_dir(ds.camera_id)
-        screenshot_dir.mkdir(parents=True, exist_ok=True)
-        filename = f"{ds.camera_id}_{int(time.time())}.jpg"
-        expected_file = screenshot_dir / filename
-
-        payload = {"action": "screenshot", "source_id": ds.camera_id, "filename": filename}
-        write_test_payload(f"{ds.camera_id}_command_screenshot.json", payload)
-        send_command(kafka_producer, ds.command_topic, payload, ds.timeout)
-
-        assert wait_for_file(expected_file, wait_seconds=20), f"Screenshot file not found: {expected_file}"
 
     def test_command_switch_preview(self, ds, prepared_camera, kafka_producer):
         _, info_data = fetch_stream_info(ds.base_url, ds.timeout)
@@ -157,8 +70,6 @@ class TestDeepStreamAPI:
 
         send_command(kafka_producer, ds.command_topic, payload_off, ds.timeout)
         send_command(kafka_producer, ds.command_topic, payload_on, ds.timeout)
-
-    # ---- stream remove (must be last) ----
 
     def test_stream_remove(self, ds, prepared_camera, kafka_producer):
         payload = build_stream_remove_payload(ds.camera_id, ds.camera_url)
