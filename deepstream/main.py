@@ -2,13 +2,16 @@
 """Build and run a DeepStream pipeline from YAML (pyservicemaker)."""
 
 import argparse
+import logging
 import signal
 import sys
 from pathlib import Path
 from typing import Any
 
 import yaml
-from pyservicemaker import Pipeline
+from pyservicemaker import Pipeline, Probe
+
+from utils.logging_config import InferenceFrameLogger, RollingLoggingConfigurator
 
 ROOT = Path(__file__).resolve().parent
 DEFAULT_CONFIG = ROOT / "configs" / "pipeline.yml"
@@ -55,13 +58,16 @@ class PipelineYamlBuilder:
 class PipelineRunner:
     """Run pipeline; SIGINT/SIGTERM call stop() to unblock wait()."""
 
-    def __init__(self, pipeline: Pipeline) -> None:
+    def __init__(self, pipeline: Pipeline, logger: logging.Logger) -> None:
         self._pipeline = pipeline
+        self._logger = logger
         self._stopping = False
+        self._pipeline.attach("pgie", Probe("infer_log", InferenceFrameLogger()))
 
     def run(self) -> None:
         signal.signal(signal.SIGINT, self._on_signal)
         signal.signal(signal.SIGTERM, self._on_signal)
+        self._logger.info("Starting pipeline")
         self._pipeline.start()
         try:
             self._pipeline.wait()
@@ -75,7 +81,7 @@ class PipelineRunner:
         if self._stopping:
             raise SystemExit(128 + signum)
         self._stopping = True
-        print(f"\nSignal {signum}, stopping pipeline...")
+        self._logger.warning("Signal %s received, stopping pipeline", signum)
         self._pipeline.stop()
 
 
@@ -83,8 +89,12 @@ def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Run DeepStream pipeline from YAML.")
     parser.add_argument("-c", "--config", type=Path, default=DEFAULT_CONFIG)
     args = parser.parse_args(argv)
+    logger = RollingLoggingConfigurator().configure()
     config = args.config if args.config.is_absolute() else ROOT / args.config
-    PipelineRunner(PipelineYamlBuilder(config).build()).run()
+    logger.info("Loading pipeline config: %s", config)
+    pipeline = PipelineYamlBuilder(config).build()
+    logger.info("Pipeline ready")
+    PipelineRunner(pipeline, logger).run()
 
 
 if __name__ == "__main__":

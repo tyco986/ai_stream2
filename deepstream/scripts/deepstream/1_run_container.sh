@@ -19,7 +19,16 @@ docker run -d \
   -e DS_PREVIEW_RTP_HOST=ai_stream2_mediamtx \
   -v /home/admin/project/ai_stream2/deepstream:/app \
   -w /app \
-  ai_stream2_deepstream
+  nvcr.io/nvidia/deepstream:9.0-triton-multiarch \
+  sleep infinity
+
+docker exec ai_stream2_deepstream bash -ec '
+pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+pip install --break-system-packages \
+  /opt/nvidia/deepstream/deepstream/service-maker/python/pyservicemaker*.whl
+pip install --break-system-packages pyyaml
+pip install --break-system-packages av
+'
 
 mkdir -p /home/admin/project/ai_stream2/deepstream/libs
 docker cp /home/admin/project/ai_stream2/deepstream/attachments/DeepStream-Yolo/. ai_stream2_deepstream:/tmp/DeepStream-Yolo/
