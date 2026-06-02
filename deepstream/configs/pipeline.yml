@@ -1,0 +1,68 @@
+# Pipeline: python main.py -c configs/pipeline.yml
+# Input: rtsp://ai_stream2_mediamtx:8554/video1  (1920x1080)
+# Mux 640x640 + enable-padding: letterbox here; pgie must not letterbox again (see pgie yml).
+# Output: rtsp://127.0.0.1:8554/video1_ds
+
+app:
+  pgie-config: configs/pgie_yolo26_person.yml
+  source-uri: rtsp://ai_stream2_mediamtx:8554/video1
+  live-source: 1
+  rtsp-publish-uri: rtsp://ai_stream2_mediamtx:8554/video1_ds
+
+pipeline:
+  name: yolo26-detection
+
+  elements:
+    - name: src0
+      type: nvurisrcbin
+      properties:
+        uri: ${source-uri}
+        disable-audio: 1
+
+    - name: mux
+      type: nvstreammux
+      properties:
+        batch-size: 1
+        width: 640
+        height: 640
+        enable-padding: 1
+        batched-push-timeout: 40000
+        gpu-id: 0
+        live-source: ${live-source}
+
+    - name: pgie
+      type: nvinfer
+      properties:
+        config-file-path: ${pgie-config}
+
+    - name: osd
+      type: nvosdbin
+      properties:
+        gpu-id: 0
+
+    - name: nvvidconv
+      type: nvvideoconvert
+      properties:
+        gpu-id: 0
+
+    - name: encoder
+      type: nvv4l2h264enc
+      properties:
+        bitrate: 4000000
+        iframeinterval: 30
+        preset-id: 1
+        gpu-id: 0
+
+    - name: h264parse
+      type: h264parse
+
+  sink:
+    type: rtspclientsink
+    properties:
+      location: ${rtsp-publish-uri}
+      sync: 0
+      async: 0
+
+  links:
+    - [[src0, mux], ["", "sink_%u"]]
+    - [mux, pgie, osd, nvvidconv, encoder, h264parse, sink]

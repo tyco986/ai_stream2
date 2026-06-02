@@ -20,7 +20,7 @@ def main() -> int:
         return 1
 
     data = resp.json()
-    if data != {"status": "ok", "service": "ffmpeg"}:
+    if data != {"success": True, "message": "", "service": "ffmpeg"}:
         print(f"FAIL unexpected body={data}", file=sys.stderr)
         return 1
 

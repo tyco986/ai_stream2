@@ -12,6 +12,7 @@ SCRIPTS = (
     "test_frame_extract.py",
     "test_video2rtsp.py",
     "test_video2rtsp_list.py",
+    "test_rtsp_info.py",
     "test_video2rtsp_stop.py",
 )
 

@@ -46,11 +46,12 @@ staticfiles/
 media/
 
 # DeepStream runtime data
-deepstream/storage/
+
 
 # DeepStream build artifacts & large binary files
 *.so
 *.engine
-
+*.onnx
+*.onnx.data
 # Docker
 *.tar

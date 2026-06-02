@@ -7,9 +7,7 @@ import requests
 
 from _common import print_ok
 
-DEFAULT_INPUT = (
-    Path(__file__).resolve().parents[1] / "output" / "remove_B_frame" / "video1_B0.mp4"
-)
+DEFAULT_INPUT = Path(__file__).resolve().parents[1] / "video" / "video1.mp4"
 
 
 def main() -> int:

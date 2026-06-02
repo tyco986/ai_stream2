@@ -1,4 +1,5 @@
 import argparse
+import json
 import logging
 import os
 import re
@@ -10,13 +11,37 @@ from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import JSONResponse, Response
 
 TIMESTAMP_PATTERN = re.compile(r"^\d{2}:\d{2}:\d{2}(\.\d{1,3})?$")
 LOG_FORMAT = "[%(asctime)s] %(levelname)s %(name)s: %(message)s"
+
+
+def _api_ok(**kwargs) -> dict:
+    return {"success": True, "message": "", **kwargs}
+
+
+def _api_error(status_code: int, message: str) -> JSONResponse:
+    return JSONResponse(
+        status_code=status_code,
+        content={"success": False, "message": message},
+    )
+
+
+async def _handle_http_exception(_: Request, exc: HTTPException) -> JSONResponse:
+    detail = exc.detail
+    message = detail if isinstance(detail, str) else str(detail)
+    return _api_error(exc.status_code, message)
+
+
+async def _handle_validation_error(
+    _: Request, exc: RequestValidationError
+) -> JSONResponse:
+    return _api_error(422, str(exc.errors()))
 
 
 class Video2RtspBody(BaseModel):
@@ -38,6 +63,84 @@ class FrameExtractBody(BaseModel):
 class RemoveBFrameBody(BaseModel):
     input: str
     output: str | None = None
+
+
+class RtspInfoBody(BaseModel):
+    rtsp: str
+
+
+class ApiErrorResponse(BaseModel):
+    success: bool = False
+    message: str
+
+
+class HelloWorldResponse(BaseModel):
+    success: bool = True
+    message: str = ""
+    service: str
+
+
+class PublisherItem(BaseModel):
+    input: str
+    rtsp: str
+    pid: int
+    loop: bool
+
+
+class Video2RtspResponse(BaseModel):
+    success: bool = True
+    message: str = ""
+    input: str
+    rtsp: str
+    pid: int
+    loop: bool
+    command: str
+
+
+class Video2RtspListResponse(BaseModel):
+    success: bool = True
+    message: str = ""
+    publishers: list[PublisherItem]
+
+
+class Video2RtspStopResponse(BaseModel):
+    success: bool = True
+    message: str = ""
+    stopped: list[PublisherItem]
+
+
+class FrameExtractResponse(BaseModel):
+    success: bool = True
+    message: str = ""
+    input: str
+    timestamp: str
+    output: str
+    command: str
+
+
+class RemoveBFrameResponse(BaseModel):
+    success: bool = True
+    message: str = ""
+    input: str
+    output: str
+    command: str
+
+
+class RtspInfoResponse(BaseModel):
+    success: bool = True
+    message: str = ""
+    rtsp: str
+    probe: dict
+    command: str
+
+
+_API_ERRORS = {
+    400: {"model": ApiErrorResponse, "description": "Bad request"},
+    404: {"model": ApiErrorResponse, "description": "Not found"},
+    409: {"model": ApiErrorResponse, "description": "Conflict"},
+    422: {"model": ApiErrorResponse, "description": "Validation error"},
+    500: {"model": ApiErrorResponse, "description": "Server error"},
+}
 
 
 class RollingFileLogger:
@@ -162,6 +265,10 @@ class FFmpegServer:
             version="1.0.0",
         )
         self.app.add_middleware(RequestLogMiddleware, logger=self._log)
+        self.app.add_exception_handler(HTTPException, _handle_http_exception)
+        self.app.add_exception_handler(
+            RequestValidationError, _handle_validation_error
+        )
         self._register_routes()
         self._log.info("FFmpeg API service initialized log_root=%s", self._log.log_root)
 
@@ -171,40 +278,58 @@ class FFmpegServer:
             self.hello_world,
             methods=["GET"],
             summary="Health check",
+            response_model=HelloWorldResponse,
         )
         self.app.add_api_route(
             "/ffmpeg/video2rtsp",
             self.video2rtsp,
             methods=["POST"],
             summary="Publish video as RTSP",
+            response_model=Video2RtspResponse,
+            responses={k: _API_ERRORS[k] for k in (404, 409, 500)},
         )
         self.app.add_api_route(
             "/ffmpeg/video2rtsp_list",
             self.video2rtsp_list,
             methods=["GET"],
             summary="List active RTSP publishers",
+            response_model=Video2RtspListResponse,
         )
         self.app.add_api_route(
             "/ffmpeg/video2rtsp_stop",
             self.video2rtsp_stop,
             methods=["POST"],
             summary="Stop RTSP publisher(s)",
+            response_model=Video2RtspStopResponse,
+            responses={404: _API_ERRORS[404]},
         )
         self.app.add_api_route(
             "/ffmpeg/frame_extract",
             self.frame_extract,
             methods=["POST"],
             summary="Extract a single frame",
+            response_model=FrameExtractResponse,
+            responses={k: _API_ERRORS[k] for k in (404, 422, 500)},
         )
         self.app.add_api_route(
             "/ffmpeg/remove_B_frame",
             self.remove_b_frame,
             methods=["POST"],
             summary="Remove B-frames from video",
+            response_model=RemoveBFrameResponse,
+            responses={k: _API_ERRORS[k] for k in (404, 500)},
+        )
+        self.app.add_api_route(
+            "/ffmpeg/rtsp_info",
+            self.rtsp_info,
+            methods=["POST"],
+            summary="Probe RTSP stream with ffprobe",
+            response_model=RtspInfoResponse,
+            responses={k: _API_ERRORS[k] for k in (400, 500)},
         )
 
     def hello_world(self) -> dict:
-        return {"status": "ok", "service": "ffmpeg"}
+        return _api_ok(service="ffmpeg")
 
     def video2rtsp(self, body: Video2RtspBody) -> dict:
         return self._invoke_ffmpeg(
@@ -216,16 +341,16 @@ class FFmpegServer:
 
     def video2rtsp_list(self) -> dict:
         self._cleanup_publishers()
-        return {
-            "publishers": [p.to_dict() for p in self._publishers.values()],
-        }
+        return _api_ok(
+            publishers=[p.to_dict() for p in self._publishers.values()],
+        )
 
     def video2rtsp_stop(self, body: Video2RtspStopBody) -> dict:
         self._cleanup_publishers()
         if body.rtsp == "all":
             stopped = [self._stop_publisher(p) for p in list(self._publishers.values())]
             self._publishers.clear()
-            return {"stopped": stopped}
+            return _api_ok(stopped=stopped)
 
         publisher = self._publishers.get(body.rtsp)
         if publisher is None or not publisher.is_running():
@@ -235,7 +360,7 @@ class FFmpegServer:
             )
         stopped = self._stop_publisher(publisher)
         del self._publishers[body.rtsp]
-        return {"stopped": [stopped]}
+        return _api_ok(stopped=[stopped])
 
     def frame_extract(self, body: FrameExtractBody) -> dict:
         return self._invoke_ffmpeg(
@@ -252,6 +377,9 @@ class FFmpegServer:
             Path(body.output) if body.output else None,
         )
 
+    def rtsp_info(self, body: RtspInfoBody) -> dict:
+        return self._invoke_ffmpeg(self._rtsp_info, body.rtsp)
+
     def _video2rtsp(
         self,
         input_path: Path,
@@ -261,15 +389,6 @@ class FFmpegServer:
         resolved_input = self._resolve_input(input_path)
         target_rtsp = rtsp_url or self._default_rtsp_url(resolved_input)
         self._ensure_rtsp_available(target_rtsp)
-
-        if self._probe_has_b_frames(resolved_input):
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    "Input video contains B-frames. "
-                    "Use POST /ffmpeg/remove_B_frame to remove them before publishing."
-                ),
-            )
 
         cmd = [
             "ffmpeg",
@@ -293,12 +412,7 @@ class FFmpegServer:
                 target_rtsp,
             ]
         )
-        process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
+        process = subprocess.Popen(cmd)
         self._publishers[target_rtsp] = RtspPublisher(
             process, resolved_input, target_rtsp, loop
         )
@@ -309,13 +423,13 @@ class FFmpegServer:
             resolved_input,
             loop,
         )
-        return {
-            "input": str(resolved_input),
-            "rtsp": target_rtsp,
-            "pid": process.pid,
-            "loop": loop,
-            "command": shlex.join(cmd),
-        }
+        return _api_ok(
+            input=str(resolved_input),
+            rtsp=target_rtsp,
+            pid=process.pid,
+            loop=loop,
+            command=shlex.join(cmd),
+        )
 
     def _frame_extract(
         self,
@@ -346,12 +460,12 @@ class FFmpegServer:
             str(resolved_output),
         ]
         self._run(cmd)
-        return {
-            "input": str(resolved_input),
-            "timestamp": normalized_ts,
-            "output": str(resolved_output),
-            "command": shlex.join(cmd),
-        }
+        return _api_ok(
+            input=str(resolved_input),
+            timestamp=normalized_ts,
+            output=str(resolved_output),
+            command=shlex.join(cmd),
+        )
 
     def _remove_b_frame(self, input_path: Path, output_path: Path | None) -> dict:
         resolved_input = self._resolve_input(input_path)
@@ -376,11 +490,11 @@ class FFmpegServer:
             str(resolved_output),
         ]
         self._run(cmd)
-        return {
-            "input": str(resolved_input),
-            "output": str(resolved_output),
-            "command": shlex.join(cmd),
-        }
+        return _api_ok(
+            input=str(resolved_input),
+            output=str(resolved_output),
+            command=shlex.join(cmd),
+        )
 
     def _invoke_ffmpeg(self, fn, *args, **kwargs) -> dict:
         try:
@@ -405,21 +519,30 @@ class FFmpegServer:
             text=True,
         )
 
-    def _probe_has_b_frames(self, path: Path) -> bool:
+    def _rtsp_info(self, rtsp_url: str) -> dict:
+        if not rtsp_url.startswith("rtsp://"):
+            raise HTTPException(
+                status_code=400,
+                detail="rtsp must start with rtsp://",
+            )
         cmd = [
             "ffprobe",
             "-v",
-            "error",
-            "-select_streams",
-            "v:0",
-            "-show_entries",
-            "stream=has_b_frames",
-            "-of",
-            "default=nw=1:nk=1",
-            str(path),
+            "quiet",
+            "-rtsp_transport",
+            "tcp",
+            "-print_format",
+            "json",
+            "-show_format",
+            "-show_streams",
+            rtsp_url,
         ]
         result = self._run(cmd)
-        return result.stdout.strip() == "1"
+        return _api_ok(
+            rtsp=rtsp_url,
+            probe=json.loads(result.stdout),
+            command=shlex.join(cmd),
+        )
 
     def _default_rtsp_url(self, input_path: Path) -> str:
         return (

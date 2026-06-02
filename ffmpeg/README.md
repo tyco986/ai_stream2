@@ -68,7 +68,7 @@ paths:
 rtsp://ai_stream2_mediamtx:8554/{stem}
 ```
 
-路径 `{stem}` 为输入文件名不含扩展名（如 `video1_B0.mp4` → `video1_B0`）。
+路径 `{stem}` 为输入文件名不含扩展名（如 `video1.mp4` → `video1`）。
 
 | 访问方 | RTSP 地址 | 说明 |
 |--------|-----------|------|
@@ -107,31 +107,69 @@ python main.py --host 0.0.0.0 --port 8080 --output-root ./output --log-root ./lo
 | POST | `/ffmpeg/video2rtsp_stop` | 按 RTSP 地址停止推流（`all` 停止全部） |
 | POST | `/ffmpeg/frame_extract` | 按时间戳截图 |
 | POST | `/ffmpeg/remove_B_frame` | 重编码并移除 B 帧 |
+| POST | `/ffmpeg/rtsp_info` | `ffprobe` 探测 RTSP 流详情 |
+
+### 统一响应字段
+
+所有接口 JSON 均包含：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `success` | `bool` | 执行成功为 `true`，失败为 `false` |
+| `message` | `string` | 成功时为 `""`；失败时为错误信息 |
+
+失败时 HTTP 状态码仍为非 2xx，响应体仅含 `success`、`message`（无 FastAPI 默认的 `detail` 字段）。
+
+### `GET /ffmpeg/hello_world`
+
+```json
+{
+  "success": true,
+  "message": "",
+  "service": "ffmpeg"
+}
+```
 
 ### `POST /ffmpeg/video2rtsp`
 
 ```json
 {
-  "input": "/app/output/remove_B_frame/video1_B0.mp4",
-  "rtsp": "rtsp://ai_stream2_mediamtx:8554/video1_B0",
+  "input": "/app/video/video1.mp4",
+  "rtsp": "rtsp://ai_stream2_mediamtx:8554/video1",
   "loop": true
 }
 ```
 
 - `rtsp` 可选；默认为 `rtsp://{mediamtx-host}:{mediamtx-rtsp-port}/{stem}`。
 - `loop` 可选，默认 `true`；为 `true` 时循环播放（`-stream_loop -1`），为 `false` 时播完即停。
-- 响应字段：`input`、`rtsp`、`pid`、`loop`、`command`。
-- 同一 RTSP 地址已在推流时返回 `409`。
-- 输入含 B 帧时返回 `400`，需先调用 `remove_B_frame`。
+- 成功时额外字段：`input`、`rtsp`、`pid`、`loop`、`command`。
+- 仅负责启动后台 ffmpeg 进程，**不校验** RTSP 是否真正推流成功；可用 `video2rtsp_list` 查看进程是否仍在运行。
+- 同一 RTSP 地址已在推流时 → `409`。
+
+成功响应示例：
+
+```json
+{
+  "success": true,
+  "message": "",
+  "input": "/app/video/video1.mp4",
+  "rtsp": "rtsp://ai_stream2_mediamtx:8554/video1",
+  "pid": 123,
+  "loop": true,
+  "command": "ffmpeg ..."
+}
+```
 
 ### `GET /ffmpeg/video2rtsp_list`
 
 ```json
 {
+  "success": true,
+  "message": "",
   "publishers": [
     {
-      "input": "/app/output/remove_B_frame/video1_B0.mp4",
-      "rtsp": "rtsp://ai_stream2_mediamtx:8554/video1_B0",
+      "input": "/app/video/video1.mp4",
+      "rtsp": "rtsp://ai_stream2_mediamtx:8554/video1",
       "pid": 123,
       "loop": true
     }
@@ -141,18 +179,60 @@ python main.py --host 0.0.0.0 --port 8080 --output-root ./output --log-root ./lo
 
 - 仅包含仍在运行的 ffmpeg 推流进程；已退出的会自动从列表移除。
 
+### `POST /ffmpeg/rtsp_info`
+
+```json
+{
+  "rtsp": "rtsp://127.0.0.1:8554/video1"
+}
+```
+
+- 使用 `ffprobe`（`-rtsp_transport tcp`、`-show_format`、`-show_streams`）拉取流信息。
+- 成功时额外字段：`rtsp`、`probe`（`ffprobe` JSON，含 `streams`、`format` 等）、`command`。
+- `rtsp` 须以 `rtsp://` 开头，否则 → `400`。
+- 流不可达或探测失败 → `500`。
+
+成功响应示例：
+
+```json
+{
+  "success": true,
+  "message": "",
+  "rtsp": "rtsp://ai_stream2_mediamtx:8554/video1",
+  "probe": { "streams": [], "format": {} },
+  "command": "ffprobe -v quiet -rtsp_transport tcp ..."
+}
+```
+
 ### `POST /ffmpeg/video2rtsp_stop`
 
 ```json
 {
-  "rtsp": "rtsp://ai_stream2_mediamtx:8554/video1_B0"
+  "rtsp": "rtsp://ai_stream2_mediamtx:8554/video1"
 }
 ```
 
 - `rtsp` 为 `"all"` 时停止全部推流。
 - `rtsp` 须与推流时使用的地址一致（见上文「RTSP 地址：容器 vs 宿主机」）。
-- 响应字段：`stopped`（数组，每项含 `input`、`rtsp`、`pid`、`loop`）。
-- 指定 RTSP 未在推流时返回 `404`。
+- 成功时额外字段：`stopped`（数组，每项含 `input`、`rtsp`、`pid`、`loop`）。
+- 指定 RTSP 未在推流时 → `404`，`success: false`。
+
+成功响应示例：
+
+```json
+{
+  "success": true,
+  "message": "",
+  "stopped": [
+    {
+      "input": "/app/video/video1.mp4",
+      "rtsp": "rtsp://ai_stream2_mediamtx:8554/video1",
+      "pid": 123,
+      "loop": true
+    }
+  ]
+}
+```
 
 ### `POST /ffmpeg/frame_extract`
 
@@ -166,7 +246,7 @@ python main.py --host 0.0.0.0 --port 8080 --output-root ./output --log-root ./lo
 
 - `timestamp`：格式为 `HH:MM:SS` 或 `HH:MM:SS.mmm`；省略毫秒时规范化为 **`.000`**。
 - 默认输出：`{output-root}/frame_extract/{stem}_{sanitized_ts}.png`（如 `video1_00-01-23-000.png`）。
-- 响应字段：`input`、`timestamp`、`output`、`command`。
+- 成功时额外字段：`input`、`timestamp`、`output`、`command`。
 
 ### `POST /ffmpeg/remove_B_frame`
 
@@ -178,17 +258,26 @@ python main.py --host 0.0.0.0 --port 8080 --output-root ./output --log-root ./lo
 ```
 
 - 默认输出：`{output-root}/remove_B_frame/{stem}_B0.mp4`
-- 响应字段：`input`、`output`、`command`。
+- 成功时额外字段：`input`、`output`、`command`。
+
+失败响应示例：
+
+```json
+{
+  "success": false,
+  "message": "Input file not found: /path/to/missing.mp4"
+}
+```
 
 ### 常见 HTTP 状态码
 
 | 状态码 | 场景 |
 |--------|------|
-| `400` | `video2rtsp`：输入含 B 帧 |
+| `400` | `rtsp_info`：`rtsp` 非 `rtsp://` 开头 |
 | `404` | 输入文件不存在；或 `video2rtsp_stop` 指定 RTSP 未在推流 |
 | `409` | `video2rtsp`：同一 RTSP 地址已在推流 |
-| `422` | `timestamp` 格式无效 |
-| `500` | `ffmpeg` / `ffprobe` 执行失败 |
+| `422` | 请求体验证失败；或 `timestamp` 格式无效 |
+| `500` | `ffmpeg` / `ffprobe` 执行失败（`frame_extract`、`remove_B_frame`、`rtsp_info` 等） |
 
 ## 测试脚本
 
@@ -199,13 +288,14 @@ python main.py --host 0.0.0.0 --port 8080 --output-root ./output --log-root ./lo
 | `test_hello_world.py` | 健康检查 |
 | `test_remove_B_frame.py` | 去 B 帧（默认 `/app/video/video1.mp4`） |
 | `test_frame_extract.py` | 截图 |
-| `test_video2rtsp.py` | 推流（默认 `/app/output/remove_B_frame/video1_B0.mp4`） |
+| `test_video2rtsp.py` | 推流（默认 `/app/video/video1.mp4`） |
 | `test_video2rtsp_list.py` | 列出活跃推流 |
+| `test_rtsp_info.py` | RTSP 探测（默认 `rtsp://ai_stream2_mediamtx:8554/video1`，需在 `video2rtsp` 之后） |
 | `test_video2rtsp_stop.py` | 停止推流（默认 `rtsp=all`） |
 | `test_all.py` | 依次运行以上全部测试 |
 | `test_all.sh` | 容器内一键运行 `test_all.py` |
 | `test_all_on_host.sh` | 宿主机通过 `docker exec` 运行 `test_all.py` |
-| `preview_rtsp.sh` | 宿主机 ffplay 预览 RTSP（默认 `rtsp://127.0.0.1:8554/video1_B0`） |
+| `preview_rtsp.sh` | 宿主机 ffplay 预览 RTSP（默认 `rtsp://127.0.0.1:8554/video1`） |
 
 ```bash
 # 容器内
@@ -226,19 +316,12 @@ bash ffmpeg/tests/preview_rtsp.sh
 ### 烟测顺序
 
 1. **GET** `/ffmpeg/hello_world`
-2. **POST** `/ffmpeg/remove_B_frame`（源视频含 B 帧时需要）
+2. **POST** `/ffmpeg/remove_B_frame`（可选）
 3. **POST** `/ffmpeg/video2rtsp`
 4. **GET** `/ffmpeg/video2rtsp_list`
-5. **POST** `/ffmpeg/frame_extract`
-6. **POST** `/ffmpeg/video2rtsp_stop` → `{"rtsp":"all"}`
-
-## B 帧处理流程
-
-```
-video2rtsp（400，含 B 帧）
-    → remove_B_frame
-    → video2rtsp（200，开始推流）
-```
+5. **POST** `/ffmpeg/rtsp_info`
+6. **POST** `/ffmpeg/frame_extract`
+7. **POST** `/ffmpeg/video2rtsp_stop` → `{"rtsp":"all"}`
 
 ## 输出目录结构
 

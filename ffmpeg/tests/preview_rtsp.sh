@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-RTSP="rtsp://127.0.0.1:8554/video1_B0"
+RTSP="rtsp://127.0.0.1:8554/video1"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -11,7 +11,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     -h|--help)
       echo "Usage: $0 [--rtsp URL]"
-      echo "Default: rtsp://127.0.0.1:8554/video1_B0"
+      echo "Default: rtsp://127.0.0.1:8554/video1"
       exit 0
       ;;
     *)

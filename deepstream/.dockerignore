@@ -1,6 +1,0 @@
-# Build artifacts and external-service binaries (not part of DeepStream image)
-ffmpeg-release-amd64-static.tar.xz
-mediamtx_v*_linux_amd64.tar.gz
-**/__pycache__
-**/.pytest_cache
-storage/

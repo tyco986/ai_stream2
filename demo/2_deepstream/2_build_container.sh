@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="$(cd "${SCRIPT_DIR}/../../../../" && pwd)"
+ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 NAME="${DEEPSTREAM_CONTAINER_NAME:-ai_stream2_deepstream}"
 IMG="${DEEPSTREAM_IMAGE:-ai_stream2_deepstream}"
@@ -28,8 +28,8 @@ docker run -d --name "${NAME}" --network "${NET}" --gpus all \
   -e KAFKA_EVENT_TOPIC=deepstream-events \
   -e KAFKA_COMMAND_TOPIC=deepstream-commands \
   -e DS_PREVIEW_RTP_HOST="${PREVIEW_RTP_HOST}" \
-  -v "${ROOT}/deepstream/models:/app/models" \
-  -v "${ROOT}/deepstream/config:/app/config" \
+  -v "${ROOT}/deepstream:/app" \
+  -w /app \
   "${IMG}"
 
 cat <<EOF
