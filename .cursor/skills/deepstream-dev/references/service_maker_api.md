@@ -924,54 +924,41 @@ Pipelines can be created from YAML configuration files (for pipeline structure d
 pipeline = Pipeline("pipeline-name", "/path/to/pipeline_config.yml")
 ```
 
-**Note**: This YAML config is for **pipeline structure** (elements, links, probes). The nvinfer `config-file-path` can point to either a YAML file (`.yml`) or INI-style text file (`.txt`) - both formats are supported.
+**Note**: Service Maker pipeline YAML uses top-level `deepstream` (not `pipeline`). The nvinfer `config-file-path` can point to either a YAML file (`.yml`) or INI-style text file (`.txt`) - both formats are supported.
 
-### YAML Structure Example (Pipeline Definition)
+Custom `BatchMetadataOperator` probes (e.g. detection loggers) are **not** declared in YAML; attach them in Python after `Pipeline(name, config_file)` (see `deepstream_test1.py`).
+
+Boolean properties must be YAML booleans (`true`/`false`), not `0`/`1`.
+
+### YAML Structure Example (Pipeline Definition, DS 9.0)
+
+Official samples: `service-maker/sources/apps/python/pipeline_api/*/dstest*_config.yaml`
 
 ```yaml
-pipeline:
-  name: my-pipeline
-  elements:
-    - name: src
-      type: filesrc
+deepstream:
+  nodes:
+    - type: filesrc
+      name: filesrc
       properties:
         location: /path/to/video.h264
-    
-    - name: parser
-      type: h264parse
-    
-    - name: decoder
-      type: nvv4l2decoder
-    
-    - name: mux
-      type: nvstreammux
+    - type: nvinfer
+      name: infer
       properties:
-        batch-size: 1
-        width: 1920
-        height: 1080
-    
-    - name: infer
-      type: nvinfer
-      properties:
-        # nvinfer supports both YAML (.yml) and INI-style (.txt) config formats
         config-file-path: /path/to/pgie_config.yml
-    
-    - name: osd
-      type: nvosdbin
-    
-    - name: sink
-      type: nveglglessink
-  
-  links:
-    - [src, parser, decoder]
-    - [decoder, mux]
-    - [mux, infer, osd, sink]
-  
-  probes:
-    - element: infer
-      probe-name: my-probe
-      probe-type: custom
-      operator: MyOperator
+    - type: measure_fps_probe.measure_fps_probe
+      name: fps_probe
+  edges:
+    filesrc: h264parse
+    infer: [nvvideoconvert, fps_probe]
+    nvvideoconvert: nvdsosd
+```
+
+Pad-specific edges: `infer.src: nvvideoconvert`. Tee fan-out: `tee: [queue, queue1]`.
+
+Load directly in Python (pipeline name is the first constructor argument, not in the YAML file):
+
+```python
+pipeline = Pipeline("my-pipeline", "/path/to/pipeline_config.yaml")
 ```
 
 ### nvinfer Configuration (Both Formats Supported)

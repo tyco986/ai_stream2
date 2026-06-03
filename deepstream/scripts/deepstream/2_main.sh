@@ -26,4 +26,4 @@ done
 
 [[ -n "${CONFIG}" ]] || { usage >&2; exit 1; }
 
-exec docker exec ai_stream2_deepstream python3 /app/main.py --config "${CONFIG}"
+exec docker exec -it ai_stream2_deepstream python3 /app/main.py --config "${CONFIG}"

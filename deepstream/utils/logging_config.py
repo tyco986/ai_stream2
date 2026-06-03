@@ -8,7 +8,7 @@ from pathlib import Path
 from pyservicemaker import BatchMetadataOperator
 
 LOG_FORMAT = "[%(asctime)s] %(levelname)s %(name)s: %(message)s"
-INFERENCE_LOG_INTERVAL = 25
+DEFAULT_DETECTION_LOG_INTERVAL = 1500
 DEEPSTREAM_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_LOG_DIR = DEEPSTREAM_ROOT / "logs"
 DEFAULT_MAX_BYTES = 10 * 1024 * 1024
@@ -62,13 +62,13 @@ class RollingLoggingConfigurator:
         return logger
 
 
-class InferenceFrameLogger(BatchMetadataOperator):
-    """Log detections every INFERENCE_LOG_INTERVAL frames; frame 0 is always included."""
+class YoloDetectionLogger(BatchMetadataOperator):
+    """Log YOLO detections every N frames; frame 0 is always included."""
 
-    def __init__(self) -> None:
+    def __init__(self, interval: int = DEFAULT_DETECTION_LOG_INTERVAL) -> None:
         super().__init__()
         self._logger = logging.getLogger("deepstream")
-        self._interval = INFERENCE_LOG_INTERVAL
+        self._interval = interval
 
     def handle_metadata(self, batch_meta) -> None:
         for frame_meta in batch_meta.frame_items:
