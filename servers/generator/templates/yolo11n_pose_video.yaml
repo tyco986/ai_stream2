@@ -1,0 +1,16 @@
+# bash servers/generator/scripts/3_generate.sh --config <template_name>
+#
+# Artifacts: pipeline.yml, pgie.yml, params.yml, ... under config_save_dir.
+
+generator: YoloPoseVideoConfigGenerator
+config_save_dir: /root/configs/generator/yolo11n_pose_video
+pgie_model_dir: models/trt/yolo11n-pose
+input: /root/attachments/videos/video1.mp4
+output: /root/outputs/deepstream/yolo11n_pose_video.mp4
+enable_kafka: false
+enable_nvtracker: false
+interval: 0
+pgie_class_attr:
+  all:
+    conf: 0.25
+nvdsanalytics_config: null

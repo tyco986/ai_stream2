@@ -1,0 +1,32 @@
+{
+  "model_type": "dynamic",
+  "input_tensor_name": "input",
+  "output_tensor_name": "output",
+  "classes": [
+    "person"
+  ],
+  "input_tensor_shape": [
+    4,
+    3,
+    640,
+    640
+  ],
+  "output_tensor_shape": [
+    4,
+    8400,
+    56
+  ],
+  "batch_size": 4,
+  "precision": "fp16",
+  "yolo_version": "yolo11",
+  "yolo_task": "pose",
+  "bundle_sha256": "4cd235924f1d9e332bf47651eeb01e8df52a5c3d35b480bdb29d837f41603e4f",
+  "bundle_files": {
+    "yolo11n-pose.onnx": "55797c165bee96ab1c1522e50974424408b757a9cab99ce003701a4224e96d49",
+    "yolo11n-pose.onnx.data": "78763f364091956e2e6ce1510a4164e688c3d989743175842d0ab33b930d040c"
+  },
+  "gpu_id": 0,
+  "cuda_version": "13.1",
+  "tensorrt_version": "101401",
+  "build_time": "2026-06-19T02:54:13.934398+00:00"
+}

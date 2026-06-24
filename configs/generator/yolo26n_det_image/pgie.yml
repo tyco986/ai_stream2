@@ -1,0 +1,22 @@
+property:
+  gpu-id: 0
+  onnx-file: ''
+  model-engine-file: /root/models/trt/yolo26n/yolo26n.engine
+  labelfile-path: /root/models/trt/yolo26n/labels.txt
+  batch-size: 1
+  network-mode: 2
+  process-mode: 1
+  model-color-format: 0
+  num-detected-classes: 80
+  gie-unique-id: 1
+  interval: 0
+  cluster-mode: 4
+  maintain-aspect-ratio: 1
+  symmetric-padding: 1
+  net-scale-factor: 0.00392156862745098
+  infer-dims: 3;640;640
+  custom-lib-path: /app/libs/libnvdsinfer_custom_impl_Yolo.so
+  parse-bbox-func-name: NvDsInferParseYolo
+class-attrs-all:
+  topk: 300
+  pre-cluster-threshold: 0.25

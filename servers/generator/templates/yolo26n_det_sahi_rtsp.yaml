@@ -1,0 +1,27 @@
+# bash servers/generator/scripts/3_generate.sh --config <template_name>
+#
+# Artifacts: pipeline.yml, pgie.yml, params.yml, sahi_slice_*.jpg/json, ... under config_save_dir.
+# runtime batch size = SAHI tile count; mux batch size = len(streams).
+
+generator: YoloDetSahiConfigGenerator
+config_save_dir: /root/configs/generator/yolo26n_det_sahi_rtsp
+pgie_model_dir: models/trt/yolo26n_sahi
+interval: 0
+pgie_class_attr:
+  all:
+    conf: 0.25
+enable_visualized_rtsp: true
+enable_kafka: false
+enable_nvtracker: false
+nvdsanalytics_config: null
+streams:
+  - rtsp://ai_stream2_mediamtx:8554/video1
+  - rtsp://ai_stream2_mediamtx:8554/video2
+sahi_config:
+  nvsahipreprocess:
+    slice_width: 640
+    slice_height: 640
+    overlap_width_ratio: 0.2
+    overlap_height_ratio: 0.2
+  nvsahipostprocess:
+    match_threshold: 0.5

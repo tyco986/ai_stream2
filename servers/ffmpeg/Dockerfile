@@ -8,22 +8,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-# Container paths; 2_build_container.sh mounts host dirs onto these:
-#   attachments/videos -> /app/video
-#   outputs/ffmpeg     -> /app/output
-#   logs/ffmpeg        -> /app/log
-ENV OUTPUT_ROOT=/app/output
-ENV LOG_ROOT=/app/log
-ENV VIDEO_ROOT=/app/video
-ENV VIDEOS_ROOT=/app/videos
-ENV MEDIAMTX_HOST=ai_stream2_mediamtx
-ENV MEDIAMTX_RTSP_PORT=8554
+ENV HOST=0.0.0.0
+ENV PORT=8080
+ENV LOG_ROOT=/root/logs/ffmpeg
 
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
-RUN mkdir -p /app/output /app/log /app/videos
+RUN mkdir -p /root/tmp /root/outputs/ffmpeg/frame_extract /root/outputs/remove_B_frame /root/logs/ffmpeg
 
 EXPOSE 8080
-CMD ["python", "main.py", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["python", "main.py"]

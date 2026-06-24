@@ -1,0 +1,21 @@
+generator: YoloDetSahiVideoConfigGenerator
+input: /root/attachments/videos/video1.mp4
+output: /root/outputs/deepstream/yolo26n_det_sahi_video.mp4
+pgie_model_dir: /root/models/trt/yolo26n-sahi
+config_save_dir: /root/configs/generator/yolo26n_det_sahi_video
+enable_kafka: false
+enable_nvtracker: false
+interval: 0
+pgie_class_attr:
+  all:
+    conf: 0.25
+pgie_class_on: null
+nvdsanalytics_config: null
+sahi_config:
+  nvsahipreprocess:
+    slice_width: 640
+    slice_height: 640
+    overlap_width_ratio: 0.2
+    overlap_height_ratio: 0.2
+  nvsahipostprocess:
+    match_threshold: 0.5

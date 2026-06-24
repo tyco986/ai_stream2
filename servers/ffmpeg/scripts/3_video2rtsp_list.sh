@@ -1,25 +1,34 @@
 #!/usr/bin/env bash
-# Run from project root. Requires ai_stream2_ffmpeg on :8080.
+# Run from project root.
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=_api_curl.sh
-. "${SCRIPT_DIR}/_api_curl.sh"
+API_URL="http://127.0.0.1:8080"
+ENDPOINT="${API_URL}/ai_stream2/ffmpeg/video2rtsp_list"
 
 usage() {
   cat <<EOF
-Usage: $0 [--help]
+usage: $0
 
-  GET http://127.0.0.1:8080/ffmpeg/video2rtsp_list
+List active RTSP publishers.
+
+Prerequisites: 1_build_image.sh, 2_run_container.sh
 EOF
 }
 
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    -h|--help) usage; exit 0 ;;
-    *) usage >&2; exit 1 ;;
-  esac
-done
+case "${1:-}" in
+  -h|--help|help) usage; exit 0 ;;
+  "") ;;
+  *) echo "unknown option: $1" >&2; usage; exit 1 ;;
+esac
 
-api_curl http://127.0.0.1:8080/ffmpeg/video2rtsp_list
-echo
+RESPONSE_BODY="$(mktemp)"
+trap 'rm -f "${RESPONSE_BODY}"' EXIT
+
+HTTP_CODE="$(curl -sS -w "%{http_code}" -o "${RESPONSE_BODY}" "${ENDPOINT}")"
+
+if [[ "${HTTP_CODE}" == "200" ]]; then
+  cat "${RESPONSE_BODY}"
+else
+  cat "${RESPONSE_BODY}"
+  exit 1
+fi

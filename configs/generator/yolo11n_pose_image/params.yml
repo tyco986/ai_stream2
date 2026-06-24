@@ -1,0 +1,10 @@
+generator: YoloPoseImageConfigGenerator
+input: /root/attachments/images/test.png
+output: /root/outputs/deepstream/yolo11n_pose_image.jpg
+pgie_model_dir: /root/models/trt/yolo11n-pose
+config_save_dir: /root/configs/generator/yolo11n_pose_image
+enable_kafka: true
+pgie_class_attr:
+  all:
+    conf: 0.25
+pgie_class_on: null

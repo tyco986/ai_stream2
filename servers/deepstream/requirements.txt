@@ -1,0 +1,6 @@
+pyyaml
+av
+onnx
+pillow
+fastapi
+uvicorn

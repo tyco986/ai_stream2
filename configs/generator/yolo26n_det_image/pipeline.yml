@@ -1,0 +1,80 @@
+deepstream:
+  nodes:
+  - type: nvurisrcbin
+    name: src
+    properties:
+      uri: file:///root/attachments/images/test.png
+      disable-audio: true
+      select-rtp-protocol: 4
+      num-buffers: 1
+  - type: nvstreammux
+    name: mux
+    properties:
+      batch-size: 1
+      width: 1920
+      height: 1080
+      enable-padding: false
+      batched-push-timeout: 40000
+      gpu-id: 0
+      live-source: false
+  - type: nvinfer
+    name: pgie
+    properties:
+      config-file-path: /root/configs/generator/yolo26n_det_image/pgie.yml
+      batch-size: 1
+      gpu-id: 0
+  - type: tee
+    name: tee
+  - type: queue
+    name: queue_meta
+    properties:
+      leaky: 2
+      max-size-buffers: 4
+  - type: nvmsgconv
+    name: msgconv
+    properties:
+      config: /root/configs/generator/yolo26n_det_image/nvmsgconv.yml
+      payload-type: 1
+      msg2p-newapi: true
+      frame-interval: 1
+  - type: nvmsgbroker
+    name: msgbroker
+    properties:
+      proto-lib: /opt/nvidia/deepstream/deepstream/lib/libnvds_kafka_proto.so
+      conn-str: ai_stream2_kafka;9092
+      topic: deepstream-detections
+      config: /root/configs/generator/yolo26n_det_image/kafka.txt
+      sync: false
+      async: false
+  - type: nvosdbin
+    name: osd
+    properties:
+      gpu-id: 0
+      display-bbox: true
+      display-text: true
+  - type: nvvideoconvert
+    name: nvvidconv
+    properties:
+      gpu-id: 0
+  - type: nvjpegenc
+    name: jpegenc
+    properties:
+      quality: 85
+  - type: filesink
+    name: sink
+    properties:
+      location: /root/outputs/deepstream/yolo26n_det_image.jpg
+      sync: false
+      async: false
+  edges:
+    src: mux
+    mux: pgie
+    pgie: tee
+    queue_meta: msgconv
+    msgconv: msgbroker
+    tee:
+    - queue_meta
+    - osd
+    osd: nvvidconv
+    nvvidconv: jpegenc
+    jpegenc: sink

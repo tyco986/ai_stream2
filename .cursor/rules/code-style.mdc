@@ -1,4 +1,4 @@
----*/
+---
 description: 全局代码风格 — 适用于项目所有 Python 代码
 alwaysApply: true
 ---
@@ -38,15 +38,40 @@ def get_camera(camera_id):
 
 禁止函数内部 import（除非解决循环依赖，且必须加注释说明原因）。
 
+## 命名
+
+函数名、类方法名、参数名均禁止前置 `_`。
+
+```python
+# ✅ 无前缀下划线
+def get_camera(camera_id):
+    ...
+
+class AlertEngine:
+    def calculate_score(self, detection):
+        ...
+
+# ❌ 前置下划线
+def _get_camera(_camera_id):
+    ...
+
+class AlertEngine:
+    def _calculate_score(self, detection):
+        ...
+```
+
 ## 面向对象
 
 优先使用类封装逻辑，便于复用和测试。Service 层、Client 层必须是类，不要写散落的函数集合。
 
+`__init__` 方法中首先要做的是将全部参数赋值给 `self`，再写其他逻辑。
+
 ```python
 # ✅ 类封装，可复用可测试
 class DeepStreamClient:
-    def __init__(self, base_url):
+    def __init__(self, base_url, timeout):
         self.base_url = base_url
+        self.timeout = timeout
 
     async def add_stream(self, camera_id, rtsp_url):
         ...
@@ -55,12 +80,41 @@ class DeepStreamClient:
 async def add_stream_to_deepstream(camera_id, rtsp_url):
     base_url = settings.DEEPSTREAM_URL
     ...
+
+# ❌ __init__ 中先做其他逻辑，或遗漏参数赋值
+class DeepStreamClient:
+    def __init__(self, base_url, timeout):
+        self.client = httpx.AsyncClient(timeout=timeout)
+        self.base_url = base_url
 ```
 
 ## 语言
 
 代码中除注释外一律使用英文（变量名、函数名、类名、字符串 key）。
 注释使用中文或英文均可，但同一文件内保持一致。
+
+## 废话代码（禁止补丁式堆叠）
+
+「废话」指冗余实现：在旧代码上叠 if、回退路径、中间方法，而不是按新需求整理形状。
+
+- 加功能前先读现有结构；能重构就重构，不顺手就删旧路径再写，不要双轨并存
+- 新方案取代旧方案时，同步删掉失效常量、方法和分支（如已弃用的解析路径）
+- 同一职责只保留一条路径；不要「先 A 不行再 B 再 C」的层层回退，除非边界上真有多种来源
+- 改完自问：若从零实现这功能，还会是现在这个文件形状吗？若否，继续删
+
+```python
+# ✅ 新 API 接受目录 → 直接改构造与调用方
+class YoloPipeline:
+    def __init__(self, config_dir, pipeline_name):
+        self.config_dir = Path(config_dir)
+        ...
+
+# ❌ 补丁：保留旧 yaml 路径，再叠 config_dir 分支、resolve 回退、is_file 守卫
+def resolve_meta_via_pgie(...):
+    ...
+def resolve_meta_via_params(...):
+    ...
+```
 
 ## 简洁
 
@@ -84,16 +138,16 @@ def get_status_label(status):
 
 ## 禁止嵌套函数定义
 
-不要在函数内部定义函数。需要辅助逻辑时提取为类的私有方法或模块级函数。
+不要在函数内部定义函数。需要辅助逻辑时提取为类方法或模块级函数。
 
 ```python
 # ✅ 提取为方法
 class AlertEngine:
     def evaluate(self, detection):
-        score = self._calculate_score(detection)
+        score = self.calculate_score(detection)
         ...
 
-    def _calculate_score(self, detection):
+    def calculate_score(self, detection):
         ...
 
 # ❌ 函数内定义函数

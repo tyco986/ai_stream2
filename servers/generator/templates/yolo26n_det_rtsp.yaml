@@ -1,0 +1,24 @@
+# Upload: curl -F "input=@servers/generator/templates/$(basename $0 .yaml).yaml" ...
+# or: bash servers/generator/scripts/3_generate.sh --config yolo26n_det_rtsp
+#
+# Artifacts: pipeline.yml, pgie.yml, params.yml, ... under config_save_dir.
+# RTSP streams are probed at generation time; all streams must share resolution and fps.
+# runtime batch size equals len(streams); gpu_id and engine batch come from meta.json.
+
+generator: YoloDetRTSPConfigGenerator
+config_save_dir: /root/configs/generator/yolo26n_det_rtsp
+pgie_model_dir: models/trt/yolo26n
+interval: 0
+pgie_class_attr:
+  all:
+    conf: 0.4
+
+enable_visualized_rtsp: true
+enable_kafka: true
+enable_nvtracker: true
+
+nvdsanalytics_config: null
+
+streams:
+  - rtsp://ai_stream2_mediamtx:8554/video1
+  - rtsp://ai_stream2_mediamtx:8554/video2

@@ -1,0 +1,5 @@
+sensor0:
+  enable: 1
+  type: Camera
+  id: stream_0
+  description: file:///root/attachments/images/test.png
