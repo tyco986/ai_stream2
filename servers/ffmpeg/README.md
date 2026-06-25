@@ -9,7 +9,7 @@
 ./servers/ffmpeg/scripts/0_pull_base_image.sh   # 可选
 ./servers/ffmpeg/scripts/1_build_image.sh
 ./servers/ffmpeg/scripts/2_run_container.sh
-./servers/mediamtx/scripts/1_build_container.sh # RTSP 推流时需要
+./servers/mediamtx/scripts/1_run_container.sh # RTSP 推流时需要
 ```
 
 API：`http://127.0.0.1:8080/ai_stream2/ffmpeg/hello_world`  
