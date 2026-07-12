@@ -1,13 +1,13 @@
-generator: YoloPoseVideoConfigGenerator
+generator: PoseVideoGenerator
 input: /root/attachments/videos/video1.mp4
 output: /root/outputs/yolo11n_pose_video.mp4
-pgie_model_dir: /root/models/trt/yolo11n-pose
-config_save_dir: /root/configs/generator/yolo11n_pose_video
-enable_kafka: false
-enable_nvtracker: false
+pgie:
+  model_dir: /root/models/trt/yolo11n-pose
+  class_attr:
+    all:
+      conf: 0.25
+  class_on: null
+analyzer: null
+tracker: false
 interval: 0
-pgie_class_attr:
-  all:
-    conf: 0.25
-pgie_class_on: null
-nvdsanalytics_config: null
+config_save_dir: /root/configs/generator/yolo11n_pose_video

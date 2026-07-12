@@ -40,7 +40,7 @@ deepstream:
       config-file-path: /root/configs/generator/yolo26n_det_sahi_rtsp/pgie.yml
       batch-size: 9
       gpu-id: 0
-      input-tensor-meta: 1
+      input-tensor-meta: true
   - type: queue
     name: queue_sahi
     properties:
@@ -66,17 +66,46 @@ deepstream:
     name: nvvidconv0
     properties:
       gpu-id: 0
+  - type: tee
+    name: tee_raw0
+  - type: queue
+    name: queue_raw0
+    properties:
+      leaky: 2
+      max-size-buffers: 4
+  - type: appsink
+    name: appsink_raw0
+    properties:
+      emit-signals: true
+      sync: false
+      max-buffers: 1
+      drop: true
   - type: nvosdbin
     name: osd0
     properties:
       gpu-id: 0
       display-bbox: true
       display-text: true
+      display-mask: false
+  - type: tee
+    name: tee_vis0
+  - type: queue
+    name: queue_vis0
+    properties:
+      leaky: 2
+      max-size-buffers: 4
+  - type: appsink
+    name: appsink_vis0
+    properties:
+      emit-signals: true
+      sync: false
+      max-buffers: 1
+      drop: true
   - type: nvv4l2h264enc
     name: encoder0
     properties:
       bitrate: 4000000
-      iframeinterval: 25
+      iframeinterval: 30
       preset-id: 1
       gpu-id: 0
   - type: h264parse
@@ -96,17 +125,46 @@ deepstream:
     name: nvvidconv1
     properties:
       gpu-id: 0
+  - type: tee
+    name: tee_raw1
+  - type: queue
+    name: queue_raw1
+    properties:
+      leaky: 2
+      max-size-buffers: 4
+  - type: appsink
+    name: appsink_raw1
+    properties:
+      emit-signals: true
+      sync: false
+      max-buffers: 1
+      drop: true
   - type: nvosdbin
     name: osd1
     properties:
       gpu-id: 0
       display-bbox: true
       display-text: true
+      display-mask: false
+  - type: tee
+    name: tee_vis1
+  - type: queue
+    name: queue_vis1
+    properties:
+      leaky: 2
+      max-size-buffers: 4
+  - type: appsink
+    name: appsink_vis1
+    properties:
+      emit-signals: true
+      sync: false
+      max-buffers: 1
+      drop: true
   - type: nvv4l2h264enc
     name: encoder1
     properties:
       bitrate: 4000000
-      iframeinterval: 25
+      iframeinterval: 30
       preset-id: 1
       gpu-id: 0
   - type: h264parse
@@ -126,12 +184,28 @@ deepstream:
     queue_sahi: sahi_postprocess
     sahi_postprocess: demux
     queue_demux0: nvvidconv0
-    nvvidconv0: osd0
-    osd0: encoder0
+    nvvidconv0: tee_raw0
+    tee_raw0:
+    - queue_raw0
+    - osd0
+    queue_raw0: appsink_raw0
+    osd0: tee_vis0
+    tee_vis0:
+    - queue_vis0
+    - encoder0
+    queue_vis0: appsink_vis0
     encoder0: h264parse0
     h264parse0: sink0
     queue_demux1: nvvidconv1
-    nvvidconv1: osd1
-    osd1: encoder1
+    nvvidconv1: tee_raw1
+    tee_raw1:
+    - queue_raw1
+    - osd1
+    queue_raw1: appsink_raw1
+    osd1: tee_vis1
+    tee_vis1:
+    - queue_vis1
+    - encoder1
+    queue_vis1: appsink_vis1
     encoder1: h264parse1
     h264parse1: sink1

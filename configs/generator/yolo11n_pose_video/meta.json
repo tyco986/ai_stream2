@@ -18,8 +18,8 @@
   ],
   "batch_size": 1,
   "precision": "fp16",
-  "yolo_version": "yolo11",
-  "yolo_task": "pose",
+  "version": "yolo11",
+  "task": "pose",
   "bundle_sha256": "7d3d0cc6f11f2973408a6b4d4980d3eead24b822becfb90bee30627f575a0da4",
   "bundle_files": {
     "yolo11n-pose.onnx": "b5d11b9761d1178354a747591c53f46dc33dd3ff87c9feb4dbc631e8898b0b27",

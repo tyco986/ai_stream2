@@ -3,7 +3,7 @@ property:
   onnx-file: ''
   model-engine-file: /root/models/trt/yolo11n-pose/yolo11n-pose.engine
   labelfile-path: /root/models/trt/yolo11n-pose/labels.txt
-  batch-size: 2
+  batch-size: 1
   network-mode: 2
   network-type: 3
   process-mode: 1

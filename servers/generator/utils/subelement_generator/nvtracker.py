@@ -51,7 +51,7 @@ nvtracker_default_config = {
         },
     }
 
-class NvtrackerConfigGenerator:
+class NvtrackerGenerator:
     def __init__(self) -> None:
         self.config = deepcopy(nvtracker_default_config)
 
@@ -61,5 +61,5 @@ class NvtrackerConfigGenerator:
 
 
 if __name__ == "__main__":
-    nvtracker_generator = NvtrackerConfigGenerator()
+    nvtracker_generator = NvtrackerGenerator()
     print(nvtracker_generator.config)

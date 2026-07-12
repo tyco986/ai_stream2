@@ -7,6 +7,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 import uvicorn
+import yaml
 from fastapi import FastAPI, File, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -15,7 +16,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from utils.manager import ConfigGeneratorManager
+from utils.manager import GeneratorManager
 
 PROJECT_NAME = "ai_stream2"
 LOG_FORMAT = "[%(asctime)s] %(levelname)s %(name)s: %(message)s"
@@ -87,7 +88,7 @@ async def handle_validation_error(
 class GeneratorServer:
     def __init__(self, log_root: Path) -> None:
         self.logger = configure_file_logger(log_root)
-        generators = ", ".join(sorted(ConfigGeneratorManager.GENERATORS))
+        generators = ", ".join(sorted(GeneratorManager.GENERATORS))
 
         self.app = FastAPI(
             title="Generator API",
@@ -113,7 +114,7 @@ class GeneratorServer:
 
     async def generate(self, input: UploadFile = File(...)) -> Response:
         try:
-            ConfigGeneratorManager.from_yaml(await input.read()).write()
+            GeneratorManager(yaml.safe_load(await input.read())).write()
             return JSONResponse(ApiJsonResponse().model_dump())
         except Exception:
             message = traceback.format_exc()

@@ -38,7 +38,7 @@ nvdsanalytics_default_config = {
         },
     }
 
-class NvdsanalyticsConfigGenerator:
+class NvdsanalyticsGenerator:
     """Write nvdsanalytics config-file YAML (full template, all rules disabled)."""
 
     def __init__(self, config=nvdsanalytics_default_config) -> None:
@@ -49,5 +49,5 @@ class NvdsanalyticsConfigGenerator:
             yaml.safe_dump(self.config, handle, sort_keys=False, default_flow_style=False)
 
 if __name__ == "__main__":
-    nvdsanalytics_generator = NvdsanalyticsConfigGenerator()
+    nvdsanalytics_generator = NvdsanalyticsGenerator()
     print(nvdsanalytics_generator.config)

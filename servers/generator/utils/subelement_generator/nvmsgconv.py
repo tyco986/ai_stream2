@@ -9,7 +9,7 @@ nvmsgconv_default_config = {"sensor0": {
             "id": "",
             "description": "",}}
 
-class NvmsgconvConfigGenerator:
+class NvmsgconvGenerator:
     def __init__(self, streams):
         self.streams = streams
         self.config = {}
@@ -27,5 +27,5 @@ class NvmsgconvConfigGenerator:
             yaml.safe_dump(self.config, handle, sort_keys=False, default_flow_style=False)
 
 if __name__ == "__main__":
-    nvmsgconv_generator = NvmsgconvConfigGenerator(streams=["stream_0", "stream_1"])
+    nvmsgconv_generator = NvmsgconvGenerator(streams=["stream_0", "stream_1"])
     print(nvmsgconv_generator.config)

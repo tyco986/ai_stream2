@@ -6,7 +6,7 @@ default_kafka_config = (
 )
 
 
-class KafkaConfigGenerator:
+class KafkaGenerator:
     """Write kafka.txt for nvmsgbroker librdkafka settings."""
 
     def __init__(self) -> None:
@@ -16,5 +16,5 @@ class KafkaConfigGenerator:
         Path(save_path).write_text(self.config, encoding="utf-8")
 
 if __name__ == "__main__":
-    kafka_generator = KafkaConfigGenerator()
+    kafka_generator = KafkaGenerator()
     print(kafka_generator.config)

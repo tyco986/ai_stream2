@@ -36,7 +36,7 @@ nvsahipreprocess_default_config = [
 ]
 
 
-class NvsahipreprocessConfigGenerator:
+class NvsahipreprocessGenerator:
     """Write nvsahipreprocess ``config-file`` (INI) for SAHI tensor preparation.
 
     Slice geometry (``slice-width``, ``overlap-*``) is set on the GStreamer element in
@@ -77,7 +77,7 @@ class NvsahipreprocessConfigGenerator:
             handle.write("\n".join(self.config))
 
 if __name__ == "__main__":
-    nvsahipreprocess_generator = NvsahipreprocessConfigGenerator(
+    nvsahipreprocess_generator = NvsahipreprocessGenerator(
         network_input_shape="16;3;640;640",
         target_unique_ids=1,
         tensor_data_type=0,

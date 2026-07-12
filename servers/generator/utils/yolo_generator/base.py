@@ -16,7 +16,7 @@ def align_tracker_dimension(value: int) -> int:
 align_tracker_height = align_tracker_dimension
 
 
-class DeepstreamConfigGenerator:
+class DeepstreamGenerator:
     """Base class for building pyservicemaker pipeline YAML configs.
 
     Subclasses implement add() and link() to populate nodes and edges.
@@ -24,7 +24,7 @@ class DeepstreamConfigGenerator:
     """
 
     def __init__(self) -> None:
-        self._config = {
+        self.pipeline = {
             "deepstream": {
                 "nodes": [],
                 "edges": {},
@@ -38,20 +38,20 @@ class DeepstreamConfigGenerator:
         pass
 
     def to_dict(self) -> dict:
-        return self._config
+        return self.pipeline
 
     def _append_node(self, element_type: str, name: str, properties: dict) -> None:
         node = {"type": element_type, "name": name}
         if properties:
             node["properties"] = properties
-        self._config["deepstream"]["nodes"].append(node)
+        self.pipeline["deepstream"]["nodes"].append(node)
 
     def write(self, save_path: Path | str) -> None:
         path = Path(save_path).expanduser().resolve()
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("w", encoding="utf-8") as handle:
             yaml.safe_dump(
-                self._config,
+                self.pipeline,
                 handle,
                 sort_keys=False,
                 default_flow_style=False,
@@ -352,6 +352,7 @@ class DeepstreamConfigGenerator:
         gpu_id: int = 0,
         display_bbox: bool = True,
         display_text: bool = True,
+        display_mask: bool = False,
     ) -> dict:
         """Build properties for ``nvosdbin`` (on-screen display: boxes, labels, masks).
 
@@ -359,11 +360,13 @@ class DeepstreamConfigGenerator:
             gpu_id: GPU device ID for OSD compositing.
             display_bbox: Draw bounding boxes around detected/tracked objects.
             display_text: Draw class labels and confidence text on objects.
+            display_mask: Draw instance segmentation masks from object metadata.
         """
         return {
             "gpu-id": gpu_id,
             "display-bbox": display_bbox,
             "display-text": display_text,
+            "display-mask": display_mask,
         }
 
     def _add_nvvideoconvert(self, gpu_id: int = 0) -> dict:
@@ -440,6 +443,28 @@ class DeepstreamConfigGenerator:
         return {
             "sync": sync,
             "async": async_,
+        }
+
+    def _add_appsink(
+        self,
+        emit_signals: bool = True,
+        sync: bool = False,
+        max_buffers: int = 1,
+        drop: bool = True,
+    ) -> dict:
+        """Build properties for ``appsink`` (deliver buffers to application via Receiver).
+
+        Args:
+            emit_signals: When True, emit ``new-sample`` for BufferRetriever attachment.
+            sync: When True, synchronize to the pipeline clock.
+            max_buffers: Maximum queued buffers before dropping or blocking.
+            drop: When True, drop old buffers when the queue is full.
+        """
+        return {
+            "emit-signals": emit_signals,
+            "sync": sync,
+            "max-buffers": max_buffers,
+            "drop": drop,
         }
 
     def _add_nvjpegenc(self, quality: int = 85) -> dict:

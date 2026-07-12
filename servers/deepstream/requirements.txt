@@ -2,5 +2,7 @@ pyyaml
 av
 onnx
 pillow
+cupy-cuda13x
 fastapi
 uvicorn
+confluent-kafka

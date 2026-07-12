@@ -1,10 +1,11 @@
-generator: YoloDetImageConfigGenerator
+generator: DetImageGenerator
 input: /root/attachments/images/test.png
 output: /root/outputs/deepstream/yolo26n_det_image.jpg
-pgie_model_dir: /root/models/trt/yolo26n
+pgie:
+  model_dir: /root/models/trt/yolo26n
+  class_attr:
+    all:
+      conf: 0.25
+  class_on: null
+interval: 0
 config_save_dir: /root/configs/generator/yolo26n_det_image
-enable_kafka: true
-pgie_class_attr:
-  all:
-    conf: 0.25
-pgie_class_on: null

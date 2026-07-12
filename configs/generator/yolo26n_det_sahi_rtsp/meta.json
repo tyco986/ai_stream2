@@ -97,15 +97,15 @@
   ],
   "batch_size": 9,
   "precision": "fp16",
-  "yolo_version": "yolo26",
-  "yolo_task": "detect",
+  "version": "yolo26",
+  "task": "detect",
   "yolo_export": "sahi",
-  "bundle_sha256": "6e83c3f90f39dbdc2fcf7ef48b32159a28ca6bdd833bac4655145317926e2915",
+  "bundle_sha256": "1620bbbca5c1c91131d6854df5215dceca83e17f3d61c56bdd88d8eab3aba64f",
   "bundle_files": {
-    "yolo26n.onnx": "2281511523c122f8bcd4542dc205876096565ac5a9cb956209cab8fffc2f6c0c"
+    "yolo26n.onnx": "d1ff89346b910b9c463f2a5ce329e1f3d7bb209541b963ffda16aa45b77b9c75"
   },
   "gpu_id": 0,
   "cuda_version": "13.1",
   "tensorrt_version": "101401",
-  "build_time": "2026-06-24T00:46:50.329928+00:00"
+  "build_time": "2026-06-24T09:22:12.608046+00:00"
 }

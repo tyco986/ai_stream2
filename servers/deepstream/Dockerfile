@@ -18,6 +18,10 @@ WORKDIR /app
 
 RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        librdkafka-dev
+
 COPY servers/deepstream/requirements.txt /tmp/requirements.txt
 RUN pip install --break-system-packages \
     /opt/nvidia/deepstream/deepstream/service-maker/python/pyservicemaker*.whl \
@@ -56,7 +60,7 @@ ls -la /app/libs/ \
 '
 
 RUN mkdir -p /root/logs/deepstream \
-    && rm -rf /root/.cache/gstreamer-1.0
+    && rm -rf /var/lib/apt/lists/* /root/.cache/gstreamer-1.0
 
 EXPOSE 8092
 CMD ["python3", "main.py"]

@@ -1,15 +1,15 @@
-from .kafka import KafkaConfigGenerator
-from .nvdsanalytics import NvdsanalyticsConfigGenerator
-from .nvmsgconv import NvmsgconvConfigGenerator
-from .nvtracker import NvtrackerConfigGenerator
-from .pgie import PgieConfigGenerator
-from .nvsahipreprocess import NvsahipreprocessConfigGenerator
+from .kafka import KafkaGenerator
+from .nvdsanalytics import NvdsanalyticsGenerator
+from .nvmsgconv import NvmsgconvGenerator
+from .nvtracker import NvtrackerGenerator
+from .pgie import PgieGenerator
+from .nvsahipreprocess import NvsahipreprocessGenerator
 
 __all__ = [
-    "KafkaConfigGenerator",
-    "NvdsanalyticsConfigGenerator",
-    "NvmsgconvConfigGenerator",
-    "NvtrackerConfigGenerator",
-    "PgieConfigGenerator",
-    "NvsahipreprocessConfigGenerator",
+    "KafkaGenerator",
+    "NvdsanalyticsGenerator",
+    "NvmsgconvGenerator",
+    "NvtrackerGenerator",
+    "PgieGenerator",
+    "NvsahipreprocessGenerator",
 ]

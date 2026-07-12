@@ -3,7 +3,7 @@ import os
 import yaml
 from pathlib import Path
 
-class PgieConfigGenerator:
+class PgieGenerator:
     def __init__(
         self,
         model_engine_file: str,
@@ -63,5 +63,5 @@ if __name__ == "__main__":
         filter_out_class_ids=None,
         num_detected_classes=80,
     )
-    pgie_generator = PgieConfigGenerator(**pgie_config)
+    pgie_generator = PgieGenerator(**pgie_config)
     print(pgie_generator.config)

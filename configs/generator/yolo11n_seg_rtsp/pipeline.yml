@@ -6,16 +6,10 @@ deepstream:
       uri: rtsp://ai_stream2_mediamtx:8554/video1
       disable-audio: true
       select-rtp-protocol: 4
-  - type: nvurisrcbin
-    name: src1
-    properties:
-      uri: rtsp://ai_stream2_mediamtx:8554/video2
-      disable-audio: true
-      select-rtp-protocol: 4
   - type: nvstreammux
     name: mux
     properties:
-      batch-size: 2
+      batch-size: 1
       width: 1920
       height: 1080
       enable-padding: false
@@ -26,31 +20,8 @@ deepstream:
     name: pgie
     properties:
       config-file-path: /root/configs/generator/yolo11n_seg_rtsp/pgie.yml
-      batch-size: 2
+      batch-size: 1
       gpu-id: 0
-  - type: tee
-    name: tee
-  - type: queue
-    name: queue_meta
-    properties:
-      leaky: 2
-      max-size-buffers: 4
-  - type: nvmsgconv
-    name: msgconv
-    properties:
-      config: /root/configs/generator/yolo11n_seg_rtsp/nvmsgconv.yml
-      payload-type: 1
-      msg2p-newapi: true
-      frame-interval: 1
-  - type: nvmsgbroker
-    name: msgbroker
-    properties:
-      proto-lib: /opt/nvidia/deepstream/deepstream/lib/libnvds_kafka_proto.so
-      conn-str: ai_stream2_kafka;9092
-      topic: deepstream-detections
-      config: /root/configs/generator/yolo11n_seg_rtsp/kafka.txt
-      sync: false
-      async: false
   - type: nvtracker
     name: tracker
     properties:
@@ -70,17 +41,46 @@ deepstream:
     name: nvvidconv0
     properties:
       gpu-id: 0
+  - type: tee
+    name: tee_raw0
+  - type: queue
+    name: queue_raw0
+    properties:
+      leaky: 2
+      max-size-buffers: 4
+  - type: appsink
+    name: appsink_raw0
+    properties:
+      emit-signals: true
+      sync: false
+      max-buffers: 1
+      drop: true
   - type: nvosdbin
     name: osd0
     properties:
       gpu-id: 0
       display-bbox: true
       display-text: true
+      display-mask: true
+  - type: tee
+    name: tee_vis0
+  - type: queue
+    name: queue_vis0
+    properties:
+      leaky: 2
+      max-size-buffers: 4
+  - type: appsink
+    name: appsink_vis0
+    properties:
+      emit-signals: true
+      sync: false
+      max-buffers: 1
+      drop: true
   - type: nvv4l2h264enc
     name: encoder0
     properties:
       bitrate: 4000000
-      iframeinterval: 25
+      iframeinterval: 30
       preset-id: 1
       gpu-id: 0
   - type: h264parse
@@ -91,54 +91,21 @@ deepstream:
       location: rtsp://ai_stream2_mediamtx:8554/video1_ds
       sync: false
       async: false
-  - type: queue
-    name: queue_demux1
-    properties:
-      leaky: 2
-      max-size-buffers: 4
-  - type: nvvideoconvert
-    name: nvvidconv1
-    properties:
-      gpu-id: 0
-  - type: nvosdbin
-    name: osd1
-    properties:
-      gpu-id: 0
-      display-bbox: true
-      display-text: true
-  - type: nvv4l2h264enc
-    name: encoder1
-    properties:
-      bitrate: 4000000
-      iframeinterval: 25
-      preset-id: 1
-      gpu-id: 0
-  - type: h264parse
-    name: h264parse1
-  - type: rtspclientsink
-    name: sink1
-    properties:
-      location: rtsp://ai_stream2_mediamtx:8554/video2_ds
-      sync: false
-      async: false
   edges:
     src0: mux
-    src1: mux
     mux: pgie
     pgie: tracker
-    tracker: tee
-    queue_meta: msgconv
-    msgconv: msgbroker
-    tee:
-    - queue_meta
-    - demux
+    tracker: demux
     queue_demux0: nvvidconv0
-    nvvidconv0: osd0
-    osd0: encoder0
+    nvvidconv0: tee_raw0
+    tee_raw0:
+    - queue_raw0
+    - osd0
+    queue_raw0: appsink_raw0
+    osd0: tee_vis0
+    tee_vis0:
+    - queue_vis0
+    - encoder0
+    queue_vis0: appsink_vis0
     encoder0: h264parse0
     h264parse0: sink0
-    queue_demux1: nvvidconv1
-    nvvidconv1: osd1
-    osd1: encoder1
-    encoder1: h264parse1
-    h264parse1: sink1

@@ -118,22 +118,65 @@ def resolve_meta_via_params(...):
 
 ## 简洁
 
-- 避免不必要的 if 分支，善用早返回、字典映射、`or` 默认值
+- 避免不必要的 if 分支，善用字典映射、`or` 默认值
 - 不要写只有一个分支的 if-else
 
 ```python
-# ✅ 早返回
+# ✅ 单出口，用变量承接结果
 def get_status_label(status):
+    label = STATUS_MAP.get(status, "未知")
     if status == "offline":
-        return "离线"
-    return STATUS_MAP.get(status, "未知")
+        label = "离线"
+    return label
 
 # ❌ 多余的 else
 def get_status_label(status):
     if status == "offline":
-        return "离线"
+        label = "离线"
     else:
-        return STATUS_MAP.get(status, "未知")
+        label = STATUS_MAP.get(status, "未知")
+    return label
+```
+
+## 函数返回
+
+函数或方法若**有返回值**，`return` **有且仅有一个**，且必须放在末尾；分支逻辑通过修改变量表达，禁止中途 `return`（含早返回）。无返回值时可隐式结束，不必写 `return`。
+
+```python
+# ✅ 先定义结果变量，分支中修改，末尾唯一 return
+def get_label(status):
+    label = STATUS_MAP.get(status, "未知")
+    if status == "offline":
+        label = "离线"
+    return label
+
+# ✅ 无返回值，可隐式结束
+def log_event(event):
+    logger.info(event)
+
+# ❌ 中途 return
+def get_label(status):
+    if status == "offline":
+        return "离线"
+    return STATUS_MAP.get(status, "未知")
+```
+
+## 推导式
+
+尽量使用列表推导式、字典推导式（及集合推导式）替代等价的 `for` 循环构建容器；逻辑复杂、含副作用或需多步累积时仍用普通循环。
+
+```python
+# ✅ 列表推导式
+labels = [obj.label for obj in objects if obj.label]
+
+# ✅ 字典推导式
+scores = {det.id: det.confidence for det in detections}
+
+# ❌ 仅为构建列表而写的循环
+labels = []
+for obj in objects:
+    if obj.label:
+        labels.append(obj.label)
 ```
 
 ## 禁止嵌套函数定义

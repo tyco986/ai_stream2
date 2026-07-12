@@ -1,13 +1,14 @@
-# bash servers/generator/scripts/3_generate.sh --config <template_name>
+# bash servers/generator/scripts/3_generate.sh --config yolo11n_pose_image
 #
 # Artifacts: pipeline.yml, pgie.yml, params.yml, ... under config_save_dir.
 
-generator: YoloPoseImageConfigGenerator
+generator: PoseImageGenerator
 config_save_dir: /root/configs/generator/yolo11n_pose_image
-pgie_model_dir: models/trt/yolo11n-pose
-input: attachments/images/test.png
-output: outputs/deepstream/yolo11n_pose_image.jpg
-enable_kafka: true
-pgie_class_attr:
-  all:
-    conf: 0.25
+interval: 0
+pgie:
+  model_dir: /root/models/trt/yolo11n-pose
+  class_attr:
+    all:
+      conf: 0.25
+input: /root/attachments/images/test.png
+output: /root/outputs/deepstream/yolo11n_pose_image.jpg

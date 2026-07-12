@@ -11,8 +11,8 @@ property:
   gie-unique-id: 1
   interval: 0
   cluster-mode: 4
-  maintain-aspect-ratio: 1
-  symmetric-padding: 1
+  maintain-aspect-ratio: 0
+  symmetric-padding: 0
   net-scale-factor: 0.00392156862745098
   infer-dims: 3;640;640
   custom-lib-path: /app/libs/libnvdsinfer_custom_impl_Yolo.so

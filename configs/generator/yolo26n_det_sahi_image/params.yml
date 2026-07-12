@@ -1,14 +1,14 @@
-generator: YoloDetSahiImageConfigGenerator
+generator: DetSahiImageGenerator
 input: /root/attachments/images/test.png
-output: /root/outputs/deepstream/yolo26n_det_sahi_image.png
-pgie_model_dir: /root/models/trt/yolo26n-sahi
-config_save_dir: /root/configs/generator/yolo26n_det_sahi_image
-enable_kafka: false
-pgie_class_attr:
-  all:
-    conf: 0.25
-pgie_class_on: null
-sahi_config:
+output: /root/outputs/deepstream/yolo26n_det_sahi_image.jpg
+pgie:
+  model_dir: /root/models/trt/yolo26n-sahi
+  class_attr:
+    all:
+      conf: 0.25
+  class_on: null
+interval: 0
+sahi:
   nvsahipreprocess:
     slice_width: 640
     slice_height: 640
@@ -16,3 +16,4 @@ sahi_config:
     overlap_height_ratio: 0.2
   nvsahipostprocess:
     match_threshold: 0.5
+config_save_dir: /root/configs/generator/yolo26n_det_sahi_image

@@ -1,16 +1,16 @@
-# bash servers/generator/scripts/3_generate.sh --config <template_name>
+# bash servers/generator/scripts/3_generate.sh --config yolo26n_det_video
 #
 # Artifacts: pipeline.yml, pgie.yml, params.yml, ... under config_save_dir.
 
-generator: YoloDetVideoConfigGenerator
+generator: DetVideoGenerator
 config_save_dir: /root/configs/generator/yolo26n_det_video
-pgie_model_dir: models/trt/yolo26n
+interval: 0
+pgie:
+  model_dir: /root/models/trt/yolo26n
+  class_attr:
+    all:
+      conf: 0.25
+tracker: null
+analyzer: null
 input: /root/attachments/videos/video1.mp4
 output: /root/outputs/yolo26n_det_video.mp4
-enable_kafka: false
-enable_nvtracker: false
-interval: 0
-pgie_class_attr:
-  all:
-    conf: 0.25
-nvdsanalytics_config: null

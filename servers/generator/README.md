@@ -38,18 +38,18 @@ YAML 中相对路径 `models/*`、`configs/*` 会在服务端映射为 `/root/mo
 
 | generator | 场景 |
 |-----------|------|
-| `YoloDetImageConfigGenerator` | 单张图片检测 |
-| `YoloSegImageConfigGenerator` | 单张图片分割 |
-| `YoloPoseImageConfigGenerator` | 单张图片姿态 |
-| `YoloDetSahiImageConfigGenerator` | 单张图片 SAHI 检测 |
-| `YoloDetVideoConfigGenerator` | 视频文件检测 |
-| `YoloSegVideoConfigGenerator` | 视频文件分割 |
-| `YoloPoseVideoConfigGenerator` | 视频文件姿态 |
-| `YoloDetSahiVideoConfigGenerator` | 视频文件 SAHI 检测 |
-| `YoloDetRTSPConfigGenerator` | 多路 RTSP 检测 |
-| `YoloSegRTSPConfigGenerator` | 多路 RTSP 分割 |
-| `YoloPoseRTSPConfigGenerator` | 多路 RTSP 姿态 |
-| `YoloDetSahiConfigGenerator` | 多路 RTSP SAHI 检测 |
+| `YoloDetImageGenerator` | 单张图片检测 |
+| `YoloSegImageGenerator` | 单张图片分割 |
+| `YoloPoseImageGenerator` | 单张图片姿态 |
+| `YoloDetSahiImageGenerator` | 单张图片 SAHI 检测 |
+| `YoloDetVideoGenerator` | 视频文件检测 |
+| `YoloSegVideoGenerator` | 视频文件分割 |
+| `YoloPoseVideoGenerator` | 视频文件姿态 |
+| `YoloDetSahiVideoGenerator` | 视频文件 SAHI 检测 |
+| `YoloDetRTSPGenerator` | 多路 RTSP 检测 |
+| `YoloSegRTSPGenerator` | 多路 RTSP 分割 |
+| `YoloPoseRTSPGenerator` | 多路 RTSP 姿态 |
+| `YoloDetSahiRTSPGenerator` | 多路 RTSP SAHI 检测 |
 
 ### 公共字段
 
@@ -68,7 +68,7 @@ SAHI 额外字段：`sahi_config`。
 
 生成目录中除 pipeline 相关 YAML 外，还会写入 `params.yml`（完整入参快照，含 `generator`）。
 
-`pgie_model_dir` 要求见 `utils/yolo_generator/utils/pgie_config_parser.py`。RTSP 生成时会探测流地址，且多路流分辨率需一致。
+`pgie_model_dir` 要求见 `utils/yolo_generator/utils/pgie_parser.py`。RTSP 生成时会探测流地址，且多路流分辨率需一致。
 
 ### 响应格式
 

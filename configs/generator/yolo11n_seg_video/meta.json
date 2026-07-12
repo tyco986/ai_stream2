@@ -97,8 +97,8 @@
   ],
   "batch_size": 1,
   "precision": "fp16",
-  "yolo_version": "yolo11",
-  "yolo_task": "segment",
+  "version": "yolo11",
+  "task": "segment",
   "bundle_sha256": "09fb4f537d103304e1c6927bf518c117b5fe12bd0d32a360f7d925d7284b7832",
   "bundle_files": {
     "yolo11n-seg.onnx": "76ce42afcb6d065be7a12bc57fce65b68b6bedbdadfa29156666a67c4a7d3617"

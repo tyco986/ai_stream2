@@ -85,27 +85,27 @@
     "toothbrush"
   ],
   "input_tensor_shape": [
-    4,
+    9,
     3,
     640,
     640
   ],
   "output_tensor_shape": [
-    4,
+    9,
     8400,
     6
   ],
-  "batch_size": 4,
+  "batch_size": 9,
   "precision": "fp16",
-  "yolo_version": "yolo26",
-  "yolo_task": "detect",
-  "bundle_sha256": "2e89fb420b308e73be548707688ed5d6a8ceb70ca5ade4d9658b7bdad7a7d269",
+  "version": "yolo26",
+  "task": "detect",
+  "bundle_sha256": "fda64bc5b97aafaffe28f969b2a135f263c770ac255f83448b2593e539f318d2",
   "bundle_files": {
-    "yolo26n.onnx": "659b991c8f0dc1688407cfd359c144eda8bcb61ca459c22d7d322c152f0f5e3c",
+    "yolo26n.onnx": "2292fce8a66a38a8852f082c342f98b0a8deecc7215305888140f5be7dfcae93",
     "yolo26n.onnx.data": "bdf9cc4c3b0107fe04d1d27f5f74290538f3504c7bb0614352cf9e6919d44d3c"
   },
   "gpu_id": 0,
   "cuda_version": "13.1",
   "tensorrt_version": "101401",
-  "build_time": "2026-06-19T03:03:20.383809+00:00"
+  "build_time": "2026-06-23T09:32:28.105207+00:00"
 }

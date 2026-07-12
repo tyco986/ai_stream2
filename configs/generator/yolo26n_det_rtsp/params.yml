@@ -1,15 +1,22 @@
-generator: YoloDetRTSPConfigGenerator
 streams:
-- rtsp://ai_stream2_mediamtx:8554/video1
-- rtsp://ai_stream2_mediamtx:8554/video2
-pgie_model_dir: /root/models/trt/yolo26n
-config_save_dir: /root/configs/generator/yolo26n_det_rtsp
-enable_visualized_rtsp: true
-enable_kafka: true
-enable_nvtracker: true
+  video1:
+    url: rtsp://ai_stream2_mediamtx:8554/video1
+    width: 1920
+    height: 1080
+    fps: 30
+  video2:
+    url: rtsp://ai_stream2_mediamtx:8554/video2
+    width: 1920
+    height: 1080
+    fps: 30
+generator: DetVisRTSPGenerator
+pgie:
+  model_dir: /root/models/trt/yolo26n
+  class_attr:
+    all:
+      conf: 0.4
+  class_on: null
+analyzer: null
+tracker: true
 interval: 0
-pgie_class_attr:
-  all:
-    conf: 0.4
-pgie_class_on: null
-nvdsanalytics_config: null
+config_save_dir: /root/configs/generator/yolo26n_det_rtsp

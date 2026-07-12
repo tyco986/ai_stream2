@@ -23,29 +23,6 @@ deepstream:
       config-file-path: /root/configs/generator/yolo11n_seg_image/pgie.yml
       batch-size: 1
       gpu-id: 0
-  - type: tee
-    name: tee
-  - type: queue
-    name: queue_meta
-    properties:
-      leaky: 2
-      max-size-buffers: 4
-  - type: nvmsgconv
-    name: msgconv
-    properties:
-      config: /root/configs/generator/yolo11n_seg_image/nvmsgconv.yml
-      payload-type: 1
-      msg2p-newapi: true
-      frame-interval: 1
-  - type: nvmsgbroker
-    name: msgbroker
-    properties:
-      proto-lib: /opt/nvidia/deepstream/deepstream/lib/libnvds_kafka_proto.so
-      conn-str: ai_stream2_kafka;9092
-      topic: deepstream-detections
-      config: /root/configs/generator/yolo11n_seg_image/kafka.txt
-      sync: false
-      async: false
   - type: nvosdbin
     name: osd
     properties:
@@ -70,12 +47,7 @@ deepstream:
   edges:
     src: mux
     mux: pgie
-    pgie: tee
-    queue_meta: msgconv
-    msgconv: msgbroker
-    tee:
-    - queue_meta
-    - osd
+    pgie: osd
     osd: nvvidconv
     nvvidconv: jpegenc
     jpegenc: sink

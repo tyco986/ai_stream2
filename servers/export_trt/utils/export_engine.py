@@ -74,12 +74,12 @@ class OnnxBundle:
         return batch_size
 
     def uses_static_plugins(self) -> bool:
-        return self.meta["yolo_task"] == "segment"
+        return self.meta["task"] == "segment"
 
     def yolo_plugin_path(self) -> Path:
-        suffix = YOLO_PLUGIN_SUFFIX.get(self.meta["yolo_task"])
+        suffix = YOLO_PLUGIN_SUFFIX.get(self.meta["task"])
         if suffix is None:
-            raise ValueError(f"unsupported yolo_task {self.meta['yolo_task']!r}")
+            raise ValueError(f"unsupported task {self.meta['task']!r}")
         plugin_path = LIBS_ROOT / f"libnvdsinfer_custom_impl_Yolo{suffix}.so"
         if not plugin_path.is_file():
             raise ValueError(f"missing static plugin: {plugin_path}")

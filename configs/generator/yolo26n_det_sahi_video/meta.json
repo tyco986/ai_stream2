@@ -97,8 +97,8 @@
   ],
   "batch_size": 9,
   "precision": "fp16",
-  "yolo_version": "yolo26",
-  "yolo_task": "detect",
+  "version": "yolo26",
+  "task": "detect",
   "yolo_export": "sahi",
   "bundle_sha256": "1620bbbca5c1c91131d6854df5215dceca83e17f3d61c56bdd88d8eab3aba64f",
   "bundle_files": {

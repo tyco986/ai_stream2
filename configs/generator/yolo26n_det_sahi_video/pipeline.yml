@@ -55,6 +55,7 @@ deepstream:
       gpu-id: 0
       display-bbox: true
       display-text: true
+      display-mask: false
   - type: nvvideoconvert
     name: nvvidconv
     properties:
@@ -73,7 +74,7 @@ deepstream:
   - type: filesink
     name: sink
     properties:
-      location: /root/outputs/deepstream/yolo26n_det_sahi_video.mp4
+      location: /root/outputs/yolo26n_det_sahi_video.mp4
       sync: false
       async: false
   edges:

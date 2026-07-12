@@ -258,8 +258,8 @@ def build_meta(
         "output_tensor_shape": resolve_shape(output_t, batch_size),
         "batch_size": batch_size,
         "precision": input_t["precision"],
-        "yolo_version": spec.family,
-        "yolo_task": spec.task,
+        "version": spec.family,
+        "task": spec.task,
         "yolo_export": spec.yolo_export,
     }
     if spec.yolo_export == "sahi":
