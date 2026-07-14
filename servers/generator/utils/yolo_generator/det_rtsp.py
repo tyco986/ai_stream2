@@ -7,18 +7,16 @@ import yaml
 from .base import (
     DeepstreamGenerator,
     TRACKER_LL_LIB,
-    align_tracker_height,
 )
 from ..subelement_generator import (
     NvdsanalyticsGenerator,
     NvtrackerGenerator,
     PgieGenerator,
 )
-from ..subelement_generator.nvdsanalytics import nvdsanalytics_default_config
 from .utils import YoloDet
 from .utils.pgie_parser import PgieParser
 from .utils.nvdsanalytics_parser import NvdsanalyticsParser
-from .utils.nvtracker_parser import validate_tracker
+from .utils.nvtracker_utils import align_tracker_dimension, format_operate_on_class_ids, validate_tracker
 
 RTSP_TOPOLOGY_DOC = """
     Batch inference chain::
@@ -70,7 +68,7 @@ VIS_RTSP_TOPOLOGY_DOC = """
               ─┬→ queue_raw{N} → appsink_raw{N}     # raw frame, PNG on alert
               └→ osd{N} → tee_vis{N}
                     ─┬→ queue_vis{N} → appsink_vis{N}   # osd frame, JPEG on alert
-                    └→ encoder{N} → h264parse{N} → rtspclientsink{N}
+                    └→ queue_enc{N} → encoder{N} → h264parse{N} → rtspclientsink{N}
 
     Tee purpose (per stream)::
 
@@ -82,11 +80,12 @@ VIS_RTSP_TOPOLOGY_DOC = """
             queue_raw is leaky so slow PNG encode does not block osd or RTSP.
 
         tee_vis{N}
-            Position: after osd, before encoder.
+            Position: after osd, before appsink_vis / queue_enc.
             Meaning: split the osd-composited frame into two consumers —
             (1) appsink_vis for alert-time visualized JPEG capture;
-            (2) encoder → rtspclientsink for continuous live preview.
+            (2) queue_enc → encoder → rtspclientsink for continuous live preview.
             queue_vis is leaky so alert capture does not stall the preview encode path.
+            queue_enc is leaky so a slow encoder does not backpressure appsink_vis.
 
     Python (not in pipeline.yml)::
 
@@ -105,7 +104,7 @@ VIS_RTSP_TOPOLOGY_DOC = """
                               ▼
         queue → nvvidconv → tee_raw ─┬→ queue → appsink_raw   # original, pre-osd
                                      └→ osd → tee_vis ─┬→ queue → appsink_vis   # post-osd
-                                                       └→ encoder → rtsp sink   # preview
+                                                       └→ queue_enc → encoder → rtsp sink
 """
 
 
@@ -121,8 +120,7 @@ class DetRTSPGenerator(DeepstreamGenerator):
 
     f"""Generate YOLO detection RTSP pipeline for event alert + probe-side Kafka.
 
-    Set ``analyzer=None`` to keep nvdsanalytics inserted with master switch off.
-    Set ``tracker=None`` to skip nvtracker. Pass ``tracker={{"class_id": ...}}`` to insert nvtracker. Does not insert ``nvmsgconv`` / ``nvmsgbroker`` or RTSP preview sink;
+    Set ``analyzer=None`` to skip nvdsanalytics. Set ``tracker=None`` to skip nvtracker.
     DeepStream attaches ``BaseProbe`` on ``analyzer`` for ``EventMessager`` and appsink
     capture branches.
     {RTSP_TOPOLOGY_DOC}
@@ -183,9 +181,6 @@ class DetRTSPGenerator(DeepstreamGenerator):
         self.pipeline_yml = self.pipeline
         self.pad_links_yml = self.pad_links
 
-    def tracker_dimensions(self) -> tuple[int, int]:
-        return self.width, align_tracker_height(self.height)
-
     def init_pgie(self) -> None:
         class_on = self.pgie.get("class_on")
         if class_on is not None:
@@ -211,20 +206,18 @@ class DetRTSPGenerator(DeepstreamGenerator):
         self.pgie_yml = self.pgie_generator.config
 
     def init_nvdsanalytics(self) -> None:
+        self.enable_nvdsanalytics = self.analyzer is not None
+        self.nvdsanalytics_yml = None
+        if not self.enable_nvdsanalytics:
+            return
         pipeline_stream_names = list(self.streams.keys())
-        if self.analyzer is not None:
-            parser = NvdsanalyticsParser(
-                self.analyzer["streams"],
-                self.analyzer["template"],
-            )
-            parser.validate(pipeline_stream_names, self.pgie_config_parser.class_ids)
-            config = parser.build(pipeline_stream_names, self.width, self.height)
-            self.nvdsanalytics_yml = NvdsanalyticsGenerator(config).config
-        else:
-            config = copy.deepcopy(nvdsanalytics_default_config)
-            config["property"]["config-width"] = self.width
-            config["property"]["config-height"] = self.height
-            self.nvdsanalytics_yml = NvdsanalyticsGenerator(config).config
+        parser = NvdsanalyticsParser(
+            self.analyzer["streams"],
+            self.analyzer["template"],
+        )
+        parser.validate(pipeline_stream_names, self.pgie_config_parser.class_ids)
+        config = parser.build(pipeline_stream_names, self.width, self.height)
+        self.nvdsanalytics_yml = NvdsanalyticsGenerator(config).config
 
     def init_nvtracker(self) -> None:
         self.nvtracker_generator = None
@@ -236,6 +229,9 @@ class DetRTSPGenerator(DeepstreamGenerator):
         if self.enable_nvtracker:
             self.nvtracker_generator = NvtrackerGenerator()
             self.nvtracker_yml = self.nvtracker_generator.config
+            self.tracker_width = align_tracker_dimension(self.width)
+            self.tracker_height = align_tracker_dimension(self.height)
+            self.operate_on_class_ids = format_operate_on_class_ids(self.tracker)
 
     def apply_save_paths(self, config_save_dir: Path) -> None:
         for node in self.pipeline_yml["deepstream"]["nodes"]:
@@ -249,7 +245,7 @@ class DetRTSPGenerator(DeepstreamGenerator):
                 properties["ll-config-file"] = str(
                     config_save_dir / self.TRACKER_CONFIG_NAME
                 )
-            if name == "analyzer":
+            if name == "analyzer" and self.enable_nvdsanalytics:
                 properties["config-file"] = str(
                     config_save_dir / self.ANALYTICS_CONFIG_NAME
                 )
@@ -274,13 +270,14 @@ class DetRTSPGenerator(DeepstreamGenerator):
                 yaml.safe_dump(
                     self.nvtracker_yml, handle, sort_keys=False, default_flow_style=False
                 )
-        with open(nvdsanalytics_save_path, "w", encoding="utf-8") as handle:
-            yaml.safe_dump(
-                self.nvdsanalytics_yml,
-                handle,
-                sort_keys=False,
-                default_flow_style=False,
-            )
+        if self.enable_nvdsanalytics:
+            with open(nvdsanalytics_save_path, "w", encoding="utf-8") as handle:
+                yaml.safe_dump(
+                    self.nvdsanalytics_yml,
+                    handle,
+                    sort_keys=False,
+                    default_flow_style=False,
+                )
         with open(pipeline_save_path, "w", encoding="utf-8") as handle:
             yaml.safe_dump(
                 self.pipeline_yml, handle, sort_keys=False, default_flow_style=False
@@ -331,26 +328,27 @@ class DetRTSPGenerator(DeepstreamGenerator):
             ),
         )
         if self.enable_nvtracker:
-            tracker_width, tracker_height = self.tracker_dimensions()
             self._append_node(
                 "nvtracker",
                 "tracker",
                 self._add_nvtracker(
                     TRACKER_LL_LIB,
                     self.TRACKER_CONFIG_NAME,
-                    tracker_width=tracker_width,
-                    tracker_height=tracker_height,
+                    tracker_width=self.tracker_width,
+                    tracker_height=self.tracker_height,
+                    gpu_id=self.pgie_generator.gpu_id,
+                    operate_on_class_ids=self.operate_on_class_ids,
+                ),
+            )
+        if self.enable_nvdsanalytics:
+            self._append_node(
+                "nvdsanalytics",
+                "analyzer",
+                self._add_nvdsanalytics(
+                    self.ANALYTICS_CONFIG_NAME,
                     gpu_id=self.pgie_generator.gpu_id,
                 ),
             )
-        self._append_node(
-            "nvdsanalytics",
-            "analyzer",
-            self._add_nvdsanalytics(
-                self.ANALYTICS_CONFIG_NAME,
-                gpu_id=self.pgie_generator.gpu_id,
-            ),
-        )
         self._append_node("nvstreamdemux", "demux", self._add_nvstreamdemux())
         gpu_id = self.pgie_generator.gpu_id
         osd_kwargs = self.event_osd_kwargs(gpu_id)
@@ -390,8 +388,11 @@ class DetRTSPGenerator(DeepstreamGenerator):
         if self.enable_nvtracker:
             edges[inference_tail] = "tracker"
             inference_tail = "tracker"
-        edges[inference_tail] = "analyzer"
-        edges["analyzer"] = "demux"
+        if self.enable_nvdsanalytics:
+            edges[inference_tail] = "analyzer"
+            edges["analyzer"] = "demux"
+        else:
+            edges[inference_tail] = "demux"
         for index in range(len(self.streams)):
             self.pad_links["demux"].append(f"queue_demux{index}")
             edges[f"queue_demux{index}"] = f"nvvidconv{index}"
@@ -409,8 +410,7 @@ class DetVisRTSPGenerator(DetRTSPGenerator):
     f"""Generate YOLO detection RTSP pipeline for event alert + probe-side Kafka + live preview.
 
     Requires ``enable_visualized_rtsp=True``.
-    Set ``analyzer=None`` to keep nvdsanalytics inserted with master switch off.
-    Set ``tracker=None`` to skip nvtracker. Pass ``tracker={{"class_id": ...}}`` to insert nvtracker. Does not insert ``nvmsgconv`` / ``nvmsgbroker``;
+    Set ``analyzer=None`` to skip nvdsanalytics. Set ``tracker=None`` to skip nvtracker.
     DeepStream attaches ``BaseProbe`` on ``analyzer`` for ``EventMessager`` and appsink
     capture branches.
     {VIS_RTSP_TOPOLOGY_DOC}
@@ -465,26 +465,27 @@ class DetVisRTSPGenerator(DetRTSPGenerator):
             ),
         )
         if self.enable_nvtracker:
-            tracker_width, tracker_height = self.tracker_dimensions()
             self._append_node(
                 "nvtracker",
                 "tracker",
                 self._add_nvtracker(
                     TRACKER_LL_LIB,
                     self.TRACKER_CONFIG_NAME,
-                    tracker_width=tracker_width,
-                    tracker_height=tracker_height,
+                    tracker_width=self.tracker_width,
+                    tracker_height=self.tracker_height,
+                    gpu_id=self.pgie_generator.gpu_id,
+                    operate_on_class_ids=self.operate_on_class_ids,
+                ),
+            )
+        if self.enable_nvdsanalytics:
+            self._append_node(
+                "nvdsanalytics",
+                "analyzer",
+                self._add_nvdsanalytics(
+                    self.ANALYTICS_CONFIG_NAME,
                     gpu_id=self.pgie_generator.gpu_id,
                 ),
             )
-        self._append_node(
-            "nvdsanalytics",
-            "analyzer",
-            self._add_nvdsanalytics(
-                self.ANALYTICS_CONFIG_NAME,
-                gpu_id=self.pgie_generator.gpu_id,
-            ),
-        )
         self._append_node("nvstreamdemux", "demux", self._add_nvstreamdemux())
         gpu_id = self.pgie_generator.gpu_id
         osd_kwargs = self.event_osd_kwargs(gpu_id)
@@ -510,6 +511,7 @@ class DetVisRTSPGenerator(DetRTSPGenerator):
             )
             self._append_node("tee", f"tee_vis{index}", self._add_tee())
             self._append_node("queue", f"queue_vis{index}", self._add_queue())
+            self._append_node("queue", f"queue_enc{index}", self._add_queue())
             self._append_node(
                 "appsink",
                 f"appsink_vis{index}",
@@ -542,8 +544,11 @@ class DetVisRTSPGenerator(DetRTSPGenerator):
         if self.enable_nvtracker:
             edges[inference_tail] = "tracker"
             inference_tail = "tracker"
-        edges[inference_tail] = "analyzer"
-        edges["analyzer"] = "demux"
+        if self.enable_nvdsanalytics:
+            edges[inference_tail] = "analyzer"
+            edges["analyzer"] = "demux"
+        else:
+            edges[inference_tail] = "demux"
         for index in range(len(self.streams)):
             self.pad_links["demux"].append(f"queue_demux{index}")
             edges[f"queue_demux{index}"] = f"nvvidconv{index}"
@@ -551,8 +556,9 @@ class DetVisRTSPGenerator(DetRTSPGenerator):
             edges[f"tee_raw{index}"] = [f"queue_raw{index}", f"osd{index}"]
             edges[f"queue_raw{index}"] = f"appsink_raw{index}"
             edges[f"osd{index}"] = f"tee_vis{index}"
-            edges[f"tee_vis{index}"] = [f"queue_vis{index}", f"encoder{index}"]
+            edges[f"tee_vis{index}"] = [f"queue_vis{index}", f"queue_enc{index}"]
             edges[f"queue_vis{index}"] = f"appsink_vis{index}"
+            edges[f"queue_enc{index}"] = f"encoder{index}"
             edges[f"encoder{index}"] = f"h264parse{index}"
             edges[f"h264parse{index}"] = f"sink{index}"
         self.pipeline["deepstream"]["edges"] = edges

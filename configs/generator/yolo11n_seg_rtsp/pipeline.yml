@@ -30,6 +30,7 @@ deepstream:
       tracker-width: 1920
       tracker-height: 1056
       gpu-id: 0
+      operate-on-class-ids: ''
   - type: nvstreamdemux
     name: demux
   - type: queue

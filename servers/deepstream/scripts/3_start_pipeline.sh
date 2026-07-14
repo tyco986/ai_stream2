@@ -2,28 +2,31 @@
 # Run from project root.
 set -euo pipefail
 
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 API_URL="http://127.0.0.1:8092"
 ENDPOINT="${API_URL}/ai_stream2/deepstream/start_pipeline"
+TEMPLATES_DIR="${ROOT}/servers/deepstream/templates"
 
 usage() {
   cat <<EOF
-usage: $0 --name NAME
+usage: $0 --config PATH
 
-Start a built pipeline in background via DeepStream API.
+Build and start a DeepStream pipeline via API from a template YAML.
 
 Options:
-  --name NAME    Pipeline instance name (required)
+  --config PATH   Pipeline template (e.g. det_image_pipeline or servers/deepstream/templates/...)
 
-Prerequisites: 3_build_pipeline.sh
+Prerequisites: 1_build_image.sh, 2_run_container.sh
+Stop: docker stop ai_stream2_deepstream
 EOF
 }
 
-NAME=""
+CONFIG=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --name)
-      NAME="$2"
+    --config)
+      CONFIG="$2"
       shift 2
       ;;
     -h|--help)
@@ -38,15 +41,34 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[[ -n "$NAME" ]] || { echo "--name is required" >&2; usage; exit 1; }
+[[ -n "$CONFIG" ]] || { echo "--config is required" >&2; usage; exit 1; }
+
+resolve_config_path() {
+  local path="$1"
+  if [[ -f "$path" ]]; then
+    realpath "$path"
+    return
+  fi
+  if [[ -f "${TEMPLATES_DIR}/${path}.yml" ]]; then
+    realpath "${TEMPLATES_DIR}/${path}.yml"
+    return
+  fi
+  if [[ -f "${TEMPLATES_DIR}/${path}" ]]; then
+    realpath "${TEMPLATES_DIR}/${path}"
+    return
+  fi
+  echo ""
+}
+
+CONFIG_PATH="$(resolve_config_path "$CONFIG")"
+[[ -n "$CONFIG_PATH" ]] || { echo "config not found: $CONFIG" >&2; exit 1; }
 
 RESPONSE_BODY="$(mktemp)"
 trap 'rm -f "${RESPONSE_BODY}"' EXIT
 
 HTTP_CODE="$(curl -sS -w "%{http_code}" -o "${RESPONSE_BODY}" \
   -X POST "${ENDPOINT}" \
-  -H "Content-Type: application/json" \
-  -d "{\"name\":\"${NAME}\"}")"
+  -F "input=@${CONFIG_PATH}")"
 
 cat "${RESPONSE_BODY}"
 echo

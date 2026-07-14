@@ -10,7 +10,8 @@ pgie:
   class_attr:
     all:
       conf: 0.25
-tracker: null
+tracker:
+  class_id: -1
 analyzer: null
 input: /root/attachments/videos/video1.mp4
-output: /root/outputs/yolo11n_seg_video.mp4
+output: /root/outputs/deepstream/yolo11n_seg_video.mp4

@@ -306,15 +306,31 @@ class FFmpegServer:
         target_rtsp = rtsp or f"rtsp://{mediamtx_host}:{mediamtx_port}/{input_path.stem}"
         self.ensure_rtsp_available(target_rtsp)
 
-        cmd = [*FFMPEG_BASE, "-re"]
+        # Re-encode B0 with packed H.264 for DeepStream; -c copy of B0 remux often stalls.
+        cmd = [*FFMPEG_BASE, "-re", "-fflags", "+genpts"]
         if loop:
             cmd.extend(["-stream_loop", "-1"])
         cmd.extend(
             [
                 "-i",
                 str(input_path),
-                "-c",
-                "copy",
+                "-c:v",
+                "libx264",
+                "-profile:v",
+                "baseline",
+                "-bf",
+                "0",
+                "-g",
+                "25",
+                "-keyint_min",
+                "25",
+                "-sc_threshold",
+                "0",
+                "-x264-params",
+                "aud=1:repeat-headers=1",
+                "-pix_fmt",
+                "yuv420p",
+                "-an",
                 "-f",
                 "rtsp",
                 "-rtsp_transport",

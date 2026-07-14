@@ -6,15 +6,14 @@ import yaml
 from PIL import Image
 
 from .base import DeepstreamGenerator
-from ..subelement_generator import NvdsanalyticsGenerator, PgieGenerator
-from ..subelement_generator.nvdsanalytics import nvdsanalytics_default_config
+from ..subelement_generator import PgieGenerator
 from .utils import YoloDet
 from .utils.pgie_parser import PgieParser
 
 IMAGE_TOPOLOGY_DOC = """
     Inference chain::
 
-        src → mux → pgie → analyzer → osd → nvvidconv → jpegenc → filesink
+        src → mux → pgie → osd → nvvidconv → jpegenc → filesink
 """
 
 
@@ -23,7 +22,6 @@ class DetImageGenerator(DeepstreamGenerator):
 
     PIPELINE_CONFIG_NAME = "pipeline.yml"
     PGIE_CONFIG_NAME = "pgie.yml"
-    ANALYTICS_CONFIG_NAME = "nvdsanalytics.yml"
     PARAMS_NAME = "params.yml"
 
     f"""Generate YOLO detection image pipeline YAML.
@@ -49,7 +47,6 @@ class DetImageGenerator(DeepstreamGenerator):
 
         self.init_input()
         self.init_pgie()
-        self.init_nvdsanalytics()
         self.init_params()
         self.init_pipeline()
 
@@ -97,12 +94,6 @@ class DetImageGenerator(DeepstreamGenerator):
         self.pgie_generator.update_config()
         self.pgie_yml = self.pgie_generator.config
 
-    def init_nvdsanalytics(self) -> None:
-        config = copy.deepcopy(nvdsanalytics_default_config)
-        config["property"]["config-width"] = self.width
-        config["property"]["config-height"] = self.height
-        self.nvdsanalytics_yml = NvdsanalyticsGenerator(config).config
-
     def apply_save_paths(self, config_save_dir: Path) -> None:
         for node in self.pipeline_yml["deepstream"]["nodes"]:
             name = node["name"]
@@ -111,16 +102,11 @@ class DetImageGenerator(DeepstreamGenerator):
                 properties["config-file-path"] = str(
                     config_save_dir / self.PGIE_CONFIG_NAME
                 )
-            if name == "analyzer":
-                properties["config-file"] = str(
-                    config_save_dir / self.ANALYTICS_CONFIG_NAME
-                )
 
     def write(self, config_save_dir: str | Path) -> None:
         config_save_dir = Path(config_save_dir)
         pipeline_save_path = config_save_dir / self.PIPELINE_CONFIG_NAME
         pgie_save_path = config_save_dir / self.PGIE_CONFIG_NAME
-        nvdsanalytics_save_path = config_save_dir / self.ANALYTICS_CONFIG_NAME
         params_save_path = config_save_dir / self.PARAMS_NAME
         self.apply_save_paths(config_save_dir)
         shutil.copy2(
@@ -129,13 +115,6 @@ class DetImageGenerator(DeepstreamGenerator):
         )
         with open(pgie_save_path, "w", encoding="utf-8") as handle:
             yaml.safe_dump(self.pgie_yml, handle, sort_keys=False, default_flow_style=False)
-        with open(nvdsanalytics_save_path, "w", encoding="utf-8") as handle:
-            yaml.safe_dump(
-                self.nvdsanalytics_yml,
-                handle,
-                sort_keys=False,
-                default_flow_style=False,
-            )
         with open(pipeline_save_path, "w", encoding="utf-8") as handle:
             yaml.safe_dump(
                 self.pipeline_yml, handle, sort_keys=False, default_flow_style=False
@@ -184,14 +163,6 @@ class DetImageGenerator(DeepstreamGenerator):
                 gpu_id=self.pgie_generator.gpu_id,
             ),
         )
-        self._append_node(
-            "nvdsanalytics",
-            "analyzer",
-            self._add_nvdsanalytics(
-                self.ANALYTICS_CONFIG_NAME,
-                gpu_id=self.pgie_generator.gpu_id,
-            ),
-        )
         gpu_id = self.pgie_generator.gpu_id
         self._append_node(
             "nvosdbin",
@@ -214,8 +185,7 @@ class DetImageGenerator(DeepstreamGenerator):
         edges = {
             "src": "mux",
             "mux": "pgie",
-            "pgie": "analyzer",
-            "analyzer": "osd",
+            "pgie": "osd",
             "osd": "nvvidconv",
             "nvvidconv": "jpegenc",
             "jpegenc": "sink",

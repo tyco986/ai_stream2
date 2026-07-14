@@ -2,6 +2,16 @@ from pyservicemaker import osd
 
 
 class DetDrawer:
+    def __init__(self, show_label=False, show_conf=False):
+        self.show_label = show_label
+        self.show_conf = show_conf
+
+    def hide_osd_objects(self, frame_meta) -> None:
+        for obj_meta in frame_meta.object_items:
+            obj_meta.rect_params.border_width = 0
+            obj_meta.text_params.display_text = b""
+            obj_meta.text_params.set_bg_clr = 0
+
     def apply_rect_params(self, rect, data, box_color, box_width) -> None:
         r, g, b, a = box_color
         rect.left = data["left"]
@@ -11,12 +21,21 @@ class DetDrawer:
         rect.border_width = int(box_width)
         rect.border_color = osd.Color(float(r), float(g), float(b), float(a))
 
-    def apply_label(self, obj_meta, item, text_color, text_bg_color, label) -> None:
-        display_label = label if label else item["label"]
-        if display_label:
+    def build_display_text(self, item) -> str:
+        parts = []
+        if self.show_label and item["label"]:
+            parts.append(item["label"])
+        if self.show_conf:
+            parts.append(f"{item['conf']:.2f}")
+        display_text = " ".join(parts)
+        return display_text
+
+    def apply_label(self, obj_meta, item, text_color, text_bg_color) -> None:
+        display_text = self.build_display_text(item)
+        if display_text:
             rect = obj_meta.rect_params
             text = obj_meta.text_params
-            text.display_text = display_label.encode("utf-8")
+            text.display_text = display_text.encode("utf-8")
             text.x_offset = int(rect.left)
             text.y_offset = max(0, int(rect.top) - 14)
             text.font_params.name = osd.FontFamily.Serif
@@ -36,51 +55,45 @@ class DetDrawer:
         box_width,
         text_color,
         text_bg_color,
-        label,
     ) -> None:
         obj_meta = batch_meta.acquire_object_meta()
         self.apply_rect_params(obj_meta.rect_params, item["rect_params"], box_color, box_width)
-        self.apply_label(obj_meta, item, text_color, text_bg_color, label)
+        self.apply_label(obj_meta, item, text_color, text_bg_color)
         frame_meta.append(obj_meta)
 
     def __call__(
         self,
         batch_meta,
-        results,
+        result,
         box_color=(0.0, 1.0, 0.0, 1.0),
         box_width=2,
         text_color=(1.0, 1.0, 1.0, 1.0),
         text_bg_color=(0.0, 0.0, 0.0, 0.6),
-        label="",
     ) -> None:
-        frame_meta_by_pad = {
-            int(frame_meta.pad_index): frame_meta
-            for frame_meta in batch_meta.frame_items
-        }
-        for frame_result in results:
-            frame_meta = frame_meta_by_pad[int(frame_result["pad_index"])]
-            for item in frame_result["objects"]:
-                self.append_object(
-                    batch_meta,
-                    frame_meta,
-                    item,
-                    box_color,
-                    box_width,
-                    text_color,
-                    text_bg_color,
-                    label,
-                )
+        frame_meta = next(iter(batch_meta.frame_items))
+        self.hide_osd_objects(frame_meta)
+        for item in result["objects"]:
+            self.append_object(
+                batch_meta,
+                frame_meta,
+                item,
+                box_color,
+                box_width,
+                text_color,
+                text_bg_color,
+            )
 
 
 class DetFadeDrawer(DetDrawer):
-    def __init__(self, interval=0, fade_time=0):
+    def __init__(self, show_label=False, show_conf=False, interval=0, fade_time=0):
+        super().__init__(show_label, show_conf)
         self.interval = int(interval)
         self.fade_time = int(fade_time)
         self.min_alpha = 0.2
         self.alpha_lut = self.build_alpha_lut(self.interval, self.fade_time)
         self.runtime_interval = len(self.alpha_lut)
-        self.frame_counts = {}
-        self.caches = {}
+        self.frame_count = 0
+        self.cache = []
 
     def fade_color(self, color, fade_alpha) -> tuple:
         r, g, b = color[:3]
@@ -109,38 +122,29 @@ class DetFadeDrawer(DetDrawer):
     def __call__(
         self,
         batch_meta,
-        results,
+        result,
         box_color=(0.0, 1.0, 0.0, 1.0),
         box_width=2,
         text_color=(1.0, 1.0, 1.0, 1.0),
         text_bg_color=(0.0, 0.0, 0.0, 0.6),
-        label="",
     ) -> None:
-        frame_meta_by_pad = {
-            int(frame_meta.pad_index): frame_meta
-            for frame_meta in batch_meta.frame_items
-        }
-        for frame_result in results:
-            pad_index = int(frame_result["pad_index"])
-            count = self.frame_counts.get(pad_index, 0) + 1
-            self.frame_counts[pad_index] = count
-            phase = (count - 1) % self.runtime_interval
-            if phase == 0:
-                self.caches[pad_index] = frame_result["objects"]
-            cache = self.caches.get(pad_index, [])
-            fade_alpha = self.alpha_lut[phase]
-            faded_box_color = self.fade_color(box_color, fade_alpha)
-            faded_text_color = self.fade_color(text_color, fade_alpha)
-            faded_text_bg_color = self.fade_color(text_bg_color, fade_alpha)
-            frame_meta = frame_meta_by_pad[pad_index]
-            for item in cache:
-                self.append_object(
-                    batch_meta,
-                    frame_meta,
-                    item,
-                    faded_box_color,
-                    box_width,
-                    faded_text_color,
-                    faded_text_bg_color,
-                    label,
-                )
+        frame_meta = next(iter(batch_meta.frame_items))
+        self.hide_osd_objects(frame_meta)
+        self.frame_count += 1
+        phase = (self.frame_count - 1) % self.runtime_interval
+        if phase == 0:
+            self.cache = result["objects"]
+        fade_alpha = self.alpha_lut[phase]
+        faded_box_color = self.fade_color(box_color, fade_alpha)
+        faded_text_color = self.fade_color(text_color, fade_alpha)
+        faded_text_bg_color = self.fade_color(text_bg_color, fade_alpha)
+        for item in self.cache:
+            self.append_object(
+                batch_meta,
+                frame_meta,
+                item,
+                faded_box_color,
+                box_width,
+                faded_text_color,
+                faded_text_bg_color,
+            )

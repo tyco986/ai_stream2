@@ -9,6 +9,11 @@ logFile: /logs/mediamtx/mediamtx.log
 
 rtspAddress: :8554
 webrtcAddress: :8889
+# WebRTC media (ICE). Docker must publish 8189/udp (and preferably 8189/tcp).
+webrtcLocalUDPAddress: :8189
+webrtcLocalTCPAddress: :8189
+# Host-reachable address for browser ICE candidates (WSL/local: 127.0.0.1).
+webrtcAdditionalHosts: [127.0.0.1]
 
 api: yes
 apiAddress: :9997

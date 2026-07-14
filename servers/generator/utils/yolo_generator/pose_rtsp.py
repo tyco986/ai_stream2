@@ -14,8 +14,7 @@ class PoseRTSPGenerator(DetRTSPGenerator):
 
     f"""Generate YOLO pose RTSP pipeline for event alert + probe-side Kafka.
 
-    Set ``analyzer=None`` to keep nvdsanalytics inserted with master switch off.
-    Set ``tracker=None`` to skip nvtracker. Pass ``tracker={{"class_id": ...}}`` to insert nvtracker.
+    Set ``analyzer=None`` to skip nvdsanalytics. Set ``tracker=None`` to skip nvtracker.
     Does not insert ``nvmsgconv`` / ``nvmsgbroker`` or RTSP preview sink;
     DeepStream attaches ``BaseProbe`` on ``analyzer`` for ``EventMessager`` and appsink
     capture branches.
@@ -35,8 +34,7 @@ class PoseVisRTSPGenerator(DetVisRTSPGenerator):
     f"""Generate YOLO pose RTSP pipeline for event alert + probe-side Kafka + live preview.
 
     Requires ``enable_visualized_rtsp=True``.
-    Set ``analyzer=None`` to keep nvdsanalytics inserted with master switch off.
-    Set ``tracker=None`` to skip nvtracker. Pass ``tracker={{"class_id": ...}}`` to insert nvtracker. Does not insert ``nvmsgconv`` / ``nvmsgbroker``;
+    Set ``analyzer=None`` to skip nvdsanalytics. Set ``tracker=None`` to skip nvtracker. Does not insert ``nvmsgconv`` / ``nvmsgbroker``;
     DeepStream attaches ``BaseProbe`` on ``analyzer`` for ``EventMessager`` and appsink
     capture branches.
     {VIS_RTSP_TOPOLOGY_DOC}

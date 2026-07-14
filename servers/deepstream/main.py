@@ -4,34 +4,55 @@ import threading
 import traceback
 
 import uvicorn
-from fastapi import FastAPI
+import yaml
+from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from utils.pipeline.yolo_pipeline import (
-    DetRTSPPipeline,
-    DetSahiRTSPPipeline,
-    PoseRTSPPipeline,
-    SegRTSPPipeline,
-)
 from utils.pipeline.pipeline_runner import PipelineRunner
+from utils.pipeline.yolo_pipeline import (
+    DetImagePipeline,
+    DetRTSPPipeline,
+    DetSahiImagePipeline,
+    DetSahiRTSPPipeline,
+    DetSahiVideoPipeline,
+    DetVideoPipeline,
+    PoseImagePipeline,
+    PoseRTSPPipeline,
+    PoseVideoPipeline,
+    SegImagePipeline,
+    SegRTSPPipeline,
+    SegVideoPipeline,
+)
 
 PROJECT_NAME = "ai_stream2"
 DEFAULT_HOST = os.environ.get("HOST", "0.0.0.0")
 DEFAULT_PORT = int(os.environ.get("PORT", "8092"))
+RUNNER_LOG_ROOT = "/root/logs/deepstream"
 
 PIPELINE_BUILDERS = {
     "DetRTSPPipeline": DetRTSPPipeline,
     "SegRTSPPipeline": SegRTSPPipeline,
     "PoseRTSPPipeline": PoseRTSPPipeline,
+    "DetImagePipeline": DetImagePipeline,
+    "SegImagePipeline": SegImagePipeline,
+    "PoseImagePipeline": PoseImagePipeline,
+    "DetVideoPipeline": DetVideoPipeline,
+    "SegVideoPipeline": SegVideoPipeline,
+    "PoseVideoPipeline": PoseVideoPipeline,
     "DetSahiRTSPPipeline": DetSahiRTSPPipeline,
+    "DetSahiImagePipeline": DetSahiImagePipeline,
+    "DetSahiVideoPipeline": DetSahiVideoPipeline,
 }
 
 
-class BuildPipelineRequest(BaseModel):
+class StartPipelineRequest(BaseModel):
     type: str
     name: str
-    config: dict
+    config_dir: str
+    logger: dict = {}
+    messager: dict = {}
+    drawer: dict | None = None
 
 
 def json_response(success: bool, message: str = ""):
@@ -46,58 +67,45 @@ class DeepStreamServer:
         self.runner_thread = None
         self.app = FastAPI(title="DeepStream API", version="1.0.0")
         prefix = f"/{PROJECT_NAME}/deepstream"
-        self.app.add_api_route(f"{prefix}/build_pipeline", self.build_pipeline, methods=["POST"])
         self.app.add_api_route(f"{prefix}/start_pipeline", self.start_pipeline, methods=["POST"])
-        self.app.add_api_route(f"{prefix}/stop_pipeline", self.stop_pipeline, methods=["POST"])
 
     def is_running(self):
         return self.runner_thread is not None and self.runner_thread.is_alive()
 
-    async def build_pipeline(self, body: BuildPipelineRequest):
+    def build_pipeline_kwargs(self, body: StartPipelineRequest) -> dict:
+        kwargs = {
+            "logger": body.logger,
+            "messager": body.messager,
+        }
+        if body.drawer is not None:
+            kwargs["drawer"] = body.drawer
+        return kwargs
+
+    async def start_pipeline(self, input: UploadFile = File(...)):
         success = False
         message = ""
+        body = StartPipelineRequest(**yaml.safe_load(await input.read()))
         if self.is_running():
             message = "pipeline is running"
         elif body.type not in PIPELINE_BUILDERS:
             message = f"unknown pipeline type: {body.type}"
-        elif "config_dir" not in body.config:
-            message = "config.config_dir is required"
         else:
             try:
-                probe_config = body.config.get("probe", {})
-                builder = PIPELINE_BUILDERS[body.type](body.config["config_dir"], body.name, **probe_config)
+                builder = PIPELINE_BUILDERS[body.type](
+                    body.config_dir,
+                    body.name,
+                    **self.build_pipeline_kwargs(body),
+                )
                 self.pipeline = builder.build()
-                self.runner = PipelineRunner(self.pipeline)
+                self.runner = PipelineRunner(
+                    self.pipeline,
+                    logger={"root": f"{RUNNER_LOG_ROOT}/{body.name}/runner"},
+                )
+                self.runner_thread = threading.Thread(target=self.runner.start, daemon=True)
+                self.runner_thread.start()
                 success = True
             except Exception:
                 message = traceback.format_exc()
-        return json_response(success, message)
-
-    async def start_pipeline(self):
-        success = False
-        message = ""
-        if self.pipeline is None:
-            message = "pipeline not built"
-        elif self.is_running():
-            message = "pipeline already running"
-        else:
-            self.runner_thread = threading.Thread(target=self.runner.start, daemon=True)
-            self.runner_thread.start()
-            success = True
-        return json_response(success, message)
-
-    async def stop_pipeline(self):
-        success = False
-        message = ""
-        if self.pipeline is None:
-            message = "pipeline not built"
-        elif not self.is_running():
-            message = "pipeline not running"
-        else:
-            self.runner.stop()
-            self.runner_thread.join()
-            self.runner_thread = None
-            success = True
         return json_response(success, message)
 
 

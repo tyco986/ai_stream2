@@ -2,9 +2,9 @@ class PoseBatchMetaParser:
     POSE_KEYPOINT_COUNT = 17
 
     def __init__(self, batch_meta):
-        self.results = None
+        self.result = None
         self.batch_meta = batch_meta
-        self.get_results()
+        self.get_result()
 
     def parse_rect_params(self, rect) -> dict:
         color = rect.border_color
@@ -68,8 +68,7 @@ class PoseBatchMetaParser:
         }
         return result
 
-    def get_results(self) -> list[dict]:
-        self.results = [
-            self.parse_frame(frame_meta)
-            for frame_meta in self.batch_meta.frame_items
-        ]
+    def get_result(self) -> dict:
+        frame_meta = next(iter(self.batch_meta.frame_items))
+        self.result = self.parse_frame(frame_meta)
+        return self.result

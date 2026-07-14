@@ -7,18 +7,16 @@ import yaml
 from .base import (
     DeepstreamGenerator,
     TRACKER_LL_LIB,
-    align_tracker_height,
 )
 from ..subelement_generator import (
     NvdsanalyticsGenerator,
     NvtrackerGenerator,
     PgieGenerator,
 )
-from ..subelement_generator.nvdsanalytics import nvdsanalytics_default_config
 from .utils import YoloDet
 from .utils.pgie_parser import PgieParser
 from .utils.nvdsanalytics_parser import NvdsanalyticsParser
-from .utils.nvtracker_parser import validate_tracker
+from .utils.nvtracker_utils import align_tracker_dimension, format_operate_on_class_ids, validate_tracker
 from .utils.validate_video import probe_video
 
 VIDEO_STREAM_NAME = "video"
@@ -95,9 +93,6 @@ class DetVideoGenerator(DeepstreamGenerator):
         self.link()
         self.pipeline_yml = self.pipeline
 
-    def tracker_dimensions(self) -> tuple[int, int]:
-        return self.width, align_tracker_height(self.height)
-
     def init_pgie(self) -> None:
         class_on = self.pgie.get("class_on")
         if class_on is not None:
@@ -123,19 +118,17 @@ class DetVideoGenerator(DeepstreamGenerator):
         self.pgie_yml = self.pgie_generator.config
 
     def init_nvdsanalytics(self) -> None:
-        if self.analyzer is not None:
-            parser = NvdsanalyticsParser(
-                self.analyzer["streams"],
-                self.analyzer["template"],
-            )
-            parser.validate([VIDEO_STREAM_NAME], self.pgie_config_parser.class_ids)
-            config = parser.build([VIDEO_STREAM_NAME], self.width, self.height)
-            self.nvdsanalytics_yml = NvdsanalyticsGenerator(config).config
-        else:
-            config = copy.deepcopy(nvdsanalytics_default_config)
-            config["property"]["config-width"] = self.width
-            config["property"]["config-height"] = self.height
-            self.nvdsanalytics_yml = NvdsanalyticsGenerator(config).config
+        self.enable_nvdsanalytics = self.analyzer is not None
+        self.nvdsanalytics_yml = None
+        if not self.enable_nvdsanalytics:
+            return
+        parser = NvdsanalyticsParser(
+            self.analyzer["streams"],
+            self.analyzer["template"],
+        )
+        parser.validate([VIDEO_STREAM_NAME], self.pgie_config_parser.class_ids)
+        config = parser.build([VIDEO_STREAM_NAME], self.width, self.height)
+        self.nvdsanalytics_yml = NvdsanalyticsGenerator(config).config
 
     def init_nvtracker(self) -> None:
         self.nvtracker_generator = None
@@ -147,6 +140,9 @@ class DetVideoGenerator(DeepstreamGenerator):
         if self.enable_nvtracker:
             self.nvtracker_generator = NvtrackerGenerator()
             self.nvtracker_yml = self.nvtracker_generator.config
+            self.tracker_width = align_tracker_dimension(self.width)
+            self.tracker_height = align_tracker_dimension(self.height)
+            self.operate_on_class_ids = format_operate_on_class_ids(self.tracker)
 
     def apply_save_paths(self, config_save_dir: Path) -> None:
         for node in self.pipeline_yml["deepstream"]["nodes"]:
@@ -160,7 +156,7 @@ class DetVideoGenerator(DeepstreamGenerator):
                 properties["ll-config-file"] = str(
                     config_save_dir / self.TRACKER_CONFIG_NAME
                 )
-            if name == "analyzer":
+            if name == "analyzer" and self.enable_nvdsanalytics:
                 properties["config-file"] = str(
                     config_save_dir / self.ANALYTICS_CONFIG_NAME
                 )
@@ -184,13 +180,14 @@ class DetVideoGenerator(DeepstreamGenerator):
                 yaml.safe_dump(
                     self.nvtracker_yml, handle, sort_keys=False, default_flow_style=False
                 )
-        with open(nvdsanalytics_save_path, "w", encoding="utf-8") as handle:
-            yaml.safe_dump(
-                self.nvdsanalytics_yml,
-                handle,
-                sort_keys=False,
-                default_flow_style=False,
-            )
+        if self.enable_nvdsanalytics:
+            with open(nvdsanalytics_save_path, "w", encoding="utf-8") as handle:
+                yaml.safe_dump(
+                    self.nvdsanalytics_yml,
+                    handle,
+                    sort_keys=False,
+                    default_flow_style=False,
+                )
         with open(pipeline_save_path, "w", encoding="utf-8") as handle:
             yaml.safe_dump(
                 self.pipeline_yml, handle, sort_keys=False, default_flow_style=False
@@ -239,26 +236,27 @@ class DetVideoGenerator(DeepstreamGenerator):
             ),
         )
         if self.enable_nvtracker:
-            tracker_width, tracker_height = self.tracker_dimensions()
             self._append_node(
                 "nvtracker",
                 "tracker",
                 self._add_nvtracker(
                     TRACKER_LL_LIB,
                     self.TRACKER_CONFIG_NAME,
-                    tracker_width=tracker_width,
-                    tracker_height=tracker_height,
+                    tracker_width=self.tracker_width,
+                    tracker_height=self.tracker_height,
+                    gpu_id=self.pgie_generator.gpu_id,
+                    operate_on_class_ids=self.operate_on_class_ids,
+                ),
+            )
+        if self.enable_nvdsanalytics:
+            self._append_node(
+                "nvdsanalytics",
+                "analyzer",
+                self._add_nvdsanalytics(
+                    self.ANALYTICS_CONFIG_NAME,
                     gpu_id=self.pgie_generator.gpu_id,
                 ),
             )
-        self._append_node(
-            "nvdsanalytics",
-            "analyzer",
-            self._add_nvdsanalytics(
-                self.ANALYTICS_CONFIG_NAME,
-                gpu_id=self.pgie_generator.gpu_id,
-            ),
-        )
         gpu_id = self.pgie_generator.gpu_id
         self._append_node(
             "nvosdbin",
@@ -297,8 +295,11 @@ class DetVideoGenerator(DeepstreamGenerator):
         if self.enable_nvtracker:
             edges[inference_tail] = "tracker"
             inference_tail = "tracker"
-        edges[inference_tail] = "analyzer"
-        edges["analyzer"] = "osd"
+        if self.enable_nvdsanalytics:
+            edges[inference_tail] = "analyzer"
+            edges["analyzer"] = "osd"
+        else:
+            edges[inference_tail] = "osd"
         edges["osd"] = "nvvidconv"
         edges["nvvidconv"] = "encoder"
         edges["encoder"] = "h264parse"

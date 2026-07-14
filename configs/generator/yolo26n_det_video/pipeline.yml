@@ -47,7 +47,7 @@ deepstream:
   - type: filesink
     name: sink
     properties:
-      location: /root/outputs/yolo26n_det_video.mp4
+      location: /root/outputs/deepstream/yolo26n_det_video.mp4
       sync: false
       async: false
   edges:

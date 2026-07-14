@@ -30,25 +30,22 @@ class DetLogger:
         logger.addHandler(handler)
         return logger
 
-    def payload(self, results) -> list:
-        payload = []
-        for frame_result in results:
-            class_num = {}
-            for item in frame_result["objects"]:
-                cls = int(item["cls"])
-                class_num[cls] = class_num.get(cls, 0) + 1
-            record = {
-                "pad_index": int(frame_result["pad_index"]),
-                "source_id": int(frame_result["source_id"]),
-                "frame_number": int(frame_result["frame_number"]),
-                "class_num": class_num,
-            }
-            payload.append(record)
-        return payload
+    def payload(self, result: dict) -> dict:
+        class_num = {}
+        for item in result["objects"]:
+            cls = int(item["cls"])
+            class_num[cls] = class_num.get(cls, 0) + 1
+        record = {
+            "pad_index": int(result["pad_index"]),
+            "source_id": int(result["source_id"]),
+            "frame_number": int(result["frame_number"]),
+            "class_num": class_num,
+        }
+        return record
 
-    def __call__(self, results) -> None:
+    def __call__(self, result: dict) -> None:
         if self.interval == 0 or self.counter % self.interval == 0:
-            payload = self.payload(results)
-            self.logger.info("%s", json.dumps(payload, ensure_ascii=False))
+            record = self.payload(result)
+            self.logger.info("%s", json.dumps(record, ensure_ascii=False))
             self.counter = 0
         self.counter += 1

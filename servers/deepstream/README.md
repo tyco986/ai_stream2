@@ -1,12 +1,12 @@
 # DeepStream API
 
-在 DeepStream 容器内运行的 FastAPI 服务：加载 generator 产出的静态 pipeline YAML，attach `YoloDetDrawer`，后台启停 pipeline。
+在 DeepStream 容器内运行的 FastAPI 服务：按模板 build 并后台启动 pipeline。停止由 `docker stop` 接管。
 
 ## 运行
 
 ```bash
 cd /app   # 容器内 WORKDIR
-python main.py --host 0.0.0.0 --port 8092 --log-root /root/logs/deepstream
+python main.py --host 0.0.0.0 --port 8092
 ```
 
 API 基址：`http://127.0.0.1:8092`  
@@ -16,7 +16,7 @@ Swagger：`http://127.0.0.1:8092/docs`
 
 | 宿主机 | 容器路径 | 用途 |
 |--------|----------|------|
-| `configs/` | `/root/configs` | pipeline YAML（`build_pipeline` 的 `input`） |
+| `configs/` | `/root/configs` | pipeline / 模型配置 |
 | `models/` | `/root/models` | TensorRT 模型 |
 | `logs/` | `/root/logs` | 服务日志 |
 
@@ -24,26 +24,11 @@ Swagger：`http://127.0.0.1:8092/docs`
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/ai_stream2/deepstream/build_pipeline` | 加载 YAML 并 build（attach drawer） |
-| POST | `/ai_stream2/deepstream/start_pipeline` | 后台启动 pipeline |
-| POST | `/ai_stream2/deepstream/stop_pipeline` | 停止运行中的 pipeline |
+| POST | `/ai_stream2/deepstream/start_pipeline` | build 并后台启动 pipeline |
 
-### build_pipeline
+### start_pipeline
 
-```json
-{
-  "input": "/root/configs/generator/yolo26n_det_rtsp/pipeline.yml",
-  "name": "yolo26n-det"
-}
-```
-
-### start_pipeline / stop_pipeline
-
-```json
-{
-  "name": "yolo26n-det"
-}
-```
+见 `servers/deepstream/templates/*.yml`（`type` / `name` / `config_dir` / `logger` / `messager` / `drawer`）。
 
 ### 响应
 
@@ -56,24 +41,11 @@ Swagger：`http://127.0.0.1:8092/docs`
 ## 典型流程
 
 ```bash
-# 1. generator 生成配置（generator 服务）
-curl -s -X POST http://127.0.0.1:8091/ai_stream2/generator/generate \
-  -F "input=@configs/generator/yolo26n_det_rtsp/params.yml"
+# start（build + 后台运行）
+./servers/deepstream/scripts/3_start_pipeline.sh --config det_rtsp_pipeline
 
-# 2. build
-curl -s -X POST http://127.0.0.1:8092/ai_stream2/deepstream/build_pipeline \
-  -H "Content-Type: application/json" \
-  -d '{"input":"/root/configs/generator/yolo26n_det_rtsp/pipeline.yml","name":"yolo26n-det"}'
-
-# 3. start
-curl -s -X POST http://127.0.0.1:8092/ai_stream2/deepstream/start_pipeline \
-  -H "Content-Type: application/json" \
-  -d '{"name":"yolo26n-det"}'
-
-# 4. stop
-curl -s -X POST http://127.0.0.1:8092/ai_stream2/deepstream/stop_pipeline \
-  -H "Content-Type: application/json" \
-  -d '{"name":"yolo26n-det"}'
+# stop
+docker stop ai_stream2_deepstream
 ```
 
 ## 环境变量
@@ -88,4 +60,4 @@ curl -s -X POST http://127.0.0.1:8092/ai_stream2/deepstream/stop_pipeline \
 
 - 路径：`{LOG_ROOT}/app.log`
 - 每条 HTTP 请求记录 start / 状态码 / 耗时
-- pipeline build / start / stop / 异常写 ERROR 栈
+- pipeline start / 异常写 ERROR 栈

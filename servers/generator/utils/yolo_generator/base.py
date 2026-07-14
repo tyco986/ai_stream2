@@ -8,14 +8,6 @@ KAFKA_TOPIC = "deepstream-detections"
 TRACKER_LL_LIB = "/opt/nvidia/deepstream/deepstream/lib/libnvds_nvmultiobjecttracker.so"
 
 
-def align_tracker_dimension(value: int) -> int:
-    # ponytail: NvDCF wants multiples of 32; upgrade path is per-model tracker config
-    return (value // 32) * 32
-
-
-align_tracker_height = align_tracker_dimension
-
-
 class DeepstreamGenerator:
     """Base class for building pyservicemaker pipeline YAML configs.
 
@@ -236,6 +228,7 @@ class DeepstreamGenerator:
         tracker_width: int,
         tracker_height: int,
         gpu_id: int = 0,
+        operate_on_class_ids: str = "",
     ) -> dict:
         """Build properties for ``nvtracker`` (multi-object tracking across frames).
 
@@ -254,6 +247,7 @@ class DeepstreamGenerator:
             "tracker-width": tracker_width,
             "tracker-height": tracker_height,
             "gpu-id": gpu_id,
+            "operate-on-class-ids": operate_on_class_ids,
         }
 
     def _add_nvdsanalytics(self, config_file: str, gpu_id: int = 0) -> dict:
@@ -451,6 +445,7 @@ class DeepstreamGenerator:
         sync: bool = False,
         max_buffers: int = 1,
         drop: bool = True,
+        async_: bool = False,
     ) -> dict:
         """Build properties for ``appsink`` (deliver buffers to application via Receiver).
 
@@ -459,12 +454,14 @@ class DeepstreamGenerator:
             sync: When True, synchronize to the pipeline clock.
             max_buffers: Maximum queued buffers before dropping or blocking.
             drop: When True, drop old buffers when the queue is full.
+            async_: When True, run the sink state change asynchronously.
         """
         return {
             "emit-signals": emit_signals,
             "sync": sync,
             "max-buffers": max_buffers,
             "drop": drop,
+            "async": async_,
         }
 
     def _add_nvjpegenc(self, quality: int = 85) -> dict:

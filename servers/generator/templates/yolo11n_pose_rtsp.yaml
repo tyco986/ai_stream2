@@ -18,3 +18,8 @@ streams:
     width: 1920
     height: 1080
     fps: 30
+  video2:
+    url: rtsp://ai_stream2_mediamtx:8554/video2
+    width: 1920
+    height: 1080
+    fps: 30

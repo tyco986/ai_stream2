@@ -25,5 +25,5 @@ docker run -d \
   -v "${ROOT}/logs:/root/logs" \
   ai_stream2_deepstream
 
-echo "DeepStream API: http://127.0.0.1:8092/ai_stream2/deepstream/build_pipeline"
+echo "DeepStream API: http://127.0.0.1:8092/ai_stream2/deepstream/start_pipeline"
 echo "Swagger:        http://127.0.0.1:8092/docs"

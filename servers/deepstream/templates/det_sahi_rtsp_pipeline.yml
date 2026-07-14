@@ -1,0 +1,13 @@
+# Prerequisite: servers/generator/scripts/3_generate.sh --config yolo26n_det_sahi_rtsp
+
+type: DetSahiRTSPPipeline
+name: yolo26n-det-sahi-rtsp
+config_dir: /root/configs/generator/yolo26n_det_sahi_rtsp
+drawer:
+  show_label: true
+  show_conf: true
+logger:
+  root: /root/logs/deepstream/yolo26n-det-sahi-rtsp/probe
+  interval: 0
+messager:
+  topic: deepstream-detections

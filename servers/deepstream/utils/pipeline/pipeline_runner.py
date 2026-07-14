@@ -33,7 +33,3 @@ class PipelineRunner:
         self.logger.info("pipeline start")
         self.pipeline.start().wait()
         self.logger.info("pipeline finished")
-
-    def stop(self):
-        self.logger.info("pipeline stop")
-        self.pipeline.stop()

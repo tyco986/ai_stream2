@@ -12,7 +12,8 @@ class PoseDrawer(DetDrawer):
         [4, 6], [5, 7],
     ]
 
-    def __init__(self, infer_width, infer_height):
+    def __init__(self, infer_width, infer_height, show_label=False, show_conf=False):
+        super().__init__(show_label, show_conf)
         self.infer_width = int(infer_width)
         self.infer_height = int(infer_height)
 
@@ -117,7 +118,6 @@ class PoseDrawer(DetDrawer):
         box_width,
         text_color,
         text_bg_color,
-        label,
         kpt_color,
         kpt_bg_color,
         kpt_line_color,
@@ -126,7 +126,7 @@ class PoseDrawer(DetDrawer):
     ) -> None:
         obj_meta = batch_meta.acquire_object_meta()
         self.apply_rect_params(obj_meta.rect_params, item["rect_params"], box_color, box_width)
-        self.apply_label(obj_meta, item, text_color, text_bg_color, label)
+        self.apply_label(obj_meta, item, text_color, text_bg_color)
         frame_meta.append(obj_meta)
         self.append_keypoints(
             batch_meta,
@@ -142,44 +142,39 @@ class PoseDrawer(DetDrawer):
     def __call__(
         self,
         batch_meta,
-        results,
+        result,
         box_color=(0.0, 0.0, 1.0, 1.0),
         box_width=2,
         text_color=(1.0, 1.0, 1.0, 1.0),
         text_bg_color=(0.0, 0.0, 0.0, 0.6),
-        label="",
         kpt_color=(1.0, 1.0, 1.0, 1.0),
         kpt_bg_color=(0.0, 0.0, 1.0, 1.0),
         kpt_radius=6,
         kpt_line_color=(0.0, 0.0, 1.0, 1.0),
         kpt_line_width=2,
     ) -> None:
-        frame_meta_by_pad = {
-            int(frame_meta.pad_index): frame_meta
-            for frame_meta in batch_meta.frame_items
-        }
-        for frame_result in results:
-            frame_meta = frame_meta_by_pad[int(frame_result["pad_index"])]
-            for item in frame_result["objects"]:
-                self.append_object(
-                    batch_meta,
-                    frame_meta,
-                    item,
-                    box_color,
-                    box_width,
-                    text_color,
-                    text_bg_color,
-                    label,
-                    kpt_color,
-                    kpt_bg_color,
-                    kpt_line_color,
-                    kpt_radius,
-                    kpt_line_width,
-                )
+        frame_meta = next(iter(batch_meta.frame_items))
+        self.hide_osd_objects(frame_meta)
+        for item in result["objects"]:
+            self.append_object(
+                batch_meta,
+                frame_meta,
+                item,
+                box_color,
+                box_width,
+                text_color,
+                text_bg_color,
+                kpt_color,
+                kpt_bg_color,
+                kpt_line_color,
+                kpt_radius,
+                kpt_line_width,
+            )
 
 
 class PoseFadeDrawer(PoseDrawer, DetFadeDrawer):
-    def __init__(self, infer_width, infer_height, interval=0, fade_time=0):
+    def __init__(self, infer_width, infer_height, show_label=False, show_conf=False, interval=0, fade_time=0):
+        DetDrawer.__init__(self, show_label, show_conf)
         self.infer_width = int(infer_width)
         self.infer_height = int(infer_height)
         self.interval = int(interval)
@@ -187,57 +182,48 @@ class PoseFadeDrawer(PoseDrawer, DetFadeDrawer):
         self.min_alpha = 0.2
         self.alpha_lut = self.build_alpha_lut(self.interval, self.fade_time)
         self.runtime_interval = len(self.alpha_lut)
-        self.frame_counts = {}
-        self.caches = {}
+        self.frame_count = 0
+        self.cache = []
 
     def __call__(
         self,
         batch_meta,
-        results,
+        result,
         box_color=(0.0, 0.0, 1.0, 1.0),
         box_width=2,
         text_color=(1.0, 1.0, 1.0, 1.0),
         text_bg_color=(0.0, 0.0, 0.0, 0.6),
-        label="",
         kpt_color=(1.0, 1.0, 1.0, 1.0),
         kpt_bg_color=(0.0, 0.0, 1.0, 1.0),
         kpt_radius=6,
         kpt_line_color=(0.0, 0.0, 1.0, 1.0),
         kpt_line_width=2,
     ) -> None:
-        frame_meta_by_pad = {
-            int(frame_meta.pad_index): frame_meta
-            for frame_meta in batch_meta.frame_items
-        }
-        for frame_result in results:
-            pad_index = int(frame_result["pad_index"])
-            count = self.frame_counts.get(pad_index, 0) + 1
-            self.frame_counts[pad_index] = count
-            phase = (count - 1) % self.runtime_interval
-            if phase == 0:
-                self.caches[pad_index] = frame_result["objects"]
-            cache = self.caches.get(pad_index, [])
-            fade_alpha = self.alpha_lut[phase]
-            faded_box_color = self.fade_color(box_color, fade_alpha)
-            faded_text_color = self.fade_color(text_color, fade_alpha)
-            faded_text_bg_color = self.fade_color(text_bg_color, fade_alpha)
-            faded_kpt_color = self.fade_color(kpt_color, fade_alpha)
-            faded_kpt_bg_color = self.fade_color(kpt_bg_color, fade_alpha)
-            faded_kpt_line_color = self.fade_color(kpt_line_color, fade_alpha)
-            frame_meta = frame_meta_by_pad[pad_index]
-            for item in cache:
-                self.append_object(
-                    batch_meta,
-                    frame_meta,
-                    item,
-                    faded_box_color,
-                    box_width,
-                    faded_text_color,
-                    faded_text_bg_color,
-                    label,
-                    faded_kpt_color,
-                    faded_kpt_bg_color,
-                    faded_kpt_line_color,
-                    kpt_radius,
-                    kpt_line_width,
-                )
+        frame_meta = next(iter(batch_meta.frame_items))
+        self.hide_osd_objects(frame_meta)
+        self.frame_count += 1
+        phase = (self.frame_count - 1) % self.runtime_interval
+        if phase == 0:
+            self.cache = result["objects"]
+        fade_alpha = self.alpha_lut[phase]
+        faded_box_color = self.fade_color(box_color, fade_alpha)
+        faded_text_color = self.fade_color(text_color, fade_alpha)
+        faded_text_bg_color = self.fade_color(text_bg_color, fade_alpha)
+        faded_kpt_color = self.fade_color(kpt_color, fade_alpha)
+        faded_kpt_bg_color = self.fade_color(kpt_bg_color, fade_alpha)
+        faded_kpt_line_color = self.fade_color(kpt_line_color, fade_alpha)
+        for item in self.cache:
+            self.append_object(
+                batch_meta,
+                frame_meta,
+                item,
+                faded_box_color,
+                box_width,
+                faded_text_color,
+                faded_text_bg_color,
+                faded_kpt_color,
+                faded_kpt_bg_color,
+                faded_kpt_line_color,
+                kpt_radius,
+                kpt_line_width,
+            )

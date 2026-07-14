@@ -5,4 +5,5 @@ pillow
 cupy-cuda13x
 fastapi
 uvicorn
+python-multipart
 confluent-kafka
