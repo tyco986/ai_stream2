@@ -11,8 +11,7 @@ class SegVideoGenerator(DetVideoGenerator):
     f"""Generate YOLO segmentation video pipeline YAML.
 
     Reads ``input`` video via DeepStream, runs inference with OSD, and writes the
-    annotated result to ``output``. ``tracker`` is required for seg fade draw.
-    Does not insert ``nvmsgconv`` / ``nvmsgbroker``.
+    annotated result to ``output``. Does not insert ``nvmsgconv`` / ``nvmsgbroker``.
     {VIDEO_TOPOLOGY_DOC}
     """
 
@@ -22,10 +21,9 @@ class SegVideoGenerator(DetVideoGenerator):
         output: str | Path,
         analyzer: dict | None,
         pgie: dict,
-        tracker: dict = {"class_id": -1},
+        tracker: dict | None = None,
         interval: int = 0,
     ) -> None:
-        assert tracker is not None, "seg task requires tracker"
         super().__init__(
             input=input,
             output=output,

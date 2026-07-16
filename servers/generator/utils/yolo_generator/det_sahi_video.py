@@ -128,14 +128,13 @@ class DetSahiVideoGenerator(DetVideoGenerator):
                 yaml.safe_dump(
                     self.nvtracker_yml, handle, sort_keys=False, default_flow_style=False
                 )
-        if self.enable_nvdsanalytics:
-            with open(nvdsanalytics_save_path, "w", encoding="utf-8") as handle:
-                yaml.safe_dump(
-                    self.nvdsanalytics_yml,
-                    handle,
-                    sort_keys=False,
-                    default_flow_style=False,
-                )
+        with open(nvdsanalytics_save_path, "w", encoding="utf-8") as handle:
+            yaml.safe_dump(
+                self.nvdsanalytics_yml,
+                handle,
+                sort_keys=False,
+                default_flow_style=False,
+            )
         with open(pipeline_save_path, "w", encoding="utf-8") as handle:
             yaml.safe_dump(
                 self.pipeline_yml, handle, sort_keys=False, default_flow_style=False
@@ -233,15 +232,14 @@ class DetSahiVideoGenerator(DetVideoGenerator):
                     operate_on_class_ids=self.operate_on_class_ids,
                 ),
             )
-        if self.enable_nvdsanalytics:
-            self._append_node(
-                "nvdsanalytics",
-                "analyzer",
-                self._add_nvdsanalytics(
-                    self.ANALYTICS_CONFIG_NAME,
-                    gpu_id=self.pgie_generator.gpu_id,
-                ),
-            )
+        self._append_node(
+            "nvdsanalytics",
+            "analyzer",
+            self._add_nvdsanalytics(
+                self.ANALYTICS_CONFIG_NAME,
+                gpu_id=self.pgie_generator.gpu_id,
+            ),
+        )
         gpu_id = self.pgie_generator.gpu_id
         self._append_node(
             "nvosdbin",
@@ -283,11 +281,8 @@ class DetSahiVideoGenerator(DetVideoGenerator):
         if self.enable_nvtracker:
             edges[inference_tail] = "tracker"
             inference_tail = "tracker"
-        if self.enable_nvdsanalytics:
-            edges[inference_tail] = "analyzer"
-            edges["analyzer"] = "osd"
-        else:
-            edges[inference_tail] = "osd"
+        edges[inference_tail] = "analyzer"
+        edges["analyzer"] = "osd"
         edges["osd"] = "nvvidconv"
         edges["nvvidconv"] = "encoder"
         edges["encoder"] = "h264parse"

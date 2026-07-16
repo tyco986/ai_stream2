@@ -22,6 +22,11 @@ deepstream:
       config-file-path: /root/configs/generator/yolo26n_det_video/pgie.yml
       batch-size: 1
       gpu-id: 0
+  - type: nvdsanalytics
+    name: analyzer
+    properties:
+      config-file: /root/configs/generator/yolo26n_det_video/nvdsanalytics.yml
+      gpu-id: 0
   - type: nvosdbin
     name: osd
     properties:
@@ -53,7 +58,8 @@ deepstream:
   edges:
     src: mux
     mux: pgie
-    pgie: osd
+    pgie: analyzer
+    analyzer: osd
     osd: nvvidconv
     nvvidconv: encoder
     encoder: h264parse

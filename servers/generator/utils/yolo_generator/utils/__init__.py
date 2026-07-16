@@ -1,4 +1,4 @@
-from .default_configs import class_attrs_all, YoloDet, YoloSeg, YoloPose, YoloDetSahi
+from .default_configs import class_attrs_all, YoloDet, YoloSeg, YoloSegSahi, YoloPose, YoloDetSahi
 from .sahi import get_sahi_box, get_sahi_preview
 from .nvdsanalytics_parser import NvdsanalyticsParser
 from .nvtracker_utils import validate_tracker
@@ -9,6 +9,7 @@ __all__ = [
     "class_attrs_all",
     "YoloDet",
     "YoloSeg",
+    "YoloSegSahi",
     "YoloPose",
     "YoloDetSahi",
     "get_sahi_box",

@@ -83,6 +83,39 @@ YoloDetSahi = {
     },
 }
 
+YoloSegSahi = {
+    "property": {
+        "gpu-id": 0,
+        "onnx-file": "",
+        "model-engine-file": "",
+        "labelfile-path": "",
+        "batch-size": 1,
+        "network-mode": 2,
+        "network-type": 3,
+        "process-mode": 1,
+        "model-color-format": 0,
+        "num-detected-classes": 80,
+        "gie-unique-id": 1,
+        "interval": 0,
+        "cluster-mode": 4,
+        "maintain-aspect-ratio": 1,
+        "symmetric-padding": 1,
+        "force-implicit-batch-dim": 0,
+        "scaling-filter": 1,
+        "scaling-compute-hw": 0,
+        "net-scale-factor": 0.0039215697906911373,
+        "infer-dims": "3;640;640",
+        "custom-lib-path": "/opt/nvidia/deepstream/deepstream/lib/libnvds_infer_yolo.so",
+        "parse-bbox-instance-mask-func-name": "NvDsInferYoloMask",
+        "output-blob-names": "num_dets;det_boxes;det_scores;det_classes;det_masks",
+        "output-instance-mask": 1,
+        "segmentation-threshold": 0.5,
+    },
+    "class-attrs-all": {
+        "pre-cluster-threshold": 0.25,
+    },
+}
+
 YoloSeg = {
     "property": {
         "gpu-id": 0,

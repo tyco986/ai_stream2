@@ -3,7 +3,6 @@ from pyservicemaker import BatchMetadataOperator
 from utils.probe.utils.drawer.det_drawer import DetDrawer, DetFadeDrawer
 from utils.probe.utils.logger.det_logger import DetLogger
 from utils.probe.utils.messager.det_messager import DetMessager
-from utils.probe.utils.parser.det_parser import DetBatchMetaParser
 
 
 class DetSahiRTSPProbe(BatchMetadataOperator):
@@ -11,12 +10,10 @@ class DetSahiRTSPProbe(BatchMetadataOperator):
         super().__init__()
         self.logger = DetLogger(**logger)
         self.messager = DetMessager(**messager)
-        self.drawer = DetDrawer(**drawer)
+        self.drawer = DetFadeDrawer(**drawer)
 
     def handle_metadata(self, batch_meta):
-        parser = DetBatchMetaParser(batch_meta)
-        result = parser.result
-        self.drawer(batch_meta, result)
+        result = self.drawer(batch_meta)
         self.logger(result)
         self.messager(result)
 
@@ -29,9 +26,7 @@ class DetSahiImageProbe(BatchMetadataOperator):
         self.drawer = DetDrawer(**drawer)
 
     def handle_metadata(self, batch_meta):
-        parser = DetBatchMetaParser(batch_meta)
-        result = parser.result
-        self.drawer(batch_meta, result)
+        result = self.drawer(batch_meta)
         self.logger(result)
         self.messager(result)
 
@@ -41,11 +36,9 @@ class DetSahiVideoProbe(BatchMetadataOperator):
         super().__init__()
         self.logger = DetLogger(**logger)
         self.messager = DetMessager(**messager)
-        self.drawer = DetFadeDrawer(**drawer)
+        self.drawer = DetDrawer(**drawer)
 
     def handle_metadata(self, batch_meta):
-        parser = DetBatchMetaParser(batch_meta)
-        result = parser.result
-        self.drawer(batch_meta, result)
+        result = self.drawer(batch_meta)
         self.logger(result)
         self.messager(result)

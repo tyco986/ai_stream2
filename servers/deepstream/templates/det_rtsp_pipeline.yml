@@ -6,8 +6,10 @@ config_dir: /root/configs/generator/yolo26n_det_rtsp
 drawer:
   show_label: true
   show_conf: true
+  interval: 50
+  fade_time: 1
 logger:
   root: /root/logs/deepstream/yolo26n-det-rtsp/probe
-  interval: 0
+  interval: 50
 messager:
   topic: deepstream-detections

@@ -3,20 +3,15 @@ from pyservicemaker import Probe
 from utils.pipeline.base import BaseImagePipeline, BaseRTSPPipeline, BaseVideoPipeline
 from utils.probe.det_probe import DetImageProbe, DetRTSPProbe, DetVideoProbe
 from utils.probe.det_sahi_probe import DetSahiImageProbe, DetSahiRTSPProbe, DetSahiVideoProbe
-from utils.probe.pose_probe import PoseImageProbe, PoseRTSPProbe, PoseVideoProbe
+from utils.probe.pose_probe import PoseImageProbe, PoseKptsCacheProbe, PoseRTSPProbe, PoseVideoProbe
 from utils.probe.seg_probe import SegImageProbe, SegRTSPProbe, SegVideoProbe
-
-
-def validate_log_interval(pgie_interval, logger):
-    log_interval = int(logger.get("interval", 0))
-    if pgie_interval > 0:
-        assert log_interval % pgie_interval == 0, "log_interval must be a multiple of pgie_interval"
+from utils.probe.seg_sahi_probe import SegSahiImageProbe, SegSahiRTSPProbe, SegSahiVideoProbe
+from utils.probe.utils.parser.pose_parser import PoseKptsCache
 
 
 class DetRTSPPipeline(BaseRTSPPipeline):
     def __init__(self, config_dir, pipeline_name, drawer=dict(), logger=dict(), messager=dict()):
         super().__init__(config_dir, pipeline_name)
-        validate_log_interval(self.pgie_interval, logger)
         self.drawer = drawer
         self.logger = logger
         self.messager = messager
@@ -36,7 +31,6 @@ class DetRTSPPipeline(BaseRTSPPipeline):
 class SegRTSPPipeline(BaseRTSPPipeline):
     def __init__(self, config_dir, pipeline_name, drawer=dict(), logger=dict(), messager=dict()):
         super().__init__(config_dir, pipeline_name)
-        validate_log_interval(self.pgie_interval, logger)
         self.drawer = drawer
         self.logger = logger
         self.messager = messager
@@ -56,11 +50,11 @@ class SegRTSPPipeline(BaseRTSPPipeline):
 class PoseRTSPPipeline(BaseRTSPPipeline):
     def __init__(self, config_dir, pipeline_name, drawer=dict(), logger=dict(), messager=dict()):
         super().__init__(config_dir, pipeline_name)
-        validate_log_interval(self.pgie_interval, logger)
         self.drawer = drawer
         self.logger = logger
         self.messager = messager
-        self.drawer = self.resolve_drawer(drawer)
+        self.drawer = self.resolve_drawer(self.drawer)
+        self.kpts_cache = PoseKptsCache()
 
     def resolve_drawer(self, drawer):
         drawer = dict(drawer)
@@ -71,12 +65,18 @@ class PoseRTSPPipeline(BaseRTSPPipeline):
         return drawer
 
     def build(self):
+        # mask_params is valid on pgie; nvstreamdemux leaves a dangling mask wrapper.
+        self.pipeline.attach(
+            "pgie",
+            Probe("pose_kpts_cache", PoseKptsCacheProbe(self.kpts_cache)),
+        )
         self.attach_branch_probes(
             "yolo",
             lambda index: PoseRTSPProbe(
                 drawer=self.drawer,
                 logger=self.logger,
                 messager=self.messager,
+                kpts_cache=self.kpts_cache,
             ),
         )
         return self.pipeline
@@ -85,14 +85,13 @@ class PoseRTSPPipeline(BaseRTSPPipeline):
 class DetImagePipeline(BaseImagePipeline):
     def __init__(self, config_dir, pipeline_name, drawer=dict(), logger=dict(), messager=dict()):
         super().__init__(config_dir, pipeline_name)
-        validate_log_interval(self.pgie_interval, logger)
         self.drawer = drawer
         self.logger = logger
         self.messager = messager
 
     def build(self):
         self.pipeline.attach(
-            "pgie",
+            "analyzer",
             Probe(
                 "yolo",
                 DetImageProbe(drawer=self.drawer, logger=self.logger, messager=self.messager),
@@ -104,14 +103,13 @@ class DetImagePipeline(BaseImagePipeline):
 class SegImagePipeline(BaseImagePipeline):
     def __init__(self, config_dir, pipeline_name, drawer=dict(), logger=dict(), messager=dict()):
         super().__init__(config_dir, pipeline_name)
-        validate_log_interval(self.pgie_interval, logger)
         self.drawer = drawer
         self.logger = logger
         self.messager = messager
 
     def build(self):
         self.pipeline.attach(
-            "pgie",
+            "analyzer",
             Probe(
                 "yolo",
                 SegImageProbe(drawer=self.drawer, logger=self.logger, messager=self.messager),
@@ -123,11 +121,10 @@ class SegImagePipeline(BaseImagePipeline):
 class PoseImagePipeline(BaseImagePipeline):
     def __init__(self, config_dir, pipeline_name, drawer=dict(), logger=dict(), messager=dict()):
         super().__init__(config_dir, pipeline_name)
-        validate_log_interval(self.pgie_interval, logger)
         self.drawer = drawer
         self.logger = logger
         self.messager = messager
-        self.drawer = self.resolve_drawer(drawer)
+        self.drawer = self.resolve_drawer(self.drawer)
 
     def resolve_drawer(self, drawer):
         drawer = dict(drawer)
@@ -139,7 +136,7 @@ class PoseImagePipeline(BaseImagePipeline):
 
     def build(self):
         self.pipeline.attach(
-            "pgie",
+            "analyzer",
             Probe(
                 "yolo",
                 PoseImageProbe(drawer=self.drawer, logger=self.logger, messager=self.messager),
@@ -151,14 +148,13 @@ class PoseImagePipeline(BaseImagePipeline):
 class DetVideoPipeline(BaseVideoPipeline):
     def __init__(self, config_dir, pipeline_name, drawer=dict(), logger=dict(), messager=dict()):
         super().__init__(config_dir, pipeline_name)
-        validate_log_interval(self.pgie_interval, logger)
         self.drawer = drawer
         self.logger = logger
         self.messager = messager
 
     def build(self):
         self.pipeline.attach(
-            "pgie",
+            "analyzer",
             Probe(
                 "yolo",
                 DetVideoProbe(drawer=self.drawer, logger=self.logger, messager=self.messager),
@@ -170,14 +166,14 @@ class DetVideoPipeline(BaseVideoPipeline):
 class SegVideoPipeline(BaseVideoPipeline):
     def __init__(self, config_dir, pipeline_name, drawer=dict(), logger=dict(), messager=dict()):
         super().__init__(config_dir, pipeline_name)
-        validate_log_interval(self.pgie_interval, logger)
         self.drawer = drawer
         self.logger = logger
         self.messager = messager
 
     def build(self):
+        assert self.pgie_interval == 0, "pgie interval other than 0 is not supported"
         self.pipeline.attach(
-            "pgie",
+            "analyzer",
             Probe(
                 "yolo",
                 SegVideoProbe(drawer=self.drawer, logger=self.logger, messager=self.messager),
@@ -189,11 +185,10 @@ class SegVideoPipeline(BaseVideoPipeline):
 class PoseVideoPipeline(BaseVideoPipeline):
     def __init__(self, config_dir, pipeline_name, drawer=dict(), logger=dict(), messager=dict()):
         super().__init__(config_dir, pipeline_name)
-        validate_log_interval(self.pgie_interval, logger)
         self.drawer = drawer
         self.logger = logger
         self.messager = messager
-        self.drawer = self.resolve_drawer(drawer)
+        self.drawer = self.resolve_drawer(self.drawer)
 
     def resolve_drawer(self, drawer):
         drawer = dict(drawer)
@@ -205,7 +200,7 @@ class PoseVideoPipeline(BaseVideoPipeline):
 
     def build(self):
         self.pipeline.attach(
-            "pgie",
+            "analyzer",
             Probe(
                 "yolo",
                 PoseVideoProbe(drawer=self.drawer, logger=self.logger, messager=self.messager),
@@ -217,7 +212,6 @@ class PoseVideoPipeline(BaseVideoPipeline):
 class DetSahiRTSPPipeline(BaseRTSPPipeline):
     def __init__(self, config_dir, pipeline_name, drawer=dict(), logger=dict(), messager=dict()):
         super().__init__(config_dir, pipeline_name)
-        validate_log_interval(self.pgie_interval, logger)
         self.drawer = drawer
         self.logger = logger
         self.messager = messager
@@ -237,14 +231,13 @@ class DetSahiRTSPPipeline(BaseRTSPPipeline):
 class DetSahiImagePipeline(BaseImagePipeline):
     def __init__(self, config_dir, pipeline_name, drawer=dict(), logger=dict(), messager=dict()):
         super().__init__(config_dir, pipeline_name)
-        validate_log_interval(self.pgie_interval, logger)
         self.drawer = drawer
         self.logger = logger
         self.messager = messager
 
     def build(self):
         self.pipeline.attach(
-            "sahi_postprocess",
+            "analyzer",
             Probe(
                 "yolo",
                 DetSahiImageProbe(drawer=self.drawer, logger=self.logger, messager=self.messager),
@@ -253,17 +246,71 @@ class DetSahiImagePipeline(BaseImagePipeline):
         return self.pipeline
 
 
-class DetSahiVideoPipeline(BaseVideoPipeline):
+class SegSahiImagePipeline(BaseImagePipeline):
     def __init__(self, config_dir, pipeline_name, drawer=dict(), logger=dict(), messager=dict()):
         super().__init__(config_dir, pipeline_name)
-        validate_log_interval(self.pgie_interval, logger)
         self.drawer = drawer
         self.logger = logger
         self.messager = messager
 
     def build(self):
         self.pipeline.attach(
-            "sahi_postprocess",
+            "analyzer",
+            Probe(
+                "yolo",
+                SegSahiImageProbe(drawer=self.drawer, logger=self.logger, messager=self.messager),
+            ),
+        )
+        return self.pipeline
+
+
+class SegSahiVideoPipeline(BaseVideoPipeline):
+    def __init__(self, config_dir, pipeline_name, drawer=dict(), logger=dict(), messager=dict()):
+        super().__init__(config_dir, pipeline_name)
+        self.drawer = drawer
+        self.logger = logger
+        self.messager = messager
+
+    def build(self):
+        self.pipeline.attach(
+            "analyzer",
+            Probe(
+                "yolo",
+                SegSahiVideoProbe(drawer=self.drawer, logger=self.logger, messager=self.messager),
+            ),
+        )
+        return self.pipeline
+
+
+class SegSahiRTSPPipeline(BaseRTSPPipeline):
+    def __init__(self, config_dir, pipeline_name, drawer=dict(), logger=dict(), messager=dict()):
+        super().__init__(config_dir, pipeline_name)
+        self.drawer = drawer
+        self.logger = logger
+        self.messager = messager
+
+    def build(self):
+        self.attach_branch_probes(
+            "yolo",
+            lambda index: SegSahiRTSPProbe(
+                drawer=self.drawer,
+                logger=self.logger,
+                messager=self.messager,
+            ),
+        )
+        return self.pipeline
+
+
+class DetSahiVideoPipeline(BaseVideoPipeline):
+    def __init__(self, config_dir, pipeline_name, drawer=dict(), logger=dict(), messager=dict()):
+        super().__init__(config_dir, pipeline_name)
+        self.drawer = drawer
+        self.logger = logger
+        self.messager = messager
+
+    def build(self):
+        self.pipeline.attach(
+            "analyzer",
             Probe(
                 "yolo",
                 DetSahiVideoProbe(drawer=self.drawer, logger=self.logger, messager=self.messager),

@@ -1,3 +1,5 @@
 BodyPoseNet(pgie) -- 2D骨骼点检测, 不需要前置人检(18个关键点, 与yolo-pose中的17个关键点不同)
 PeopleNet(pgie) + BodyPose3DNet(sgie) + PoseClassificationNet(sgie)-- PeopleNet可检人/脸/包, BodyPose3DNet用于检测单帧RGB推理三维Pose(34个关键点), PoseClassificationNet基于三维关键点+时域clip做动作识别
 PeopleNet(pgie) + ActionRecognitionNet(sgie) -- PeopleNet同上, ActionRecognitionNet通过时域clip + person crop做基于RGB+时域的动作识别, 与PoseClassificationNet不同的是, ActionRecognitionNet只要person crop
+
+generator中analyzer与tracker的init代码不顺, 记得优化

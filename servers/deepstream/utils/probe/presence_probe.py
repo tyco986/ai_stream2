@@ -1,20 +1,17 @@
 from utils.probe.utils.debouncer.presence_debouncer import PresenceDebouncer
-from utils.probe.utils.parser.det_parser import DetBatchMetaParser
 
 from .det_probe import DetRTSPProbe
 
 PRESENCE_META_TYPE = 8193
 
 
-class PresenceProbe(DetRTSPProbe):
+class DetPresenceProbe(DetRTSPProbe):
     def __init__(self, debouncer=dict(), logger=dict(), messager=dict()):
         super().__init__(logger=logger, messager=messager)
         self.debouncer = PresenceDebouncer(**debouncer)
 
     def handle_metadata(self, batch_meta):
-        parser = DetBatchMetaParser(batch_meta)
-        result = parser.result
-        self.drawer(batch_meta, result)
+        result = self.drawer(batch_meta)
         self.debouncer(result)
         self.logger(result)
         self.messager(result)

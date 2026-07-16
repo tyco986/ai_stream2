@@ -13,7 +13,7 @@ class SegRTSPGenerator(DetRTSPGenerator):
 
     f"""Generate YOLO segmentation RTSP pipeline for event alert + probe-side Kafka.
 
-    Set ``analyzer=None`` to skip nvdsanalytics. ``tracker`` is required for seg fade draw.
+    Set ``analyzer=None`` to skip nvdsanalytics. Set ``tracker=None`` to skip nvtracker.
     Does not insert ``nvmsgconv`` / ``nvmsgbroker`` or RTSP preview sink;
     DeepStream attaches ``BaseProbe`` on ``analyzer`` for ``EventMessager`` and appsink
     capture branches.
@@ -25,10 +25,9 @@ class SegRTSPGenerator(DetRTSPGenerator):
         streams: dict[str, dict],
         analyzer: dict | None,
         pgie: dict,
-        tracker: dict = {"class_id": -1},
+        tracker: dict | None = None,
         interval: int = 0,
     ) -> None:
-        assert tracker is not None, "seg task requires tracker"
         super().__init__(
             streams=streams,
             analyzer=analyzer,
@@ -48,7 +47,7 @@ class SegRTSPGenerator(DetRTSPGenerator):
             "gpu_id": gpu_id,
             "display_bbox": True,
             "display_text": True,
-            "display_mask": True,
+            "display_mask": False,
         }
 
 
@@ -58,7 +57,7 @@ class SegVisRTSPGenerator(DetVisRTSPGenerator):
     f"""Generate YOLO segmentation RTSP pipeline for event alert + probe-side Kafka + live preview.
 
     Requires ``enable_visualized_rtsp=True``.
-    Set ``analyzer=None`` to skip nvdsanalytics. ``tracker`` is required for seg fade draw.
+    Set ``analyzer=None`` to skip nvdsanalytics. Set ``tracker=None`` to skip nvtracker.
     Does not insert ``nvmsgconv`` / ``nvmsgbroker``;
     DeepStream attaches ``BaseProbe`` on ``analyzer`` for ``EventMessager`` and appsink
     capture branches.
@@ -71,10 +70,9 @@ class SegVisRTSPGenerator(DetVisRTSPGenerator):
         enable_visualized_rtsp: bool,
         analyzer: dict | None,
         pgie: dict,
-        tracker: dict = {"class_id": 0},
+        tracker: dict | None = None,
         interval: int = 0,
     ) -> None:
-        assert tracker is not None, "seg task requires tracker"
         super().__init__(
             streams=streams,
             enable_visualized_rtsp=enable_visualized_rtsp,
@@ -95,5 +93,5 @@ class SegVisRTSPGenerator(DetVisRTSPGenerator):
             "gpu_id": gpu_id,
             "display_bbox": True,
             "display_text": True,
-            "display_mask": True,
+            "display_mask": False,
         }

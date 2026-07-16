@@ -7,6 +7,7 @@ pgie:
     all:
       conf: 0.25
   class_on: null
+analyzer: null
 interval: 0
 sahi:
   nvsahipreprocess:

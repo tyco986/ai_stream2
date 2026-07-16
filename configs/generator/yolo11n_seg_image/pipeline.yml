@@ -23,13 +23,18 @@ deepstream:
       config-file-path: /root/configs/generator/yolo11n_seg_image/pgie.yml
       batch-size: 1
       gpu-id: 0
+  - type: nvdsanalytics
+    name: analyzer
+    properties:
+      config-file: /root/configs/generator/yolo11n_seg_image/nvdsanalytics.yml
+      gpu-id: 0
   - type: nvosdbin
     name: osd
     properties:
       gpu-id: 0
       display-bbox: true
       display-text: true
-      display-mask: true
+      display-mask: false
   - type: nvvideoconvert
     name: nvvidconv
     properties:
@@ -47,7 +52,8 @@ deepstream:
   edges:
     src: mux
     mux: pgie
-    pgie: osd
+    pgie: analyzer
+    analyzer: osd
     osd: nvvidconv
     nvvidconv: jpegenc
     jpegenc: sink

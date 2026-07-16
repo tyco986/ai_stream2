@@ -1,7 +1,7 @@
 from pyservicemaker import Receiver
 
 from utils.pipeline.base import BaseRTSPPipeline
-from utils.probe.presence_probe import PresenceProbe
+from utils.probe.presence_probe import DetPresenceProbe
 from utils.receiver.raw_capturer import RawCapturer
 from utils.receiver.vis_capturer import VisCapturer
 
@@ -25,7 +25,7 @@ class PresenceRTSPPipeline(BaseRTSPPipeline):
     def build(self):
         self.attach_branch_probes(
             "presence",
-            lambda index: PresenceProbe(
+            lambda index: DetPresenceProbe(
                 debouncer=self.debouncer,
                 logger=self.logger,
                 messager=self.messager,

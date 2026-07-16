@@ -7,5 +7,6 @@ pgie:
     all:
       conf: 0.25
   class_on: null
+analyzer: null
 interval: 0
 config_save_dir: /root/configs/generator/yolo26n_det_image

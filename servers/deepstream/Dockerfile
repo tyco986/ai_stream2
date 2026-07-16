@@ -13,6 +13,7 @@ ENV HOST=0.0.0.0
 ENV PORT=8092
 ENV LOG_ROOT=/root/logs/deepstream
 ENV GST_PLUGIN_PATH=/opt/nvidia/deepstream/deepstream/lib/gst-plugins
+ENV LD_PRELOAD=/app/libs/libnvdsinfer_custom_impl_Yolo_seg.so
 
 WORKDIR /app
 
@@ -20,7 +21,8 @@ RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        librdkafka-dev
+        librdkafka-dev \
+        patch
 
 COPY servers/deepstream/requirements.txt /tmp/requirements.txt
 RUN pip install --break-system-packages \
@@ -33,6 +35,9 @@ COPY attachments/deepstream-sahi /root/attachments/deepstream-sahi
 
 RUN bash -ec '\
 set -euo pipefail; \
+cd /opt/nvidia/deepstream/deepstream-9.0 && patch -p0 < /app/patches/gstnvinfer-interval-tensor-input.patch; \
+make -C /opt/nvidia/deepstream/deepstream-9.0/sources/gst-plugins/gst-nvinfer CUDA_VER=${CUDA_VER} -j"$(nproc)"; \
+make -C /opt/nvidia/deepstream/deepstream-9.0/sources/gst-plugins/gst-nvinfer CUDA_VER=${CUDA_VER} install; \
 mkdir -p /root/src /app/libs; \
 for f in /root/attachments/DeepStream-Yolo/*.zip /root/attachments/deepstream-sahi/*.zip; do \
   [[ -f "$f" ]] && unzip -o -q "$f" -d /root/src; \

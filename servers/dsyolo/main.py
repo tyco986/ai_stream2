@@ -127,6 +127,13 @@ EXPORT_SPECS: dict[str, ExportSpec] = {
         yolo_export="sahi",
         bundle_suffix="-sahi",
     ),
+    "export_yolo11_seg_sahi": ExportSpec(
+        APP_ROOT / "utils/export_yolo11_seg_sahi.py",
+        "yolo11",
+        "segment",
+        yolo_export="sahi_seg",
+        bundle_suffix="-sahi",
+    ),
     "export_yolo11": ExportSpec(
         SRC_ROOT / "DeepStream-Yolo-master/utils/export_yolo11.py",
         "yolo11",
@@ -229,6 +236,19 @@ def validate_sahi_meta(meta: dict) -> None:
         )
 
 
+def validate_sahi_seg_meta(meta: dict) -> None:
+    if meta["input_tensor_name"] != "images":
+        raise ValueError(
+            f"SAHI seg export expected input tensor 'images', got {meta['input_tensor_name']!r}"
+        )
+    output_names = meta["output_tensor_names"]
+    expected = ["num_dets", "det_boxes", "det_scores", "det_classes", "det_masks"]
+    if output_names != expected:
+        raise ValueError(
+            f"SAHI seg export expected outputs {expected}, got {output_names}"
+        )
+
+
 def build_meta(
     spec: ExportSpec,
     onnx_path: Path,
@@ -240,8 +260,11 @@ def build_meta(
         raise ValueError("onnx missing input or output")
 
     input_t = parse_onnx_tensor(graph.input[0])
-    output_t = parse_onnx_tensor(graph.output[0])
-    is_dynamic = any(input_t["dynamic"]) or any(output_t["dynamic"])
+    output_tensors = [parse_onnx_tensor(value) for value in graph.output]
+    output_t = output_tensors[0]
+    is_dynamic = any(input_t["dynamic"]) or any(
+        any(tensor["dynamic"]) for tensor in output_tensors
+    )
     batch_size = resolve_batch_size(input_t, export_batch, is_dynamic)
 
     classes = [
@@ -264,6 +287,12 @@ def build_meta(
     }
     if spec.yolo_export == "sahi":
         validate_sahi_meta(meta)
+    if spec.yolo_export == "sahi_seg":
+        meta["output_tensor_names"] = [tensor["name"] for tensor in output_tensors]
+        meta["output_tensor_shapes"] = [
+            resolve_shape(tensor, batch_size) for tensor in output_tensors
+        ]
+        validate_sahi_seg_meta(meta)
     return meta
 
 

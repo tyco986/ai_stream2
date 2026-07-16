@@ -50,6 +50,11 @@ deepstream:
       class-agnostic: false
       enable-merge: true
       two-phase-nmm: true
+  - type: nvdsanalytics
+    name: analyzer
+    properties:
+      config-file: /root/configs/generator/yolo26n_det_sahi_image/nvdsanalytics.yml
+      gpu-id: 0
   - type: nvosdbin
     name: osd
     properties:
@@ -77,7 +82,8 @@ deepstream:
     sahi_preprocess: pgie
     pgie: queue_sahi
     queue_sahi: sahi_postprocess
-    sahi_postprocess: osd
+    sahi_postprocess: analyzer
+    analyzer: osd
     osd: nvvidconv
     nvvidconv: jpegenc
     jpegenc: sink

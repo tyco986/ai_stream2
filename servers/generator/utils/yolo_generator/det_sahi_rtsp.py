@@ -32,7 +32,7 @@ class DetSahiRTSPGenerator(DetRTSPGenerator):
 
     f"""Generate YOLO SAHI detection RTSP pipeline for event alert + probe-side Kafka.
 
-    Set ``analyzer=None`` to skip nvdsanalytics. Set ``tracker=None`` to skip nvtracker.
+    Set ``analyzer=None`` to disable nvdsanalytics rules. Set ``tracker=None`` to skip nvtracker.
     Does not insert ``nvmsgconv`` / ``nvmsgbroker`` or RTSP preview sink;
     DeepStream attaches ``BaseProbe`` on ``analyzer`` for ``EventMessager`` and appsink
     capture branches.
@@ -66,7 +66,7 @@ class DetSahiRTSPGenerator(DetRTSPGenerator):
 
     def init_streams(self) -> None:
         super().init_streams()
-        self.mux_batch_size = self.runtime_batch_size
+        self.mux_batch_size = len(self.streams)
         sahi = self.sahi["nvsahipreprocess"]
         slice_info = get_sahi_box(
             image_width=self.width,
@@ -77,7 +77,7 @@ class DetSahiRTSPGenerator(DetRTSPGenerator):
             overlap_height_ratio=sahi["overlap_height_ratio"],
             enable_full_frame=True,
         )
-        self.runtime_batch_size = int(slice_info["num"])
+        self.runtime_batch_size = int(slice_info["num"]) * len(self.streams)
 
     def init_pgie(self) -> None:
         super().init_pgie()
@@ -134,14 +134,13 @@ class DetSahiRTSPGenerator(DetRTSPGenerator):
                 yaml.safe_dump(
                     self.nvtracker_yml, handle, sort_keys=False, default_flow_style=False
                 )
-        if self.enable_nvdsanalytics:
-            with open(nvdsanalytics_save_path, "w", encoding="utf-8") as handle:
-                yaml.safe_dump(
-                    self.nvdsanalytics_yml,
-                    handle,
-                    sort_keys=False,
-                    default_flow_style=False,
-                )
+        with open(nvdsanalytics_save_path, "w", encoding="utf-8") as handle:
+            yaml.safe_dump(
+                self.nvdsanalytics_yml,
+                handle,
+                sort_keys=False,
+                default_flow_style=False,
+            )
         with open(pipeline_save_path, "w", encoding="utf-8") as handle:
             yaml.safe_dump(
                 self.pipeline_yml, handle, sort_keys=False, default_flow_style=False
@@ -241,15 +240,14 @@ class DetSahiRTSPGenerator(DetRTSPGenerator):
                     operate_on_class_ids=self.operate_on_class_ids,
                 ),
             )
-        if self.enable_nvdsanalytics:
-            self._append_node(
-                "nvdsanalytics",
-                "analyzer",
-                self._add_nvdsanalytics(
-                    self.ANALYTICS_CONFIG_NAME,
-                    gpu_id=self.pgie_generator.gpu_id,
-                ),
-            )
+        self._append_node(
+            "nvdsanalytics",
+            "analyzer",
+            self._add_nvdsanalytics(
+                self.ANALYTICS_CONFIG_NAME,
+                gpu_id=self.pgie_generator.gpu_id,
+            ),
+        )
         self._append_node("nvstreamdemux", "demux", self._add_nvstreamdemux())
         gpu_id = self.pgie_generator.gpu_id
         osd_kwargs = self.event_osd_kwargs(gpu_id)
@@ -292,11 +290,8 @@ class DetSahiRTSPGenerator(DetRTSPGenerator):
         if self.enable_nvtracker:
             edges[inference_tail] = "tracker"
             inference_tail = "tracker"
-        if self.enable_nvdsanalytics:
-            edges[inference_tail] = "analyzer"
-            edges["analyzer"] = "demux"
-        else:
-            edges[inference_tail] = "demux"
+        edges[inference_tail] = "analyzer"
+        edges["analyzer"] = "demux"
         for index in range(len(self.streams)):
             self.pad_links["demux"].append(f"queue_demux{index}")
             edges[f"queue_demux{index}"] = f"nvvidconv{index}"
@@ -315,7 +310,7 @@ class DetSahiVisRTSPGenerator(DetVisRTSPGenerator):
     f"""Generate YOLO SAHI detection RTSP pipeline for event alert + probe-side Kafka + live preview.
 
     Requires ``enable_visualized_rtsp=True``.
-    Set ``analyzer=None`` to skip nvdsanalytics. Set ``tracker=None`` to skip nvtracker. Does not insert ``nvmsgconv`` / ``nvmsgbroker``;
+    Set ``analyzer=None`` to disable nvdsanalytics rules. Set ``tracker=None`` to skip nvtracker. Does not insert ``nvmsgconv`` / ``nvmsgbroker``;
     DeepStream attaches ``BaseProbe`` on ``analyzer`` for ``EventMessager`` and appsink
     capture branches.
     {VIS_RTSP_TOPOLOGY_DOC}
@@ -351,7 +346,7 @@ class DetSahiVisRTSPGenerator(DetVisRTSPGenerator):
 
     def init_streams(self) -> None:
         super().init_streams()
-        self.mux_batch_size = self.runtime_batch_size
+        self.mux_batch_size = len(self.streams)
         sahi = self.sahi["nvsahipreprocess"]
         slice_info = get_sahi_box(
             image_width=self.width,
@@ -362,7 +357,7 @@ class DetSahiVisRTSPGenerator(DetVisRTSPGenerator):
             overlap_height_ratio=sahi["overlap_height_ratio"],
             enable_full_frame=True,
         )
-        self.runtime_batch_size = int(slice_info["num"])
+        self.runtime_batch_size = int(slice_info["num"]) * len(self.streams)
 
     def init_pgie(self) -> None:
         super().init_pgie()
@@ -419,14 +414,13 @@ class DetSahiVisRTSPGenerator(DetVisRTSPGenerator):
                 yaml.safe_dump(
                     self.nvtracker_yml, handle, sort_keys=False, default_flow_style=False
                 )
-        if self.enable_nvdsanalytics:
-            with open(nvdsanalytics_save_path, "w", encoding="utf-8") as handle:
-                yaml.safe_dump(
-                    self.nvdsanalytics_yml,
-                    handle,
-                    sort_keys=False,
-                    default_flow_style=False,
-                )
+        with open(nvdsanalytics_save_path, "w", encoding="utf-8") as handle:
+            yaml.safe_dump(
+                self.nvdsanalytics_yml,
+                handle,
+                sort_keys=False,
+                default_flow_style=False,
+            )
         with open(pipeline_save_path, "w", encoding="utf-8") as handle:
             yaml.safe_dump(
                 self.pipeline_yml, handle, sort_keys=False, default_flow_style=False
@@ -526,15 +520,14 @@ class DetSahiVisRTSPGenerator(DetVisRTSPGenerator):
                     operate_on_class_ids=self.operate_on_class_ids,
                 ),
             )
-        if self.enable_nvdsanalytics:
-            self._append_node(
-                "nvdsanalytics",
-                "analyzer",
-                self._add_nvdsanalytics(
-                    self.ANALYTICS_CONFIG_NAME,
-                    gpu_id=self.pgie_generator.gpu_id,
-                ),
-            )
+        self._append_node(
+            "nvdsanalytics",
+            "analyzer",
+            self._add_nvdsanalytics(
+                self.ANALYTICS_CONFIG_NAME,
+                gpu_id=self.pgie_generator.gpu_id,
+            ),
+        )
         self._append_node("nvstreamdemux", "demux", self._add_nvstreamdemux())
         gpu_id = self.pgie_generator.gpu_id
         osd_kwargs = self.event_osd_kwargs(gpu_id)
@@ -596,11 +589,8 @@ class DetSahiVisRTSPGenerator(DetVisRTSPGenerator):
         if self.enable_nvtracker:
             edges[inference_tail] = "tracker"
             inference_tail = "tracker"
-        if self.enable_nvdsanalytics:
-            edges[inference_tail] = "analyzer"
-            edges["analyzer"] = "demux"
-        else:
-            edges[inference_tail] = "demux"
+        edges[inference_tail] = "analyzer"
+        edges["analyzer"] = "demux"
         for index in range(len(self.streams)):
             self.pad_links["demux"].append(f"queue_demux{index}")
             edges[f"queue_demux{index}"] = f"nvvidconv{index}"

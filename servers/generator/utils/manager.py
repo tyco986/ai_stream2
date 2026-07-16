@@ -4,6 +4,8 @@ from pathlib import Path
 from .yolo_generator import (
     DetImageGenerator,
     DetSahiImageGenerator,
+    SegSahiImageGenerator,
+    SegSahiVideoGenerator,
     DetVideoGenerator,
     SegVideoGenerator,
     PoseVideoGenerator,
@@ -18,6 +20,8 @@ from .yolo_generator import (
     PoseVisRTSPGenerator,
     DetSahiRTSPGenerator,
     DetSahiVisRTSPGenerator,
+    SegSahiRTSPGenerator,
+    SegSahiVisRTSPGenerator,
 )
 
 
@@ -25,6 +29,8 @@ class GeneratorManager:
     GENERATORS = {
         "DetImageGenerator": DetImageGenerator,
         "DetSahiImageGenerator": DetSahiImageGenerator,
+        "SegSahiImageGenerator": SegSahiImageGenerator,
+        "SegSahiVideoGenerator": SegSahiVideoGenerator,
         "DetVideoGenerator": DetVideoGenerator,
         "SegVideoGenerator": SegVideoGenerator,
         "PoseVideoGenerator": PoseVideoGenerator,
@@ -39,6 +45,8 @@ class GeneratorManager:
         "PoseVisRTSPGenerator": PoseVisRTSPGenerator,
         "DetSahiRTSPGenerator": DetSahiRTSPGenerator,
         "DetSahiVisRTSPGenerator": DetSahiVisRTSPGenerator,
+        "SegSahiRTSPGenerator": SegSahiRTSPGenerator,
+        "SegSahiVisRTSPGenerator": SegSahiVisRTSPGenerator,
     }
 
     def __init__(self, config: dict) -> None:

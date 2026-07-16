@@ -1,6 +1,5 @@
-# Seg has no seg_parser.py: mask OSD must update inference obj_meta in place
-# (pyservicemaker cannot rebuild mask_params). seg_drawer.py parses and draws
-# in one pass over object_items and returns the frame result.
+# Inference frames: in-place on pgie object_meta (mask_params stays valid).
+# Non-inference frames: rebuild rect via DetFadeDrawer append from object_cache.
 
 from pyservicemaker import BatchMetadataOperator
 
@@ -40,7 +39,7 @@ class SegVideoProbe(BatchMetadataOperator):
         super().__init__()
         self.logger = DetLogger(**logger)
         self.messager = DetMessager(**messager)
-        self.drawer = SegFadeDrawer(**drawer)
+        self.drawer = SegDrawer(**drawer)
 
     def handle_metadata(self, batch_meta) -> None:
         result = self.drawer(batch_meta)

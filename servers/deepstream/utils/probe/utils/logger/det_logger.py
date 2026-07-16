@@ -10,6 +10,7 @@ class DetLogger:
     def __init__(self, root, interval=0):
         self.root = Path(root)
         self.interval = int(interval)
+        self.runtime_interval = self.interval + 1 if self.interval > 0 else 0
         self.counter = 0
         assert self.interval >= 0, "interval must be greater than or equal to 0"
         self.logger = self.init_logger()
@@ -44,7 +45,7 @@ class DetLogger:
         return record
 
     def __call__(self, result: dict) -> None:
-        if self.interval == 0 or self.counter % self.interval == 0:
+        if self.interval == 0 or self.counter % self.runtime_interval == 0:
             record = self.payload(result)
             self.logger.info("%s", json.dumps(record, ensure_ascii=False))
             self.counter = 0

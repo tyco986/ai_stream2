@@ -1,0 +1,89 @@
+deepstream:
+  nodes:
+  - type: nvurisrcbin
+    name: src
+    properties:
+      uri: file:///root/attachments/images/test.png
+      disable-audio: true
+      select-rtp-protocol: 4
+      num-buffers: 1
+  - type: nvstreammux
+    name: mux
+    properties:
+      batch-size: 1
+      width: 1920
+      height: 1080
+      enable-padding: false
+      batched-push-timeout: 40000
+      gpu-id: 0
+      live-source: false
+  - type: nvsahipreprocess
+    name: sahi_preprocess
+    properties:
+      config-file: /root/configs/generator/yolo11n_seg_sahi_image/nvsahipreprocess.ini
+      slice-width: 640
+      slice-height: 640
+      overlap-width-ratio: 0.2
+      overlap-height-ratio: 0.2
+      enable-full-frame: true
+      gpu-id: 0
+      unique-id: 15
+      target-unique-ids: '1'
+  - type: nvinfer
+    name: pgie
+    properties:
+      config-file-path: /root/configs/generator/yolo11n_seg_sahi_image/pgie.yml
+      batch-size: 9
+      gpu-id: 0
+      input-tensor-meta: true
+  - type: queue
+    name: queue_sahi
+    properties:
+      leaky: 2
+      max-size-buffers: 4
+  - type: nvsahipostprocess
+    name: sahi_postprocess
+    properties:
+      gie-ids: '1'
+      match-metric: 1
+      match-threshold: 0.5
+      class-agnostic: false
+      enable-merge: true
+      two-phase-nmm: true
+  - type: nvdsanalytics
+    name: analyzer
+    properties:
+      config-file: /root/configs/generator/yolo11n_seg_sahi_image/nvdsanalytics.yml
+      gpu-id: 0
+  - type: nvosdbin
+    name: osd
+    properties:
+      gpu-id: 0
+      display-bbox: true
+      display-text: true
+      display-mask: true
+  - type: nvvideoconvert
+    name: nvvidconv
+    properties:
+      gpu-id: 0
+  - type: nvjpegenc
+    name: jpegenc
+    properties:
+      quality: 85
+  - type: filesink
+    name: sink
+    properties:
+      location: /root/outputs/deepstream/yolo11n_seg_sahi_image.jpg
+      sync: false
+      async: false
+  edges:
+    src: mux
+    mux: sahi_preprocess
+    sahi_preprocess: pgie
+    pgie: queue_sahi
+    queue_sahi: sahi_postprocess
+    sahi_postprocess: analyzer
+    analyzer: osd
+    osd: nvvidconv
+    nvvidconv: jpegenc
+    jpegenc: sink

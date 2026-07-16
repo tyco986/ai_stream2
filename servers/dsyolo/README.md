@@ -69,8 +69,9 @@ curl -s -X POST http://127.0.0.1:8090/ai_stream2/dsyolo/export_yolo26 \
 |------|------|
 | `3_export_yolo26.sh` | YOLO26 检测 |
 | `3_export_yolo11.sh` | YOLO11 检测 |
-| `3_export_yolo11-pose.sh` | YOLO11 姿态 |
-| `3_export_yolo11-seg.sh` | YOLO11 分割 |
+| `3_export_yolo11_pose.sh` | YOLO11 姿态 |
+| `3_export_yolo11_seg.sh` | YOLO11 分割 |
+| `3_export_yolo11_seg_sahi.sh` | YOLO11 SAHI 分割 |
 
 ## 服务参数
 

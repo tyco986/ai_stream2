@@ -9,7 +9,7 @@ from pathlib import Path
 
 TRTEXEC = Path("/usr/bin/trtexec")
 LIBS_ROOT = Path("/app/libs")
-WORKSPACE_MIB = 2048
+WORKSPACE_MIB = 8192
 DEFAULT_MODEL_ROOT = Path("/root/models")
 DEFAULT_PRECISION = "fp16"
 AVAILABLE_PRECISION = frozenset({"fp32", "fp16", "int8"})
@@ -73,13 +73,17 @@ class OnnxBundle:
             raise ValueError("batch_size is required for dynamic input batch")
         return batch_size
 
+    @property
+    def task(self) -> str:
+        return self.meta["task"]
+
     def uses_static_plugins(self) -> bool:
-        return self.meta["task"] == "segment"
+        return self.task == "segment"
 
     def yolo_plugin_path(self) -> Path:
-        suffix = YOLO_PLUGIN_SUFFIX.get(self.meta["task"])
+        suffix = YOLO_PLUGIN_SUFFIX.get(self.task)
         if suffix is None:
-            raise ValueError(f"unsupported task {self.meta['task']!r}")
+            raise ValueError(f"unsupported task {self.task!r}")
         plugin_path = LIBS_ROOT / f"libnvdsinfer_custom_impl_Yolo{suffix}.so"
         if not plugin_path.is_file():
             raise ValueError(f"missing static plugin: {plugin_path}")

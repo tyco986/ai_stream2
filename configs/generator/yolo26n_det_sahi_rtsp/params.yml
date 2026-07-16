@@ -3,12 +3,12 @@ streams:
     url: rtsp://ai_stream2_mediamtx:8554/video1
     width: 1920
     height: 1080
-    fps: 30
+    fps: 25
   video2:
     url: rtsp://ai_stream2_mediamtx:8554/video2
     width: 1920
     height: 1080
-    fps: 30
+    fps: 25
 generator: DetSahiVisRTSPGenerator
 pgie:
   model_dir: /root/models/trt/yolo26n-sahi
@@ -18,7 +18,7 @@ pgie:
   class_on: null
 analyzer: null
 tracker: null
-interval: 0
+interval: 50
 sahi:
   nvsahipreprocess:
     slice_width: 640

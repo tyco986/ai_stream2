@@ -17,6 +17,12 @@ class PoseDrawer(DetDrawer):
         self.infer_width = int(infer_width)
         self.infer_height = int(infer_height)
 
+    def hide_osd_objects(self, frame_meta) -> None:
+        for obj_meta in frame_meta.object_items:
+            obj_meta.rect_params.border_width = 0
+            obj_meta.text_params.display_text = b""
+            obj_meta.text_params.set_bg_clr = 0
+
     def flatten_kpts(self, item) -> list[float]:
         kpts = item.get("kpts")
         flat = []
@@ -34,11 +40,12 @@ class PoseDrawer(DetDrawer):
 
     def next_display_meta(self, batch_meta, display_meta, element_count, display_metas):
         meta = display_meta
-        if meta is None or element_count >= self.MAX_ELEMENTS_IN_DISPLAY_META:
+        count = element_count
+        if meta is None or count >= self.MAX_ELEMENTS_IN_DISPLAY_META:
             meta = batch_meta.acquire_display_meta()
-        if meta not in display_metas:
             display_metas.append(meta)
-        return meta
+            count = 0
+        return meta, count
 
     def append_keypoints(
         self,
@@ -52,62 +59,61 @@ class PoseDrawer(DetDrawer):
         kpt_line_width,
     ) -> None:
         flat = self.flatten_kpts(item)
-        if not flat:
-            return
+        if flat:
+            frame_w = int(frame_meta.pipeline_width) or int(frame_meta.source_width)
+            frame_h = int(frame_meta.pipeline_height) or int(frame_meta.source_height)
+            gain, pad_x, pad_y = self.pose_frame_transform(frame_w, frame_h)
+            display_meta = None
+            display_metas = []
+            element_count = 0
+            r, g, b, a = kpt_color
+            point_color = osd.Color(float(r), float(g), float(b), float(a))
+            r, g, b, a = kpt_bg_color
+            point_bg_color = osd.Color(float(r), float(g), float(b), float(a))
+            r, g, b, a = kpt_line_color
+            line_color = osd.Color(float(r), float(g), float(b), float(a))
 
-        frame_w = int(frame_meta.pipeline_width)
-        frame_h = int(frame_meta.pipeline_height)
-        gain, pad_x, pad_y = self.pose_frame_transform(frame_w, frame_h)
-        display_meta = None
-        display_metas = []
-        element_count = 0
-        r, g, b, a = kpt_color
-        point_color = osd.Color(float(r), float(g), float(b), float(a))
-        r, g, b, a = kpt_bg_color
-        point_bg_color = osd.Color(float(r), float(g), float(b), float(a))
-        r, g, b, a = kpt_line_color
-        line_color = osd.Color(float(r), float(g), float(b), float(a))
+            for joint_idx in range(len(flat) // 3):
+                base = joint_idx * 3
+                xc = (flat[base + 0] - pad_x) / gain
+                yc = (flat[base + 1] - pad_y) / gain
+                display_meta, element_count = self.next_display_meta(
+                    batch_meta, display_meta, element_count, display_metas
+                )
+                element_count += 1
+                circle = osd.Circle()
+                circle.xc = int(min(frame_w - 1, max(0, xc)))
+                circle.yc = int(min(frame_h - 1, max(0, yc)))
+                circle.radius = int(kpt_radius)
+                circle.color = point_color
+                circle.has_bg_color = 1
+                circle.bg_color = point_bg_color
+                display_meta.add_circle(circle)
 
-        for joint_idx in range(len(flat) // 3):
-            base = joint_idx * 3
-            xc = (flat[base + 0] - pad_x) / gain
-            yc = (flat[base + 1] - pad_y) / gain
-            display_meta = self.next_display_meta(
-                batch_meta, display_meta, element_count, display_metas
-            )
-            element_count += 1
-            circle = osd.Circle()
-            circle.xc = int(min(frame_w - 1, max(0, xc)))
-            circle.yc = int(min(frame_h - 1, max(0, yc)))
-            circle.radius = int(kpt_radius)
-            circle.color = point_color
-            circle.has_bg_color = 1
-            circle.bg_color = point_bg_color
-            display_meta.add_circle(circle)
+            for joint_a, joint_b in self.skeleton:
+                idx_a = (joint_a - 1) * 3
+                idx_b = (joint_b - 1) * 3
+                if idx_a + 2 >= len(flat) or idx_b + 2 >= len(flat):
+                    continue
+                x1 = (flat[idx_a + 0] - pad_x) / gain
+                y1 = (flat[idx_a + 1] - pad_y) / gain
+                x2 = (flat[idx_b + 0] - pad_x) / gain
+                y2 = (flat[idx_b + 1] - pad_y) / gain
+                display_meta, element_count = self.next_display_meta(
+                    batch_meta, display_meta, element_count, display_metas
+                )
+                element_count += 1
+                line = osd.Line()
+                line.x1 = int(min(frame_w - 1, max(0, x1)))
+                line.y1 = int(min(frame_h - 1, max(0, y1)))
+                line.x2 = int(min(frame_w - 1, max(0, x2)))
+                line.y2 = int(min(frame_h - 1, max(0, y2)))
+                line.width = int(kpt_line_width)
+                line.color = line_color
+                display_meta.add_line(line)
 
-        for joint_a, joint_b in self.skeleton:
-            idx_a = (joint_a - 1) * 3
-            idx_b = (joint_b - 1) * 3
-            if idx_a + 2 >= len(flat) or idx_b + 2 >= len(flat):
-                continue
-            x1 = (flat[idx_a + 0] - pad_x) / gain
-            y1 = (flat[idx_a + 1] - pad_y) / gain
-            x2 = (flat[idx_b + 0] - pad_x) / gain
-            y2 = (flat[idx_b + 1] - pad_y) / gain
-            display_meta = self.next_display_meta(
-                batch_meta, display_meta, element_count, display_metas
-            )
-            element_count += 1
-            line = osd.Line()
-            line.x1 = int(min(frame_w - 1, max(0, x1)))
-            line.y1 = int(min(frame_h - 1, max(0, y1)))
-            line.x2 = int(min(frame_w - 1, max(0, x2)))
-            line.y2 = int(min(frame_h - 1, max(0, y2)))
-            line.width = int(kpt_line_width)
-            line.color = line_color
-            display_meta.add_line(line)
-
-        [frame_meta.append(meta) for meta in display_metas]
+            for meta in display_metas:
+                frame_meta.append(meta)
 
     def append_object(
         self,
@@ -173,16 +179,18 @@ class PoseDrawer(DetDrawer):
 
 
 class PoseFadeDrawer(PoseDrawer, DetFadeDrawer):
-    def __init__(self, infer_width, infer_height, show_label=False, show_conf=False, interval=0, fade_time=0):
-        DetDrawer.__init__(self, show_label, show_conf)
+    def __init__(
+        self,
+        infer_width,
+        infer_height,
+        show_label=False,
+        show_conf=False,
+        interval=0,
+        fade_time=0,
+    ):
         self.infer_width = int(infer_width)
         self.infer_height = int(infer_height)
-        self.interval = int(interval)
-        self.fade_time = int(fade_time)
-        self.min_alpha = 0.2
-        self.alpha_lut = self.build_alpha_lut(self.interval, self.fade_time)
-        self.runtime_interval = len(self.alpha_lut)
-        self.frame_count = 0
+        DetFadeDrawer.__init__(self, show_label, show_conf, interval, fade_time)
         self.cache = []
 
     def __call__(
@@ -203,7 +211,7 @@ class PoseFadeDrawer(PoseDrawer, DetFadeDrawer):
         self.hide_osd_objects(frame_meta)
         self.frame_count += 1
         phase = (self.frame_count - 1) % self.runtime_interval
-        if phase == 0:
+        if phase == 0 and result["objects"]:
             self.cache = result["objects"]
         fade_alpha = self.alpha_lut[phase]
         faded_box_color = self.fade_color(box_color, fade_alpha)

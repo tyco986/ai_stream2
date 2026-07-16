@@ -22,22 +22,18 @@ deepstream:
       config-file-path: /root/configs/generator/yolo11n_seg_video/pgie.yml
       batch-size: 1
       gpu-id: 0
-  - type: nvtracker
-    name: tracker
+  - type: nvdsanalytics
+    name: analyzer
     properties:
-      ll-lib-file: /opt/nvidia/deepstream/deepstream/lib/libnvds_nvmultiobjecttracker.so
-      ll-config-file: /root/configs/generator/yolo11n_seg_video/nvtracker.yml
-      tracker-width: 1920
-      tracker-height: 1056
+      config-file: /root/configs/generator/yolo11n_seg_video/nvdsanalytics.yml
       gpu-id: 0
-      operate-on-class-ids: ''
   - type: nvosdbin
     name: osd
     properties:
       gpu-id: 0
       display-bbox: true
       display-text: true
-      display-mask: true
+      display-mask: false
   - type: nvvideoconvert
     name: nvvidconv
     properties:
@@ -62,8 +58,8 @@ deepstream:
   edges:
     src: mux
     mux: pgie
-    pgie: tracker
-    tracker: osd
+    pgie: analyzer
+    analyzer: osd
     osd: nvvidconv
     nvvidconv: encoder
     encoder: h264parse

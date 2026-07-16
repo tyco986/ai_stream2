@@ -10,5 +10,6 @@ pgie:
   class_attr:
     all:
       conf: 0.25
+analyzer: null
 input: /root/attachments/images/test.png
 output: /root/outputs/deepstream/yolo11n_pose_image.jpg

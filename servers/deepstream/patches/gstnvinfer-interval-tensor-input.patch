@@ -1,0 +1,16 @@
+--- sources/gst-plugins/gst-nvinfer/gstnvinfer.cpp
++++ sources/gst-plugins/gst-nvinfer/gstnvinfer.cpp
+@@ -2166,4 +2166,13 @@
+         ("NvDsBatchMeta not found for input buffer."), (NULL));
+     return GST_FLOW_ERROR;
+   }
++  gboolean skip_batch;
++
++  /* Process batch only when interval_counter is 0. */
++  skip_batch = (nvinfer->interval_counter++ % (nvinfer->interval + 1) > 0);
++
++  if (skip_batch) {
++    return GST_FLOW_OK;
++  }
++
+   std::unordered_map<guint, TensorInputBatch> tensormeta_map;

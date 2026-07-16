@@ -1,9 +1,22 @@
+class PoseKptsCache:
+    def __init__(self):
+        self.frames = {}
+
+    def put_frame(self, source_id, frame_number, kpts_list):
+        self.frames[(int(source_id), int(frame_number))] = kpts_list
+
+    def pop_frame(self, source_id, frame_number):
+        kpts_list = self.frames.pop((int(source_id), int(frame_number)), [])
+        return kpts_list
+
+
 class PoseBatchMetaParser:
     POSE_KEYPOINT_COUNT = 17
 
-    def __init__(self, batch_meta):
+    def __init__(self, batch_meta, kpts_list=None):
         self.result = None
         self.batch_meta = batch_meta
+        self.kpts_list = kpts_list
         self.get_result()
 
     def parse_rect_params(self, rect) -> dict:
@@ -23,10 +36,11 @@ class PoseBatchMetaParser:
         }
         return rect_params
 
-    def parse_kpts(self, mask) -> list[list[float]] | None:
+    @staticmethod
+    def parse_kpts(mask) -> list[list[float]] | None:
         flat = [
             float(v)
-            for v in mask.mask_array.ravel()[: self.POSE_KEYPOINT_COUNT * 3]
+            for v in mask.mask_array.ravel()[: PoseBatchMetaParser.POSE_KEYPOINT_COUNT * 3]
         ]
         kpts = None
         if flat:
@@ -36,7 +50,16 @@ class PoseBatchMetaParser:
             ]
         return kpts
 
-    def parse_obj(self, obj) -> dict:
+    def resolve_kpts(self, obj, index) -> list[list[float]] | None:
+        kpts = None
+        if self.kpts_list is not None:
+            if index < len(self.kpts_list):
+                kpts = self.kpts_list[index]
+        else:
+            kpts = PoseBatchMetaParser.parse_kpts(obj.mask_params)
+        return kpts
+
+    def parse_obj(self, obj, index) -> dict:
         rect = obj.rect_params
         result = {
             "box": [
@@ -49,12 +72,15 @@ class PoseBatchMetaParser:
             "cls": int(obj.class_id),
             "label": str(obj.label) if obj.label else "",
             "rect_params": self.parse_rect_params(rect),
-            "kpts": self.parse_kpts(obj.mask_params),
+            "kpts": self.resolve_kpts(obj, index),
         }
         return result
 
     def parse_frame(self, frame_meta) -> dict:
-        objects = [self.parse_obj(obj) for obj in frame_meta.object_items]
+        objects = [
+            self.parse_obj(obj, index)
+            for index, obj in enumerate(frame_meta.object_items)
+        ]
         result = {
             "pad_index": int(frame_meta.pad_index),
             "frame_number": int(frame_meta.frame_number),

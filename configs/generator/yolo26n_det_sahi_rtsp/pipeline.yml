@@ -38,7 +38,7 @@ deepstream:
     name: pgie
     properties:
       config-file-path: /root/configs/generator/yolo26n_det_sahi_rtsp/pgie.yml
-      batch-size: 9
+      batch-size: 18
       gpu-id: 0
       input-tensor-meta: true
   - type: queue
@@ -55,6 +55,11 @@ deepstream:
       class-agnostic: false
       enable-merge: true
       two-phase-nmm: true
+  - type: nvdsanalytics
+    name: analyzer
+    properties:
+      config-file: /root/configs/generator/yolo26n_det_sahi_rtsp/nvdsanalytics.yml
+      gpu-id: 0
   - type: nvstreamdemux
     name: demux
   - type: queue
@@ -80,6 +85,7 @@ deepstream:
       sync: false
       max-buffers: 1
       drop: true
+      async: false
   - type: nvosdbin
     name: osd0
     properties:
@@ -94,6 +100,11 @@ deepstream:
     properties:
       leaky: 2
       max-size-buffers: 4
+  - type: queue
+    name: queue_enc0
+    properties:
+      leaky: 2
+      max-size-buffers: 4
   - type: appsink
     name: appsink_vis0
     properties:
@@ -101,11 +112,12 @@ deepstream:
       sync: false
       max-buffers: 1
       drop: true
+      async: false
   - type: nvv4l2h264enc
     name: encoder0
     properties:
       bitrate: 4000000
-      iframeinterval: 30
+      iframeinterval: 25
       preset-id: 1
       gpu-id: 0
   - type: h264parse
@@ -139,6 +151,7 @@ deepstream:
       sync: false
       max-buffers: 1
       drop: true
+      async: false
   - type: nvosdbin
     name: osd1
     properties:
@@ -153,6 +166,11 @@ deepstream:
     properties:
       leaky: 2
       max-size-buffers: 4
+  - type: queue
+    name: queue_enc1
+    properties:
+      leaky: 2
+      max-size-buffers: 4
   - type: appsink
     name: appsink_vis1
     properties:
@@ -160,11 +178,12 @@ deepstream:
       sync: false
       max-buffers: 1
       drop: true
+      async: false
   - type: nvv4l2h264enc
     name: encoder1
     properties:
       bitrate: 4000000
-      iframeinterval: 30
+      iframeinterval: 25
       preset-id: 1
       gpu-id: 0
   - type: h264parse
@@ -182,7 +201,8 @@ deepstream:
     sahi_preprocess: pgie
     pgie: queue_sahi
     queue_sahi: sahi_postprocess
-    sahi_postprocess: demux
+    sahi_postprocess: analyzer
+    analyzer: demux
     queue_demux0: nvvidconv0
     nvvidconv0: tee_raw0
     tee_raw0:
@@ -192,8 +212,9 @@ deepstream:
     osd0: tee_vis0
     tee_vis0:
     - queue_vis0
-    - encoder0
+    - queue_enc0
     queue_vis0: appsink_vis0
+    queue_enc0: encoder0
     encoder0: h264parse0
     h264parse0: sink0
     queue_demux1: nvvidconv1
@@ -205,7 +226,8 @@ deepstream:
     osd1: tee_vis1
     tee_vis1:
     - queue_vis1
-    - encoder1
+    - queue_enc1
     queue_vis1: appsink_vis1
+    queue_enc1: encoder1
     encoder1: h264parse1
     h264parse1: sink1

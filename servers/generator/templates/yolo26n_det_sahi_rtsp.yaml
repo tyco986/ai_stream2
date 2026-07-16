@@ -2,7 +2,7 @@
 
 generator: DetSahiVisRTSPGenerator
 config_save_dir: /root/configs/generator/yolo26n_det_sahi_rtsp
-interval: 0
+interval: 50
 pgie:
   model_dir: /root/models/trt/yolo26n-sahi
   class_attr:
@@ -16,12 +16,12 @@ streams:
     url: rtsp://ai_stream2_mediamtx:8554/video1
     width: 1920
     height: 1080
-    fps: 30
+    fps: 25
   video2:
     url: rtsp://ai_stream2_mediamtx:8554/video2
     width: 1920
     height: 1080
-    fps: 30
+    fps: 25
 sahi:
   nvsahipreprocess:
     slice_width: 640

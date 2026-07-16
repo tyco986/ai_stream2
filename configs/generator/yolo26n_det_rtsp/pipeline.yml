@@ -28,15 +28,11 @@ deepstream:
       config-file-path: /root/configs/generator/yolo26n_det_rtsp/pgie.yml
       batch-size: 2
       gpu-id: 0
-  - type: nvtracker
-    name: tracker
+  - type: nvdsanalytics
+    name: analyzer
     properties:
-      ll-lib-file: /opt/nvidia/deepstream/deepstream/lib/libnvds_nvmultiobjecttracker.so
-      ll-config-file: /root/configs/generator/yolo26n_det_rtsp/nvtracker.yml
-      tracker-width: 1920
-      tracker-height: 1056
+      config-file: /root/configs/generator/yolo26n_det_rtsp/nvdsanalytics.yml
       gpu-id: 0
-      operate-on-class-ids: '0'
   - type: nvstreamdemux
     name: demux
   - type: queue
@@ -94,7 +90,7 @@ deepstream:
     name: encoder0
     properties:
       bitrate: 4000000
-      iframeinterval: 30
+      iframeinterval: 25
       preset-id: 1
       gpu-id: 0
   - type: h264parse
@@ -160,7 +156,7 @@ deepstream:
     name: encoder1
     properties:
       bitrate: 4000000
-      iframeinterval: 30
+      iframeinterval: 25
       preset-id: 1
       gpu-id: 0
   - type: h264parse
@@ -175,8 +171,8 @@ deepstream:
     src0: mux
     src1: mux
     mux: pgie
-    pgie: tracker
-    tracker: demux
+    pgie: analyzer
+    analyzer: demux
     queue_demux0: nvvidconv0
     nvvidconv0: tee_raw0
     tee_raw0:

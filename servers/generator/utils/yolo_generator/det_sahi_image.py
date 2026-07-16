@@ -14,7 +14,7 @@ SAHI_IMAGE_TOPOLOGY_DOC = """
     Inference chain::
 
         src → mux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
-            → osd → nvvidconv → jpegenc → filesink
+            → analyzer → osd → nvvidconv → jpegenc → filesink
 
     ``mux`` batch size is 1; ``pgie`` batch size is the SAHI tile count.
 """
@@ -36,6 +36,7 @@ class DetSahiImageGenerator(DetImageGenerator):
         self,
         input: str | Path,
         output: str | Path,
+        analyzer: dict | None,
         pgie: dict,
         sahi: dict,
         interval: int = 0,
@@ -43,11 +44,13 @@ class DetSahiImageGenerator(DetImageGenerator):
         self.sahi = sahi
         self.input = Path(input).expanduser().resolve()
         self.output = Path(output).expanduser().resolve()
+        self.analyzer = analyzer
         self.pgie = pgie
         self.interval = interval
         DeepstreamGenerator.__init__(self)
         self.init_input()
         self.init_pgie()
+        self.init_nvdsanalytics()
         self.init_sahi()
         self.init_params()
         self.init_pipeline()
@@ -105,6 +108,7 @@ class DetSahiImageGenerator(DetImageGenerator):
         config_save_dir = Path(config_save_dir)
         pipeline_save_path = config_save_dir / self.PIPELINE_CONFIG_NAME
         pgie_save_path = config_save_dir / self.PGIE_CONFIG_NAME
+        nvdsanalytics_save_path = config_save_dir / self.ANALYTICS_CONFIG_NAME
         params_save_path = config_save_dir / self.PARAMS_NAME
         sahi_preprocess_save_path = config_save_dir / self.SAHI_PREPROCESS_CONFIG_NAME
         self.apply_save_paths(config_save_dir)
@@ -114,6 +118,13 @@ class DetSahiImageGenerator(DetImageGenerator):
         )
         with open(pgie_save_path, "w", encoding="utf-8") as handle:
             yaml.safe_dump(self.pgie_yml, handle, sort_keys=False, default_flow_style=False)
+        with open(nvdsanalytics_save_path, "w", encoding="utf-8") as handle:
+            yaml.safe_dump(
+                self.nvdsanalytics_yml,
+                handle,
+                sort_keys=False,
+                default_flow_style=False,
+            )
         with open(pipeline_save_path, "w", encoding="utf-8") as handle:
             yaml.safe_dump(
                 self.pipeline_yml, handle, sort_keys=False, default_flow_style=False
@@ -199,6 +210,14 @@ class DetSahiImageGenerator(DetImageGenerator):
                 two_phase_nmm=True,
             ),
         )
+        self._append_node(
+            "nvdsanalytics",
+            "analyzer",
+            self._add_nvdsanalytics(
+                self.ANALYTICS_CONFIG_NAME,
+                gpu_id=self.pgie_generator.gpu_id,
+            ),
+        )
         gpu_id = self.pgie_generator.gpu_id
         self._append_node(
             "nvosdbin",
@@ -224,7 +243,8 @@ class DetSahiImageGenerator(DetImageGenerator):
             "sahi_preprocess": "pgie",
             "pgie": "queue_sahi",
             "queue_sahi": "sahi_postprocess",
-            "sahi_postprocess": "osd",
+            "sahi_postprocess": "analyzer",
+            "analyzer": "osd",
             "osd": "nvvidconv",
             "nvvidconv": "jpegenc",
             "jpegenc": "sink",

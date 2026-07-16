@@ -3,14 +3,14 @@ property:
   onnx-file: ''
   model-engine-file: /root/models/trt/yolo11n-seg/yolo11n-seg.engine
   labelfile-path: /root/models/trt/yolo11n-seg/labels.txt
-  batch-size: 1
+  batch-size: 2
   network-mode: 2
   network-type: 3
   process-mode: 1
   model-color-format: 0
   num-detected-classes: 80
   gie-unique-id: 1
-  interval: 0
+  interval: 50
   cluster-mode: 4
   maintain-aspect-ratio: 1
   symmetric-padding: 1
