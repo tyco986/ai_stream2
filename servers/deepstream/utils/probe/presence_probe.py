@@ -1,26 +1,46 @@
-from utils.probe.utils.debouncer.presence_debouncer import PresenceDebouncer
+from pyservicemaker import BatchMetadataOperator
 
-from .det_probe import DetRTSPProbe
+from utils.probe.utils.drawer.presence_drawer import PresenceFadeDrawer
+from utils.probe.utils.logger.presence_logger import PresenceLogger
+from utils.probe.utils.messager.det_messager import DetMessager
+from utils.bridge.presence_capture_state import PresenceCaptureState
 
-PRESENCE_META_TYPE = 8193
+from .det_probe import DetVisRTSPProbe, DetVideoProbe
 
 
-class DetPresenceProbe(DetRTSPProbe):
-    def __init__(self, debouncer=dict(), logger=dict(), messager=dict()):
-        super().__init__(logger=logger, messager=messager)
-        self.debouncer = PresenceDebouncer(**debouncer)
+class DetVisRTSPPresenceProbe(DetVisRTSPProbe):
+    def __init__(self, debouncer=dict(), logger=dict(), messager=dict(), drawer=dict()):
+        BatchMetadataOperator.__init__(self)
+        self.drawer = PresenceFadeDrawer(drawer=drawer, debouncer=debouncer)
+        self.messager = DetMessager(**messager)
+        self.logger = PresenceLogger(**logger)
 
     def handle_metadata(self, batch_meta):
-        result = self.drawer(batch_meta)
-        self.debouncer(result)
-        self.logger(result)
-        self.messager(result)
-        self.stamp_event_meta(batch_meta, result)
+        for result in self.drawer(batch_meta):
+            self.logger(result)
+            self.messager(result)
+            event = result.get("event", {"event_code": ""})
+            PresenceCaptureState.update(
+                result["pad_index"],
+                result["frame_number"],
+                event.get("event_code", ""),
+            )
 
-    def stamp_event_meta(self, batch_meta, result: dict) -> None:
-        event = result.get("event", {"event_code": "", "window": []})
-        frame_meta = next(iter(batch_meta.frame_items))
-        event_msg = batch_meta.acquire_event_message_meta()
-        payload = {"event": event}
-        event_msg.set_user_data_json(payload, PRESENCE_META_TYPE)
-        frame_meta.append(event_msg)
+
+class DetPresenceVideoProbe(DetVideoProbe):
+    def __init__(self, debouncer=dict(), logger=dict(), messager=dict(), drawer=dict()):
+        BatchMetadataOperator.__init__(self)
+        self.drawer = PresenceFadeDrawer(drawer=drawer, debouncer=debouncer)
+        self.messager = DetMessager(**messager)
+        self.logger = PresenceLogger(**logger)
+
+    def handle_metadata(self, batch_meta):
+        for result in self.drawer(batch_meta):
+            self.logger(result)
+            self.messager(result)
+            event = result.get("event", {"event_code": ""})
+            PresenceCaptureState.update(
+                result["pad_index"],
+                result["frame_number"],
+                event.get("event_code", ""),
+            )

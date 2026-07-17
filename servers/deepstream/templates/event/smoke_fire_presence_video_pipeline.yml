@@ -1,0 +1,24 @@
+# Prerequisite: servers/generator/scripts/3_generate.sh --config yolo10x_smoke_fire_video
+
+type: PresenceVideoPipeline
+name: yolo10x-smoke-fire-video
+config_dir: /root/configs/generator/yolo10x_smoke_fire_video
+drawer:
+  show_label: true
+  show_conf: true
+  interval: 0
+  fade_time: 0
+debouncer:
+  class_ids: [0, 1]
+  threshold: 0.5
+  length: 10
+  mode: slide
+logger:
+  root: /root/logs/deepstream/yolo10x-smoke-fire-video/probe
+  interval: 0
+messager:
+  topic: deepstream-detections
+  host: ai_stream2_kafka
+  port: 9092
+capturer:
+  output_dir: /root/outputs/deepstream/yolo10x-smoke-fire-video

@@ -44,22 +44,20 @@ class SegDrawer(DetDrawer):
         box_width=2,
         text_color=(1.0, 1.0, 1.0, 1.0),
         text_bg_color=(0.0, 0.0, 0.0, 0.6),
-    ) -> dict:
-        frame_meta = next(iter(batch_meta.frame_items))
-        objects = []
-        for object_meta in frame_meta.object_items:
-            item = self.parse_object(object_meta)
-            self.draw_inplace(
-                object_meta,
-                item,
-                mask_color,
-                box_width,
-                text_color,
-                text_bg_color,
+    ) -> list:
+        results = []
+        for frame_meta in batch_meta.frame_items:
+            results.append(
+                self.process_frame(
+                    batch_meta,
+                    frame_meta,
+                    box_color=mask_color,
+                    box_width=box_width,
+                    text_color=text_color,
+                    text_bg_color=text_bg_color,
+                )
             )
-            objects.append(item)
-        result = self.get_result(frame_meta, objects)
-        return result
+        return results
 
 
 class SegFadeDrawer(DetFadeDrawer, SegDrawer):
@@ -70,8 +68,8 @@ class SegFadeDrawer(DetFadeDrawer, SegDrawer):
         box_width=2,
         text_color=(1.0, 1.0, 1.0, 1.0),
         text_bg_color=(0.0, 0.0, 0.0, 0.6),
-    ) -> dict:
-        result = DetFadeDrawer.__call__(
+    ) -> list:
+        results = DetFadeDrawer.__call__(
             self,
             batch_meta,
             box_color=mask_color,
@@ -79,4 +77,4 @@ class SegFadeDrawer(DetFadeDrawer, SegDrawer):
             text_color=text_color,
             text_bg_color=text_bg_color,
         )
-        return result
+        return results

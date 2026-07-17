@@ -1,0 +1,5 @@
+# Prerequisite: servers/generator/scripts/3_generate.sh --config yolo11n_seg_sahi_rtsp
+
+type: BaseRTSPPipeline
+name: yolo11n-seg-sahi-rtsp
+config_dir: /root/configs/generator/yolo11n_seg_sahi_rtsp

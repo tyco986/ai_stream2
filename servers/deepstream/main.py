@@ -9,22 +9,26 @@ from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from utils.pipeline.base import (
+    BaseImagePipeline,
+    BaseRTSPFakeSinkPipeline,
+    BaseRTSPPipeline,
+    BaseVideoPipeline,
+)
 from utils.pipeline.pipeline_runner import PipelineRunner
+from utils.pipeline.presence_pipeline import PresenceRTSPPipeline, PresenceVideoPipeline
 from utils.pipeline.yolo_pipeline import (
     DetImagePipeline,
-    DetRTSPPipeline,
+    DetVisRTSPPipeline,
     DetSahiImagePipeline,
-    DetSahiRTSPPipeline,
+    DetSahiVisRTSPPipeline,
     DetSahiVideoPipeline,
     DetVideoPipeline,
-    PoseImagePipeline,
-    PoseRTSPPipeline,
-    PoseVideoPipeline,
     SegImagePipeline,
     SegSahiImagePipeline,
     SegSahiVideoPipeline,
-    SegSahiRTSPPipeline,
-    SegRTSPPipeline,
+    SegSahiVisRTSPPipeline,
+    SegVisRTSPPipeline,
     SegVideoPipeline,
 )
 
@@ -32,23 +36,35 @@ PROJECT_NAME = "ai_stream2"
 DEFAULT_HOST = os.environ.get("HOST", "0.0.0.0")
 DEFAULT_PORT = int(os.environ.get("PORT", "8092"))
 RUNNER_LOG_ROOT = "/root/logs/deepstream"
+BASE_PIPELINE_TYPES = frozenset(
+    {
+        "BaseImagePipeline",
+        "BaseVideoPipeline",
+        "BaseRTSPPipeline",
+        "BaseRTSPFakeSinkPipeline",
+    }
+)
+PRESENCE_PIPELINE_TYPES = frozenset({"PresenceRTSPPipeline", "PresenceVideoPipeline"})
 
 PIPELINE_BUILDERS = {
-    "DetRTSPPipeline": DetRTSPPipeline,
-    "SegRTSPPipeline": SegRTSPPipeline,
-    "PoseRTSPPipeline": PoseRTSPPipeline,
+    "BaseImagePipeline": BaseImagePipeline,
+    "BaseVideoPipeline": BaseVideoPipeline,
+    "BaseRTSPPipeline": BaseRTSPPipeline,
+    "BaseRTSPFakeSinkPipeline": BaseRTSPFakeSinkPipeline,
+    "DetVisRTSPPipeline": DetVisRTSPPipeline,
+    "SegVisRTSPPipeline": SegVisRTSPPipeline,
     "DetImagePipeline": DetImagePipeline,
     "SegImagePipeline": SegImagePipeline,
     "SegSahiImagePipeline": SegSahiImagePipeline,
     "SegSahiVideoPipeline": SegSahiVideoPipeline,
-    "SegSahiRTSPPipeline": SegSahiRTSPPipeline,
-    "PoseImagePipeline": PoseImagePipeline,
+    "SegSahiVisRTSPPipeline": SegSahiVisRTSPPipeline,
     "DetVideoPipeline": DetVideoPipeline,
     "SegVideoPipeline": SegVideoPipeline,
-    "PoseVideoPipeline": PoseVideoPipeline,
-    "DetSahiRTSPPipeline": DetSahiRTSPPipeline,
+    "DetSahiVisRTSPPipeline": DetSahiVisRTSPPipeline,
     "DetSahiImagePipeline": DetSahiImagePipeline,
     "DetSahiVideoPipeline": DetSahiVideoPipeline,
+    "PresenceRTSPPipeline": PresenceRTSPPipeline,
+    "PresenceVideoPipeline": PresenceVideoPipeline,
 }
 
 
@@ -59,6 +75,8 @@ class StartPipelineRequest(BaseModel):
     logger: dict = {}
     messager: dict = {}
     drawer: dict | None = None
+    debouncer: dict | None = None
+    capturer: dict | None = None
 
 
 def json_response(success: bool, message: str = ""):
@@ -83,7 +101,14 @@ class DeepStreamServer:
             "logger": body.logger,
             "messager": body.messager,
         }
-        if body.drawer is not None:
+        if body.type in PRESENCE_PIPELINE_TYPES:
+            if body.debouncer is not None:
+                kwargs["debouncer"] = body.debouncer
+            if body.drawer is not None:
+                kwargs["drawer"] = body.drawer
+            if body.capturer is not None:
+                kwargs["capturer"] = body.capturer
+        elif body.drawer is not None:
             kwargs["drawer"] = body.drawer
         return kwargs
 
@@ -97,11 +122,15 @@ class DeepStreamServer:
             message = f"unknown pipeline type: {body.type}"
         else:
             try:
-                builder = PIPELINE_BUILDERS[body.type](
-                    body.config_dir,
-                    body.name,
-                    **self.build_pipeline_kwargs(body),
-                )
+                builder_cls = PIPELINE_BUILDERS[body.type]
+                if body.type in BASE_PIPELINE_TYPES:
+                    builder = builder_cls(body.config_dir, body.name)
+                else:
+                    builder = builder_cls(
+                        body.config_dir,
+                        body.name,
+                        **self.build_pipeline_kwargs(body),
+                    )
                 self.pipeline = builder.build()
                 self.runner = PipelineRunner(
                     self.pipeline,

@@ -47,7 +47,6 @@ media/
 
 # DeepStream runtime data
 
-
 # DeepStream build artifacts & large binary files
 *.so
 *.engine

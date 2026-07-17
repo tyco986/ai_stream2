@@ -17,7 +17,6 @@ pgie:
       conf: 0.25
   class_on: null
 analyzer: null
-tracker:
-  class_id: -1
+tracker: null
 interval: 50
 config_save_dir: /root/configs/generator/yolo11n_seg_rtsp

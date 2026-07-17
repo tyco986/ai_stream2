@@ -1,5 +1,8 @@
 from pyservicemaker import osd
 
+# frame_meta.object_items is single-pass; parse and draw in one loop.
+# Do not list(object_items) then mutate — held refs segfault.
+
 
 class DetDrawer:
     def __init__(self, show_label=False, show_conf=False):
@@ -25,26 +28,28 @@ class DetDrawer:
 
     def parse_object(self, object_meta) -> dict:
         rect = object_meta.rect_params
+        label = str(object_meta.label) if object_meta.label else ""
         result = {
-            "box": [
+            "object": [
                 int(round(float(rect.left))),
                 int(round(float(rect.top))),
                 int(round(float(rect.left) + float(rect.width))),
                 int(round(float(rect.top) + float(rect.height))),
+                round(float(object_meta.confidence), 2),
+                int(object_meta.class_id),
+                label,
             ],
-            "conf": round(float(object_meta.confidence), 2),
-            "cls": int(object_meta.class_id),
-            "label": str(object_meta.label) if object_meta.label else "",
             "rect_params": self.parse_rect_params(rect),
         }
         return result
 
     def build_display_text(self, item) -> str:
+        obj = item["object"]
         parts = []
-        if self.show_label and item["label"]:
-            parts.append(item["label"])
+        if self.show_label and obj[6]:
+            parts.append(obj[6])
         if self.show_conf:
-            parts.append(f"{item['conf']:.2f}")
+            parts.append(f"{obj[4]:.2f}")
         display_text = " ".join(parts)
         return display_text
 
@@ -69,12 +74,6 @@ class DetDrawer:
         object_meta.rect_params.border_color = osd.Color(float(r), float(g), float(b), float(a))
         object_meta.rect_params.border_width = int(box_width)
 
-    def hide_osd_objects(self, frame_meta) -> None:
-        for obj_meta in frame_meta.object_items:
-            obj_meta.rect_params.border_width = 0
-            obj_meta.text_params.display_text = b""
-            obj_meta.text_params.set_bg_clr = 0
-
     def apply_rect_params(self, rect, data, box_color, box_width) -> None:
         r, g, b, a = box_color
         rect.left = data["left"]
@@ -83,6 +82,7 @@ class DetDrawer:
         rect.height = data["height"]
         rect.border_width = int(box_width)
         rect.border_color = osd.Color(float(r), float(g), float(b), float(a))
+        rect.rotation_angle = 0.0
 
     def draw_inplace(
         self,
@@ -93,6 +93,7 @@ class DetDrawer:
         text_color,
         text_bg_color,
     ) -> None:
+        object_meta.rect_params.rotation_angle = 0.0
         self.apply_box_color(object_meta, box_color, box_width)
         self.apply_label(object_meta, item, text_color, text_bg_color)
 
@@ -110,16 +111,15 @@ class DetDrawer:
         }
         return result
 
-    def __call__(
+    def process_frame(
         self,
         batch_meta,
+        frame_meta,
         box_color=(0.0, 1.0, 0.0, 1.0),
         box_width=2,
         text_color=(1.0, 1.0, 1.0, 1.0),
         text_bg_color=(0.0, 0.0, 0.0, 0.6),
     ) -> dict:
-        frame_meta = next(iter(batch_meta.frame_items))
-        self.hide_osd_objects(frame_meta)
         objects = []
         for object_meta in frame_meta.object_items:
             item = self.parse_object(object_meta)
@@ -135,6 +135,28 @@ class DetDrawer:
         result = self.get_result(frame_meta, objects)
         return result
 
+    def __call__(
+        self,
+        batch_meta,
+        box_color=(0.0, 1.0, 0.0, 1.0),
+        box_width=2,
+        text_color=(1.0, 1.0, 1.0, 1.0),
+        text_bg_color=(0.0, 0.0, 0.0, 0.6),
+    ) -> list:
+        results = []
+        for frame_meta in batch_meta.frame_items:
+            results.append(
+                self.process_frame(
+                    batch_meta,
+                    frame_meta,
+                    box_color=box_color,
+                    box_width=box_width,
+                    text_color=text_color,
+                    text_bg_color=text_bg_color,
+                )
+            )
+        return results
+
 
 class DetFadeDrawer(DetDrawer):
     def __init__(self, show_label=False, show_conf=False, interval=0, fade_time=0):
@@ -142,9 +164,9 @@ class DetFadeDrawer(DetDrawer):
         self.interval = int(interval)
         self.fade_time = int(fade_time)
         self.min_alpha = 0.2
-        self.frame_count = 0
-        self.phase = 0
-        self.object_cache = []
+        self.frame_count = {}
+        self.phase = {}
+        self.object_cache = {}
         self.alpha_lut = self.build_alpha_lut(self.interval, self.fade_time)
         self.runtime_interval = len(self.alpha_lut)
 
@@ -159,6 +181,10 @@ class DetFadeDrawer(DetDrawer):
         text_bg_color,
     ) -> None:
         obj_meta = batch_meta.acquire_object_meta()
+        obj = item["object"]
+        obj_meta.class_id = int(obj[5])
+        obj_meta.confidence = float(obj[4])
+        obj_meta.label = obj[6]
         self.apply_rect_params(obj_meta.rect_params, item["rect_params"], box_color, box_width)
         self.apply_label(obj_meta, item, text_color, text_bg_color)
         frame_meta.append(obj_meta)
@@ -167,12 +193,14 @@ class DetFadeDrawer(DetDrawer):
         self,
         batch_meta,
         frame_meta,
+        pad_index,
         box_color,
         box_width,
         text_color,
         text_bg_color,
     ) -> list:
-        for item in self.object_cache:
+        cache = self.object_cache.get(pad_index, [])
+        for item in cache:
             self.append_object(
                 batch_meta,
                 frame_meta,
@@ -182,7 +210,7 @@ class DetFadeDrawer(DetDrawer):
                 text_color,
                 text_bg_color,
             )
-        return self.object_cache
+        return cache
 
     def build_alpha_lut(self, interval, fade_time) -> list[float]:
         if fade_time <= 0:
@@ -208,20 +236,21 @@ class DetFadeDrawer(DetDrawer):
         result = (float(r), float(g), float(b), float(fade_alpha))
         return result
 
-    def __call__(
+    def process_frame(
         self,
         batch_meta,
+        frame_meta,
         box_color=(0.0, 1.0, 0.0, 1.0),
         box_width=2,
         text_color=(1.0, 1.0, 1.0, 1.0),
         text_bg_color=(0.0, 0.0, 0.0, 0.6),
     ) -> dict:
-        frame_meta = next(iter(batch_meta.frame_items))
-        fade_alpha = self.alpha_lut[self.phase]
+        pad_index = int(frame_meta.pad_index)
+        phase = self.phase.get(pad_index, 0)
+        fade_alpha = self.alpha_lut[phase]
         faded_box_color = self.fade_color(box_color, fade_alpha)
         faded_text_color = self.fade_color(text_color, fade_alpha)
         faded_text_bg_color = self.fade_color(text_bg_color, fade_alpha)
-        self.hide_osd_objects(frame_meta)
         objects = []
         for object_meta in frame_meta.object_items:
             item = self.parse_object(object_meta)
@@ -235,17 +264,41 @@ class DetFadeDrawer(DetDrawer):
             )
             objects.append(item)
         if objects:
-            self.object_cache = objects
+            self.object_cache[pad_index] = objects
         else:
             objects = self.draw_non_inference_rebuild(
                 batch_meta,
                 frame_meta,
+                pad_index,
                 faded_box_color,
                 box_width,
                 faded_text_color,
                 faded_text_bg_color,
             )
         result = self.get_result(frame_meta, objects)
-        self.frame_count += 1
-        self.phase = self.frame_count % self.runtime_interval
+        frame_count = self.frame_count.get(pad_index, 0) + 1
+        self.frame_count[pad_index] = frame_count
+        self.phase[pad_index] = frame_count % self.runtime_interval
         return result
+
+    def __call__(
+        self,
+        batch_meta,
+        box_color=(0.0, 1.0, 0.0, 1.0),
+        box_width=2,
+        text_color=(1.0, 1.0, 1.0, 1.0),
+        text_bg_color=(0.0, 0.0, 0.0, 0.6),
+    ) -> list:
+        results = []
+        for frame_meta in batch_meta.frame_items:
+            results.append(
+                self.process_frame(
+                    batch_meta,
+                    frame_meta,
+                    box_color=box_color,
+                    box_width=box_width,
+                    text_color=text_color,
+                    text_bg_color=text_bg_color,
+                )
+            )
+        return results

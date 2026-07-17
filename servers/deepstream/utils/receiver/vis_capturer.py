@@ -4,7 +4,7 @@ import cupy
 from PIL import Image
 from pyservicemaker import BufferRetriever
 
-PRESENCE_META_TYPE = 8193
+from utils.bridge.presence_capture_state import PresenceCaptureState
 
 
 class VisCapturer(BufferRetriever):
@@ -15,12 +15,9 @@ class VisCapturer(BufferRetriever):
 
     def consume(self, buffer):
         frame_meta = next(iter(buffer.batch_meta.frame_items))
-        item = next(iter(frame_meta.user_meta_items(PRESENCE_META_TYPE)))
-        data = item.get_user_data_json()
-        event = data.get("event", {"event_code": ""})
-        if "1" in event["event_code"]:
-            pad_index = int(frame_meta.pad_index)
-            frame_number = int(frame_meta.frame_number)
+        pad_index = int(frame_meta.pad_index)
+        frame_number = int(frame_meta.frame_number)
+        if PresenceCaptureState.should_capture(pad_index, frame_number):
             output_path = self.output_dir / f"vis_{pad_index}_{frame_number}.jpg"
             tensor = buffer.extract(int(frame_meta.batch_id)).clone()
             frame = cupy.from_dlpack(tensor)[:, :, :3]

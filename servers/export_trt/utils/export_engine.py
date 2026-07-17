@@ -16,7 +16,7 @@ AVAILABLE_PRECISION = frozenset({"fp32", "fp16", "int8"})
 PRECISION_FLAGS = {"fp16": "--fp16", "int8": "--int8"}
 META_JSON_NAME = "meta.json"
 LABELS_NAME = "labels.txt"
-YOLO_PLUGIN_SUFFIX = {"detect": "", "pose": "_pose", "segment": "_seg"}
+YOLO_PLUGIN_SUFFIX = {"detect": "", "segment": "_seg"}
 
 
 @dataclass(frozen=True)
@@ -105,6 +105,7 @@ class OnnxBundle:
         batch_size: int,
         gpu_id: int,
         precision: str,
+        builder_optimization_level: int | None = None,
     ) -> list[str]:
         command = [
             str(TRTEXEC),
@@ -113,6 +114,8 @@ class OnnxBundle:
             f"--device={gpu_id}",
             f"--memPoolSize=workspace:{WORKSPACE_MIB}M",
         ]
+        if builder_optimization_level is not None:
+            command.append(f"--builderOptimizationLevel={builder_optimization_level}")
         if self.uses_static_plugins():
             command.append(f"--staticPlugins={self.yolo_plugin_path()}")
         if flag := PRECISION_FLAGS.get(precision):
@@ -133,6 +136,7 @@ class OnnxBundle:
         gpu_id: int,
         precision: str,
         build_time: str,
+        builder_optimization_level: int | None = None,
     ) -> dict:
         meta = dict(self.meta)
         meta["batch_size"] = batch_size
@@ -142,6 +146,7 @@ class OnnxBundle:
             {
                 "precision": precision,
                 "gpu_id": gpu_id,
+                "builder_optimization_level": builder_optimization_level,
                 "cuda_version": probe_cuda_version(),
                 "tensorrt_version": probe_version(
                     [str(TRTEXEC), "--version"], r"TensorRT v([\d.]+|\w+)"
@@ -190,8 +195,18 @@ class ExportEngineRunner:
             raise ValueError(f"input not found or not a directory: {path}")
         return path
 
-    def run_trtexec(self, bundle: OnnxBundle, engine_path: Path, batch_size: int, gpu_id: int, precision: str) -> str:
-        command = bundle.build_trtexec_command(engine_path, batch_size, gpu_id, precision)
+    def run_trtexec(
+        self,
+        bundle: OnnxBundle,
+        engine_path: Path,
+        batch_size: int,
+        gpu_id: int,
+        precision: str,
+        builder_optimization_level: int | None = None,
+    ) -> str:
+        command = bundle.build_trtexec_command(
+            engine_path, batch_size, gpu_id, precision, builder_optimization_level
+        )
         engine_path.parent.mkdir(parents=True, exist_ok=True)
         self.logger.info("trtexec start cmd=%s", command)
         result = subprocess.run(command, capture_output=True, text=True)
@@ -210,6 +225,7 @@ class ExportEngineRunner:
         batch_size: int | None,
         gpu_id: int,
         precision: str = DEFAULT_PRECISION,
+        builder_optimization_level: int | None = None,
     ) -> Path:
         precision = validate_precision(precision)
         bundle = OnnxBundle.load(self.resolve_input(input_path))
@@ -222,10 +238,18 @@ class ExportEngineRunner:
 
         shutil.copy2(bundle.labels_path, bundle_dir / LABELS_NAME)
         engine_path = bundle_dir / f"{bundle.stem}.engine"
-        build_time = self.run_trtexec(bundle, engine_path, resolved_batch, gpu_id, precision)
+        build_time = self.run_trtexec(
+            bundle, engine_path, resolved_batch, gpu_id, precision, builder_optimization_level
+        )
         (bundle_dir / META_JSON_NAME).write_text(
             json.dumps(
-                bundle.build_output_meta(resolved_batch, gpu_id, precision, build_time),
+                bundle.build_output_meta(
+                    resolved_batch,
+                    gpu_id,
+                    precision,
+                    build_time,
+                    builder_optimization_level,
+                ),
                 ensure_ascii=False,
                 indent=2,
             )

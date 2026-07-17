@@ -16,7 +16,7 @@ Build and start a DeepStream pipeline via API from a template YAML.
 Options:
   --config PATH   Pipeline template (e.g. det_image_pipeline or servers/deepstream/templates/...)
 
-Prerequisites: 1_build_image.sh, 2_run_container.sh
+Prerequisites: 1_build_dev_image.sh or 1_build_prod_image.sh, 2_run_dev_container.sh or 2_run_prod_container.sh
 Stop: docker stop ai_stream2_deepstream
 EOF
 }
@@ -45,18 +45,22 @@ done
 
 resolve_config_path() {
   local path="$1"
+  local candidate
   if [[ -f "$path" ]]; then
     realpath "$path"
     return
   fi
-  if [[ -f "${TEMPLATES_DIR}/${path}.yml" ]]; then
-    realpath "${TEMPLATES_DIR}/${path}.yml"
-    return
-  fi
-  if [[ -f "${TEMPLATES_DIR}/${path}" ]]; then
-    realpath "${TEMPLATES_DIR}/${path}"
-    return
-  fi
+  for candidate in \
+    "${TEMPLATES_DIR}/${path}.yml" \
+    "${TEMPLATES_DIR}/${path}" \
+    "${TEMPLATES_DIR}"/*/"${path}.yml" \
+    "${TEMPLATES_DIR}"/*/"${path}"
+  do
+    if [[ -f "$candidate" ]]; then
+      realpath "$candidate"
+      return
+    fi
+  done
   echo ""
 }
 

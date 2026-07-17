@@ -8,7 +8,7 @@ from utils.probe.utils.logger.det_logger import DetLogger
 from utils.probe.utils.messager.det_messager import DetMessager
 
 
-class SegRTSPProbe(BatchMetadataOperator):
+class SegVisRTSPProbe(BatchMetadataOperator):
     def __init__(self, drawer=dict(), logger=dict(), messager=dict()):
         super().__init__()
         self.logger = DetLogger(**logger)
@@ -16,9 +16,9 @@ class SegRTSPProbe(BatchMetadataOperator):
         self.drawer = SegFadeDrawer(**drawer)
 
     def handle_metadata(self, batch_meta) -> None:
-        result = self.drawer(batch_meta)
-        self.logger(result)
-        self.messager(result)
+        for result in self.drawer(batch_meta):
+            self.logger(result)
+            self.messager(result)
 
 
 class SegImageProbe(BatchMetadataOperator):
@@ -29,9 +29,9 @@ class SegImageProbe(BatchMetadataOperator):
         self.drawer = SegDrawer(**drawer)
 
     def handle_metadata(self, batch_meta) -> None:
-        result = self.drawer(batch_meta)
-        self.logger(result)
-        self.messager(result)
+        for result in self.drawer(batch_meta):
+            self.logger(result)
+            self.messager(result)
 
 
 class SegVideoProbe(BatchMetadataOperator):
@@ -42,6 +42,6 @@ class SegVideoProbe(BatchMetadataOperator):
         self.drawer = SegDrawer(**drawer)
 
     def handle_metadata(self, batch_meta) -> None:
-        result = self.drawer(batch_meta)
-        self.logger(result)
-        self.messager(result)
+        for result in self.drawer(batch_meta):
+            self.logger(result)
+            self.messager(result)

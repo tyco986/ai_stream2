@@ -1,43 +1,24 @@
 import copy
 
-from .det_rtsp import (
-    DetRTSPGenerator,
-    DetVisRTSPGenerator,
+from ..base_generator import (
+    BaseRTSPGenerator,
+    BaseRTSPVisGenerator,
     RTSP_TOPOLOGY_DOC,
     VIS_RTSP_TOPOLOGY_DOC,
 )
-from .utils import YoloSeg
+from ..subelement_generator import YoloSeg
 
-class SegRTSPGenerator(DetRTSPGenerator):
+
+class SegRTSPGenerator(BaseRTSPGenerator):
     GENERATOR = "SegRTSPGenerator"
 
-    f"""Generate YOLO segmentation RTSP pipeline for event alert + probe-side Kafka.
+    f"""Generate YOLO segmentation RTSP pipeline (headless, ends at fakesink).
 
     Set ``analyzer=None`` to skip nvdsanalytics. Set ``tracker=None`` to skip nvtracker.
-    Does not insert ``nvmsgconv`` / ``nvmsgbroker`` or RTSP preview sink;
-    DeepStream attaches ``BaseProbe`` on ``analyzer`` for ``EventMessager`` and appsink
-    capture branches.
     {RTSP_TOPOLOGY_DOC}
     """
 
-    def __init__(
-        self,
-        streams: dict[str, dict],
-        analyzer: dict | None,
-        pgie: dict,
-        tracker: dict | None = None,
-        interval: int = 0,
-    ) -> None:
-        super().__init__(
-            streams=streams,
-            analyzer=analyzer,
-            pgie=pgie,
-            tracker=tracker,
-            interval=interval,
-        )
-
-    def init_pgie(self) -> None:
-        super().init_pgie()
+    def apply_pgie_config(self) -> None:
         self.pgie_generator.config = copy.deepcopy(YoloSeg)
         self.pgie_generator.update_config()
         self.pgie_yml = self.pgie_generator.config
@@ -51,39 +32,16 @@ class SegRTSPGenerator(DetRTSPGenerator):
         }
 
 
-class SegVisRTSPGenerator(DetVisRTSPGenerator):
+class SegVisRTSPGenerator(BaseRTSPVisGenerator):
     GENERATOR = "SegVisRTSPGenerator"
 
-    f"""Generate YOLO segmentation RTSP pipeline for event alert + probe-side Kafka + live preview.
+    f"""Generate YOLO segmentation RTSP pipeline with OSD preview sink.
 
-    Requires ``enable_visualized_rtsp=True``.
     Set ``analyzer=None`` to skip nvdsanalytics. Set ``tracker=None`` to skip nvtracker.
-    Does not insert ``nvmsgconv`` / ``nvmsgbroker``;
-    DeepStream attaches ``BaseProbe`` on ``analyzer`` for ``EventMessager`` and appsink
-    capture branches.
     {VIS_RTSP_TOPOLOGY_DOC}
     """
 
-    def __init__(
-        self,
-        streams: dict[str, dict],
-        enable_visualized_rtsp: bool,
-        analyzer: dict | None,
-        pgie: dict,
-        tracker: dict | None = None,
-        interval: int = 0,
-    ) -> None:
-        super().__init__(
-            streams=streams,
-            enable_visualized_rtsp=enable_visualized_rtsp,
-            analyzer=analyzer,
-            pgie=pgie,
-            tracker=tracker,
-            interval=interval,
-        )
-
-    def init_pgie(self) -> None:
-        super().init_pgie()
+    def apply_pgie_config(self) -> None:
         self.pgie_generator.config = copy.deepcopy(YoloSeg)
         self.pgie_generator.update_config()
         self.pgie_yml = self.pgie_generator.config

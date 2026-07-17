@@ -1,0 +1,5 @@
+# Prerequisite: servers/generator/scripts/3_generate.sh --config yolo26n_det_sahi_video
+
+type: BaseVideoPipeline
+name: yolo26n-det-sahi-video
+config_dir: /root/configs/generator/yolo26n_det_sahi_video

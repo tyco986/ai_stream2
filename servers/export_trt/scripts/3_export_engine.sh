@@ -8,7 +8,7 @@ ENDPOINT="${API_URL}/ai_stream2/export_trt/export_engine"
 
 usage() {
   cat <<EOF
-usage: $0 --input path/to/onnx_folder [--batch-size N] [--precision fp16|fp32|int8]
+usage: $0 --input path/to/onnx_folder [--batch-size N] [--precision fp16|fp32|int8] [--builder-optimization-level N]
 
 Export TensorRT engine under models/trt/{name}/ via Export TRT API.
 
@@ -16,6 +16,7 @@ Options:
   --input PATH         ONNX folder under models/ (required)
   --batch-size N       Batch size for dynamic ONNX (default: omit)
   --precision VALUE    Engine precision: fp32, fp16, int8 (default: fp16)
+  --builder-optimization-level N  trtexec builderOptimizationLevel (default: omit)
 
 Prerequisites: 1_build_image.sh, 2_run_container.sh
 EOF
@@ -24,6 +25,7 @@ EOF
 INPUT=""
 BATCH_SIZE=""
 PRECISION="fp16"
+BUILDER_OPTIMIZATION_LEVEL=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -37,6 +39,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --precision)
       PRECISION="$2"
+      shift 2
+      ;;
+    --builder-optimization-level)
+      BUILDER_OPTIMIZATION_LEVEL="$2"
       shift 2
       ;;
     -h|--help)
@@ -67,7 +73,8 @@ HTTP_CODE="$(curl -sS -w "%{http_code}" -o /tmp/export_trt_response.json \
   -X POST "${ENDPOINT}" \
   -F "input=${CONTAINER_INPUT}" \
   -F "precision=${PRECISION}" \
-  ${BATCH_SIZE:+-F "batch_size=${BATCH_SIZE}"})"
+  ${BATCH_SIZE:+-F "batch_size=${BATCH_SIZE}"} \
+  ${BUILDER_OPTIMIZATION_LEVEL:+-F "builder_optimization_level=${BUILDER_OPTIMIZATION_LEVEL}"})"
 
 cat /tmp/export_trt_response.json
 echo

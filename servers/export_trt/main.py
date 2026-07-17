@@ -151,10 +151,13 @@ class ExportTrtServer:
         batch_size: int | None = Form(None),
         gpu_id: int = Form(0),
         precision: str = Form(DEFAULT_PRECISION),
+        builder_optimization_level: int | None = Form(None),
     ) -> Response:
         return self.handle(
             "export_engine",
-            lambda: self.run_export_engine(input, batch_size, gpu_id, precision),
+            lambda: self.run_export_engine(
+                input, batch_size, gpu_id, precision, builder_optimization_level
+            ),
         )
 
     def run_export_engine(
@@ -163,8 +166,11 @@ class ExportTrtServer:
         batch_size: int | None,
         gpu_id: int,
         precision: str,
+        builder_optimization_level: int | None,
     ) -> dict:
-        bundle_dir = self.runner.run(input_path, batch_size, gpu_id, precision)
+        bundle_dir = self.runner.run(
+            input_path, batch_size, gpu_id, precision, builder_optimization_level
+        )
         return json_ok(message=str(bundle_dir))
 
 

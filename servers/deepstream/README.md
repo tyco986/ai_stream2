@@ -2,6 +2,27 @@
 
 在 DeepStream 容器内运行的 FastAPI 服务：按模板 build 并后台启动 pipeline。停止由 `docker stop` 接管。
 
+## 镜像分层
+
+| 镜像 | 构建 | 用途 |
+|------|------|------|
+| `ai_stream2_deepstream_dev` | `1_build_dev_image.sh` | 开发：运行时依赖 + `/opt/ai_stream2/servers/deepstream/libs` |
+| `ai_stream2_deepstream_prod` | `1_build_prod_image.sh` | 生产：dev + 内置 `servers/deepstream` 代码 |
+
+原生 `.so` 固定在容器路径 `/opt/ai_stream2/servers/deepstream/libs`，不映射到宿主机。
+
+## 开发与生产
+
+```bash
+# 开发：挂代码，改 Python 后 restart 即可
+./servers/deepstream/scripts/1_build_dev_image.sh   # 改 pip / patch / native 后
+./servers/deepstream/scripts/2_run_dev_container.sh
+
+# 生产：代码打进镜像
+./servers/deepstream/scripts/1_build_prod_image.sh
+./servers/deepstream/scripts/2_run_prod_container.sh
+```
+
 ## 运行
 
 ```bash
@@ -12,10 +33,11 @@ python main.py --host 0.0.0.0 --port 8092
 API 基址：`http://127.0.0.1:8092`  
 Swagger：`http://127.0.0.1:8092/docs`
 
-## 目录挂载（推荐）
+## 目录挂载
 
 | 宿主机 | 容器路径 | 用途 |
 |--------|----------|------|
+| `servers/deepstream` | `/app` | 开发模式：Python 代码 |
 | `configs/` | `/root/configs` | pipeline / 模型配置 |
 | `models/` | `/root/models` | TensorRT 模型 |
 | `logs/` | `/root/logs` | 服务日志 |
@@ -28,7 +50,7 @@ Swagger：`http://127.0.0.1:8092/docs`
 
 ### start_pipeline
 
-见 `servers/deepstream/templates/*.yml`（`type` / `name` / `config_dir` / `logger` / `messager` / `drawer`）。
+见 `servers/deepstream/templates/`（含 `yolo/`、`base/` 等子目录下的 `*.yml`：`type` / `name` / `config_dir` / `logger` / `messager` / `drawer`）。
 
 ### 响应
 
@@ -41,10 +63,7 @@ Swagger：`http://127.0.0.1:8092/docs`
 ## 典型流程
 
 ```bash
-# start（build + 后台运行）
-./servers/deepstream/scripts/3_start_pipeline.sh --config det_rtsp_pipeline
-
-# stop
+./servers/deepstream/scripts/3_start_pipeline.sh --config smoke_fire_pipeline
 docker stop ai_stream2_deepstream
 ```
 
@@ -54,7 +73,7 @@ docker stop ai_stream2_deepstream
 |------|------|------|
 | `HOST` | `0.0.0.0` | 监听地址 |
 | `PORT` | `8092` | 监听端口 |
-| `LOG_ROOT` | `/root/logs/deepstream` | 日志目录（`app.log`，10MB × 10 轮转） |
+| `LOG_ROOT` | `/root/logs/deepstream` | 日志目录 |
 
 ## 日志
 

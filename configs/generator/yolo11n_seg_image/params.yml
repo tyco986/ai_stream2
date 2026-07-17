@@ -1,5 +1,5 @@
 generator: SegImageGenerator
-input: /root/attachments/images/test.png
+input: /root/attachments/images/video1.png
 output: /root/outputs/deepstream/yolo11n_seg_image.jpg
 pgie:
   model_dir: /root/models/trt/yolo11n-seg

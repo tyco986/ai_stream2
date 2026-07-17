@@ -30,7 +30,6 @@ Swagger：`http://127.0.0.1:8090/docs`
 | GET | `/ai_stream2/dsyolo/hello_world` | 健康检查 |
 | POST | `/ai_stream2/dsyolo/export_yolo26` | YOLO26 检测 |
 | POST | `/ai_stream2/dsyolo/export_yolo11` | YOLO11 检测 |
-| POST | `/ai_stream2/dsyolo/export_yolo11_pose` | YOLO11 姿态 |
 | POST | `/ai_stream2/dsyolo/export_yolo11_seg` | YOLO11 分割 |
 
 ### 导出参数
@@ -69,7 +68,6 @@ curl -s -X POST http://127.0.0.1:8090/ai_stream2/dsyolo/export_yolo26 \
 |------|------|
 | `3_export_yolo26.sh` | YOLO26 检测 |
 | `3_export_yolo11.sh` | YOLO11 检测 |
-| `3_export_yolo11_pose.sh` | YOLO11 姿态 |
 | `3_export_yolo11_seg.sh` | YOLO11 分割 |
 | `3_export_yolo11_seg_sahi.sh` | YOLO11 SAHI 分割 |
 

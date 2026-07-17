@@ -1,11 +1,10 @@
 import copy
 
-from pathlib import Path
+from ..base_generator import BaseVideoGenerator, VIDEO_TOPOLOGY_DOC
+from ..subelement_generator import YoloSeg
 
-from .det_video import DetVideoGenerator, VIDEO_TOPOLOGY_DOC
-from .utils import YoloSeg
 
-class SegVideoGenerator(DetVideoGenerator):
+class SegVideoGenerator(BaseVideoGenerator):
     GENERATOR = "SegVideoGenerator"
 
     f"""Generate YOLO segmentation video pipeline YAML.
@@ -15,26 +14,7 @@ class SegVideoGenerator(DetVideoGenerator):
     {VIDEO_TOPOLOGY_DOC}
     """
 
-    def __init__(
-        self,
-        input: str | Path,
-        output: str | Path,
-        analyzer: dict | None,
-        pgie: dict,
-        tracker: dict | None = None,
-        interval: int = 0,
-    ) -> None:
-        super().__init__(
-            input=input,
-            output=output,
-            analyzer=analyzer,
-            pgie=pgie,
-            tracker=tracker,
-            interval=interval,
-        )
-
-    def init_pgie(self) -> None:
-        super().init_pgie()
+    def apply_pgie_config(self) -> None:
         self.pgie_generator.config = copy.deepcopy(YoloSeg)
         self.pgie_generator.update_config()
         self.pgie_yml = self.pgie_generator.config

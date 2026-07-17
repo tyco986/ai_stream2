@@ -1,9 +1,8 @@
 PIPELINE_GENERATOR = {
-    "DetRTSPPipeline": "DetVisRTSPGenerator",
-    "SegRTSPPipeline": "SegVisRTSPGenerator",
-    "PoseRTSPPipeline": "PoseVisRTSPGenerator",
-    "DetSahiRTSPPipeline": "DetSahiVisRTSPGenerator",
-    "SegSahiRTSPPipeline": "SegSahiVisRTSPGenerator",
+    "DetVisRTSPPipeline": "DetVisRTSPGenerator",
+    "SegVisRTSPPipeline": "SegVisRTSPGenerator",
+    "DetSahiVisRTSPPipeline": "DetSahiVisRTSPGenerator",
+    "SegSahiVisRTSPPipeline": "SegSahiVisRTSPGenerator",
 }
 
 PIPELINE_MAP = PIPELINE_GENERATOR

@@ -16,7 +16,7 @@ Generate DeepStream pipeline configs via Generator API.
 Options:
   --config PATH   Generator YAML (e.g. yolo26n_det_rtsp or servers/generator/templates/...)
 
-Prerequisites: 1_build_image.sh, 2_run_container.sh
+Prerequisites: 1_build_dev_image.sh or 1_build_prod_image.sh, 2_run_dev_container.sh or 2_run_prod_container.sh
 EOF
 }
 
@@ -44,18 +44,22 @@ done
 
 resolve_config_path() {
   local path="$1"
+  local candidate
   if [[ -f "$path" ]]; then
     realpath "$path"
     return
   fi
-  if [[ -f "${TEMPLATES_DIR}/${path}.yaml" ]]; then
-    realpath "${TEMPLATES_DIR}/${path}.yaml"
-    return
-  fi
-  if [[ -f "${TEMPLATES_DIR}/${path}" ]]; then
-    realpath "${TEMPLATES_DIR}/${path}"
-    return
-  fi
+  for candidate in \
+    "${TEMPLATES_DIR}/${path}.yaml" \
+    "${TEMPLATES_DIR}/${path}" \
+    "${TEMPLATES_DIR}"/*/"${path}.yaml" \
+    "${TEMPLATES_DIR}"/*/"${path}"
+  do
+    if [[ -f "$candidate" ]]; then
+      realpath "$candidate"
+      return
+    fi
+  done
   echo ""
 }
 

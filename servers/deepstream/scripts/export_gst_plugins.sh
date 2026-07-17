@@ -13,7 +13,7 @@ REMOTE_OUT="/tmp/deepstream_gst_plugins_out"
 
 if ! docker inspect "${CONTAINER}" >/dev/null 2>&1; then
   echo "Container not found: ${CONTAINER}" >&2
-  echo "Start it with: ${SCRIPT_DIR}/2_run_container.sh" >&2
+  echo "Start it with: ${SCRIPT_DIR}/2_run_dev_container.sh" >&2
   exit 1
 fi
 

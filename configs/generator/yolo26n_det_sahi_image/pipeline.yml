@@ -3,7 +3,7 @@ deepstream:
   - type: nvurisrcbin
     name: src
     properties:
-      uri: file:///root/attachments/images/test.png
+      uri: file:///root/attachments/images/video1.png
       disable-audio: true
       select-rtp-protocol: 4
       num-buffers: 1

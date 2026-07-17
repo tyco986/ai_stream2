@@ -1,25 +1,37 @@
 # Generator API
 
-在 `ai_stream2_generator` 镜像中运行的 FastAPI 服务，根据 YOLO 模型与输入源生成 DeepStream pipeline 配置（`pipeline.yml`、`pgie.yml`、`params.yml` 等）。
+在 Generator 容器内运行的 FastAPI 服务，根据 YOLO 模型与输入源生成 DeepStream pipeline 配置（`pipeline.yml`、`pgie.yml`、`params.yml` 等）。
 
-## 构建与运行
+## 镜像分层
+
+| 镜像 | 构建 | 用途 |
+|------|------|------|
+| `ai_stream2_generator_dev` | `1_build_dev_image.sh` | 开发：运行时依赖 |
+| `ai_stream2_generator_prod` | `1_build_prod_image.sh` | 生产：dev + 内置 `servers/generator` 代码 |
+
+## 开发与生产
 
 ```bash
-# 项目根目录
-./servers/generator/scripts/1_build_image.sh
-./servers/generator/scripts/2_run_container.sh
+# 开发：挂代码，改 Python 后 restart 即可
+./servers/generator/scripts/1_build_dev_image.sh   # 改 pip 依赖后
+./servers/generator/scripts/2_run_dev_container.sh
+
+# 生产：代码打进镜像
+./servers/generator/scripts/1_build_prod_image.sh
+./servers/generator/scripts/2_run_prod_container.sh
 ```
 
 API：`http://127.0.0.1:8091/ai_stream2/generator/generate`  
 Swagger：`http://127.0.0.1:8091/docs`（试调入口；完整说明见本文）  
 容器名：`ai_stream2_generator`
 
-## 目录
+## 目录挂载
 
 | 宿主机 | 容器路径 | 用途 |
 |--------|----------|------|
+| `servers/generator` | `/app` | 开发模式：Python 代码 |
 | `models/` | `/root/models` | 读取 TRT 模型（`pgie_model_dir`） |
-| `configs/generator/{name}/` | `/root/configs/generator/{name}/` | 模板默认输出目录（`servers/generator/templates/*.yaml` 中 `config_save_dir`） |
+| `configs/generator/{name}/` | `/root/configs/generator/{name}/` | 模板默认输出目录（`servers/generator/templates/**/*.yaml` 中 `config_save_dir`） |
 | `logs/` | `/root/logs` | 服务日志（`LOG_ROOT` 默认 `/root/logs/generator`） |
 
 ## 接口
@@ -30,7 +42,7 @@ Swagger：`http://127.0.0.1:8091/docs`（试调入口；完整说明见本文）
 
 ### 请求
 
-`multipart/form-data`，字段 `input`：generator YAML 文件（与 `servers/generator/templates/*.yaml` 同结构）。
+`multipart/form-data`，字段 `input`：generator YAML 文件（与 `servers/generator/templates/**/*.yaml` 同结构）。
 
 YAML 中相对路径 `models/*`、`configs/*` 会在服务端映射为 `/root/models/*`、`/root/configs/*`。
 
@@ -40,15 +52,12 @@ YAML 中相对路径 `models/*`、`configs/*` 会在服务端映射为 `/root/mo
 |-----------|------|
 | `YoloDetImageGenerator` | 单张图片检测 |
 | `YoloSegImageGenerator` | 单张图片分割 |
-| `YoloPoseImageGenerator` | 单张图片姿态 |
 | `YoloDetSahiImageGenerator` | 单张图片 SAHI 检测 |
 | `YoloDetVideoGenerator` | 视频文件检测 |
 | `YoloSegVideoGenerator` | 视频文件分割 |
-| `YoloPoseVideoGenerator` | 视频文件姿态 |
 | `YoloDetSahiVideoGenerator` | 视频文件 SAHI 检测 |
 | `YoloDetRTSPGenerator` | 多路 RTSP 检测 |
 | `YoloSegRTSPGenerator` | 多路 RTSP 分割 |
-| `YoloPoseRTSPGenerator` | 多路 RTSP 姿态 |
 | `YoloDetSahiRTSPGenerator` | 多路 RTSP SAHI 检测 |
 
 ### 公共字段
@@ -63,12 +72,12 @@ YAML 中相对路径 `models/*`、`configs/*` 会在服务端映射为 `/root/mo
 | `enable_kafka` | 是否输出 Kafka 元数据分支 |
 
 Image / Video 额外字段：`input`、`output`。  
-RTSP 额外字段：`streams`、`enable_visualized_rtsp`、`enable_nvtracker`、`interval`、`nvdsanalytics_config`。  
+RTSP 额外字段：`streams`、`enable_nvtracker`、`interval`、`nvdsanalytics_config`。  
 SAHI 额外字段：`sahi_config`。
 
 生成目录中除 pipeline 相关 YAML 外，还会写入 `params.yml`（完整入参快照，含 `generator`）。
 
-`pgie_model_dir` 要求见 `utils/yolo_generator/utils/pgie_parser.py`。RTSP 生成时会探测流地址，且多路流分辨率需一致。
+`pgie_model_dir` 要求见 `utils/subelement_generator/utils/pgie_parser.py`。RTSP 生成时会探测流地址，且多路流分辨率需一致。
 
 ### 响应格式
 
@@ -88,17 +97,17 @@ SAHI 额外字段：`sahi_config`。
 
 ```bash
 curl -s -X POST http://127.0.0.1:8091/ai_stream2/generator/generate \
-  -F "input=@servers/generator/templates/yolo26n_det_image.yaml"
+  -F "input=@servers/generator/templates/yolo/yolo26n_det_image.yaml"
 ```
 
 ## 命令行
 
 ```bash
 ./servers/generator/scripts/3_generate.sh --config yolo26n_det_rtsp
-./servers/generator/scripts/3_generate.sh --config servers/generator/templates/yolo26n_det_image.yaml
+./servers/generator/scripts/3_generate.sh --config servers/generator/templates/yolo/yolo26n_det_image.yaml
 ```
 
-`--config` 可为 `servers/generator/templates/` 下 YAML 路径，或模板名（不含 `.yaml`）。路径映射在服务端完成。
+`--config` 可为 `servers/generator/templates/` 下 YAML 路径，或模板名（不含 `.yaml`，会在子目录中解析）。路径映射在服务端完成。
 
 旧 DeepStream 容器内生成脚本见 `servers/deepstream/scripts/deepstream/3_generate_pipeline.sh`（已弃用，请用本服务）。
 

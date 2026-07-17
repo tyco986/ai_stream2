@@ -17,6 +17,7 @@ pgie:
       conf: 0.4
   class_on: null
 analyzer: null
-tracker: null
+tracker:
+  class_id: 0
 interval: 50
 config_save_dir: /root/configs/generator/yolo26n_det_rtsp

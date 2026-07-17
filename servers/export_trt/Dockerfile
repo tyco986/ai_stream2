@@ -31,9 +31,6 @@ cp /root/src/DeepStream-Yolo-master/nvdsinfer_custom_impl_Yolo/libnvdsinfer_cust
 make -C /root/src/DeepStream-Yolo-Face-master/nvdsinfer_custom_impl_Yolo_face clean; \
 make -C /root/src/DeepStream-Yolo-Face-master/nvdsinfer_custom_impl_Yolo_face; \
 cp /root/src/DeepStream-Yolo-Face-master/nvdsinfer_custom_impl_Yolo_face/libnvdsinfer_custom_impl_Yolo_face.so /app/libs/; \
-make -C /root/src/DeepStream-Yolo-Pose-master/nvdsinfer_custom_impl_Yolo_pose clean; \
-make -C /root/src/DeepStream-Yolo-Pose-master/nvdsinfer_custom_impl_Yolo_pose; \
-cp /root/src/DeepStream-Yolo-Pose-master/nvdsinfer_custom_impl_Yolo_pose/libnvdsinfer_custom_impl_Yolo_pose.so /app/libs/; \
 SM=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader -i 0 2>/dev/null | head -1 | tr -d "." || echo "89"); \
 export SM; \
 make -C /root/src/DeepStream-Yolo-Seg-master/nvdsinfer_custom_impl_Yolo_seg clean; \

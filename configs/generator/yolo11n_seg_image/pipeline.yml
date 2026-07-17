@@ -3,7 +3,7 @@ deepstream:
   - type: nvurisrcbin
     name: src
     properties:
-      uri: file:///root/attachments/images/test.png
+      uri: file:///root/attachments/images/video1.png
       disable-audio: true
       select-rtp-protocol: 4
       num-buffers: 1
@@ -34,7 +34,7 @@ deepstream:
       gpu-id: 0
       display-bbox: true
       display-text: true
-      display-mask: false
+      display-mask: true
   - type: nvvideoconvert
     name: nvvidconv
     properties:

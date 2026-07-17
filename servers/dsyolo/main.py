@@ -115,6 +115,11 @@ class ExportSpec:
 
 
 EXPORT_SPECS: dict[str, ExportSpec] = {
+    "export_yolo10": ExportSpec(
+        SRC_ROOT / "DeepStream-Yolo-master/utils/export_yoloV10.py",
+        "yolo10",
+        "detect",
+    ),
     "export_yolo26": ExportSpec(
         SRC_ROOT / "DeepStream-Yolo-master/utils/export_yolo26.py",
         "yolo26",
@@ -138,11 +143,6 @@ EXPORT_SPECS: dict[str, ExportSpec] = {
         SRC_ROOT / "DeepStream-Yolo-master/utils/export_yolo11.py",
         "yolo11",
         "detect",
-    ),
-    "export_yolo11_pose": ExportSpec(
-        SRC_ROOT / "DeepStream-Yolo-Pose-master/utils/export_yolo11_pose.py",
-        "yolo11",
-        "pose",
     ),
     "export_yolo11_seg": ExportSpec(
         APP_ROOT / "utils/export_yolo11_seg.py",
@@ -171,6 +171,8 @@ def validate_pt(pt_path: Path, family: str, task: str) -> None:
         parts.extend([str(ckpt.get("model", "")), str(ckpt.get("train_args", ""))])
     blob = " ".join(parts).lower()
 
+    if family == "yolo10" and "yolov10" not in blob and "v10detect" not in blob:
+        raise ValueError("weights are not YOLOv10")
     if family == "yolo26" and "yolo26" not in blob:
         raise ValueError("weights are not YOLO26")
     if family == "yolo11" and "yolo11" not in blob:

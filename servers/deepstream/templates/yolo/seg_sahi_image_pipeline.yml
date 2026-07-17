@@ -1,0 +1,15 @@
+# Prerequisite: servers/generator/scripts/3_generate.sh --config yolo11n_seg_sahi_image
+
+type: SegSahiImagePipeline
+name: yolo11n-seg-sahi-image
+config_dir: /root/configs/generator/yolo11n_seg_sahi_image
+drawer:
+  show_label: true
+  show_conf: true
+logger:
+  root: /root/logs/deepstream/yolo11n-seg-sahi-image/probe
+  interval: 0
+messager:
+  topic: deepstream-detections
+  host: ai_stream2_kafka
+  port: 9092

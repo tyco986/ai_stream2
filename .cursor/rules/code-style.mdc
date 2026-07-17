@@ -199,9 +199,3 @@ def evaluate(detection):
         ...
     score = calculate_score(detection)
 ```
-
-## 复用
-
-- 重复逻辑超过两次必须提取为公共方法或 mixin
-- 跨 app 的公共逻辑放 `services/` 或 `utils/`
-- DRF 通用行为用 mixin 封装，不要在每个 ViewSet 里重复

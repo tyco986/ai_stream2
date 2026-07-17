@@ -33,7 +33,7 @@ deepstream:
       gpu-id: 0
       display-bbox: true
       display-text: true
-      display-mask: false
+      display-mask: true
   - type: nvvideoconvert
     name: nvvidconv
     properties:

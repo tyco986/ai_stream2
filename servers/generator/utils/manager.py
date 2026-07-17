@@ -1,28 +1,21 @@
 import shutil
 from pathlib import Path
 
-from .yolo_generator import (
-    DetImageGenerator,
-    DetSahiImageGenerator,
-    SegSahiImageGenerator,
-    SegSahiVideoGenerator,
-    DetVideoGenerator,
-    SegVideoGenerator,
-    PoseVideoGenerator,
-    DetSahiVideoGenerator,
-    SegImageGenerator,
-    PoseImageGenerator,
-    DetRTSPGenerator,
-    DetVisRTSPGenerator,
-    SegRTSPGenerator,
-    SegVisRTSPGenerator,
-    PoseRTSPGenerator,
-    PoseVisRTSPGenerator,
-    DetSahiRTSPGenerator,
-    DetSahiVisRTSPGenerator,
-    SegSahiRTSPGenerator,
-    SegSahiVisRTSPGenerator,
-)
+from .event_generator.det_video_presence import DetVideoPresenceGenerator
+from .event_generator.det_sahi_video_presence import DetSahiVideoPresenceGenerator
+from .event_generator.det_sahi_rtsp_presence import DetSahiRTSPPresenceGenerator
+from .yolo_generator.det_image import DetImageGenerator
+from .yolo_generator.det_sahi_image import DetSahiImageGenerator
+from .yolo_generator.seg_sahi_image import SegSahiImageGenerator
+from .yolo_generator.seg_sahi_video import SegSahiVideoGenerator
+from .yolo_generator.det_video import DetVideoGenerator
+from .yolo_generator.seg_video import SegVideoGenerator
+from .yolo_generator.det_sahi_video import DetSahiVideoGenerator
+from .yolo_generator.seg_image import SegImageGenerator
+from .yolo_generator.det_rtsp import DetRTSPGenerator, DetVisRTSPGenerator
+from .yolo_generator.seg_rtsp import SegRTSPGenerator, SegVisRTSPGenerator
+from .yolo_generator.det_sahi_rtsp import DetSahiRTSPGenerator, DetSahiVisRTSPGenerator
+from .yolo_generator.seg_sahi_rtsp import SegSahiRTSPGenerator, SegSahiVisRTSPGenerator
 
 
 class GeneratorManager:
@@ -32,17 +25,16 @@ class GeneratorManager:
         "SegSahiImageGenerator": SegSahiImageGenerator,
         "SegSahiVideoGenerator": SegSahiVideoGenerator,
         "DetVideoGenerator": DetVideoGenerator,
+        "DetVideoPresenceGenerator": DetVideoPresenceGenerator,
+        "DetSahiVideoPresenceGenerator": DetSahiVideoPresenceGenerator,
+        "DetSahiRTSPPresenceGenerator": DetSahiRTSPPresenceGenerator,
         "SegVideoGenerator": SegVideoGenerator,
-        "PoseVideoGenerator": PoseVideoGenerator,
         "DetSahiVideoGenerator": DetSahiVideoGenerator,
         "SegImageGenerator": SegImageGenerator,
-        "PoseImageGenerator": PoseImageGenerator,
         "DetRTSPGenerator": DetRTSPGenerator,
         "DetVisRTSPGenerator": DetVisRTSPGenerator,
         "SegRTSPGenerator": SegRTSPGenerator,
         "SegVisRTSPGenerator": SegVisRTSPGenerator,
-        "PoseRTSPGenerator": PoseRTSPGenerator,
-        "PoseVisRTSPGenerator": PoseVisRTSPGenerator,
         "DetSahiRTSPGenerator": DetSahiRTSPGenerator,
         "DetSahiVisRTSPGenerator": DetSahiVisRTSPGenerator,
         "SegSahiRTSPGenerator": SegSahiRTSPGenerator,

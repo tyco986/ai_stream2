@@ -1,10 +1,10 @@
 import copy
 
-from .det_image import DetImageGenerator, IMAGE_TOPOLOGY_DOC
-from .utils import YoloSeg
+from ..base_generator import BaseImageGenerator, IMAGE_TOPOLOGY_DOC
+from ..subelement_generator import YoloSeg
 
 
-class SegImageGenerator(DetImageGenerator):
+class SegImageGenerator(BaseImageGenerator):
     GENERATOR = "SegImageGenerator"
 
     f"""Generate YOLO segmentation image pipeline YAML.
@@ -14,8 +14,7 @@ class SegImageGenerator(DetImageGenerator):
     {IMAGE_TOPOLOGY_DOC}
     """
 
-    def init_pgie(self) -> None:
-        super().init_pgie()
+    def apply_pgie_config(self) -> None:
         self.pgie_generator.config = copy.deepcopy(YoloSeg)
         self.pgie_generator.update_config()
         self.pgie_yml = self.pgie_generator.config

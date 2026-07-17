@@ -108,34 +108,34 @@
   ],
   "output_tensor_shapes": [
     [
-      18,
-      18
+      null,
+      null
     ],
     [
-      18,
-      18,
-      18
+      null,
+      null,
+      null
     ],
     [
-      18,
-      18
+      null,
+      null
     ],
     [
-      18,
-      18
+      null,
+      null
     ],
     [
-      18,
-      100,
+      null,
+      10,
       25600
     ]
   ],
-  "bundle_sha256": "11a2640bc5bf9d93315caed6951bbb5af842c303ab660b701b3fd9765176fd87",
+  "bundle_sha256": "49b28d356bbbab773882a3ddc47a005413bbbf97bb7ef2ebd1f5c56345bd9e16",
   "bundle_files": {
-    "yolo11n-seg.onnx": "8413e743eb346bf57ae6db5f895d77c394507a3c01af3f2b49f9bbfa76caa82d"
+    "yolo11n-seg.onnx": "bb6b3b6de9969cbbb19baae0a63e4f506ec05d7ad78758ad303a74a4e4a5bb65"
   },
   "gpu_id": 0,
   "cuda_version": "13.1",
   "tensorrt_version": "101401",
-  "build_time": "2026-07-16T01:56:28.344710+00:00"
+  "build_time": "2026-07-16T04:43:36.723714+00:00"
 }

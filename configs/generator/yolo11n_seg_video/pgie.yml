@@ -18,7 +18,7 @@ property:
   scaling-compute-hw: 0
   net-scale-factor: 0.00392156862745098
   infer-dims: 3;640;640
-  custom-lib-path: /app/libs/libnvdsinfer_custom_impl_Yolo_seg.so
+  custom-lib-path: /opt/ai_stream2/servers/deepstream/libs/libnvdsinfer_custom_impl_Yolo_seg.so
   parse-bbox-instance-mask-func-name: NvDsInferParseYoloSeg
   output-instance-mask: 1
   segmentation-threshold: 0.5

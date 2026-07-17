@@ -1,0 +1,16 @@
+# bash servers/generator/scripts/3_generate.sh --config yolo10x_smoke_fire_video
+#
+# Artifacts: pipeline.yml, pgie.yml, params.yml, ... under config_save_dir.
+
+generator: DetVideoPresenceGenerator
+config_save_dir: /root/configs/generator/yolo10x_smoke_fire_video
+interval: 0
+pgie:
+  model_dir: /root/models/trt/yolov10x-smoke-fire
+  class_attr:
+    all:
+      conf: 0.25
+tracker: null
+analyzer: null
+input: /root/attachments/videos/video2.mp4
+output: /root/outputs/deepstream/yolo10x_smoke_fire_video.mp4
