@@ -2,4 +2,8 @@
 # Run from project root.
 set -euo pipefail
 
-docker build -t ai_stream2_nodejs servers/nodejs
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+# shellcheck source=../../../scripts/load_project_env.sh
+source "${ROOT}/scripts/load_project_env.sh"
+
+docker build -t "${PROJECT_NAME}_nodejs" servers/nodejs

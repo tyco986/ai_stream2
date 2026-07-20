@@ -3,8 +3,10 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+# shellcheck source=../../../scripts/load_project_env.sh
+source "${ROOT}/scripts/load_project_env.sh"
 API_URL="http://127.0.0.1:8092"
-ENDPOINT="${API_URL}/ai_stream2/deepstream/start_pipeline"
+ENDPOINT="${API_URL}/${PROJECT_NAME}/deepstream/start_pipeline"
 TEMPLATES_DIR="${ROOT}/servers/deepstream/templates"
 
 usage() {

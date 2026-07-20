@@ -25,6 +25,8 @@ htmlcov/
 # Environment
 .env
 .env.*
+# Keep committed product slug (not a secrets file)
+!project.env
 
 # IDE
 .vscode/

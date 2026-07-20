@@ -12,7 +12,7 @@ debouncer:
   class_ids: [0, 1]
   threshold: 0.5
   length: 10
-  mode: slide
+  mode: fold
 logger:
   root: /root/logs/deepstream/yolo10x-smoke-fire-video/probe
   interval: 0

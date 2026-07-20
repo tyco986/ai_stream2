@@ -75,22 +75,14 @@ class BaseImageGenerator(PipelineGenerator):
         self.pipeline_yml = self.pipeline
 
     def init_pgie(self) -> None:
-        class_on = self.pgie.get("class_on")
-        if class_on is not None:
-            assert len(class_on) == len(set(class_on)), (
-                "pgie class_on contains duplicate class ids"
-            )
-            class_on = list(set(class_on))
         self.pgie = {
             "model_dir": self.pgie["model_dir"],
-            "class_attr": self.pgie["class_attr"],
-            "class_on": class_on,
+            "class_attrs": self.pgie["class_attrs"],
         }
         self.pgie_config_parser = PgieParser(
             self.pgie["model_dir"],
             self.runtime_batch_size,
-            self.pgie["class_attr"],
-            self.pgie["class_on"],
+            self.pgie["class_attrs"],
             self.interval,
         )
         self.pgie_generator = PgieGenerator(**self.pgie_config_parser.build())
@@ -122,6 +114,7 @@ class BaseImageGenerator(PipelineGenerator):
             parser = NvdsanalyticsParser(
                 self.analyzer["streams"],
                 template,
+                self.analyzer.get("osd_mode", 0),
             )
             parser.validate([IMAGE_STREAM_NAME], self.pgie_config_parser.class_ids)
             config = parser.build([IMAGE_STREAM_NAME], self.width, self.height)

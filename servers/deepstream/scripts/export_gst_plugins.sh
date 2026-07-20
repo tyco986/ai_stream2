@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
-# Export DeepStream GStreamer plugin list from ai_stream2_deepstream into docs/.
+# Export DeepStream GStreamer plugin list from ${PROJECT_NAME}_deepstream into docs/.
 set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+# shellcheck source=../../../scripts/load_project_env.sh
+source "${ROOT}/scripts/load_project_env.sh"
 
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 DS_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 DOCS_DIR="${DS_ROOT}/docs"
 UTILS_SCRIPT="${SCRIPT_DIR}/utils/export_gst_plugins.py"
 
-CONTAINER="${DEEPSTREAM_CONTAINER:-ai_stream2_deepstream}"
+CONTAINER="${DEEPSTREAM_CONTAINER:-${PROJECT_NAME}_deepstream}"
 REMOTE_SCRIPT="/tmp/export_gst_plugins.py"
 REMOTE_OUT="/tmp/deepstream_gst_plugins_out"
 

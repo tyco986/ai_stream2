@@ -7,7 +7,7 @@ config_save_dir: /root/configs/generator/yolo10x_smoke_fire_video
 interval: 0
 pgie:
   model_dir: /root/models/trt/yolov10x-smoke-fire
-  class_attr:
+  class_attrs:
     all:
       conf: 0.25
 tracker: null

@@ -2,4 +2,8 @@
 # Run from project root.
 set -euo pipefail
 
-docker build -f servers/export_trt/Dockerfile -t ai_stream2_export_trt .
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+# shellcheck source=../../../scripts/load_project_env.sh
+source "${ROOT}/scripts/load_project_env.sh"
+
+docker build -f servers/export_trt/Dockerfile -t "${PROJECT_NAME}_export_trt" .

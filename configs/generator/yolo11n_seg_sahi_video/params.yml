@@ -3,10 +3,9 @@ input: /root/attachments/videos/video1.mp4
 output: /root/outputs/deepstream/yolo11n_seg_sahi_video.mp4
 pgie:
   model_dir: /root/models/trt/yolo11n-seg-sahi
-  class_attr:
+  class_attrs:
     all:
       conf: 0.25
-  class_on: null
 analyzer: null
 tracker: null
 interval: 50

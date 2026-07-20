@@ -3,4 +3,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
-docker build -t ai_stream2_dsyolo -f "${ROOT}/servers/dsyolo/Dockerfile" "${ROOT}"
+# shellcheck source=../../../scripts/load_project_env.sh
+source "${ROOT}/scripts/load_project_env.sh"
+
+docker build -t "${PROJECT_NAME}_dsyolo" -f "${ROOT}/servers/dsyolo/Dockerfile" "${ROOT}"

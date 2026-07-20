@@ -4,8 +4,10 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 
-NAME="${DOCKER_SOCKET_PROXY_NAME:-ai_stream2_docker_socket_proxy}"
-NET="${DOCKER_SOCKET_PROXY_NETWORK:-ai_stream2_default}"
+# shellcheck source=../../../scripts/load_project_env.sh
+source "${ROOT}/scripts/load_project_env.sh"
+NAME="${DOCKER_SOCKET_PROXY_NAME:-${PROJECT_NAME}_docker_socket_proxy}"
+NET="${DOCKER_SOCKET_PROXY_NETWORK:-${PROJECT_NAME}_default}"
 IMG="${DOCKER_SOCKET_PROXY_IMAGE:-tecnativa/docker-socket-proxy:latest}"
 HOST_PORT="${DOCKER_SOCKET_PROXY_HOST_PORT:-127.0.0.1:2375}"
 

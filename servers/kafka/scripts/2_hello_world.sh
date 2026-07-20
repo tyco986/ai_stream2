@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-NAME="${KAFKA_CONTAINER_NAME:-ai_stream2_kafka}"
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+# shellcheck source=../../../scripts/load_project_env.sh
+source "${ROOT}/scripts/load_project_env.sh"
+
+NAME="${KAFKA_CONTAINER_NAME:-${PROJECT_NAME}_kafka}"
 TOPIC="${KAFKA_TEST_TOPIC:-hello-world}"
 
 echo "=> cluster health"

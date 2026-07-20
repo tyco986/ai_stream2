@@ -13,7 +13,7 @@ class PgieParser:
     SUPPORTED_YOLO_VERSIONS = ("yolo8", "yolo11", "yolo10", "yolo26")
     CLASS_ATTR_KEY_MAP = {
         "conf": "pre-cluster-threshold",
-        "iou": "nms-iou-threshold",
+        "topk": "topk",
         "detected_min_w": "detected-min-w",
         "detected_min_h": "detected-min-h",
         "detected_max_w": "detected-max-w",
@@ -24,14 +24,12 @@ class PgieParser:
         self,
         model_dir: str | Path,
         runtime_batch_size: int,
-        class_attr: dict,
-        class_on: list[int] | None = None,
+        class_attrs: dict,
         interval: int = 0,
     ) -> None:
         self.model_dir = model_dir
         self.runtime_batch_size = runtime_batch_size
-        self.class_attr = class_attr
-        self.class_on = class_on
+        self.class_attrs = class_attrs
         self.interval = interval
 
         path = Path(model_dir).expanduser().resolve()
@@ -54,9 +52,35 @@ class PgieParser:
 
     def init_class(self) -> None:
         self.num_classes = len(self.meta["classes"])
-        self.class_ids = set(range(self.num_classes))
-        if self.class_on is not None:
-            self.class_ids = set(self.class_on)
+        assert self.class_attrs, "class_attrs cannot be empty"
+
+        has_all = False
+        attr_class_ids = set()
+        for class_key in self.class_attrs:
+            if class_key == "all":
+                has_all = True
+                continue
+            class_id = int(class_key)
+            assert class_id not in attr_class_ids, (
+                f"duplicate class id in class_attrs: {class_id}"
+            )
+            attr_class_ids.add(class_id)
+
+        if attr_class_ids:
+            assert max(attr_class_ids) <= self.num_classes - 1, (
+                f"class_attrs max id must be <= {self.num_classes - 1}"
+            )
+            assert min(attr_class_ids) >= 0, "class_attrs ids must be >= 0"
+
+        if has_all:
+            self.class_ids = set(range(self.num_classes))
+            self.filter_classes = False
+        else:
+            assert attr_class_ids, (
+                "class_attrs must contain all or at least one class id"
+            )
+            self.class_ids = attr_class_ids
+            self.filter_classes = True
 
     def build(self) -> dict:
         precision = self.meta.get("precision")
@@ -84,29 +108,17 @@ class PgieParser:
                 f"engine batch_size {engine_batch_size} for dynamic model"
             )
 
-        assert self.class_on is None or self.class_on, "class_on cannot be empty list"
-        if self.class_on is not None:
-            assert max(self.class_on) <= num_classes - 1, (
-                f"class_on max id must be <= {num_classes - 1}"
-            )
-            assert min(self.class_on) >= 0, "class_on ids must be >= 0"
-            attr_class_ids = {
-                int(class_key) for class_key in self.class_attr if class_key != "all"
-            }
-            assert attr_class_ids <= self.class_ids, (
-                f"class_attr class ids {sorted(attr_class_ids - self.class_ids)} "
-                f"not in class_on"
-            )
+        for attrs in self.class_attrs.values():
+            for key in attrs:
+                assert key in self.CLASS_ATTR_KEY_MAP, (
+                    f"unsupported class_attrs key: {key}"
+                )
 
-        if any("iou" in attrs for attrs in self.class_attr.values()):
-            assert version in ("yolo8", "yolo11"), (
-                f"iou not supported for {version}"
-            )
         class_attrs = {
             ("class-attrs-all" if class_key == "all" else f"class-attrs-{class_key}"): {
                 self.CLASS_ATTR_KEY_MAP[key]: value for key, value in attrs.items()
             }
-            for class_key, attrs in self.class_attr.items()
+            for class_key, attrs in self.class_attrs.items()
         }
 
         filter_out_class_ids = (
@@ -115,7 +127,7 @@ class PgieParser:
                 for class_id in range(num_classes)
                 if class_id not in self.class_ids
             )
-            if self.class_on is not None
+            if self.filter_classes
             else None
         )
 

@@ -18,7 +18,7 @@ from starlette.responses import Response
 
 from utils.export_engine import DEFAULT_PRECISION, ExportEngineRunner
 
-PROJECT_NAME = "ai_stream2"
+PROJECT_NAME = os.environ.get("PROJECT_NAME", "ai_stream2")
 LOG_FORMAT = "[%(asctime)s] %(levelname)s %(name)s: %(message)s"
 DEFAULT_MODEL_ROOT = Path("/root/models")
 DEFAULT_LOG_ROOT = Path(os.environ.get("LOG_ROOT", "/root/logs/export_trt"))

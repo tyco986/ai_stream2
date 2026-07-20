@@ -32,7 +32,7 @@ from utils.pipeline.yolo_pipeline import (
     SegVideoPipeline,
 )
 
-PROJECT_NAME = "ai_stream2"
+PROJECT_NAME = os.environ.get("PROJECT_NAME", "ai_stream2")
 DEFAULT_HOST = os.environ.get("HOST", "0.0.0.0")
 DEFAULT_PORT = int(os.environ.get("PORT", "8092"))
 RUNNER_LOG_ROOT = "/root/logs/deepstream"

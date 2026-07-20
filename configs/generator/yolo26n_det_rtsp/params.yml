@@ -12,10 +12,9 @@ streams:
 generator: DetVisRTSPGenerator
 pgie:
   model_dir: /root/models/trt/yolo26n
-  class_attr:
+  class_attrs:
     all:
       conf: 0.4
-  class_on: null
 analyzer: null
 tracker:
   class_id: 0

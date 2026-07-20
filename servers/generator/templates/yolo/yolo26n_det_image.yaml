@@ -7,7 +7,7 @@ config_save_dir: /root/configs/generator/yolo26n_det_image
 interval: 0
 pgie:
   model_dir: /root/models/trt/yolo26n
-  class_attr:
+  class_attrs:
     all:
       conf: 0.25
 analyzer: null

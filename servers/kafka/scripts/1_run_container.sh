@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-NAME="${KAFKA_CONTAINER_NAME:-ai_stream2_kafka}"
-NET="${KAFKA_NETWORK:-ai_stream2_default}"
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+# shellcheck source=../../../scripts/load_project_env.sh
+source "${ROOT}/scripts/load_project_env.sh"
+
+NAME="${KAFKA_CONTAINER_NAME:-${PROJECT_NAME}_kafka}"
+NET="${KAFKA_NETWORK:-${PROJECT_NAME}_default}"
 IMG="${KAFKA_IMAGE:-docker.redpanda.com/redpandadata/redpanda:v24.1.9}"
 PORT="${KAFKA_HOST_PORT:-19092}"
 

@@ -6,9 +6,11 @@ class NvdsanalyticsParser:
         "direction_detection",
     )
 
-    def __init__(self, streams: list[str], template: dict) -> None:
+    def __init__(self, streams: list[str], template: dict, osd_mode: int = 0) -> None:
         self.streams = streams
         self.template = template
+        # 0: no lines/ROIs/text; 1: lines, ROIs and static labels only; 2: mode 1 plus event info (e.g. counts)
+        self.osd_mode = osd_mode
 
     def validate(self, pipeline_stream_names: list[str], pgie_class_ids: set[int]) -> None:
         stream_name_set = set(pipeline_stream_names)
@@ -48,7 +50,7 @@ class NvdsanalyticsParser:
                 "enable": 1,
                 "config-width": config_width,
                 "config-height": config_height,
-                "osd-mode": 0,
+                "osd-mode": self.osd_mode,
                 "display-font-size": 12,
             },
         }

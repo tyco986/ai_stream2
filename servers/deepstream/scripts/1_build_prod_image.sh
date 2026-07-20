@@ -2,8 +2,12 @@
 # Run from project root. Production image: dev stage + baked application code.
 set -euo pipefail
 
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+# shellcheck source=../../../scripts/load_project_env.sh
+source "${ROOT}/scripts/load_project_env.sh"
+
 docker build \
   --target prod \
   -f servers/deepstream/Dockerfile \
-  -t ai_stream2_deepstream_prod \
+  -t "${PROJECT_NAME}_deepstream_prod" \
   .

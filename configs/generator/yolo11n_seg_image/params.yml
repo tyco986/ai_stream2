@@ -3,10 +3,9 @@ input: /root/attachments/images/video1.png
 output: /root/outputs/deepstream/yolo11n_seg_image.jpg
 pgie:
   model_dir: /root/models/trt/yolo11n-seg
-  class_attr:
+  class_attrs:
     all:
       conf: 0.25
-  class_on: null
 analyzer: null
 interval: 0
 config_save_dir: /root/configs/generator/yolo11n_seg_image

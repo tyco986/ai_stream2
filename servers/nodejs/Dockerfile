@@ -5,6 +5,7 @@ RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/re
 ENV HOST=0.0.0.0
 ENV PORT=5173
 ENV LOG_ROOT=/root/logs/nodejs
+ENV PROJECT_NAME=ai_stream2
 
 WORKDIR /app
 

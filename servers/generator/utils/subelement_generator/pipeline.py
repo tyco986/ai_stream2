@@ -1,9 +1,10 @@
+import os
 from pathlib import Path
 
 import yaml
 
 KAFKA_PROTO_LIB = "/opt/nvidia/deepstream/deepstream/lib/libnvds_kafka_proto.so"
-KAFKA_CONN_STR = "ai_stream2_kafka;9092"
+KAFKA_CONN_STR = f"{os.environ.get('PROJECT_NAME', 'ai_stream2')}_kafka;9092"
 KAFKA_TOPIC = "deepstream-detections"
 TRACKER_LL_LIB = "/opt/nvidia/deepstream/deepstream/lib/libnvds_nvmultiobjecttracker.so"
 

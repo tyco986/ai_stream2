@@ -96,22 +96,14 @@ class BaseRTSPGenerator(PipelineGenerator):
         self.pad_links_yml = self.pad_links
 
     def init_pgie(self) -> None:
-        class_on = self.pgie.get("class_on")
-        if class_on is not None:
-            assert len(class_on) == len(set(class_on)), (
-                "pgie class_on contains duplicate class ids"
-            )
-            class_on = list(set(class_on))
         self.pgie = {
             "model_dir": self.pgie["model_dir"],
-            "class_attr": self.pgie["class_attr"],
-            "class_on": class_on,
+            "class_attrs": self.pgie["class_attrs"],
         }
         self.pgie_config_parser = PgieParser(
             self.pgie["model_dir"],
             self.runtime_batch_size,
-            self.pgie["class_attr"],
-            self.pgie["class_on"],
+            self.pgie["class_attrs"],
             self.interval,
         )
         self.pgie_generator = PgieGenerator(**self.pgie_config_parser.build())
@@ -130,6 +122,7 @@ class BaseRTSPGenerator(PipelineGenerator):
             parser = NvdsanalyticsParser(
                 self.analyzer["streams"],
                 self.analyzer["template"],
+                self.analyzer.get("osd_mode", 0),
             )
             pipeline_stream_names = list(self.streams.keys())
             parser.validate(pipeline_stream_names, self.pgie_config_parser.class_ids)

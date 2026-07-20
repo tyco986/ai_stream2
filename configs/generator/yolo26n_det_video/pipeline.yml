@@ -22,6 +22,15 @@ deepstream:
       config-file-path: /root/configs/generator/yolo26n_det_video/pgie.yml
       batch-size: 1
       gpu-id: 0
+  - type: nvtracker
+    name: tracker
+    properties:
+      ll-lib-file: /opt/nvidia/deepstream/deepstream/lib/libnvds_nvmultiobjecttracker.so
+      ll-config-file: /root/configs/generator/yolo26n_det_video/nvtracker.yml
+      tracker-width: 1920
+      tracker-height: 1056
+      gpu-id: 0
+      operate-on-class-ids: ''
   - type: nvdsanalytics
     name: analyzer
     properties:
@@ -58,7 +67,8 @@ deepstream:
   edges:
     src: mux
     mux: pgie
-    pgie: analyzer
+    pgie: tracker
+    tracker: analyzer
     analyzer: osd
     osd: nvvidconv
     nvvidconv: encoder

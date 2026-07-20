@@ -12,10 +12,9 @@ streams:
 generator: SegSahiVisRTSPGenerator
 pgie:
   model_dir: /root/models/trt/yolo11n-seg-sahi
-  class_attr:
+  class_attrs:
     all:
       conf: 0.25
-  class_on: null
 analyzer: null
 tracker: null
 interval: 50

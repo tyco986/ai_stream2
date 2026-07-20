@@ -156,8 +156,8 @@
 +------------------------------------------------------------------+
 | Add Model                                                    [x] |
 +------------------------------------------------------------------+
-| Name        [ __________________________ ]  [ ] Use file name    |
 | File        [ __________________________ ]  [ Import ]           |
+| Name        [ __________________________ ]  [ ] Use file name    |
 | Type        [ Static              v ]                            |
 | BatchSize   [ 1                     ]                            |
 | Precision   [ FP16                  ]   (read-only)              |
@@ -170,9 +170,9 @@
 
 | 字段 | 控件 | 校验与行为 |
 |------|------|------------|
-| **Name** | 文本输入 | 非空；**全库唯一**（不可与其他模型 **name** 重名）；Save 时 trim；与 **model id** 无关 |
-| **Use file name** | Name 右侧 Checkbox | 勾选为 `true` 时，Name **自动同步**为 File 的 **basename**（不含扩展名）；用户仍可手动改 Name，改 File 时若仍为勾选状态则再次同步 |
 | **File** | 文本展示 + **Import** | **Import** 打开文件浏览器，筛选 `*.pt`；选中后展示文件名；Save 时随 `POST /` 以 **`source_file`（UploadFile）** 提交 |
+| **Name** | 文本输入 | 非空；**全库唯一**（不可与其他模型 **name** 重名）；Save 时 trim；与 **model id** 无关 |
+| **Use file name** | Name 右侧 Checkbox | 勾选为 `true` 时，Name **自动同步**为 File 的 **basename**（不含扩展名）；用户**手动修改 Name** 后自动取消勾选；改 File 时若仍为勾选状态则再次同步 |
 | **Type** | 下拉 | `Static` / `Dynamic`；默认 `Static` |
 | **BatchSize** | 数字输入 | 整数；**>0** 且 **≤128**；默认 `1` |
 | **Precision** | 下拉（禁用） | 写死 **`FP16`**；不可编辑；仅展示 |

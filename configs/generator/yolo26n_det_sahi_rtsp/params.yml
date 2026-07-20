@@ -12,10 +12,9 @@ streams:
 generator: DetSahiVisRTSPGenerator
 pgie:
   model_dir: /root/models/trt/yolo26n-sahi
-  class_attr:
+  class_attrs:
     all:
       conf: 0.25
-  class_on: null
 analyzer: null
 tracker: null
 interval: 50

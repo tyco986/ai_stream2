@@ -21,7 +21,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-PROJECT_NAME = "ai_stream2"
+PROJECT_NAME = os.environ.get("PROJECT_NAME", "ai_stream2")
 TIMESTAMP_PATTERN = re.compile(r"^\d{2}:\d{2}:\d{2}(\.\d{1,3})?$")
 LOG_FORMAT = "[%(asctime)s] %(levelname)s %(name)s: %(message)s"
 FFMPEG_BASE = ("ffmpeg", "-hide_banner", "-loglevel", "warning")
@@ -263,11 +263,12 @@ class FFmpegServer:
         input: UploadFile = File(...),
         rtsp: str | None = Form(None),
         loop: bool = Form(True),
-        mediamtx_host: str = Form("ai_stream2_mediamtx"),
+        mediamtx_host: str | None = Form(None),
         mediamtx_port: int = Form(8554),
     ) -> Response:
+        host = mediamtx_host or f"{PROJECT_NAME}_mediamtx"
         return self.handle("video2rtsp", lambda: self.run_video2rtsp(
-            input, rtsp, loop, mediamtx_host, mediamtx_port
+            input, rtsp, loop, host, mediamtx_port
         ))
 
     def video2rtsp_list(self) -> Response:

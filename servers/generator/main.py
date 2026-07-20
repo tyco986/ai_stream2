@@ -18,7 +18,7 @@ from starlette.responses import Response
 
 from utils.manager import GeneratorManager
 
-PROJECT_NAME = "ai_stream2"
+PROJECT_NAME = os.environ.get("PROJECT_NAME", "ai_stream2")
 LOG_FORMAT = "[%(asctime)s] %(levelname)s %(name)s: %(message)s"
 DEFAULT_LOG_ROOT = Path(os.environ.get("LOG_ROOT", "/root/logs/generator"))
 DEFAULT_HOST = os.environ.get("HOST", "0.0.0.0")

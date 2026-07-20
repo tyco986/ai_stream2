@@ -67,8 +67,7 @@ YAML 中相对路径 `models/*`、`configs/*` 会在服务端映射为 `/root/mo
 | `generator` | 生成器类名（必填） |
 | `config_save_dir` | 配置输出目录（必填；模板见 `servers/generator/templates/`，默认 `/root/configs/generator/{模板名}`） |
 | `pgie_model_dir` | 模型目录，含 `meta.json`、`labels.txt`、唯一 `.engine` |
-| `pgie_class_attr` | 检测阈值等，默认 `{"all": {"conf": 0.25}}` |
-| `pgie_class_on` | 启用的类别 id 列表；省略表示全部类别 |
+| `pgie.class_attrs` | 检测阈值等，默认 `{"all": {"conf": 0.25}}`；含 `all` 则全开，仅数字 key 则启用这些类 |
 | `enable_kafka` | 是否输出 Kafka 元数据分支 |
 
 Image / Video 额外字段：`input`、`output`。  

@@ -7,3 +7,4 @@ probe中使用nvimgcodec直接从GPU落盘图片
 dsyolo中的导出脚本记得添加max_detections
 添加单独针对onnx与trt的测试接口
 sahi的高cpu占用记得解决
+presence_pipeline可以转成使用analyzer做

@@ -22,7 +22,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 from ultralytics import YOLO
 
-PROJECT_NAME = "ai_stream2"
+PROJECT_NAME = os.environ.get("PROJECT_NAME", "ai_stream2")
 LOG_FORMAT = "[%(asctime)s] %(levelname)s %(name)s: %(message)s"
 APP_ROOT = Path(__file__).resolve().parent
 SRC_ROOT = Path("/root/src")
