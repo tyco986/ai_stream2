@@ -2,7 +2,7 @@ generator: DetSahiVideoGenerator
 input: /root/attachments/videos/video1.mp4
 output: /root/outputs/deepstream/yolo26n_det_sahi_video.mp4
 pgie:
-  model_dir: /root/models/trt/yolo26n-sahi
+  model_dir: /root/models/trt/yolo26n
   class_attrs:
     all:
       conf: 0.25

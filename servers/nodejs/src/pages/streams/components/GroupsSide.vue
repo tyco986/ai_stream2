@@ -65,7 +65,7 @@ const { t } = useI18n()
 
 <style scoped>
 .groups-side {
-  width: 260px;
+  width: 240px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -95,17 +95,17 @@ const { t } = useI18n()
   border: none;
   border-radius: 4px;
   background: transparent;
-  cursor: pointer;
   color: #606266;
+  cursor: pointer;
 }
 
 .groups-side__icon:hover:not(:disabled) {
-  background: #ecf5ff;
   color: #409eff;
+  background: #ecf5ff;
 }
 
 .groups-side__icon:disabled {
-  opacity: 0.4;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 </style>

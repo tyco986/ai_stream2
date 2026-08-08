@@ -1,19 +1,15 @@
 import json
-import shutil
 from pathlib import Path
 
-import yaml
-
-from ..subelement_generator.pipeline import PipelineGenerator
-from ..subelement_generator import NvsahipreprocessGenerator
+from ..subelement_generator.nvsahipreprocess import NvsahipreprocessGenerator
 from .base_image import BaseImageGenerator
 from ..subelement_generator.utils.sahi import get_sahi_box, get_sahi_preview
 
 SAHI_IMAGE_TOPOLOGY_DOC = """
     Topology::
 
-        src → mux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
-            → analyzer → osd → nvvidconv → jpegenc → filesink
+        nvurisrcbin → nvstreammux → nvsahipreprocess → nvinfer → queue_sahi → nvsahipostprocess
+            → nvdsanalytics → nvosdbin → nvvideoconvert → nvjpegenc → filesink
 
     Notes::
 
@@ -23,6 +19,21 @@ SAHI_IMAGE_TOPOLOGY_DOC = """
 
 class BaseSahiImageGenerator(BaseImageGenerator):
     SAHI_PREPROCESS_CONFIG_NAME = "nvsahipreprocess.ini"
+    SINK_PATH_TEMPLATES = {
+        "filesink": [
+            "nvurisrcbin",
+            "nvstreammux",
+            "nvsahipreprocess",
+            "nvinfer",
+            "queue_sahi",
+            "nvsahipostprocess",
+            "nvdsanalytics",
+            "nvosdbin",
+            "nvvideoconvert",
+            "nvjpegenc",
+            "filesink",
+        ],
+    }
 
     f"""Generate YOLO SAHI image pipeline YAML.
 
@@ -41,18 +52,13 @@ class BaseSahiImageGenerator(BaseImageGenerator):
         interval: int = 0,
     ) -> None:
         self.sahi = sahi
-        self.input = Path(input).expanduser().resolve()
-        self.output = Path(output).expanduser().resolve()
-        self.analyzer = analyzer
-        self.pgie = pgie
-        self.interval = interval
-        PipelineGenerator.__init__(self)
-        self.init_input()
-        self.init_pgie()
-        self.init_nvdsanalytics()
-        self.init_sahi()
-        self.init_params()
-        self.init_pipeline()
+        super().__init__(
+            input=input,
+            output=output,
+            analyzer=analyzer,
+            pgie=pgie,
+            interval=interval,
+        )
 
     def init_input(self) -> None:
         super().init_input()
@@ -87,46 +93,24 @@ class BaseSahiImageGenerator(BaseImageGenerator):
         super().init_params()
         self.params_yml["sahi"] = self.sahi
 
+    def init_pipeline(self) -> None:
+        self.init_sahi()
+        super().init_pipeline()
+
     def apply_save_paths(self, config_save_dir: Path) -> None:
         super().apply_save_paths(config_save_dir)
         for node in self.pipeline_yml["deepstream"]["nodes"]:
             name = node["name"]
             properties = node.get("properties", {})
-            if name == "sahi_preprocess":
+            if name == "nvsahipreprocess":
                 properties["config-file"] = str(
                     config_save_dir / self.SAHI_PREPROCESS_CONFIG_NAME
                 )
 
-    def write(self, config_save_dir: str | Path) -> None:
-        config_save_dir = Path(config_save_dir)
-        pipeline_save_path = config_save_dir / self.PIPELINE_CONFIG_NAME
-        pgie_save_path = config_save_dir / self.PGIE_CONFIG_NAME
-        nvdsanalytics_save_path = config_save_dir / self.ANALYTICS_CONFIG_NAME
-        params_save_path = config_save_dir / self.PARAMS_NAME
-        sahi_preprocess_save_path = config_save_dir / self.SAHI_PREPROCESS_CONFIG_NAME
-        self.apply_save_paths(config_save_dir)
-        shutil.copy2(
-            self.pgie_config_parser.meta_path,
-            config_save_dir / self.pgie_config_parser.meta_path.name,
+    def write_sahi(self, config_save_dir: Path) -> None:
+        self.nvsahipreprocess_generator.write(
+            config_save_dir / self.SAHI_PREPROCESS_CONFIG_NAME
         )
-        with open(pgie_save_path, "w", encoding="utf-8") as handle:
-            yaml.safe_dump(self.pgie_yml, handle, sort_keys=False, default_flow_style=False)
-        with open(nvdsanalytics_save_path, "w", encoding="utf-8") as handle:
-            yaml.safe_dump(
-                self.nvdsanalytics_yml,
-                handle,
-                sort_keys=False,
-                default_flow_style=False,
-            )
-        with open(pipeline_save_path, "w", encoding="utf-8") as handle:
-            yaml.safe_dump(
-                self.pipeline_yml, handle, sort_keys=False, default_flow_style=False
-            )
-        params = dict(self.params_yml)
-        params["config_save_dir"] = str(config_save_dir)
-        with open(params_save_path, "w", encoding="utf-8") as handle:
-            yaml.safe_dump(params, handle, sort_keys=False, default_flow_style=False)
-        self.nvsahipreprocess_generator.write(sahi_preprocess_save_path)
         sahi = self.sahi["nvsahipreprocess"]
         sahi_info = get_sahi_box(
             image_width=self.width,
@@ -142,10 +126,14 @@ class BaseSahiImageGenerator(BaseImageGenerator):
         with open(config_save_dir / "sahi_slice_info.json", "w", encoding="utf-8") as handle:
             json.dump(sahi_info, handle)
 
+    def write(self, config_save_dir: str | Path) -> None:
+        super().write(config_save_dir)
+        self.write_sahi(Path(config_save_dir))
+
     def add(self) -> None:
         self._append_node(
             "nvurisrcbin",
-            "src",
+            "nvurisrcbin",
             self._add_nvurisrcbin(
                 self.file_uri(self.input),
                 disable_audio=True,
@@ -154,7 +142,7 @@ class BaseSahiImageGenerator(BaseImageGenerator):
         )
         self._append_node(
             "nvstreammux",
-            "mux",
+            "nvstreammux",
             self._add_nvstreammux(
                 batch_size=self.mux_batch_size,
                 width=self.width,
@@ -169,7 +157,7 @@ class BaseSahiImageGenerator(BaseImageGenerator):
         postprocess = self.sahi["nvsahipostprocess"]
         self._append_node(
             "nvsahipreprocess",
-            "sahi_preprocess",
+            "nvsahipreprocess",
             self._add_nvsahipreprocess(
                 self.SAHI_PREPROCESS_CONFIG_NAME,
                 slice_width=sahi["slice_width"],
@@ -182,7 +170,7 @@ class BaseSahiImageGenerator(BaseImageGenerator):
         )
         self._append_node(
             "nvinfer",
-            "pgie",
+            "nvinfer",
             self._add_nvinfer(
                 config_file_path=self.PGIE_CONFIG_NAME,
                 batch_size=self.pgie_generator.batch_size,
@@ -193,7 +181,7 @@ class BaseSahiImageGenerator(BaseImageGenerator):
         self._append_node("queue", "queue_sahi", self._add_queue())
         self._append_node(
             "nvsahipostprocess",
-            "sahi_postprocess",
+            "nvsahipostprocess",
             self._add_nvsahipostprocess(
                 gie_ids=str(self.pgie_generator.config["property"]["gie-unique-id"]),
                 match_metric=1,
@@ -205,7 +193,7 @@ class BaseSahiImageGenerator(BaseImageGenerator):
         )
         self._append_node(
             "nvdsanalytics",
-            "analyzer",
+            "nvdsanalytics",
             self._add_nvdsanalytics(
                 self.ANALYTICS_CONFIG_NAME,
                 gpu_id=self.pgie_generator.gpu_id,
@@ -214,32 +202,32 @@ class BaseSahiImageGenerator(BaseImageGenerator):
         gpu_id = self.pgie_generator.gpu_id
         self._append_node(
             "nvosdbin",
-            "osd",
+            "nvosdbin",
             self._add_nvosdbin(**self.osd_kwargs(gpu_id)),
         )
         self._append_node(
             "nvvideoconvert",
-            "nvvidconv",
+            "nvvideoconvert",
             self._add_nvvideoconvert(gpu_id=gpu_id),
         )
-        self._append_node("nvjpegenc", "jpegenc", self._add_nvjpegenc())
+        self._append_node("nvjpegenc", "nvjpegenc", self._add_nvjpegenc())
         self._append_node(
             "filesink",
-            "sink",
+            "filesink",
             self._add_filesink(self.output, sync=False, async_=False),
         )
 
     def link(self) -> None:
         edges = {
-            "src": "mux",
-            "mux": "sahi_preprocess",
-            "sahi_preprocess": "pgie",
-            "pgie": "queue_sahi",
-            "queue_sahi": "sahi_postprocess",
-            "sahi_postprocess": "analyzer",
-            "analyzer": "osd",
-            "osd": "nvvidconv",
-            "nvvidconv": "jpegenc",
-            "jpegenc": "sink",
+            "nvurisrcbin": "nvstreammux",
+            "nvstreammux": "nvsahipreprocess",
+            "nvsahipreprocess": "nvinfer",
+            "nvinfer": "queue_sahi",
+            "queue_sahi": "nvsahipostprocess",
+            "nvsahipostprocess": "nvdsanalytics",
+            "nvdsanalytics": "nvosdbin",
+            "nvosdbin": "nvvideoconvert",
+            "nvvideoconvert": "nvjpegenc",
+            "nvjpegenc": "filesink",
         }
         self.pipeline["deepstream"]["edges"] = edges

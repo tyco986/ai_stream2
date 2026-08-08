@@ -39,8 +39,7 @@
     >
       <UiIcon name="clear" :size="16" />
     </button>
-    <div class="preset-bar__spacer" />
-    <div class="preset-bar__mode">
+    <div class="preset-bar__group">
       <button
         type="button"
         class="preset-bar__icon"
@@ -58,6 +57,24 @@
         @click="emit('update:viewMode', 'focus')"
       >
         <UiIcon name="focus" :size="16" />
+      </button>
+    </div>
+    <div class="preset-bar__group">
+      <button
+        type="button"
+        class="preset-bar__icon"
+        :title="allPaused ? t('preview.playAll') : t('preview.pauseAll')"
+        @click="emit('toggle-playback')"
+      >
+        <UiIcon :name="allPaused ? 'videoPlay' : 'videoPause'" :size="16" />
+      </button>
+      <button
+        type="button"
+        class="preset-bar__icon"
+        :title="t('preview.fullScreen')"
+        @click="emit('fullscreen')"
+      >
+        <UiIcon name="fullScreen" :size="16" />
       </button>
     </div>
   </div>
@@ -80,6 +97,7 @@ const props = defineProps<{
   saving: boolean
   presets: LayoutPresetSummary[]
   canClear: boolean
+  allPaused: boolean
 }>()
 
 const emit = defineEmits<{
@@ -90,6 +108,8 @@ const emit = defineEmits<{
   'save-as': []
   clear: []
   manage: []
+  'toggle-playback': []
+  fullscreen: []
 }>()
 
 const { t } = useI18n()
@@ -126,7 +146,8 @@ function onPresetChange(value: string) {
     emit('manage')
     return
   }
-  presetSelectValue.value = value
+  // Keep current selection until parent applies presetId (e.g. after discard confirm).
+  presetSelectValue.value = props.presetId
   emit('change-preset', value)
 }
 </script>
@@ -149,13 +170,11 @@ function onPresetChange(value: string) {
   width: 180px;
 }
 
-.preset-bar__spacer {
-  flex: 1;
-}
-
-.preset-bar__mode {
+.preset-bar__group {
   display: flex;
   gap: 4px;
+  padding-left: 8px;
+  border-left: 1px solid #dcdfe6;
 }
 
 .preset-bar__icon {

@@ -127,7 +127,10 @@ class PipelineGenerator:
             gpu_id: GPU device ID for TensorRT engine execution.
             input_tensor_meta: When True, consume GPU tensors from upstream ``nvsahipreprocess``
                 or ``nvdspreprocess`` instead of decoding frames inside nvinfer. Required for
-                SAHI pipelines (sets ``input-tensor-meta=true``).
+                SAHI pipelines (sets ``input-tensor-meta=true``). Also disables
+                ``clip-object-outside-roi``: clipping shrinks the bbox while leaving the
+                instance mask (RoiAlign over the unclipped box) unchanged, which shifts
+                mask overlays on tile edges.
         """
         properties = {
             "config-file-path": config_file_path,
@@ -136,6 +139,7 @@ class PipelineGenerator:
         }
         if input_tensor_meta:
             properties["input-tensor-meta"] = True
+            properties["clip-object-outside-roi"] = False
         return properties
 
     def _add_nvsahipreprocess(

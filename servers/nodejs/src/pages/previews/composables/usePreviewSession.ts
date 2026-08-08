@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import {
   batchDeleteLayouts,
   DEFAULT_LAYOUT_ID,
@@ -26,7 +26,8 @@ import {
   type Stream,
   type TreeStreamNode,
 } from '@/api/streams'
-import { composeShot } from '../utils/composeShot'
+import { capturePreviewShot } from '../utils/capturePreviewShot'
+import { reconcileSlotMedia } from '../utils/slotMediaHub'
 
 const layout = ref<PreviewLayout>('2x2')
 const slots = ref<(string | null)[]>(Array.from({ length: 4 }, () => null))
@@ -45,6 +46,14 @@ const searchQuery = ref('')
 const filterBoundOnly = ref(false)
 const selectedGroupId = ref<string | null>(null)
 const streamDetailMap = ref(new Map<string, Stream>())
+
+watch(
+  slots,
+  (next) => {
+    reconcileSlotMedia(next)
+  },
+  { deep: true },
+)
 
 export function usePreviewSession() {
   const streamMap = computed(() => {
@@ -95,19 +104,21 @@ export function usePreviewSession() {
   }
 
   function buildShotDataUrl() {
-    const infos = slots.value.map((id) => {
-      if (!id) {
-        return { id: null, name: null }
-      }
-      return {
-        id,
-        name: streamMap.value.get(id)?.name ?? id,
-      }
-    })
-    return composeShot(layout.value, infos)
+    return capturePreviewShot()
   }
 
   async function bootstrap() {
+    // Keep in-memory layout/slots/view_mode across SPA navigations until full reload.
+    if (loaded.value) {
+      const [treeData, layoutList] = await Promise.all([
+        getGroupsTree(),
+        listLayouts(),
+      ])
+      tree.value = treeData
+      presets.value = layoutList.items
+      await syncStreamDetails(slots.value)
+      return
+    }
     const [active, treeData, layoutList] = await Promise.all([
       getActiveLayout(),
       getGroupsTree(),
@@ -165,8 +176,17 @@ export function usePreviewSession() {
     }
     viewMode.value = next
     if (next === 'focus') {
-      focusIndex.value =
-        selectedSlotIndex.value !== null ? selectedSlotIndex.value : 0
+      const firstBound = slots.value.findIndex((id) => id !== null)
+      if (firstBound < 0) {
+        focusIndex.value = 0
+      } else if (
+        selectedSlotIndex.value !== null &&
+        slots.value[selectedSlotIndex.value]
+      ) {
+        focusIndex.value = selectedSlotIndex.value
+      } else {
+        focusIndex.value = firstBound
+      }
     }
     markDirty()
   }
@@ -174,13 +194,16 @@ export function usePreviewSession() {
   function clearSlots() {
     slots.value = Array.from({ length: LAYOUT_SLOT_COUNT[layout.value] }, () => null)
     selectedSlotIndex.value = null
+    focusIndex.value = 0
     markDirty()
   }
 
   function selectSlot(index: number) {
     const same = selectedSlotIndex.value === index
     selectedSlotIndex.value = same ? null : index
-    if (!same) {
+    if (slots.value.every((id) => id === null)) {
+      focusIndex.value = 0
+    } else if (!same) {
       focusIndex.value = index
     }
   }
@@ -192,7 +215,7 @@ export function usePreviewSession() {
     markDirty()
     if (viewMode.value === 'focus' && index === focusIndex.value) {
       const nextBound = next.findIndex((id) => id !== null)
-      focusIndex.value = nextBound >= 0 ? nextBound : index
+      focusIndex.value = nextBound >= 0 ? nextBound : 0
     }
   }
 

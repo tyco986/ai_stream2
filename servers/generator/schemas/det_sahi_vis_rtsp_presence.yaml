@@ -1,0 +1,59 @@
+type: DetSahiVisRTSPPresenceGenerator
+params:
+  streams:
+    available: true
+    params: {}
+  pgie:
+    available: true
+    params: {}
+  interval:
+    available: true
+    default: 0
+  tracker:
+    available: false
+    params:
+      class_id:
+        available: false
+        default:
+        - -1
+  analyzer:
+    available: false
+    params:
+      streams:
+        available: false
+        default: []
+      template:
+        available: false
+        default: null
+      roi_filtering:
+        available: false
+        default:
+          class_id:
+          - -1
+      overcrowding:
+        available: false
+        default: null
+      line_crossing:
+        available: false
+        default: null
+      direction_detection:
+        available: false
+        default: null
+  sahi:
+    available: true
+    params:
+      nvsahipreprocess:
+        available: true
+        default:
+          slice_width: 640
+          slice_height: 640
+          overlap_width_ratio: 0.2
+          overlap_height_ratio: 0.2
+      nvsahipostprocess:
+        available: true
+        default:
+          match_threshold: 0.5
+  input:
+    available: false
+  output:
+    available: false

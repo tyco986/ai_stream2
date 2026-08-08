@@ -8,7 +8,11 @@
     <div class="form">
       <label class="form__row">
         <span>{{ t('streams.name') }}</span>
-        <UiInput :model-value="form.name" @update:model-value="form.name = $event" />
+        <UiInput
+          :model-value="form.name"
+          :invalid="nameInvalid"
+          @update:model-value="form.name = $event"
+        />
       </label>
       <label class="form__row">
         <span>{{ t('streams.group') }}</span>
@@ -18,16 +22,54 @@
           @update:model-value="form.group_id = $event"
         />
       </label>
-      <label class="form__row">
+      <div class="form__row">
         <span>{{ t('streams.url') }}</span>
-        <UiInput :model-value="form.url" @update:model-value="form.url = $event" />
-      </label>
+        <div class="form__url">
+          <UiInput
+            :model-value="form.url"
+            :invalid="urlInvalid"
+            @update:model-value="form.url = $event"
+          />
+          <UiButton
+            class="form__probe-btn"
+            type="primary"
+            :disabled="!form.url.trim()"
+            :loading="probing"
+            @click="emit('probe')"
+          >
+            <span v-if="!probing">{{ t('streams.probe') }}</span>
+          </UiButton>
+        </div>
+      </div>
+      <div class="form__row">
+        <span>{{ t('streams.info') }}</span>
+        <div class="form__info">
+          <UiInput
+            :model-value="infoWidth"
+            :placeholder="t('streams.width')"
+            disabled
+            :clearable="false"
+          />
+          <UiInput
+            :model-value="infoHeight"
+            :placeholder="t('streams.height')"
+            disabled
+            :clearable="false"
+          />
+          <UiInput
+            :model-value="infoFps"
+            :placeholder="t('streams.fps')"
+            disabled
+            :clearable="false"
+          />
+        </div>
+      </div>
       <div class="form__row">
         <span>{{ t('streams.enabled') }}</span>
         <UiRadioGroup
           :model-value="form.enabled"
           :options="onOffOptions"
-          @update:model-value="form.enabled = Boolean($event)"
+          @update:model-value="onEnabledUpdate"
         />
       </div>
       <div class="form__row">
@@ -35,21 +77,20 @@
         <UiRadioGroup
           :model-value="form.recording"
           :options="onOffOptions"
+          :disabled="!form.enabled"
           @update:model-value="form.recording = Boolean($event)"
         />
       </div>
-      <div class="form__test">
-        <UiButton type="primary" :loading="testing" @click="emit('test')">
-          {{ t('streams.test') }}
-        </UiButton>
-      </div>
-      <div v-if="testInfo" class="form__test-info">{{ testInfo }}</div>
-      <div v-if="error" class="form__error">{{ error }}</div>
     </div>
     <template #footer>
       <UiButton @click="emit('update:modelValue', false)">{{ t('streams.cancel') }}</UiButton>
-      <UiButton type="primary" :loading="saving" @click="emit('save')">
-        {{ t('streams.save') }}
+      <UiButton
+        class="form__save-btn"
+        type="primary"
+        :loading="saving"
+        @click="emit('save')"
+      >
+        <span v-if="!saving">{{ t('streams.save') }}</span>
       </UiButton>
     </template>
   </UiDialog>
@@ -72,15 +113,16 @@ const props = defineProps<{
   groups: Group[]
   defaultGroupId: string
   saving: boolean
-  testing: boolean
-  testInfo: string
-  error: string
+  probing: boolean
+  nameInvalid: boolean
+  urlInvalid: boolean
+  probe: { resolution: string | null; fps: number | null } | null
 }>()
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
   save: []
-  test: []
+  probe: []
   'update:form': [
     form: {
       name: string
@@ -114,6 +156,28 @@ const onOffOptions = computed(() => [
   { label: t('streams.on'), value: true },
   { label: t('streams.off'), value: false },
 ])
+
+const infoWidth = computed(() => {
+  const match = /^(\d+)\s*[x×]\s*(\d+)$/i.exec(props.probe?.resolution?.trim() || '')
+  return match ? match[1] : ''
+})
+
+const infoHeight = computed(() => {
+  const match = /^(\d+)\s*[x×]\s*(\d+)$/i.exec(props.probe?.resolution?.trim() || '')
+  return match ? match[2] : ''
+})
+
+const infoFps = computed(() => {
+  const fps = props.probe?.fps
+  return fps == null ? '' : String(fps)
+})
+
+function onEnabledUpdate(value: string | boolean | number) {
+  form.enabled = Boolean(value)
+  if (!form.enabled) {
+    form.recording = false
+  }
+}
 
 watch(
   () => [props.modelValue, props.stream, props.mode, props.defaultGroupId] as const,
@@ -160,17 +224,34 @@ watch(
   gap: 8px;
 }
 
-.form__test :deep(.el-button) {
-  width: 100%;
+.form__url {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
-.form__test-info {
-  color: #67c23a;
-  font-size: 13px;
+.form__url .ui-input {
+  flex: 1;
+  min-width: 0;
 }
 
-.form__error {
-  color: #f56c6c;
-  font-size: 13px;
+.form__url :deep(.el-button) {
+  flex-shrink: 0;
+}
+
+.form__probe-btn {
+  min-width: 72px;
+}
+
+.form__info {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  min-width: 0;
+}
+
+.form__save-btn {
+  min-width: 72px;
 }
 </style>

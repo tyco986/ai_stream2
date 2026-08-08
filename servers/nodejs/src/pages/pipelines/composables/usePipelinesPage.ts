@@ -27,10 +27,18 @@ const listLoading = ref(false)
 const pollingIds = ref(new Set<string>())
 
 export function usePipelinesPage() {
-  function updateRowStatus(pipelineId: string, status: PipelineStatus) {
+  function updateRowStatus(
+    pipelineId: string,
+    status: PipelineStatus,
+    lastRefreshAt?: string | null,
+  ) {
     rows.value = rows.value.map((row) => {
       if (row.id === pipelineId) {
-        return { ...row, status }
+        const next = { ...row, status }
+        if (lastRefreshAt !== undefined) {
+          next.last_refresh_at = lastRefreshAt
+        }
+        return next
       }
       return row
     })
@@ -90,7 +98,7 @@ export function usePipelinesPage() {
       await new Promise((resolve) => setTimeout(resolve, intervalMs))
       const result = await getPipelineStatus(pipelineId)
       lastStatus = result.status
-      updateRowStatus(pipelineId, result.status)
+      updateRowStatus(pipelineId, result.status, result.last_refresh_at)
       if (terminalStatuses.includes(result.status)) {
         return result.status
       }

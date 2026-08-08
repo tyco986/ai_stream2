@@ -1,0 +1,11 @@
+generator: SegImageGenerator
+input: /root/attachments/images/video1.png
+output: /root/outputs/deepstream/yolo26n_seg_image.jpg
+pgie:
+  model_dir: /root/models/trt/yolo26n-seg
+  class_attrs:
+    all:
+      conf: 0.25
+analyzer: null
+interval: 0
+config_save_dir: /root/configs/generator/yolo26n_seg_image

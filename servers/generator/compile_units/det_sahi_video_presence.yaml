@@ -1,0 +1,22 @@
+type: DetSahiVideoPresenceGenerator
+entry: utils/event_generator/det_sahi_video_presence.py
+files:
+- utils/base_generator/base_event_sahi_video.py
+- utils/base_generator/base_event_video.py
+- utils/base_generator/base_sahi_video.py
+- utils/base_generator/base_video.py
+- utils/event_generator/det_sahi_video_presence.py
+- utils/subelement_generator/nvdsanalytics.py
+- utils/subelement_generator/nvsahipreprocess.py
+- utils/subelement_generator/nvtracker.py
+- utils/subelement_generator/pgie.py
+- utils/subelement_generator/pipeline.py
+- utils/subelement_generator/utils/default_pgie/__init__.py
+- utils/subelement_generator/utils/default_pgie/yolo_det.py
+- utils/subelement_generator/utils/default_pgie/yolo_seg.py
+- utils/subelement_generator/utils/nvdsanalytics_parser.py
+- utils/subelement_generator/utils/nvtracker_parser.py
+- utils/subelement_generator/utils/pgie_parser.py
+- utils/subelement_generator/utils/sahi.py
+- utils/subelement_generator/utils/validate_video.py
+- utils/yolo_generator/det_sahi_video.py

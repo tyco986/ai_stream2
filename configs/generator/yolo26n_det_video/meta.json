@@ -1,7 +1,7 @@
 {
-  "model_type": "dynamic",
-  "input_tensor_name": "input",
-  "output_tensor_name": "output",
+  "batch_mode": "dynamic",
+  "input_tensor_name": "images",
+  "output_tensor_name": "output0",
   "classes": [
     "person",
     "bicycle",
@@ -85,28 +85,30 @@
     "toothbrush"
   ],
   "input_tensor_shape": [
-    2,
+    18,
     3,
     640,
     640
   ],
   "output_tensor_shape": [
-    2,
-    8400,
+    18,
+    30,
     6
   ],
-  "batch_size": 2,
+  "batch_size": 18,
   "precision": "fp16",
   "version": "yolo26",
   "task": "detect",
-  "yolo_export": "deepstream_yolo",
-  "bundle_sha256": "fda64bc5b97aafaffe28f969b2a135f263c770ac255f83448b2593e539f318d2",
+  "yolo_export": "e2e",
+  "max_det": 30,
+  "conf": 0.25,
+  "bundle_sha256": "dfcc666583169608c345b1d0a55dc887f5d7c68913c2209304fe02a16ee3e0af",
   "bundle_files": {
-    "yolo26n.onnx": "2292fce8a66a38a8852f082c342f98b0a8deecc7215305888140f5be7dfcae93",
-    "yolo26n.onnx.data": "bdf9cc4c3b0107fe04d1d27f5f74290538f3504c7bb0614352cf9e6919d44d3c"
+    "yolo26n.onnx": "44b97823008e9453127ec5fd397e522860951f91329c9b35d8acb31b7d0a6a41"
   },
   "gpu_id": 0,
+  "opt_level": null,
   "cuda_version": "13.1",
   "tensorrt_version": "101401",
-  "build_time": "2026-07-15T01:32:49.674698+00:00"
+  "build_time": "2026-08-07T10:58:57.810924+00:00"
 }

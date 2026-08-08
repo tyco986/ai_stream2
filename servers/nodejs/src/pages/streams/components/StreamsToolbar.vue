@@ -2,17 +2,26 @@
   <div class="streams-toolbar">
     <div class="streams-toolbar__actions">
       <UiButton type="primary" @click="emit('add')">{{ t('streams.add') }}</UiButton>
+      <UiButton type="primary" @click="emit('publish')">{{ t('streams.publish') }}</UiButton>
       <UiButton type="danger" :disabled="!hasSelection" @click="emit('remove')">
         {{ t('streams.remove') }}
       </UiButton>
+      <span class="streams-toolbar__divider" />
       <UiButton type="primary" :disabled="!hasSelection" @click="emit('enable')">
         {{ t('streams.enable') }}
       </UiButton>
       <UiButton type="primary" :disabled="!hasSelection" @click="emit('disable')">
         {{ t('streams.disable') }}
       </UiButton>
-      <UiButton type="primary" :disabled="!hasSelection" @click="emit('test')">
-        {{ t('streams.test') }}
+      <UiButton type="primary" :disabled="!hasSelection" @click="emit('probe')">
+        {{ t('streams.probe') }}
+      </UiButton>
+      <span class="streams-toolbar__divider" />
+      <UiButton type="primary" :disabled="!hasSelection" @click="emit('record')">
+        {{ t('streams.record') }}
+      </UiButton>
+      <UiButton type="primary" :disabled="!hasSelection" @click="emit('unrecord')">
+        {{ t('streams.unrecord') }}
       </UiButton>
     </div>
     <div class="streams-toolbar__search">
@@ -37,10 +46,13 @@ defineProps<{
 
 const emit = defineEmits<{
   add: []
+  publish: []
   remove: []
   enable: []
   disable: []
-  test: []
+  probe: []
+  record: []
+  unrecord: []
   'update:search': [value: string]
 }>()
 
@@ -59,7 +71,15 @@ const { t } = useI18n()
 .streams-toolbar__actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
+}
+
+.streams-toolbar__divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background: #dcdfe6;
 }
 
 .streams-toolbar__search {

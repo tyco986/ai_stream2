@@ -1,34 +1,36 @@
 {
-  "model_type": "dynamic",
-  "input_tensor_name": "input",
-  "output_tensor_name": "output",
+  "batch_mode": "dynamic",
+  "input_tensor_name": "images",
+  "output_tensor_name": "output0",
   "classes": [
     "Fire",
     "Smoke"
   ],
   "input_tensor_shape": [
-    2,
+    18,
     3,
     640,
     640
   ],
   "output_tensor_shape": [
-    2,
-    8400,
+    18,
+    30,
     6
   ],
-  "batch_size": 2,
+  "batch_size": 18,
   "precision": "fp16",
   "version": "yolo10",
   "task": "detect",
-  "yolo_export": "deepstream_yolo",
-  "bundle_sha256": "8f790511bf3d328cb0791669ec324ad41b1a2a12bb1d69bd541fb6a81ff251b3",
+  "yolo_export": "e2e",
+  "max_det": 30,
+  "conf": 0.25,
+  "bundle_sha256": "347c9420f2ba96c0f69ef8f17b2074c75a9a073960af62b71761462a2da48428",
   "bundle_files": {
-    "yolov10x-smoke-fire.onnx": "761aca6c0217901c43c0aaa5d4637bc77a1578b76ee1b60fd25343ff6c0e085e",
-    "yolov10x-smoke-fire.onnx.data": "87eed9584251edb563a9b98b247b997dfb674034c4397687ec8d091a6b2ad074"
+    "yolov10x-smoke-fire.onnx": "913f525ef76e3b1f5bce09022fbde1766b61afa2397b77d3a37540ea927a168e"
   },
   "gpu_id": 0,
+  "opt_level": 0,
   "cuda_version": "13.1",
   "tensorrt_version": "101401",
-  "build_time": "2026-07-16T11:39:51.677750+00:00"
+  "build_time": "2026-08-07T11:01:18.768365+00:00"
 }

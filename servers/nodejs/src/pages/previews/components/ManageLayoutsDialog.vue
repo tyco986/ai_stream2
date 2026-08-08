@@ -2,7 +2,7 @@
   <UiDialog
     :model-value="modelValue"
     :title="t('preview.edit')"
-    width="720px"
+    width="840px"
     @update:model-value="emit('update:modelValue', $event)"
   >
     <div class="manage__toolbar">
@@ -30,7 +30,7 @@
           {{ row.layout.replace('x', '×') }}
         </template>
       </UiTableColumn>
-      <UiTableColumn :label="t('preview.operations')" width="100">
+      <UiTableColumn :label="t('preview.operations')" width="120">
         <template #default="{ row }">
           <div class="manage__ops">
             <button

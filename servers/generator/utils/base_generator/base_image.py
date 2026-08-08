@@ -5,7 +5,8 @@ import yaml
 from PIL import Image
 
 from ..subelement_generator.pipeline import PipelineGenerator
-from ..subelement_generator import NvdsanalyticsGenerator, PgieGenerator
+from ..subelement_generator.nvdsanalytics import NvdsanalyticsGenerator
+from ..subelement_generator.pgie import PgieGenerator
 from ..subelement_generator.utils.nvdsanalytics_parser import NvdsanalyticsParser
 from ..subelement_generator.utils.pgie_parser import PgieParser
 
@@ -14,7 +15,7 @@ IMAGE_STREAM_NAME = "image"
 IMAGE_TOPOLOGY_DOC = """
     Topology::
 
-        src → mux → pgie → analyzer → osd → nvvidconv → jpegenc → filesink
+        nvurisrcbin → nvstreammux → nvinfer → nvdsanalytics → nvosdbin → nvvideoconvert → nvjpegenc → filesink
 """
 
 
@@ -23,6 +24,19 @@ class BaseImageGenerator(PipelineGenerator):
     PGIE_CONFIG_NAME = "pgie.yml"
     ANALYTICS_CONFIG_NAME = "nvdsanalytics.yml"
     PARAMS_NAME = "params.yml"
+    SINK_PATH_CONFIG_NAME = "sink_path.yml"
+    SINK_PATH_TEMPLATES = {
+        "filesink": [
+            "nvurisrcbin",
+            "nvstreammux",
+            "nvinfer",
+            "nvdsanalytics",
+            "nvosdbin",
+            "nvvideoconvert",
+            "nvjpegenc",
+            "filesink",
+        ],
+    }
 
     f"""Generate YOLO image pipeline YAML.
 
@@ -124,14 +138,40 @@ class BaseImageGenerator(PipelineGenerator):
         for node in self.pipeline_yml["deepstream"]["nodes"]:
             name = node["name"]
             properties = node.get("properties", {})
-            if name == "pgie":
+            if name == "nvinfer":
                 properties["config-file-path"] = str(
                     config_save_dir / self.PGIE_CONFIG_NAME
                 )
-            if name == "analyzer":
+            if name == "nvdsanalytics":
                 properties["config-file"] = str(
                     config_save_dir / self.ANALYTICS_CONFIG_NAME
                 )
+
+
+    def build_sink_paths(self) -> dict[str, list[str]]:
+        templates = self.SINK_PATH_TEMPLATES
+        indexed = any("{index}" in key for key in templates)
+        sink_paths = {}
+        if indexed:
+            for index in range(len(self.streams)):
+                for key_template, path_template in templates.items():
+                    sink_paths[key_template.format(index=index)] = [
+                        part.format(index=index) for part in path_template
+                    ]
+        else:
+            sink_paths = {key: list(path) for key, path in templates.items()}
+        return sink_paths
+
+    def write_sink_path(self, config_save_dir: Path | str) -> None:
+        path = Path(config_save_dir) / self.SINK_PATH_CONFIG_NAME
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("w", encoding="utf-8") as handle:
+            yaml.safe_dump(
+                self.build_sink_paths(),
+                handle,
+                sort_keys=False,
+                default_flow_style=False,
+            )
 
     def write(self, config_save_dir: str | Path) -> None:
         config_save_dir = Path(config_save_dir)
@@ -157,6 +197,7 @@ class BaseImageGenerator(PipelineGenerator):
             yaml.safe_dump(
                 self.pipeline_yml, handle, sort_keys=False, default_flow_style=False
             )
+        self.write_sink_path(config_save_dir)
         params = dict(self.params_yml)
         params["config_save_dir"] = str(config_save_dir)
         with open(params_save_path, "w", encoding="utf-8") as handle:
@@ -172,7 +213,7 @@ class BaseImageGenerator(PipelineGenerator):
     def add(self) -> None:
         self._append_node(
             "nvurisrcbin",
-            "src",
+            "nvurisrcbin",
             self._add_nvurisrcbin(
                 self.file_uri(self.input),
                 disable_audio=True,
@@ -181,7 +222,7 @@ class BaseImageGenerator(PipelineGenerator):
         )
         self._append_node(
             "nvstreammux",
-            "mux",
+            "nvstreammux",
             self._add_nvstreammux(
                 batch_size=1,
                 width=self.width,
@@ -194,7 +235,7 @@ class BaseImageGenerator(PipelineGenerator):
         )
         self._append_node(
             "nvinfer",
-            "pgie",
+            "nvinfer",
             self._add_nvinfer(
                 config_file_path=self.PGIE_CONFIG_NAME,
                 batch_size=self.pgie_generator.batch_size,
@@ -203,7 +244,7 @@ class BaseImageGenerator(PipelineGenerator):
         )
         self._append_node(
             "nvdsanalytics",
-            "analyzer",
+            "nvdsanalytics",
             self._add_nvdsanalytics(
                 self.ANALYTICS_CONFIG_NAME,
                 gpu_id=self.pgie_generator.gpu_id,
@@ -212,30 +253,30 @@ class BaseImageGenerator(PipelineGenerator):
         gpu_id = self.pgie_generator.gpu_id
         self._append_node(
             "nvosdbin",
-            "osd",
+            "nvosdbin",
             self._add_nvosdbin(**self.osd_kwargs(gpu_id)),
         )
         self._append_node(
             "nvvideoconvert",
-            "nvvidconv",
+            "nvvideoconvert",
             self._add_nvvideoconvert(gpu_id=gpu_id),
         )
-        self._append_node("nvjpegenc", "jpegenc", self._add_nvjpegenc())
+        self._append_node("nvjpegenc", "nvjpegenc", self._add_nvjpegenc())
         self._append_node(
             "filesink",
-            "sink",
+            "filesink",
             self._add_filesink(self.output, sync=False, async_=False),
         )
 
     def link(self) -> None:
         edges = {
-            "src": "mux",
-            "mux": "pgie",
-            "pgie": "analyzer",
-            "analyzer": "osd",
-            "osd": "nvvidconv",
-            "nvvidconv": "jpegenc",
-            "jpegenc": "sink",
+            "nvurisrcbin": "nvstreammux",
+            "nvstreammux": "nvinfer",
+            "nvinfer": "nvdsanalytics",
+            "nvdsanalytics": "nvosdbin",
+            "nvosdbin": "nvvideoconvert",
+            "nvvideoconvert": "nvjpegenc",
+            "nvjpegenc": "filesink",
         }
         self.pipeline["deepstream"]["edges"] = edges
 

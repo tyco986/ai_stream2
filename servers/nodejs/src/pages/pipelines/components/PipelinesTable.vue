@@ -14,6 +14,11 @@
           <span :class="statusClass(row.status)">{{ statusLabel(row.status) }}</span>
         </template>
       </UiTableColumn>
+      <UiTableColumn :label="t('pipelines.lastRefresh')" width="160">
+        <template #default="{ row }">
+          {{ formatLastRefresh(row.last_refresh_at) }}
+        </template>
+      </UiTableColumn>
       <UiTableColumn :label="t('pipelines.operations')" width="200">
         <template #default="{ row }">
           <div class="ops">
@@ -110,19 +115,28 @@ const tableRef = ref<{
 
 function showStart(row: PipelineListItem) {
   const status = row.status
-  return status === 'stopped' || status === 'error'
+  return (
+    status === 'stopped' ||
+    status === 'error' ||
+    status === 'offline' ||
+    status === 'online'
+  )
 }
 
 function statusLabel(status: PipelineStatus) {
   let label = t('pipelines.statusStopped')
   if (status === 'running') {
     label = t('pipelines.statusRunning')
+  } else if (status === 'online') {
+    label = t('pipelines.statusOnline')
   } else if (status === 'starting') {
     label = t('pipelines.statusStarting')
   } else if (status === 'stopping') {
     label = t('pipelines.statusStopping')
   } else if (status === 'error') {
     label = t('pipelines.statusError')
+  } else if (status === 'offline') {
+    label = t('pipelines.statusOffline')
   }
   return label
 }
@@ -131,12 +145,29 @@ function statusClass(status: PipelineStatus) {
   let cls = 'status-stopped'
   if (status === 'running') {
     cls = 'status-running'
+  } else if (status === 'online') {
+    cls = 'status-online'
   } else if (status === 'error') {
     cls = 'status-error'
+  } else if (status === 'offline') {
+    cls = 'status-offline'
   } else if (status === 'starting' || status === 'stopping') {
     cls = 'status-transient'
   }
   return cls
+}
+
+function formatLastRefresh(value: string | null) {
+  if (!value) {
+    return '—'
+  }
+  const date = new Date(value)
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const dd = String(date.getDate()).padStart(2, '0')
+  const hh = String(date.getHours()).padStart(2, '0')
+  const mi = String(date.getMinutes()).padStart(2, '0')
+  const ss = String(date.getSeconds()).padStart(2, '0')
+  return `${mm}-${dd} ${hh}:${mi}:${ss}`
 }
 
 function onSelectionChange(selected: PipelineListItem[]) {
@@ -168,12 +199,20 @@ defineExpose({
   padding: 0 16px;
 }
 
+.status-online {
+  color: #409eff;
+}
+
 .status-running {
   color: #67c23a;
 }
 
 .status-error {
   color: #f56c6c;
+}
+
+.status-offline {
+  color: #909399;
 }
 
 .status-transient {

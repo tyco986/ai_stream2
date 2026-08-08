@@ -1,13 +1,21 @@
 from pyservicemaker import osd
 
+from utils.probe.utils.drawer.result import new_result
+
 # frame_meta.object_items is single-pass; parse and draw in one loop.
 # Do not list(object_items) then mutate — held refs segfault.
 
+UNTRACKED_OBJECT_ID = (1 << 64) - 1
+
 
 class DetDrawer:
-    def __init__(self, show_label=False, show_conf=False):
+    def __init__(self, show_label=False, show_conf=False, show_id=False):
         self.show_label = show_label
         self.show_conf = show_conf
+        self.show_id = show_id
+
+    def parse_object_id(self, object_meta) -> int:
+        return -1 if int(object_meta.object_id) == UNTRACKED_OBJECT_ID else int(object_meta.object_id)
 
     def parse_rect_params(self, rect) -> dict:
         color = rect.border_color
@@ -29,7 +37,7 @@ class DetDrawer:
     def parse_object(self, object_meta) -> dict:
         rect = object_meta.rect_params
         label = str(object_meta.label) if object_meta.label else ""
-        result = {
+        item = {
             "object": [
                 int(round(float(rect.left))),
                 int(round(float(rect.top))),
@@ -38,10 +46,11 @@ class DetDrawer:
                 round(float(object_meta.confidence), 2),
                 int(object_meta.class_id),
                 label,
+                self.parse_object_id(object_meta),
             ],
             "rect_params": self.parse_rect_params(rect),
         }
-        return result
+        return item
 
     def build_display_text(self, item) -> str:
         obj = item["object"]
@@ -50,7 +59,9 @@ class DetDrawer:
             parts.append(obj[6])
         if self.show_conf:
             parts.append(f"{obj[4]:.2f}")
-        display_text = " ".join(parts)
+        if self.show_id:
+            parts.append(f"{obj[7]}")
+        display_text = "|".join(parts)
         return display_text
 
     def apply_label(self, object_meta, item, text_color, text_bg_color) -> None:
@@ -97,19 +108,14 @@ class DetDrawer:
         self.apply_box_color(object_meta, box_color, box_width)
         self.apply_label(object_meta, item, text_color, text_bg_color)
 
-    def get_result(self, frame_meta, objects) -> dict:
-        result = {
-            "pad_index": int(frame_meta.pad_index),
-            "frame_number": int(frame_meta.frame_number),
-            "source_id": int(frame_meta.source_id),
-            "source_width": int(frame_meta.source_width),
-            "source_height": int(frame_meta.source_height),
-            "pipeline_width": int(frame_meta.pipeline_width),
-            "pipeline_height": int(frame_meta.pipeline_height),
-            "num_objects": len(objects),
-            "objects": objects,
-        }
-        return result
+    def fill_frame_meta(self, result, frame_meta) -> None:
+        result["pad_index"] = int(frame_meta.pad_index)
+        result["frame_number"] = int(frame_meta.frame_number)
+        result["source_id"] = int(frame_meta.source_id)
+        result["source_width"] = int(frame_meta.source_width)
+        result["source_height"] = int(frame_meta.source_height)
+        result["pipeline_width"] = int(frame_meta.pipeline_width)
+        result["pipeline_height"] = int(frame_meta.pipeline_height)
 
     def process_frame(
         self,
@@ -120,7 +126,8 @@ class DetDrawer:
         text_color=(1.0, 1.0, 1.0, 1.0),
         text_bg_color=(0.0, 0.0, 0.0, 0.6),
     ) -> dict:
-        objects = []
+        result = new_result()
+        self.fill_frame_meta(result, frame_meta)
         for object_meta in frame_meta.object_items:
             item = self.parse_object(object_meta)
             self.draw_inplace(
@@ -131,154 +138,8 @@ class DetDrawer:
                 text_color,
                 text_bg_color,
             )
-            objects.append(item)
-        result = self.get_result(frame_meta, objects)
-        return result
-
-    def __call__(
-        self,
-        batch_meta,
-        box_color=(0.0, 1.0, 0.0, 1.0),
-        box_width=2,
-        text_color=(1.0, 1.0, 1.0, 1.0),
-        text_bg_color=(0.0, 0.0, 0.0, 0.6),
-    ) -> list:
-        results = []
-        for frame_meta in batch_meta.frame_items:
-            results.append(
-                self.process_frame(
-                    batch_meta,
-                    frame_meta,
-                    box_color=box_color,
-                    box_width=box_width,
-                    text_color=text_color,
-                    text_bg_color=text_bg_color,
-                )
-            )
-        return results
-
-
-class DetFadeDrawer(DetDrawer):
-    def __init__(self, show_label=False, show_conf=False, interval=0, fade_time=0):
-        super().__init__(show_label, show_conf)
-        self.interval = int(interval)
-        self.fade_time = int(fade_time)
-        self.min_alpha = 0.2
-        self.frame_count = {}
-        self.phase = {}
-        self.object_cache = {}
-        self.alpha_lut = self.build_alpha_lut(self.interval, self.fade_time)
-        self.runtime_interval = len(self.alpha_lut)
-
-    def append_object(
-        self,
-        batch_meta,
-        frame_meta,
-        item,
-        box_color,
-        box_width,
-        text_color,
-        text_bg_color,
-    ) -> None:
-        obj_meta = batch_meta.acquire_object_meta()
-        obj = item["object"]
-        obj_meta.class_id = int(obj[5])
-        obj_meta.confidence = float(obj[4])
-        obj_meta.label = obj[6]
-        self.apply_rect_params(obj_meta.rect_params, item["rect_params"], box_color, box_width)
-        self.apply_label(obj_meta, item, text_color, text_bg_color)
-        frame_meta.append(obj_meta)
-
-    def draw_non_inference_rebuild(
-        self,
-        batch_meta,
-        frame_meta,
-        pad_index,
-        box_color,
-        box_width,
-        text_color,
-        text_bg_color,
-    ) -> list:
-        cache = self.object_cache.get(pad_index, [])
-        for item in cache:
-            self.append_object(
-                batch_meta,
-                frame_meta,
-                item,
-                box_color,
-                box_width,
-                text_color,
-                text_bg_color,
-            )
-        return cache
-
-    def build_alpha_lut(self, interval, fade_time) -> list[float]:
-        if fade_time <= 0:
-            result = [1.0]
-        else:
-            mid = interval // 2
-            tail = interval - mid
-            triangle = []
-            for i in range(interval + 1):
-                if i <= mid:
-                    t = 1.0 - i / mid if mid > 0 else 1.0
-                else:
-                    t = (i - mid) / tail if tail > 0 else 0.0
-                alpha = self.min_alpha + (1.0 - self.min_alpha) * t
-                triangle.append(round(alpha, 2))
-            result = []
-            for index in range(fade_time):
-                result.extend(triangle if index == 0 else triangle[1:])
-        return result
-
-    def fade_color(self, color, fade_alpha) -> tuple[float, float, float, float]:
-        r, g, b = color[:3]
-        result = (float(r), float(g), float(b), float(fade_alpha))
-        return result
-
-    def process_frame(
-        self,
-        batch_meta,
-        frame_meta,
-        box_color=(0.0, 1.0, 0.0, 1.0),
-        box_width=2,
-        text_color=(1.0, 1.0, 1.0, 1.0),
-        text_bg_color=(0.0, 0.0, 0.0, 0.6),
-    ) -> dict:
-        pad_index = int(frame_meta.pad_index)
-        phase = self.phase.get(pad_index, 0)
-        fade_alpha = self.alpha_lut[phase]
-        faded_box_color = self.fade_color(box_color, fade_alpha)
-        faded_text_color = self.fade_color(text_color, fade_alpha)
-        faded_text_bg_color = self.fade_color(text_bg_color, fade_alpha)
-        objects = []
-        for object_meta in frame_meta.object_items:
-            item = self.parse_object(object_meta)
-            self.draw_inplace(
-                object_meta,
-                item,
-                faded_box_color,
-                box_width,
-                faded_text_color,
-                faded_text_bg_color,
-            )
-            objects.append(item)
-        if objects:
-            self.object_cache[pad_index] = objects
-        else:
-            objects = self.draw_non_inference_rebuild(
-                batch_meta,
-                frame_meta,
-                pad_index,
-                faded_box_color,
-                box_width,
-                faded_text_color,
-                faded_text_bg_color,
-            )
-        result = self.get_result(frame_meta, objects)
-        frame_count = self.frame_count.get(pad_index, 0) + 1
-        self.frame_count[pad_index] = frame_count
-        self.phase[pad_index] = frame_count % self.runtime_interval
+            result["objects"].append(item)
+        result["num_objects"] = len(result["objects"])
         return result
 
     def __call__(

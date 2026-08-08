@@ -1,63 +1,34 @@
 import argparse
 import logging
-import os
 import time
-import traceback
+from contextlib import asynccontextmanager
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 import uvicorn
-import yaml
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from utils.manager import GeneratorManager
-
-PROJECT_NAME = os.environ.get("PROJECT_NAME", "ai_stream2")
-LOG_FORMAT = "[%(asctime)s] %(levelname)s %(name)s: %(message)s"
-DEFAULT_LOG_ROOT = Path(os.environ.get("LOG_ROOT", "/root/logs/generator"))
-DEFAULT_HOST = os.environ.get("HOST", "0.0.0.0")
-DEFAULT_PORT = int(os.environ.get("PORT", "8091"))
-
-
-class ApiErrorResponse(BaseModel):
-    success: bool = False
-    message: str
-
-
-class ApiJsonResponse(BaseModel):
-    success: bool = True
-    message: str = ""
+from utils.api.constants import (
+    DEFAULT_HOST,
+    DEFAULT_PORT,
+    LOG_FORMAT,
+    LOG_ROOT,
+    LOGGER_NAME,
+)
+from utils.api.routes import router
+from utils.api.schemas import ApiEnvelope
+from utils.api.services import AppError, GenerateService, SchemaService
+from utils.registry import GeneratorRegistry
 
 
-class RequestLogMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, logger: logging.Logger) -> None:
-        super().__init__(app)
-        self.log = logger
-
-    async def dispatch(self, request: Request, call_next) -> Response:
-        start = time.perf_counter()
-        method, path = request.method, request.url.path
-        self.log.info("request start %s %s", method, path)
-        response = await call_next(request)
-        self.log.info(
-            "request %s %s -> %s (%.1f ms)",
-            method,
-            path,
-            response.status_code,
-            (time.perf_counter() - start) * 1000,
-        )
-        return response
-
-
-def configure_file_logger(log_root: Path, name: str = "generator_api") -> logging.Logger:
+def configure_logging(log_root: Path = LOG_ROOT) -> None:
     log_root.mkdir(parents=True, exist_ok=True)
-    logger = logging.getLogger(name)
+    logger = logging.getLogger(LOGGER_NAME)
     logger.setLevel(logging.DEBUG)
     logger.handlers.clear()
     logger.propagate = False
@@ -69,68 +40,101 @@ def configure_file_logger(log_root: Path, name: str = "generator_api") -> loggin
     )
     handler.setFormatter(logging.Formatter(LOG_FORMAT))
     logger.addHandler(handler)
-    return logger
 
 
-def error_response(message: str, status_code: int = 400) -> JSONResponse:
+class RequestLogMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app) -> None:
+        super().__init__(app)
+        self.log = logging.getLogger(LOGGER_NAME)
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        start = time.perf_counter()
+        method = request.method
+        path = request.url.path
+        self.log.info("request start %s %s", method, path)
+        response = await call_next(request)
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        self.log.info(
+            "request %s %s -> %s (%.1f ms)",
+            method,
+            path,
+            response.status_code,
+            elapsed_ms,
+        )
+        return response
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    registry = GeneratorRegistry()
+    app.state.generate_service = GenerateService(registry)
+    app.state.schema_service = SchemaService(registry)
+    logger = logging.getLogger(LOGGER_NAME)
+    generators = ", ".join(registry.names())
+    logger.info(
+        "Generator API started log_root=%s generators=%s",
+        LOG_ROOT,
+        generators,
+    )
+    yield
+    logger.info("Generator API stopped")
+
+
+async def handle_app_error(request: Request, exc: AppError) -> JSONResponse:
     return JSONResponse(
-        status_code=status_code,
-        content=ApiErrorResponse(message=message).model_dump(),
+        status_code=exc.status_code,
+        content=ApiEnvelope(success=False, message=exc.message).model_dump(),
+    )
+
+
+async def handle_http_exception(request: Request, exc: HTTPException) -> JSONResponse:
+    detail = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=ApiEnvelope(success=False, message=detail).model_dump(),
     )
 
 
 async def handle_validation_error(
-    _: Request, exc: RequestValidationError
+    request: Request, exc: RequestValidationError
 ) -> JSONResponse:
-    return error_response(str(exc.errors()), status_code=422)
+    return JSONResponse(
+        status_code=422,
+        content=ApiEnvelope(success=False, message=str(exc.errors())).model_dump(),
+    )
 
 
-class GeneratorServer:
-    def __init__(self, log_root: Path) -> None:
-        self.logger = configure_file_logger(log_root)
-        generators = ", ".join(sorted(GeneratorManager.GENERATORS))
+async def handle_unhandled(request: Request, exc: Exception) -> JSONResponse:
+    logging.getLogger(LOGGER_NAME).exception("unhandled error path=%s", request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content=ApiEnvelope(success=False, message="internal error").model_dump(),
+    )
 
-        self.app = FastAPI(
-            title="Generator API",
-            description=(
-                f"Upload generator YAML as multipart `input`. "
-                f"Generators: {generators}. Details: servers/generator/README.md"
-            ),
-            version="1.0.0",
-        )
-        self.app.add_middleware(RequestLogMiddleware, logger=self.logger)
-        self.app.add_exception_handler(
-            RequestValidationError, handle_validation_error
-        )
-        self.app.add_api_route(
-            f"/{PROJECT_NAME}/generator/generate",
-            self.generate,
-            methods=["POST"],
-            summary="Generate DeepStream pipeline configs",
-            response_model=ApiJsonResponse,
-            responses={400: {"model": ApiErrorResponse}, 422: {"model": ApiErrorResponse}},
-        )
-        self.logger.info("Generator API initialized log_root=%s", log_root)
 
-    async def generate(self, input: UploadFile = File(...)) -> Response:
-        try:
-            GeneratorManager(yaml.safe_load(await input.read())).write()
-            return JSONResponse(ApiJsonResponse().model_dump())
-        except Exception:
-            message = traceback.format_exc()
-            self.logger.error("generate failed\n%s", message)
-            return error_response(message)
+def create_app() -> FastAPI:
+    configure_logging()
+    app = FastAPI(title="Generator API", version="1.0.0", lifespan=lifespan)
+    app.add_middleware(RequestLogMiddleware)
+    app.add_exception_handler(AppError, handle_app_error)
+    app.add_exception_handler(HTTPException, handle_http_exception)
+    app.add_exception_handler(RequestValidationError, handle_validation_error)
+    app.add_exception_handler(Exception, handle_unhandled)
+    app.include_router(router)
+    return app
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generator API service")
     parser.add_argument("--host", default=DEFAULT_HOST)
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
-    parser.add_argument("--log-root", default=str(DEFAULT_LOG_ROOT))
     return parser.parse_args()
 
 
-if __name__ == "__main__":
+def main() -> None:
     args = parse_args()
-    server = GeneratorServer(log_root=Path(args.log_root))
-    uvicorn.run(server.app, host=args.host, port=args.port)
+    uvicorn.run(create_app(), host=args.host, port=args.port)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,6 +1,8 @@
 export default {
   title: 'Servers',
   refresh: 'Refresh',
+  groupInfrastructure: 'Infrastructure',
+  groupPipeline: 'Pipeline',
   name: 'Name',
   status: 'Status',
   lastRefresh: 'Last Refresh',

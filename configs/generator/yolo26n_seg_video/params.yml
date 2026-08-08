@@ -1,0 +1,12 @@
+generator: SegVideoGenerator
+input: /root/attachments/videos/video1.mp4
+output: /root/outputs/deepstream/yolo26n_seg_video.mp4
+pgie:
+  model_dir: /root/models/trt/yolo26n-seg
+  class_attrs:
+    all:
+      conf: 0.25
+analyzer: null
+tracker: null
+interval: 0
+config_save_dir: /root/configs/generator/yolo26n_seg_video

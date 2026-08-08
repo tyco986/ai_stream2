@@ -1,5 +1,5 @@
 {
-  "model_type": "dynamic",
+  "batch_mode": "dynamic",
   "input_tensor_name": "images",
   "output_tensor_name": "output0",
   "classes": [
@@ -92,20 +92,23 @@
   ],
   "output_tensor_shape": [
     18,
-    300,
+    30,
     6
   ],
   "batch_size": 18,
   "precision": "fp16",
   "version": "yolo26",
   "task": "detect",
-  "yolo_export": "sahi",
-  "bundle_sha256": "12ac0668fc3c8776043a1c68613c3f908164a061535c3276edf44115c6040106",
+  "yolo_export": "e2e",
+  "max_det": 30,
+  "conf": 0.25,
+  "bundle_sha256": "dfcc666583169608c345b1d0a55dc887f5d7c68913c2209304fe02a16ee3e0af",
   "bundle_files": {
-    "yolo26n.onnx": "df05e4d13802ea57082e01438d2ec722d0d67647ec18e958d8de407d016ebdf8"
+    "yolo26n.onnx": "44b97823008e9453127ec5fd397e522860951f91329c9b35d8acb31b7d0a6a41"
   },
   "gpu_id": 0,
+  "opt_level": null,
   "cuda_version": "13.1",
   "tensorrt_version": "101401",
-  "build_time": "2026-07-16T01:52:45.516557+00:00"
+  "build_time": "2026-08-07T10:58:57.810924+00:00"
 }

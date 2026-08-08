@@ -1,0 +1,6 @@
+type: BaseRTSPPipeline
+entry: utils/base_pipeline/base_rtsp.py
+files:
+- utils/base_pipeline/base_rtsp.py
+- utils/probe/times_probe.py
+- utils/base_pipeline/times_attach.py

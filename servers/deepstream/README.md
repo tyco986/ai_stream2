@@ -9,7 +9,7 @@
 | `ai_stream2_deepstream_dev` | `1_build_dev_image.sh` | 开发：运行时依赖 + `/opt/ai_stream2/servers/deepstream/libs` |
 | `ai_stream2_deepstream_prod` | `1_build_prod_image.sh` | 生产：dev + 内置 `servers/deepstream` 代码 |
 
-原生 `.so` 固定在容器路径 `/opt/ai_stream2/servers/deepstream/libs`，不映射到宿主机。
+原生产物：`libnvds_custom_sequence_preprocess.so` 在 `/opt/ai_stream2/servers/deepstream/libs`；YOLO 解析用 deepstream-sahi 的 `libnvds_infer_yolo.so`（镜像内 `/opt/nvidia/deepstream/deepstream/lib/`）。
 
 ## 开发与生产
 
@@ -42,10 +42,15 @@ Swagger：`http://127.0.0.1:8092/docs`
 | `models/` | `/root/models` | TensorRT 模型 |
 | `logs/` | `/root/logs` | 服务日志 |
 
+`schemas/*.yaml`：各 pipeline 的 probe 参数 schema（`available` / `default`）。  
+`compile_units/*.yaml`：各 pipeline 逻辑源文件闭包（供后期 prod Nuitka / editable 编译）。
+
 ## 接口
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
+| GET | `/ai_stream2/deepstream/types` | 列出已注册 pipeline 类型 |
+| POST | `/ai_stream2/deepstream/schema` | 按类型返回 probe 参数 schema |
 | POST | `/ai_stream2/deepstream/start_pipeline` | build 并后台启动 pipeline |
 
 ### start_pipeline

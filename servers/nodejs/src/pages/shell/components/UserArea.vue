@@ -1,6 +1,7 @@
 <template>
   <div class="user-area">
     <span class="user-area__name">{{ displayName }}</span>
+    <UiButton v-if="username" @click="emit('logout')">{{ t('shell.logout') }}</UiButton>
     <button
       type="button"
       class="user-area__gear"
@@ -15,6 +16,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import UiButton from '@/shared/ui/Button.vue'
 import UiIcon from '@/shared/ui/Icon.vue'
 
 const props = defineProps<{
@@ -23,6 +25,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'open-settings': []
+  logout: []
 }>()
 
 const { t } = useI18n()

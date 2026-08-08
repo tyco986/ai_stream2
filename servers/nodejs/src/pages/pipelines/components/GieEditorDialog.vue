@@ -2,7 +2,7 @@
   <UiDialog
     :model-value="modelValue"
     :title="t('pipelines.gieEditorTitle')"
-    width="1100px"
+    width="1200px"
     @update:model-value="emit('update:modelValue', $event)"
   >
     <div class="form">
@@ -63,7 +63,7 @@
               />
             </template>
           </UiTableColumn>
-          <UiTableColumn :label="t('pipelines.operations')" width="70">
+          <UiTableColumn :label="t('pipelines.operations')" width="110">
             <template #default="{ $index }">
               <button type="button" class="ops__btn" @click="rows.splice($index, 1)">
                 <UiIcon name="delete" :size="16" />

@@ -2,13 +2,16 @@
   <div class="ui-select" :class="{ 'ui-select--invalid': invalid }">
     <el-select
       :model-value="modelValue"
+      :multiple="multiple"
       :disabled="disabled"
       :placeholder="placeholder"
       :clearable="clearable"
+      :collapse-tags="multiple"
+      :collapse-tags-tooltip="multiple"
       :popper-class="popperClass"
       style="width: 100%"
-      @update:model-value="emit('update:modelValue', $event)"
-      @change="emit('change', $event)"
+      @update:model-value="onUpdate"
+      @change="onChange"
     >
       <template v-if="$slots.label" #label="scope">
         <slot name="label" v-bind="scope" />
@@ -58,9 +61,9 @@ export type SelectOptionGroup = {
   options: SelectOption[]
 }
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
-    modelValue: string
+    modelValue: string | string[]
     options?: SelectOption[]
     groups?: SelectOptionGroup[]
     disabled?: boolean
@@ -68,6 +71,7 @@ withDefaults(
     clearable?: boolean
     invalid?: boolean
     popperClass?: string
+    multiple?: boolean
   }>(),
   {
     options: () => [],
@@ -75,13 +79,26 @@ withDefaults(
     clearable: false,
     invalid: false,
     popperClass: '',
+    multiple: false,
   },
 )
 
 const emit = defineEmits<{
-  'update:modelValue': [value: string]
-  change: [value: string]
+  'update:modelValue': [value: string | string[]]
+  change: [value: string | string[]]
 }>()
+
+function onUpdate(value: string | string[] | null | undefined) {
+  if (props.multiple) {
+    emit('update:modelValue', Array.isArray(value) ? value : [])
+    return
+  }
+  emit('update:modelValue', value ?? '')
+}
+
+function onChange(value: string | string[]) {
+  emit('change', value)
+}
 </script>
 
 <style scoped>

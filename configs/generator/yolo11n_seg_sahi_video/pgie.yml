@@ -1,8 +1,8 @@
 property:
   gpu-id: 0
   onnx-file: ''
-  model-engine-file: /root/models/trt/yolo11n-seg-sahi/yolo11n-seg.engine
-  labelfile-path: /root/models/trt/yolo11n-seg-sahi/labels.txt
+  model-engine-file: /root/models/trt/yolo11n-seg/yolo11n-seg.engine
+  labelfile-path: /root/models/trt/yolo11n-seg/labels.txt
   batch-size: 9
   network-mode: 2
   network-type: 3
@@ -10,7 +10,7 @@ property:
   model-color-format: 0
   num-detected-classes: 80
   gie-unique-id: 1
-  interval: 50
+  interval: 0
   cluster-mode: 4
   maintain-aspect-ratio: 1
   symmetric-padding: 1
@@ -25,4 +25,5 @@ property:
   output-instance-mask: 1
   segmentation-threshold: 0.5
 class-attrs-all:
+  topk: 300
   pre-cluster-threshold: 0.25

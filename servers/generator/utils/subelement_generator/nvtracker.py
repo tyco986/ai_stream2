@@ -52,8 +52,19 @@ nvtracker_default_config = {
     }
 
 class NvtrackerGenerator:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        maxShadowTrackingAge: int = 30,
+        earlyTerminationAge: int = 1,
+        probationAge: int = 3,
+    ) -> None:
+        self.maxShadowTrackingAge = maxShadowTrackingAge
+        self.earlyTerminationAge = earlyTerminationAge
+        self.probationAge = probationAge
         self.config = deepcopy(nvtracker_default_config)
+        self.config["TargetManagement"]["maxShadowTrackingAge"] = self.maxShadowTrackingAge
+        self.config["TargetManagement"]["earlyTerminationAge"] = self.earlyTerminationAge
+        self.config["TargetManagement"]["probationAge"] = self.probationAge
 
     def write(self, save_path: str | Path) -> None:
         with open(save_path, "w", encoding="utf-8") as handle:

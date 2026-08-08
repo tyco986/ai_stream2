@@ -6,16 +6,20 @@ config_dir: /root/configs/generator/yolo10x_smoke_fire_video
 drawer:
   show_label: true
   show_conf: true
-  interval: 0
-  fade_time: 0
+  interval: 50
+  fade_time: 1
 debouncer:
   class_ids: [0, 1]
   threshold: 0.5
-  length: 10
+  length: 5
   mode: fold
+  event_names:
+    "0": Fire
+    "1": Smoke
 logger:
   root: /root/logs/deepstream/yolo10x-smoke-fire-video/probe
-  interval: 0
+  interval: 50
+  times: [latency, nvinfer, nvstreammux, nvurisrcbin]
 messager:
   topic: deepstream-detections
   host: ai_stream2_kafka

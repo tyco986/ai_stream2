@@ -1,0 +1,15 @@
+type: DetRTSPGenerator
+entry: utils/yolo_generator/det_rtsp.py
+files:
+- utils/base_generator/base_rtsp.py
+- utils/subelement_generator/nvdsanalytics.py
+- utils/subelement_generator/nvtracker.py
+- utils/subelement_generator/pgie.py
+- utils/subelement_generator/pipeline.py
+- utils/subelement_generator/utils/default_pgie/__init__.py
+- utils/subelement_generator/utils/default_pgie/yolo_det.py
+- utils/subelement_generator/utils/default_pgie/yolo_seg.py
+- utils/subelement_generator/utils/nvdsanalytics_parser.py
+- utils/subelement_generator/utils/nvtracker_parser.py
+- utils/subelement_generator/utils/pgie_parser.py
+- utils/yolo_generator/det_rtsp.py

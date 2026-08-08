@@ -1,32 +1,94 @@
 from ..subelement_generator.pipeline import TRACKER_LL_LIB
-from .base_event_video import BaseEventVideoGenerator
+from .base_sahi_video import BaseSahiVideoGenerator
 
 SAHI_VIDEO_EVENT_TOPOLOGY_DOC = """
     Topology::
 
-        src → mux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
-            → tracker → analyzer → nvvidconv → tee_raw
-              ─┬→ queue_raw → nvvidconv_raw → caps_raw → appsink_raw0
-              └→ queue_osd → nvvidconv_osd → caps_osd(RGBA) → osd → tee_vis
-                    ─┬→ queue_vis → nvvidconv_vis → caps_vis → appsink_vis0
-                    └→ queue_enc → encoder → h264parse → mp4mux → filesink
+        nvurisrcbin → nvstreammux → nvsahipreprocess → nvinfer → queue_sahi → nvsahipostprocess
+            → nvtracker → nvdsanalytics → nvvideoconvert → tee_raw
+              ─┬→ queue_raw → nvvideoconvert_raw → capsfilter_raw → appsink_raw0
+              └→ queue_osd → nvvideoconvert_osd → capsfilter_osd(RGBA) → nvosdbin → tee_vis
+                    ─┬→ queue_vis → nvvideoconvert_vis → capsfilter_vis → appsink_vis0
+                    └→ queue_enc → nvv4l2h264enc → h264parse → mp4mux → filesink
 
     Notes::
 
         ``mux`` batch size is 1; ``pgie`` batch size is the SAHI tile count.
-        ``nvvidconv_raw`` / ``nvvidconv_osd`` after ``tee_raw`` force independent NVMM
+        ``nvvideoconvert_raw`` / ``nvvideoconvert_osd`` after ``tee_raw`` force independent NVMM
         buffers so ``nvosd`` in-place drawing cannot leak into the raw capture branch.
         Capture branches force ``format=RGB`` (BufferRetriever extract requirement).
 
     Python (not in pipeline.yml)::
 
-        attach(analyzer, Probe)   # logger → debouncer → drawer → messager
+        attach(nvdsanalytics, Probe)   # logger → debouncer → drawer → messager
         attach(appsink_raw0, Receiver)   # encode PNG when event alert matches
         attach(appsink_vis0, Receiver)   # encode JPEG when event alert matches
 """
 
 
-class BaseEventSahiVideoGenerator(BaseEventVideoGenerator):
+class BaseEventSahiVideoGenerator(BaseSahiVideoGenerator):
+    SINK_PATH_TEMPLATES = {
+        "appsink_raw0": [
+            "nvurisrcbin",
+            "nvstreammux",
+            "nvsahipreprocess",
+            "nvinfer",
+            "queue_sahi",
+            "nvsahipostprocess",
+            "nvtracker",
+            "nvdsanalytics",
+            "nvvideoconvert",
+            "tee_raw",
+            "queue_raw",
+            "nvvideoconvert_raw",
+            "capsfilter_raw",
+            "appsink_raw0",
+        ],
+        "appsink_vis0": [
+            "nvurisrcbin",
+            "nvstreammux",
+            "nvsahipreprocess",
+            "nvinfer",
+            "queue_sahi",
+            "nvsahipostprocess",
+            "nvtracker",
+            "nvdsanalytics",
+            "nvvideoconvert",
+            "tee_raw",
+            "queue_osd",
+            "nvvideoconvert_osd",
+            "capsfilter_osd",
+            "nvosdbin",
+            "tee_vis",
+            "queue_vis",
+            "nvvideoconvert_vis",
+            "capsfilter_vis",
+            "appsink_vis0",
+        ],
+        "filesink": [
+            "nvurisrcbin",
+            "nvstreammux",
+            "nvsahipreprocess",
+            "nvinfer",
+            "queue_sahi",
+            "nvsahipostprocess",
+            "nvtracker",
+            "nvdsanalytics",
+            "nvvideoconvert",
+            "tee_raw",
+            "queue_osd",
+            "nvvideoconvert_osd",
+            "capsfilter_osd",
+            "nvosdbin",
+            "tee_vis",
+            "queue_enc",
+            "nvv4l2h264enc",
+            "h264parse",
+            "mp4mux",
+            "filesink",
+        ],
+    }
+
     f"""Generate YOLO SAHI video pipeline for event alert + appsink capture.
 
     Reads ``input`` video via DeepStream, runs SAHI inference with event capture
@@ -37,7 +99,7 @@ class BaseEventSahiVideoGenerator(BaseEventVideoGenerator):
     def add(self) -> None:
         self._append_node(
             "nvurisrcbin",
-            "src",
+            "nvurisrcbin",
             self._add_nvurisrcbin(
                 self.file_uri(self.input),
                 disable_audio=True,
@@ -45,7 +107,7 @@ class BaseEventSahiVideoGenerator(BaseEventVideoGenerator):
         )
         self._append_node(
             "nvstreammux",
-            "mux",
+            "nvstreammux",
             self._add_nvstreammux(
                 batch_size=self.mux_batch_size,
                 width=self.width,
@@ -60,7 +122,7 @@ class BaseEventSahiVideoGenerator(BaseEventVideoGenerator):
         postprocess = self.sahi["nvsahipostprocess"]
         self._append_node(
             "nvsahipreprocess",
-            "sahi_preprocess",
+            "nvsahipreprocess",
             self._add_nvsahipreprocess(
                 self.SAHI_PREPROCESS_CONFIG_NAME,
                 slice_width=sahi["slice_width"],
@@ -73,7 +135,7 @@ class BaseEventSahiVideoGenerator(BaseEventVideoGenerator):
         )
         self._append_node(
             "nvinfer",
-            "pgie",
+            "nvinfer",
             self._add_nvinfer(
                 config_file_path=self.PGIE_CONFIG_NAME,
                 batch_size=self.pgie_generator.batch_size,
@@ -84,7 +146,7 @@ class BaseEventSahiVideoGenerator(BaseEventVideoGenerator):
         self._append_node("queue", "queue_sahi", self._add_queue())
         self._append_node(
             "nvsahipostprocess",
-            "sahi_postprocess",
+            "nvsahipostprocess",
             self._add_nvsahipostprocess(
                 gie_ids=str(self.pgie_generator.config["property"]["gie-unique-id"]),
                 match_metric=1,
@@ -97,7 +159,7 @@ class BaseEventSahiVideoGenerator(BaseEventVideoGenerator):
         if self.enable_nvtracker:
             self._append_node(
                 "nvtracker",
-                "tracker",
+                "nvtracker",
                 self._add_nvtracker(
                     TRACKER_LL_LIB,
                     self.TRACKER_CONFIG_NAME,
@@ -109,61 +171,61 @@ class BaseEventSahiVideoGenerator(BaseEventVideoGenerator):
             )
         self._append_node(
             "nvdsanalytics",
-            "analyzer",
+            "nvdsanalytics",
             self._add_nvdsanalytics(
                 self.ANALYTICS_CONFIG_NAME,
                 gpu_id=self.pgie_generator.gpu_id,
             ),
         )
         gpu_id = self.pgie_generator.gpu_id
-        osd_kwargs = self.event_osd_kwargs(gpu_id)
+        osd_kwargs = self.osd_kwargs(gpu_id)
         self._append_node(
             "nvvideoconvert",
-            "nvvidconv",
+            "nvvideoconvert",
             self._add_nvvideoconvert(gpu_id=gpu_id),
         )
         self._append_node("tee", "tee_raw", self._add_tee())
         self._append_node("queue", "queue_raw", self._add_queue())
         self._append_node(
             "nvvideoconvert",
-            "nvvidconv_raw",
+            "nvvideoconvert_raw",
             self._add_nvvideoconvert(gpu_id=gpu_id),
         )
         self._append_node(
             "capsfilter",
-            "caps_raw",
+            "capsfilter_raw",
             self._add_capsfilter("video/x-raw(memory:NVMM), format=RGB"),
         )
         self._append_node("appsink", "appsink_raw0", self._add_appsink())
         self._append_node("queue", "queue_osd", self._add_queue())
         self._append_node(
             "nvvideoconvert",
-            "nvvidconv_osd",
+            "nvvideoconvert_osd",
             self._add_nvvideoconvert(gpu_id=gpu_id),
         )
         self._append_node(
             "capsfilter",
-            "caps_osd",
+            "capsfilter_osd",
             self._add_capsfilter("video/x-raw(memory:NVMM), format=RGBA"),
         )
-        self._append_node("nvosdbin", "osd", self._add_nvosdbin(**osd_kwargs))
+        self._append_node("nvosdbin", "nvosdbin", self._add_nvosdbin(**osd_kwargs))
         self._append_node("tee", "tee_vis", self._add_tee())
         self._append_node("queue", "queue_vis", self._add_queue())
         self._append_node(
             "nvvideoconvert",
-            "nvvidconv_vis",
+            "nvvideoconvert_vis",
             self._add_nvvideoconvert(gpu_id=gpu_id),
         )
         self._append_node(
             "capsfilter",
-            "caps_vis",
+            "capsfilter_vis",
             self._add_capsfilter("video/x-raw(memory:NVMM), format=RGB"),
         )
         self._append_node("queue", "queue_enc", self._add_queue())
         self._append_node("appsink", "appsink_vis0", self._add_appsink())
         self._append_node(
             "nvv4l2h264enc",
-            "encoder",
+            "nvv4l2h264enc",
             self._add_nvv4l2h264enc(
                 bitrate=4_000_000,
                 iframeinterval=self.fps,
@@ -175,39 +237,39 @@ class BaseEventSahiVideoGenerator(BaseEventVideoGenerator):
         self._append_node("mp4mux", "mp4mux", self._add_mp4mux())
         self._append_node(
             "filesink",
-            "sink",
+            "filesink",
             self._add_filesink(self.output, sync=False, async_=False),
         )
 
     def link(self) -> None:
         edges = {
-            "src": "mux",
-            "mux": "sahi_preprocess",
-            "sahi_preprocess": "pgie",
-            "pgie": "queue_sahi",
-            "queue_sahi": "sahi_postprocess",
+            "nvurisrcbin": "nvstreammux",
+            "nvstreammux": "nvsahipreprocess",
+            "nvsahipreprocess": "nvinfer",
+            "nvinfer": "queue_sahi",
+            "queue_sahi": "nvsahipostprocess",
         }
-        inference_tail = "sahi_postprocess"
+        inference_tail = "nvsahipostprocess"
         if self.enable_nvtracker:
-            edges[inference_tail] = "tracker"
-            inference_tail = "tracker"
-        edges[inference_tail] = "analyzer"
-        edges["analyzer"] = "nvvidconv"
-        edges["nvvidconv"] = "tee_raw"
+            edges[inference_tail] = "nvtracker"
+            inference_tail = "nvtracker"
+        edges[inference_tail] = "nvdsanalytics"
+        edges["nvdsanalytics"] = "nvvideoconvert"
+        edges["nvvideoconvert"] = "tee_raw"
         edges["tee_raw"] = ["queue_raw", "queue_osd"]
-        edges["queue_raw"] = "nvvidconv_raw"
-        edges["nvvidconv_raw"] = "caps_raw"
-        edges["caps_raw"] = "appsink_raw0"
-        edges["queue_osd"] = "nvvidconv_osd"
-        edges["nvvidconv_osd"] = "caps_osd"
-        edges["caps_osd"] = "osd"
-        edges["osd"] = "tee_vis"
+        edges["queue_raw"] = "nvvideoconvert_raw"
+        edges["nvvideoconvert_raw"] = "capsfilter_raw"
+        edges["capsfilter_raw"] = "appsink_raw0"
+        edges["queue_osd"] = "nvvideoconvert_osd"
+        edges["nvvideoconvert_osd"] = "capsfilter_osd"
+        edges["capsfilter_osd"] = "nvosdbin"
+        edges["nvosdbin"] = "tee_vis"
         edges["tee_vis"] = ["queue_vis", "queue_enc"]
-        edges["queue_vis"] = "nvvidconv_vis"
-        edges["nvvidconv_vis"] = "caps_vis"
-        edges["caps_vis"] = "appsink_vis0"
-        edges["queue_enc"] = "encoder"
-        edges["encoder"] = "h264parse"
+        edges["queue_vis"] = "nvvideoconvert_vis"
+        edges["nvvideoconvert_vis"] = "capsfilter_vis"
+        edges["capsfilter_vis"] = "appsink_vis0"
+        edges["queue_enc"] = "nvv4l2h264enc"
+        edges["nvv4l2h264enc"] = "h264parse"
         edges["h264parse"] = "mp4mux"
-        edges["mp4mux"] = "sink"
+        edges["mp4mux"] = "filesink"
         self.pipeline["deepstream"]["edges"] = edges

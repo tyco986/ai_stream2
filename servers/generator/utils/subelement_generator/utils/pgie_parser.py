@@ -92,16 +92,16 @@ class PgieParser:
             f"unsupported version in {self.META_JSON_NAME}: {version}"
         )
         num_classes = self.num_classes
-        model_type = self.meta["model_type"]
+        batch_mode = self.meta["batch_mode"]
         engine_batch_size = self.meta["batch_size"]
-        if model_type == "static":
+        if batch_mode == "static":
             assert self.runtime_batch_size == engine_batch_size, (
                 f"runtime_batch_size {self.runtime_batch_size} must equal "
                 f"engine batch_size {engine_batch_size} for static model"
             )
         else:
-            assert model_type == "dynamic", (
-                f"unsupported model_type in {self.META_JSON_NAME}: {model_type}"
+            assert batch_mode == "dynamic", (
+                f"unsupported batch_mode in {self.META_JSON_NAME}: {batch_mode}"
             )
             assert self.runtime_batch_size <= engine_batch_size, (
                 f"runtime_batch_size {self.runtime_batch_size} must be <= "
@@ -114,12 +114,19 @@ class PgieParser:
                     f"unsupported class_attrs key: {key}"
                 )
 
-        class_attrs = {
-            ("class-attrs-all" if class_key == "all" else f"class-attrs-{class_key}"): {
-                self.CLASS_ATTR_KEY_MAP[key]: value for key, value in attrs.items()
-            }
-            for class_key, attrs in self.class_attrs.items()
-        }
+        class_attrs = {}
+        for class_key, attrs in self.class_attrs.items():
+            section = (
+                "class-attrs-all" if class_key == "all" else f"class-attrs-{class_key}"
+            )
+            mapped = {}
+            for key, value in attrs.items():
+                if value is None:
+                    continue
+                if key.startswith("detected_") and int(value) < 0:
+                    continue
+                mapped[self.CLASS_ATTR_KEY_MAP[key]] = value
+            class_attrs[section] = mapped
 
         filter_out_class_ids = (
             ";".join(

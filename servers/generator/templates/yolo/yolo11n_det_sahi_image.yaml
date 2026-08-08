@@ -1,0 +1,24 @@
+# bash servers/generator/scripts/3_generate.sh --config yolo11n_det_sahi_image
+#
+# Artifacts: pipeline.yml, pgie.yml, params.yml, sahi_slice_*.jpg/json, ... under config_save_dir.
+# runtime batch size = SAHI tile count; mux batch size = 1.
+
+generator: DetSahiImageGenerator
+config_save_dir: /root/configs/generator/yolo11n_det_sahi_image
+interval: 0
+pgie:
+  model_dir: /root/models/trt/yolo11n
+  class_attrs:
+    all:
+      conf: 0.25
+analyzer: null
+input: /root/attachments/images/video1.png
+output: /root/outputs/deepstream/yolo11n_det_sahi_image.jpg
+sahi:
+  nvsahipreprocess:
+    slice_width: 640
+    slice_height: 640
+    overlap_width_ratio: 0.2
+    overlap_height_ratio: 0.2
+  nvsahipostprocess:
+    match_threshold: 0.5

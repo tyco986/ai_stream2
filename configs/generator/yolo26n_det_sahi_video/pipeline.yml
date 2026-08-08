@@ -1,13 +1,13 @@
 deepstream:
   nodes:
   - type: nvurisrcbin
-    name: src
+    name: nvurisrcbin
     properties:
       uri: file:///root/attachments/videos/video1.mp4
       disable-audio: true
       select-rtp-protocol: 4
   - type: nvstreammux
-    name: mux
+    name: nvstreammux
     properties:
       batch-size: 1
       width: 1920
@@ -17,7 +17,7 @@ deepstream:
       gpu-id: 0
       live-source: false
   - type: nvsahipreprocess
-    name: sahi_preprocess
+    name: nvsahipreprocess
     properties:
       config-file: /root/configs/generator/yolo26n_det_sahi_video/nvsahipreprocess.ini
       slice-width: 640
@@ -29,7 +29,7 @@ deepstream:
       unique-id: 15
       target-unique-ids: '1'
   - type: nvinfer
-    name: pgie
+    name: nvinfer
     properties:
       config-file-path: /root/configs/generator/yolo26n_det_sahi_video/pgie.yml
       batch-size: 9
@@ -41,7 +41,7 @@ deepstream:
       leaky: 2
       max-size-buffers: 4
   - type: nvsahipostprocess
-    name: sahi_postprocess
+    name: nvsahipostprocess
     properties:
       gie-ids: '1'
       match-metric: 1
@@ -50,23 +50,23 @@ deepstream:
       enable-merge: true
       two-phase-nmm: true
   - type: nvdsanalytics
-    name: analyzer
+    name: nvdsanalytics
     properties:
       config-file: /root/configs/generator/yolo26n_det_sahi_video/nvdsanalytics.yml
       gpu-id: 0
   - type: nvosdbin
-    name: osd
+    name: nvosdbin
     properties:
       gpu-id: 0
       display-bbox: true
       display-text: true
       display-mask: false
   - type: nvvideoconvert
-    name: nvvidconv
+    name: nvvideoconvert
     properties:
       gpu-id: 0
   - type: nvv4l2h264enc
-    name: encoder
+    name: nvv4l2h264enc
     properties:
       bitrate: 4000000
       iframeinterval: 25
@@ -77,21 +77,21 @@ deepstream:
   - type: mp4mux
     name: mp4mux
   - type: filesink
-    name: sink
+    name: filesink
     properties:
       location: /root/outputs/deepstream/yolo26n_det_sahi_video.mp4
       sync: false
       async: false
   edges:
-    src: mux
-    mux: sahi_preprocess
-    sahi_preprocess: pgie
-    pgie: queue_sahi
-    queue_sahi: sahi_postprocess
-    sahi_postprocess: analyzer
-    analyzer: osd
-    osd: nvvidconv
-    nvvidconv: encoder
-    encoder: h264parse
+    nvurisrcbin: nvstreammux
+    nvstreammux: nvsahipreprocess
+    nvsahipreprocess: nvinfer
+    nvinfer: queue_sahi
+    queue_sahi: nvsahipostprocess
+    nvsahipostprocess: nvdsanalytics
+    nvdsanalytics: nvosdbin
+    nvosdbin: nvvideoconvert
+    nvvideoconvert: nvv4l2h264enc
+    nvv4l2h264enc: h264parse
     h264parse: mp4mux
-    mp4mux: sink
+    mp4mux: filesink

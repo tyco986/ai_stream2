@@ -5,9 +5,9 @@
 
 generator: SegSahiVideoGenerator
 config_save_dir: /root/configs/generator/yolo11n_seg_sahi_video
-interval: 50
+interval: 0
 pgie:
-  model_dir: /root/models/trt/yolo11n-seg-sahi
+  model_dir: /root/models/trt/yolo11n-seg
   class_attrs:
     all:
       conf: 0.25

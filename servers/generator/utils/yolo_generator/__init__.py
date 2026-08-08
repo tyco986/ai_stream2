@@ -1,1 +1,1 @@
-# Leaf generators are imported by GeneratorManager from their modules.
+# Leaf generators are imported by GeneratorRegistry from their modules.

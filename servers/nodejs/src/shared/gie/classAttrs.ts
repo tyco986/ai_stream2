@@ -51,7 +51,7 @@ export class GieClassAttrsFormat {
 
   classHead(classValue: ClassAttrRow['class'] | string): string {
     if (classValue === ALL_CLASS_SELECT) {
-      return GieClassAttrsFormat.selectText('-1', 'ALL')
+      return GieClassAttrsFormat.selectText('-1', 'All')
     }
     const id = Number(classValue)
     const label = this.labels.get(id) ?? String(id)
@@ -75,7 +75,7 @@ export class GieClassAttrsFormat {
   }
 
   selectOptions(model: Model | null): ClassSelectOption[] {
-    const all: ClassSelectOption = GieClassAttrsFormat.selectOption('-1', 'ALL', ALL_CLASS_SELECT)
+    const all: ClassSelectOption = GieClassAttrsFormat.selectOption('-1', 'All', ALL_CLASS_SELECT)
     if (!model) {
       return [all]
     }

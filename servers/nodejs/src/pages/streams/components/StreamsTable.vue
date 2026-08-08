@@ -17,12 +17,12 @@
       </UiTableColumn>
       <UiTableColumn :label="t('streams.status')" width="90">
         <template #default="{ row }">
-          {{ statusLabel(row) }}
+          <span :class="statusClass(row)">{{ statusLabel(row) }}</span>
         </template>
       </UiTableColumn>
-      <UiTableColumn :label="t('streams.lastTest')" width="140">
+      <UiTableColumn :label="t('streams.lastProbe')" width="140">
         <template #default="{ row }">
-          {{ formatLastTest(row.last_test_at) }}
+          {{ formatLastProbe(row.last_probe_at) }}
         </template>
       </UiTableColumn>
       <UiTableColumn :label="t('streams.operations')" width="200">
@@ -42,17 +42,18 @@
               class="ops__btn"
               :class="row.recording ? 'is-rec-on' : 'is-rec-off'"
               :title="t('streams.recording')"
+              :disabled="!row.enabled"
               @click="emit('toggle-recording', row)"
             >
               <UiIcon name="videoCamera" :size="16" />
             </button>
             <button
               type="button"
-              class="ops__btn is-test"
-              :class="{ 'is-spinning': testingIds.has(row.id) }"
-              :title="t('streams.test')"
-              :disabled="testingIds.has(row.id)"
-              @click="emit('test', row)"
+              class="ops__btn is-probe"
+              :class="{ 'is-spinning': probingIds.has(row.id) }"
+              :title="t('streams.probe')"
+              :disabled="probingIds.has(row.id)"
+              @click="emit('probe', row)"
             >
               <UiIcon name="refresh" :size="16" />
             </button>
@@ -96,14 +97,14 @@ import UiTableColumn from '@/shared/ui/TableColumn.vue'
 
 defineProps<{
   rows: Stream[]
-  testingIds: Set<string>
+  probingIds: Set<string>
 }>()
 
 const emit = defineEmits<{
   'selection-change': [ids: string[]]
   'toggle-enabled': [row: Stream]
   'toggle-recording': [row: Stream]
-  test: [row: Stream]
+  probe: [row: Stream]
   edit: [row: Stream]
   log: [row: Stream]
   delete: [row: Stream]
@@ -112,16 +113,22 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 function statusLabel(row: Stream) {
-  if (!row.enabled) {
-    return t('streams.disabled')
-  }
+  let label = t('streams.offline')
   if (row.status === 'online') {
-    return t('streams.online')
+    label = t('streams.online')
   }
-  return t('streams.offline')
+  return label
 }
 
-function formatLastTest(value: string | null) {
+function statusClass(row: Stream) {
+  let cls = 'status-offline'
+  if (row.status === 'online') {
+    cls = 'status-online'
+  }
+  return cls
+}
+
+function formatLastProbe(value: string | null) {
   if (!value) {
     return '—'
   }
@@ -147,6 +154,14 @@ function onSelectionChange(rows: Stream[]) {
   min-height: 0;
   overflow: auto;
   padding: 0 16px;
+}
+
+.status-online {
+  color: #67c23a;
+}
+
+.status-offline {
+  color: #f56c6c;
 }
 
 .ops {
@@ -193,7 +208,7 @@ function onSelectionChange(rows: Stream[]) {
   color: #c0c4cc;
 }
 
-.ops__btn.is-test {
+.ops__btn.is-probe {
   color: #409eff;
 }
 

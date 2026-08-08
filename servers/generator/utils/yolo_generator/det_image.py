@@ -1,7 +1,7 @@
 import copy
 
-from ..base_generator import BaseImageGenerator, IMAGE_TOPOLOGY_DOC
-from ..subelement_generator import YoloDet
+from ..base_generator.base_image import BaseImageGenerator, IMAGE_TOPOLOGY_DOC
+from ..subelement_generator.utils.default_pgie import YoloDet
 
 
 class DetImageGenerator(BaseImageGenerator):

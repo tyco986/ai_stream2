@@ -1,20 +1,17 @@
 import json
-import shutil
 from pathlib import Path
 
-import yaml
-
-from ..subelement_generator.pipeline import PipelineGenerator, TRACKER_LL_LIB
-from ..subelement_generator import NvsahipreprocessGenerator
+from ..subelement_generator.pipeline import TRACKER_LL_LIB
+from ..subelement_generator.nvsahipreprocess import NvsahipreprocessGenerator
 from .base_rtsp import BaseRTSPGenerator
 from ..subelement_generator.utils.sahi import get_sahi_box, get_sahi_preview
 
 SAHI_RTSP_TOPOLOGY_DOC = """
     Topology::
 
-        src{N} → mux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
-              → tracker → analyzer → demux
-              → queue_demux{N} → nvvidconv{N} → fakesink{N}
+        nvurisrcbin{N} → nvstreammux → nvsahipreprocess → nvinfer → queue_sahi → nvsahipostprocess
+              → nvtracker → nvdsanalytics → nvstreamdemux
+              → queue_demux{N} → nvvideoconvert{N} → fakesink{N}
 
     Notes::
 
@@ -22,12 +19,28 @@ SAHI_RTSP_TOPOLOGY_DOC = """
 
     Python (not in pipeline.yml)::
 
-        attach(analyzer, Probe)   # logger → drawer → messager
+        attach(nvdsanalytics, Probe)   # logger → drawer → messager
 """
 
 
 class BaseSahiRTSPGenerator(BaseRTSPGenerator):
     SAHI_PREPROCESS_CONFIG_NAME = "nvsahipreprocess.ini"
+    SINK_PATH_TEMPLATES = {
+        "fakesink{index}": [
+            "nvurisrcbin{index}",
+            "nvstreammux",
+            "nvsahipreprocess",
+            "nvinfer",
+            "queue_sahi",
+            "nvsahipostprocess",
+            "nvtracker",
+            "nvdsanalytics",
+            "nvstreamdemux",
+            "queue_demux{index}",
+            "nvvideoconvert{index}",
+            "fakesink{index}",
+        ],
+    }
 
     f"""Generate YOLO SAHI RTSP pipeline (headless, ends at fakesink).
 
@@ -45,19 +58,13 @@ class BaseSahiRTSPGenerator(BaseRTSPGenerator):
         interval: int = 0,
     ) -> None:
         self.sahi = sahi
-        self.streams = streams
-        self.analyzer = analyzer
-        self.tracker = tracker
-        self.interval = interval
-        self.pgie = pgie
-        PipelineGenerator.__init__(self)
-        self.init_streams()
-        self.init_pgie()
-        self.init_sahi()
-        self.init_nvdsanalytics()
-        self.init_nvtracker()
-        self.init_params()
-        self.init_pipeline()
+        super().__init__(
+            streams=streams,
+            analyzer=analyzer,
+            pgie=pgie,
+            tracker=tracker,
+            interval=interval,
+        )
 
     def init_streams(self) -> None:
         super().init_streams()
@@ -92,57 +99,24 @@ class BaseSahiRTSPGenerator(BaseRTSPGenerator):
         super().init_params()
         self.params_yml["sahi"] = self.sahi
 
+    def init_pipeline(self) -> None:
+        self.init_sahi()
+        super().init_pipeline()
+
     def apply_save_paths(self, config_save_dir: Path) -> None:
         super().apply_save_paths(config_save_dir)
         for node in self.pipeline_yml["deepstream"]["nodes"]:
             name = node["name"]
             properties = node.get("properties", {})
-            if name == "sahi_preprocess":
+            if name == "nvsahipreprocess":
                 properties["config-file"] = str(
                     config_save_dir / self.SAHI_PREPROCESS_CONFIG_NAME
                 )
 
-    def write(self, config_save_dir: str | Path) -> None:
-        config_save_dir = Path(config_save_dir)
-        pipeline_save_path = config_save_dir / self.PIPELINE_CONFIG_NAME
-        pad_links_save_path = config_save_dir / self.PAD_LINKS_CONFIG_NAME
-        pgie_save_path = config_save_dir / self.PGIE_CONFIG_NAME
-        nvtracker_save_path = config_save_dir / self.TRACKER_CONFIG_NAME
-        nvdsanalytics_save_path = config_save_dir / self.ANALYTICS_CONFIG_NAME
-        params_save_path = config_save_dir / self.PARAMS_NAME
-        sahi_preprocess_save_path = config_save_dir / self.SAHI_PREPROCESS_CONFIG_NAME
-        self.apply_save_paths(config_save_dir)
-        shutil.copy2(
-            self.pgie_config_parser.meta_path,
-            config_save_dir / self.pgie_config_parser.meta_path.name,
+    def write_sahi(self, config_save_dir: Path) -> None:
+        self.nvsahipreprocess_generator.write(
+            config_save_dir / self.SAHI_PREPROCESS_CONFIG_NAME
         )
-        with open(pgie_save_path, "w", encoding="utf-8") as handle:
-            yaml.safe_dump(self.pgie_yml, handle, sort_keys=False, default_flow_style=False)
-        if self.enable_nvtracker:
-            with open(nvtracker_save_path, "w", encoding="utf-8") as handle:
-                yaml.safe_dump(
-                    self.nvtracker_yml, handle, sort_keys=False, default_flow_style=False
-                )
-        with open(nvdsanalytics_save_path, "w", encoding="utf-8") as handle:
-            yaml.safe_dump(
-                self.nvdsanalytics_yml,
-                handle,
-                sort_keys=False,
-                default_flow_style=False,
-            )
-        with open(pipeline_save_path, "w", encoding="utf-8") as handle:
-            yaml.safe_dump(
-                self.pipeline_yml, handle, sort_keys=False, default_flow_style=False
-            )
-        with open(pad_links_save_path, "w", encoding="utf-8") as handle:
-            yaml.safe_dump(
-                self.pad_links_yml, handle, sort_keys=False, default_flow_style=False
-            )
-        params = dict(self.params_yml)
-        params["config_save_dir"] = str(config_save_dir)
-        with open(params_save_path, "w", encoding="utf-8") as handle:
-            yaml.safe_dump(params, handle, sort_keys=False, default_flow_style=False)
-        self.nvsahipreprocess_generator.write(sahi_preprocess_save_path)
         sahi = self.sahi["nvsahipreprocess"]
         sahi_info = get_sahi_box(
             image_width=self.width,
@@ -158,16 +132,20 @@ class BaseSahiRTSPGenerator(BaseRTSPGenerator):
         with open(config_save_dir / "sahi_slice_info.json", "w", encoding="utf-8") as handle:
             json.dump(sahi_info, handle)
 
+    def write(self, config_save_dir: str | Path) -> None:
+        super().write(config_save_dir)
+        self.write_sahi(Path(config_save_dir))
+
     def add(self) -> None:
         for index, name in enumerate(self.streams):
             self._append_node(
                 "nvurisrcbin",
-                f"src{index}",
+                f"nvurisrcbin{index}",
                 self._add_nvurisrcbin(self.streams[name]["url"], disable_audio=True),
             )
         self._append_node(
             "nvstreammux",
-            "mux",
+            "nvstreammux",
             self._add_nvstreammux(
                 batch_size=self.mux_batch_size,
                 width=self.width,
@@ -182,7 +160,7 @@ class BaseSahiRTSPGenerator(BaseRTSPGenerator):
         postprocess = self.sahi["nvsahipostprocess"]
         self._append_node(
             "nvsahipreprocess",
-            "sahi_preprocess",
+            "nvsahipreprocess",
             self._add_nvsahipreprocess(
                 self.SAHI_PREPROCESS_CONFIG_NAME,
                 slice_width=sahi["slice_width"],
@@ -195,7 +173,7 @@ class BaseSahiRTSPGenerator(BaseRTSPGenerator):
         )
         self._append_node(
             "nvinfer",
-            "pgie",
+            "nvinfer",
             self._add_nvinfer(
                 config_file_path=self.PGIE_CONFIG_NAME,
                 batch_size=self.pgie_generator.batch_size,
@@ -206,7 +184,7 @@ class BaseSahiRTSPGenerator(BaseRTSPGenerator):
         self._append_node("queue", "queue_sahi", self._add_queue())
         self._append_node(
             "nvsahipostprocess",
-            "sahi_postprocess",
+            "nvsahipostprocess",
             self._add_nvsahipostprocess(
                 gie_ids=str(self.pgie_generator.config["property"]["gie-unique-id"]),
                 match_metric=1,
@@ -219,7 +197,7 @@ class BaseSahiRTSPGenerator(BaseRTSPGenerator):
         if self.enable_nvtracker:
             self._append_node(
                 "nvtracker",
-                "tracker",
+                "nvtracker",
                 self._add_nvtracker(
                     TRACKER_LL_LIB,
                     self.TRACKER_CONFIG_NAME,
@@ -231,44 +209,44 @@ class BaseSahiRTSPGenerator(BaseRTSPGenerator):
             )
         self._append_node(
             "nvdsanalytics",
-            "analyzer",
+            "nvdsanalytics",
             self._add_nvdsanalytics(
                 self.ANALYTICS_CONFIG_NAME,
                 gpu_id=self.pgie_generator.gpu_id,
             ),
         )
-        self._append_node("nvstreamdemux", "demux", self._add_nvstreamdemux())
+        self._append_node("nvstreamdemux", "nvstreamdemux", self._add_nvstreamdemux())
         gpu_id = self.pgie_generator.gpu_id
         for index in range(len(self.streams)):
             self._append_node("queue", f"queue_demux{index}", self._add_queue())
             self._append_node(
                 "nvvideoconvert",
-                f"nvvidconv{index}",
+                f"nvvideoconvert{index}",
                 self._add_nvvideoconvert(gpu_id=gpu_id),
             )
             self._append_node(
                 "fakesink",
-                f"sink{index}",
+                f"fakesink{index}",
                 self._add_fakesink(sync=False, async_=False),
             )
 
     def link(self) -> None:
-        self.pad_links = {"demux": []}
+        self.pad_links = {"nvstreamdemux": []}
         edges: dict = {}
         for index in range(len(self.streams)):
-            edges[f"src{index}"] = "mux"
-        edges["mux"] = "sahi_preprocess"
-        edges["sahi_preprocess"] = "pgie"
-        edges["pgie"] = "queue_sahi"
-        edges["queue_sahi"] = "sahi_postprocess"
-        inference_tail = "sahi_postprocess"
+            edges[f"nvurisrcbin{index}"] = "nvstreammux"
+        edges["nvstreammux"] = "nvsahipreprocess"
+        edges["nvsahipreprocess"] = "nvinfer"
+        edges["nvinfer"] = "queue_sahi"
+        edges["queue_sahi"] = "nvsahipostprocess"
+        inference_tail = "nvsahipostprocess"
         if self.enable_nvtracker:
-            edges[inference_tail] = "tracker"
-            inference_tail = "tracker"
-        edges[inference_tail] = "analyzer"
-        edges["analyzer"] = "demux"
+            edges[inference_tail] = "nvtracker"
+            inference_tail = "nvtracker"
+        edges[inference_tail] = "nvdsanalytics"
+        edges["nvdsanalytics"] = "nvstreamdemux"
         for index in range(len(self.streams)):
-            self.pad_links["demux"].append(f"queue_demux{index}")
-            edges[f"queue_demux{index}"] = f"nvvidconv{index}"
-            edges[f"nvvidconv{index}"] = f"sink{index}"
+            self.pad_links["nvstreamdemux"].append(f"queue_demux{index}")
+            edges[f"queue_demux{index}"] = f"nvvideoconvert{index}"
+            edges[f"nvvideoconvert{index}"] = f"fakesink{index}"
         self.pipeline["deepstream"]["edges"] = edges

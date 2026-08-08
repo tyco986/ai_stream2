@@ -1,6 +1,7 @@
 <template>
   <el-radio-group
     :model-value="modelValue"
+    :disabled="disabled"
     @update:model-value="emit('update:modelValue', $event)"
   >
     <el-radio
@@ -14,10 +15,16 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
-  modelValue: string | boolean | number
-  options: { label: string; value: string | boolean | number }[]
-}>()
+withDefaults(
+  defineProps<{
+    modelValue: string | boolean | number
+    options: { label: string; value: string | boolean | number }[]
+    disabled?: boolean
+  }>(),
+  {
+    disabled: false,
+  },
+)
 
 const emit = defineEmits<{
   'update:modelValue': [value: string | boolean | number]

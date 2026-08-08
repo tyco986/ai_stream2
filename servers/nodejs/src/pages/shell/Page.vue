@@ -1,14 +1,33 @@
 <template>
   <div v-if="loaded" class="shell" :class="`shell--${mode}`">
     <aside v-if="mode === 'sidebar'" class="shell__sidebar">
-      <div class="shell__logo">{{ projectName }}</div>
+      <LogoVersionEntry
+        layout="sidebar"
+        :version="currentVersion"
+        :visible="canOpenVersions"
+        @open="versionsOpen = true"
+      />
       <AppNav layout="sidebar" />
-      <UserArea :username="username" @open-settings="settingsOpen = true" />
+      <UserArea
+        :username="username"
+        @open-settings="settingsOpen = true"
+        @logout="onLogout"
+      />
     </aside>
 
     <header v-else class="shell__topbar">
+      <LogoVersionEntry
+        layout="topbar"
+        :version="currentVersion"
+        :visible="canOpenVersions"
+        @open="versionsOpen = true"
+      />
       <AppNav layout="topbar" />
-      <UserArea :username="username" @open-settings="settingsOpen = true" />
+      <UserArea
+        :username="username"
+        @open-settings="settingsOpen = true"
+        @logout="onLogout"
+      />
     </header>
 
     <main class="shell__content">
@@ -22,26 +41,42 @@
       @apply="onApply"
       @cancel="settingsOpen = false"
     />
+
+    <VersionsDialog
+      v-model="versionsOpen"
+      @changed="onVersionsChanged"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { RouterView } from 'vue-router'
+import { RouterView, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import type { ShellMode } from '@/api/shell'
+import { logout, type ShellMode } from '@/api/shell'
 import { ApiError } from '@/shared/http/client'
-import { PROJECT_NAME } from '@/shared/project'
 import { toast } from '@/shared/ui/toast'
 import AppNav from './components/AppNav.vue'
+import LogoVersionEntry from './components/LogoVersionEntry.vue'
 import PageSettingsDialog from './components/PageSettingsDialog.vue'
 import UserArea from './components/UserArea.vue'
+import VersionsDialog from './components/VersionsDialog.vue'
 import { useShellSettings } from './composables/useShellSettings'
 
 const { t } = useI18n()
-const projectName = PROJECT_NAME
-const { mode, username, loaded, bootstrap, applySettings } = useShellSettings()
+const router = useRouter()
+const {
+  mode,
+  username,
+  loaded,
+  canOpenVersions,
+  currentVersion,
+  bootstrap,
+  applySettings,
+  refreshCurrentVersion,
+} = useShellSettings()
 const settingsOpen = ref(false)
+const versionsOpen = ref(false)
 const applying = ref(false)
 
 onMounted(() => {
@@ -59,6 +94,15 @@ async function onApply(draftMode: ShellMode) {
     toast.error(message || t('shell.applyFailed'))
   }
   applying.value = false
+}
+
+async function onVersionsChanged() {
+  await refreshCurrentVersion()
+}
+
+async function onLogout() {
+  await logout()
+  await router.replace({ name: 'login' })
 }
 </script>
 
@@ -79,20 +123,12 @@ async function onApply(draftMode: ShellMode) {
 }
 
 .shell__sidebar {
-  width: 200px;
+  width: var(--shell-sidebar-width, 200px);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   background: #fff;
   border-right: 1px solid #e4e7ed;
-}
-
-.shell__logo {
-  padding: 16px 12px;
-  font-weight: 700;
-  font-size: 16px;
-  color: #303133;
-  border-bottom: 1px solid #ebeef5;
 }
 
 .shell__topbar {

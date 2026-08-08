@@ -1,0 +1,15 @@
+export default {
+  title: 'Login',
+  username: 'Username',
+  password: 'Password',
+  ticketOrPassword: 'Password / ticket',
+  newPassword: 'New password',
+  confirmPassword: 'Confirm password',
+  submit: 'Login',
+  changePasswordSubmit: 'Change password & login',
+  usernameRequired: 'Username is required',
+  passwordRequired: 'Password is required',
+  newPasswordRequired: 'New password is required',
+  passwordMismatch: 'Passwords do not match',
+  mustChangePassword: 'Please set a new password to continue',
+}

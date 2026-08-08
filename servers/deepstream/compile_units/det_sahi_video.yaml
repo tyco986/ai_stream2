@@ -1,0 +1,17 @@
+type: DetSahiVideoPipeline
+entry: utils/yolo_pipeline/det_sahi_video.py
+files:
+- utils/base_pipeline/base_video.py
+- utils/base_pipeline/times_attach.py
+- utils/base_pipeline/validate.py
+- utils/probe/det_sahi_video_probe.py
+- utils/probe/utils/timer/__init__.py
+- utils/probe/utils/timer/decorator.py
+- utils/probe/utils/timer/frame_timer.py
+- utils/probe/utils/drawer/result.py
+- utils/probe/utils/drawer/det_drawer.py
+- utils/probe/utils/drawer/det_fade_drawer.py
+- utils/probe/utils/logger/det_logger.py
+- utils/probe/times_probe.py
+- utils/probe/utils/messager/det_messager.py
+- utils/yolo_pipeline/det_sahi_video.py

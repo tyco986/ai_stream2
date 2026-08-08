@@ -15,6 +15,9 @@ ENV PORT=8092
 ENV LOG_ROOT=/root/logs/deepstream
 ENV GST_PLUGIN_PATH=/opt/nvidia/deepstream/deepstream/lib/gst-plugins
 ENV DEEPSTREAM_LIBS_ROOT=/opt/ai_stream2/servers/deepstream/libs
+ENV NVDS_ENABLE_LATENCY_MEASUREMENT=1
+ENV NVDS_ENABLE_COMPONENT_LATENCY_MEASUREMENT=1
+ENV LATENCY_PROBE_SO=/opt/nvidia/deepstream/deepstream/service-maker/modules/liblatency_probe.so
 
 WORKDIR /app
 
@@ -24,6 +27,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         librdkafka-dev \
         patch \
+        ripgrep \
     && rm -rf /var/lib/apt/lists/*
 
 COPY servers/deepstream/requirements.txt /tmp/requirements.txt
@@ -32,7 +36,6 @@ RUN pip install --break-system-packages \
     && pip install --break-system-packages -r /tmp/requirements.txt
 
 COPY servers/deepstream/patches /app/patches
-COPY attachments/DeepStream-Yolo /root/attachments/DeepStream-Yolo
 COPY attachments/deepstream-sahi /root/attachments/deepstream-sahi
 
 RUN bash -ec '\
@@ -41,33 +44,38 @@ cd /opt/nvidia/deepstream/deepstream-9.0 && patch -p0 < /app/patches/gstnvinfer-
 make -C /opt/nvidia/deepstream/deepstream-9.0/sources/gst-plugins/gst-nvinfer CUDA_VER=${CUDA_VER} -j"$(nproc)"; \
 make -C /opt/nvidia/deepstream/deepstream-9.0/sources/gst-plugins/gst-nvinfer CUDA_VER=${CUDA_VER} install; \
 mkdir -p /root/src; \
-for f in /root/attachments/DeepStream-Yolo/*.zip /root/attachments/deepstream-sahi/*.zip; do \
+for f in /root/attachments/deepstream-sahi/*.zip; do \
   [[ -f "$f" ]] && unzip -o -q "$f" -d /root/src; \
 done; \
-cd /root/src && patch -p0 < /app/patches/deepstream-yolo-rotation-angle-init.patch; \
+cd /root/src/deepstream-sahi-master && patch -p1 < /app/patches/gstnvsahipostprocess-latency-timestamp.patch; \
 bash /root/src/deepstream-sahi-master/install.sh --plugins-only; \
 test -f /opt/nvidia/deepstream/deepstream/lib/gst-plugins/libnvdsgst_sahipreprocess.so; \
 test -f /opt/nvidia/deepstream/deepstream/lib/gst-plugins/libnvdsgst_sahipostprocess.so; \
+test -f /opt/nvidia/deepstream/deepstream/lib/libnvds_infer_yolo.so; \
+SEG_SRC=/root/src/nvdsinfer_custom_impl_Yolo_seg; \
+test -d "${SEG_SRC}"; \
+SM=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader -i 0 2>/dev/null | head -1 | tr -d "." || echo "89"); \
+export SM CUDA_VER; \
+make -C "${SEG_SRC}" clean; \
+make -C "${SEG_SRC}"; \
+mkdir -p "${DEEPSTREAM_LIBS_ROOT}"; \
+cp "${SEG_SRC}/libnvdsinfer_custom_impl_Yolo_seg.so" "${DEEPSTREAM_LIBS_ROOT}/"; \
 '
 
-FROM base AS dev
+COPY servers/deepstream/modules/latency_probe /tmp/latency_probe
+RUN cmake -S /tmp/latency_probe -B /tmp/latency_probe/build \
+    && cmake --build /tmp/latency_probe/build -j"$(nproc)" \
+    && cp /tmp/latency_probe/build/liblatency_probe.so \
+        /opt/nvidia/deepstream/deepstream/service-maker/modules/ \
+    && rm -rf /tmp/latency_probe
 
 ENV LD_PRELOAD=/opt/ai_stream2/servers/deepstream/libs/libnvdsinfer_custom_impl_Yolo_seg.so
+
+FROM base AS dev
 
 RUN bash -ec '\
 set -euo pipefail; \
 mkdir -p "${DEEPSTREAM_LIBS_ROOT}"; \
-make -C /root/src/DeepStream-Yolo-master/nvdsinfer_custom_impl_Yolo clean; \
-make -C /root/src/DeepStream-Yolo-master/nvdsinfer_custom_impl_Yolo; \
-cp /root/src/DeepStream-Yolo-master/nvdsinfer_custom_impl_Yolo/libnvdsinfer_custom_impl_Yolo.so "${DEEPSTREAM_LIBS_ROOT}/"; \
-make -C /root/src/DeepStream-Yolo-Face-master/nvdsinfer_custom_impl_Yolo_face clean; \
-make -C /root/src/DeepStream-Yolo-Face-master/nvdsinfer_custom_impl_Yolo_face; \
-cp /root/src/DeepStream-Yolo-Face-master/nvdsinfer_custom_impl_Yolo_face/libnvdsinfer_custom_impl_Yolo_face.so "${DEEPSTREAM_LIBS_ROOT}/"; \
-SM=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader -i 0 2>/dev/null | head -1 | tr -d "." || echo "89"); \
-export SM; \
-make -C /root/src/DeepStream-Yolo-Seg-master/nvdsinfer_custom_impl_Yolo_seg clean; \
-make -C /root/src/DeepStream-Yolo-Seg-master/nvdsinfer_custom_impl_Yolo_seg; \
-cp /root/src/DeepStream-Yolo-Seg-master/nvdsinfer_custom_impl_Yolo_seg/libnvdsinfer_custom_impl_Yolo_seg.so "${DEEPSTREAM_LIBS_ROOT}/"; \
 cd /opt/nvidia/deepstream/deepstream-9.0/sources/apps/sample_apps/deepstream-3d-action-recognition && make && make install; \
 cp /opt/nvidia/deepstream/deepstream-9.0/lib/libnvds_custom_sequence_preprocess.so "${DEEPSTREAM_LIBS_ROOT}/"; \
 ls -la "${DEEPSTREAM_LIBS_ROOT}/"; \

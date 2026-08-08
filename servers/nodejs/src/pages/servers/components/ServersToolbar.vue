@@ -1,6 +1,6 @@
 <template>
   <div class="servers-toolbar">
-    <UiButton type="success" :loading="refreshing" @click="emit('refresh')">
+    <UiButton type="primary" :loading="refreshing" @click="emit('refresh')">
       {{ t('servers.refresh') }}
     </UiButton>
   </div>

@@ -1,0 +1,16 @@
+type: DetSahiImageGenerator
+entry: utils/yolo_generator/det_sahi_image.py
+files:
+- utils/base_generator/base_image.py
+- utils/base_generator/base_sahi_image.py
+- utils/subelement_generator/nvdsanalytics.py
+- utils/subelement_generator/nvsahipreprocess.py
+- utils/subelement_generator/pgie.py
+- utils/subelement_generator/pipeline.py
+- utils/subelement_generator/utils/default_pgie/__init__.py
+- utils/subelement_generator/utils/default_pgie/yolo_det.py
+- utils/subelement_generator/utils/default_pgie/yolo_seg.py
+- utils/subelement_generator/utils/nvdsanalytics_parser.py
+- utils/subelement_generator/utils/pgie_parser.py
+- utils/subelement_generator/utils/sahi.py
+- utils/yolo_generator/det_sahi_image.py

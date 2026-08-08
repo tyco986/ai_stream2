@@ -1,8 +1,8 @@
 property:
   gpu-id: 0
   onnx-file: ''
-  model-engine-file: /root/models/trt/yolo26n-sahi/yolo26n.engine
-  labelfile-path: /root/models/trt/yolo26n-sahi/labels.txt
+  model-engine-file: /root/models/trt/yolo26n/yolo26n.engine
+  labelfile-path: /root/models/trt/yolo26n/labels.txt
   batch-size: 9
   network-mode: 2
   network-type: 0
@@ -11,7 +11,7 @@ property:
   num-detected-classes: 80
   gie-unique-id: 1
   interval: 0
-  cluster-mode: 2
+  cluster-mode: 4
   maintain-aspect-ratio: 1
   symmetric-padding: 1
   force-implicit-batch-dim: 0
@@ -21,4 +21,5 @@ property:
   parse-bbox-func-name: NvDsInferYoloE2E
   output-blob-names: output0
 class-attrs-all:
+  topk: 300
   pre-cluster-threshold: 0.25

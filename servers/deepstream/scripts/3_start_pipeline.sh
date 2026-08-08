@@ -16,7 +16,7 @@ usage: $0 --config PATH
 Build and start a DeepStream pipeline via API from a template YAML.
 
 Options:
-  --config PATH   Pipeline template (e.g. det_image_pipeline or servers/deepstream/templates/...)
+  --config PATH   Pipeline template (e.g. yolo26n_det_image_pipeline or servers/deepstream/templates/...)
 
 Prerequisites: 1_build_dev_image.sh or 1_build_prod_image.sh, 2_run_dev_container.sh or 2_run_prod_container.sh
 Stop: docker stop ai_stream2_deepstream

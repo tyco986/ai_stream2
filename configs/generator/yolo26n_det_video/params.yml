@@ -6,46 +6,7 @@ pgie:
   class_attrs:
     all:
       conf: 0.25
-analyzer:
-  streams:
-  - video
-  osd_mode: 2
-  template:
-    roi_filtering:
-      class_id:
-      - -1
-      inverse_roi: 0
-      roi:
-      - - FLOOR
-        - 160;60;1760;60;1760;1020;160;1020
-    overcrowding:
-      class_id:
-      - 0
-      object_threshold: 5
-      time_threshold: 2000
-      roi:
-      - - CLUSTER
-        - 320;360;980;360;980;760;320;760
-    line_crossing:
-      extended: 0
-      class_id:
-      - 0
-      mode: balanced
-      roi:
-      - - CrossDown
-        - 960;400;960;680;200;540;1720;540
-      - - CrossUp
-        - 960;680;960;400;200;540;1720;540
-    direction_detection:
-      class_id:
-      - 0
-      mode: loose
-      roi:
-      - - South
-        - 960;400;960;720
-      - - North
-        - 960;720;960;400
-tracker:
-  class_id: -1
+analyzer: null
+tracker: null
 interval: 50
 config_save_dir: /root/configs/generator/yolo26n_det_video

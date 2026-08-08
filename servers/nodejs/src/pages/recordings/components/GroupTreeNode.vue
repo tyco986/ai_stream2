@@ -5,7 +5,7 @@
       :class="{
         'is-group-selected': node.type === 'group' && node.id === selectedGroupId,
       }"
-      :style="{ paddingLeft: `${12 + depth * 14}px` }"
+      :style="{ paddingLeft: `${treeRowPaddingLeft(depth, node.type === 'stream' ? 'stream' : 'group')}px` }"
       @click="onRowClick"
     >
       <button
@@ -14,7 +14,7 @@
         class="tree-node__twist"
         @click.stop="emit('toggle', node.id)"
       >
-        {{ expandedIds.has(node.id) ? 'v' : '>' }}
+        {{ expandedIds.has(node.id) ? '▼' : '▶' }}
       </button>
       <span v-else class="tree-node__twist-spacer" />
       <span class="tree-node__label" :class="labelClass">
@@ -41,6 +41,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { TreeNode } from '@/api/streams'
+import { treeRowPaddingLeft } from '@/shared/ui/treeIndent'
 
 const props = defineProps<{
   node: TreeNode

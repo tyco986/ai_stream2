@@ -5,6 +5,7 @@
     :row-key="rowKey"
     :highlight-current-row="highlightCurrentRow"
     :current-row-key="currentRowKey"
+    :row-class-name="rowClassName"
     style="width: 100%"
     @selection-change="onSelectionChange"
     @row-click="onRowClick"
@@ -21,6 +22,7 @@ defineProps<{
   rowKey?: string
   highlightCurrentRow?: boolean
   currentRowKey?: string
+  rowClassName?: string | ((data: { row: T; rowIndex: number }) => string)
 }>()
 
 const emit = defineEmits<{

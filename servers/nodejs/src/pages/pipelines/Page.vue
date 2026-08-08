@@ -5,7 +5,6 @@
       <PipelinesToolbar
         :search="searchInput"
         :has-selection="selectedIds.length > 0"
-        :refreshing="listLoading"
         @add="openAdd"
         @remove="openBatchDelete"
         @refresh="onRefresh"
@@ -225,8 +224,8 @@ async function onStart(row: PipelineListItem) {
     await startPipeline(row.id)
     updateRowStatus(row.id, 'starting')
     toast.success(t('pipelines.toastStarting'))
-    const status = await waitForTerminalStatus(row.id, ['running', 'error', 'stopped'])
-    if (status === 'running') {
+    const status = await waitForTerminalStatus(row.id, ['running', 'online', 'error', 'stopped'])
+    if (status === 'running' || status === 'online') {
       toast.success(t('pipelines.toastStarted'))
     } else if (status === 'error') {
       toast.error(t('pipelines.toastFailed'))
@@ -257,8 +256,14 @@ async function onStop(row: PipelineListItem) {
 }
 
 async function onRefreshRow(row: PipelineListItem) {
-  const result = await getPipelineStatus(row.id)
-  updateRowStatus(row.id, result.status)
+  markPolling(row.id, true)
+  try {
+    const result = await getPipelineStatus(row.id)
+    updateRowStatus(row.id, result.status, result.last_refresh_at)
+  } catch (err) {
+    toast.error(err instanceof ApiError ? err.message : t('pipelines.toastFailed'))
+  }
+  markPolling(row.id, false)
 }
 
 async function openLog(row: PipelineListItem) {

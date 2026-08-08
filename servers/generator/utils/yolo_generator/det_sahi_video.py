@@ -1,7 +1,7 @@
 import copy
 
-from ..base_generator import BaseSahiVideoGenerator, SAHI_VIDEO_TOPOLOGY_DOC
-from ..subelement_generator import YoloDetSahi
+from ..base_generator.base_sahi_video import BaseSahiVideoGenerator, SAHI_VIDEO_TOPOLOGY_DOC
+from ..subelement_generator.utils.default_pgie import YoloDet
 
 
 class DetSahiVideoGenerator(BaseSahiVideoGenerator):
@@ -15,6 +15,6 @@ class DetSahiVideoGenerator(BaseSahiVideoGenerator):
     """
 
     def apply_pgie_config(self) -> None:
-        self.pgie_generator.config = copy.deepcopy(YoloDetSahi)
+        self.pgie_generator.config = copy.deepcopy(YoloDet)
         self.pgie_generator.update_config()
         self.pgie_yml = self.pgie_generator.config

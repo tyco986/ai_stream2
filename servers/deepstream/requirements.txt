@@ -2,6 +2,8 @@ pyyaml
 av
 onnx
 pillow
+numpy==1.26.4
+opencv-python-headless==4.11.0.86
 cupy-cuda13x
 fastapi
 uvicorn

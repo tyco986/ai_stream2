@@ -1,0 +1,15 @@
+filesink:
+- nvurisrcbin
+- nvstreammux
+- nvsahipreprocess
+- nvinfer
+- queue_sahi
+- nvsahipostprocess
+- nvtracker
+- nvdsanalytics
+- nvosdbin
+- nvvideoconvert
+- nvv4l2h264enc
+- h264parse
+- mp4mux
+- filesink

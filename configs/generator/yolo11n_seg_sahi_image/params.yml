@@ -2,7 +2,7 @@ generator: SegSahiImageGenerator
 input: /root/attachments/images/video1.png
 output: /root/outputs/deepstream/yolo11n_seg_sahi_image.jpg
 pgie:
-  model_dir: /root/models/trt/yolo11n-seg-sahi
+  model_dir: /root/models/trt/yolo11n-seg
   class_attrs:
     all:
       conf: 0.25

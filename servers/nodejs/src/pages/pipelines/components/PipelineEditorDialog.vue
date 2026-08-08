@@ -48,6 +48,15 @@
               />
             </label>
             <label>
+              <span>{{ t('pipelines.showId') }}</span>
+              <UiSelect
+                :model-value="boolStr(form.drawer.show_id)"
+                :options="boolOptions"
+                :disabled="!fieldAvailable('pipeline', 'drawer', 'show_id')"
+                @update:model-value="form.drawer.show_id = $event === 'true'"
+              />
+            </label>
+            <label>
               <span>{{ t('pipelines.interval') }}</span>
               <UiInput
                 :model-value="String(form.drawer.interval)"
@@ -139,7 +148,7 @@
         <div class="form__block" :class="{ 'is-disabled': !blockAvailable('generator', 'streams') }">
           <div class="form__block-title">{{ t('pipelines.streams') }}</div>
           <div class="form__pick">
-            <UiInput :model-value="streamNamesText" :clearable="false" />
+            <UiInput :model-value="streamNamesText" :clearable="false" :invalid="streamsInvalid" />
             <UiButton
               :disabled="!blockAvailable('generator', 'streams')"
               @click="streamsPickOpen = true"
@@ -229,6 +238,76 @@
             </label>
           </div>
         </div>
+
+        <div class="form__block" :class="{ 'is-disabled': !blockAvailable('generator', 'sahi') }">
+          <div class="form__block-title">{{ t('pipelines.sahi') }}</div>
+          <div class="form__grid">
+            <label>
+              <span>{{ t('pipelines.sliceWidth') }}</span>
+              <UiInput
+                :model-value="String(form.sahi.nvsahipreprocess.slice_width)"
+                :disabled="!blockAvailable('generator', 'sahi')"
+                @update:model-value="form.sahi.nvsahipreprocess.slice_width = Number($event) || 0"
+              />
+            </label>
+            <label>
+              <span>{{ t('pipelines.sliceHeight') }}</span>
+              <UiInput
+                :model-value="String(form.sahi.nvsahipreprocess.slice_height)"
+                :disabled="!blockAvailable('generator', 'sahi')"
+                @update:model-value="form.sahi.nvsahipreprocess.slice_height = Number($event) || 0"
+              />
+            </label>
+            <label>
+              <span>{{ t('pipelines.overlapWidthRatio') }}</span>
+              <UiInput
+                :model-value="String(form.sahi.nvsahipreprocess.overlap_width_ratio)"
+                :disabled="!blockAvailable('generator', 'sahi')"
+                @update:model-value="
+                  form.sahi.nvsahipreprocess.overlap_width_ratio = Number($event) || 0
+                "
+              />
+            </label>
+            <label>
+              <span>{{ t('pipelines.overlapHeightRatio') }}</span>
+              <UiInput
+                :model-value="String(form.sahi.nvsahipreprocess.overlap_height_ratio)"
+                :disabled="!blockAvailable('generator', 'sahi')"
+                @update:model-value="
+                  form.sahi.nvsahipreprocess.overlap_height_ratio = Number($event) || 0
+                "
+              />
+            </label>
+            <label>
+              <span>{{ t('pipelines.matchThreshold') }}</span>
+              <UiInput
+                :model-value="String(form.sahi.nvsahipostprocess.match_threshold)"
+                :disabled="!blockAvailable('generator', 'sahi')"
+                @update:model-value="
+                  form.sahi.nvsahipostprocess.match_threshold = Number($event) || 0
+                "
+              />
+            </label>
+          </div>
+        </div>
+
+        <div class="form__block" :class="{ 'is-disabled': !blockAvailable('generator', 'input') }">
+          <div class="form__block-title">{{ t('pipelines.input') }}</div>
+          <UiInput
+            :model-value="form.input"
+            :disabled="!blockAvailable('generator', 'input')"
+            @update:model-value="form.input = $event"
+          />
+        </div>
+
+        <div class="form__block" :class="{ 'is-disabled': !blockAvailable('generator', 'output') }">
+          <div class="form__block-title">{{ t('pipelines.output') }}</div>
+          <UiInput
+            :model-value="form.output"
+            :disabled="!blockAvailable('generator', 'output')"
+            @update:model-value="form.output = $event"
+          />
+        </div>
       </fieldset>
 
     </div>
@@ -272,6 +351,7 @@ import {
   type Debouncer,
   type Drawer,
   type PipelineAnalyzer,
+  type SahiConfig,
   type TypeSchema,
 } from '@/api/pipelines'
 import { listStreams, type Stream } from '@/api/streams'
@@ -307,6 +387,7 @@ const streamCandidates = ref<Stream[]>([])
 const streamNameMap = ref<Record<string, string>>({})
 const classOptions = ref<ClassItem[]>([])
 const nameInvalid = ref(false)
+const streamsInvalid = ref(false)
 const localSaving = ref(false)
 
 const trackerEnabled = ref(false)
@@ -318,12 +399,25 @@ const classPickTarget = ref<string>('debouncer')
 const classPickValue = ref<number[]>([])
 const streamsPickOpen = ref(false)
 
+const DEFAULT_SAHI: SahiConfig = {
+  nvsahipreprocess: {
+    slice_width: 640,
+    slice_height: 640,
+    overlap_width_ratio: 0.2,
+    overlap_height_ratio: 0.2,
+  },
+  nvsahipostprocess: {
+    match_threshold: 0.5,
+  },
+}
+
 const form = reactive({
   name: '',
   type: '',
   drawer: {
     show_label: true,
     show_conf: true,
+    show_id: false,
     interval: 50,
     fade_time: 1,
   } as Drawer,
@@ -346,6 +440,9 @@ const form = reactive({
     line_crossing: null as { class_id: number | number[] } | null,
     direction_detection: null as { class_id: number | number[] } | null,
   },
+  sahi: structuredClone(DEFAULT_SAHI),
+  input: '',
+  output: '',
 })
 
 const hasType = computed(() => Boolean(form.type))
@@ -388,6 +485,7 @@ watch(
       return
     }
     nameInvalid.value = false
+    streamsInvalid.value = false
     await loadLookups()
     if (props.mode === 'edit' && props.pipelineId) {
       await loadExisting(props.pipelineId)
@@ -431,7 +529,13 @@ function resetForm() {
   trackerEnabled.value = false
   analyzerEnabled.value = false
   trackerClassIds.value = [-1]
-  form.drawer = { show_label: true, show_conf: true, interval: 50, fade_time: 1 }
+  form.drawer = {
+    show_label: true,
+    show_conf: true,
+    show_id: false,
+    interval: 50,
+    fade_time: 1,
+  }
   form.logger = { interval: 50 }
   form.messager = { interval: 0 }
   form.debouncer = { length: 10, threshold: 0.5, class_ids: [], mode: 'fold' }
@@ -446,13 +550,23 @@ function resetForm() {
     line_crossing: null,
     direction_detection: null,
   }
+  form.sahi = structuredClone(DEFAULT_SAHI)
+  form.input = ''
+  form.output = ''
 }
 
 async function loadExisting(pipelineId: string) {
   const pipeline = await getPipeline(pipelineId)
   form.name = pipeline.name
   form.type = pipeline.type
-  form.drawer = { ...pipeline.drawer }
+  form.drawer = {
+    show_label: true,
+    show_conf: true,
+    show_id: false,
+    interval: 50,
+    fade_time: 1,
+    ...pipeline.drawer,
+  }
   form.logger = { ...pipeline.logger }
   form.messager = { ...pipeline.messager }
   form.debouncer = pipeline.debouncer
@@ -481,6 +595,14 @@ async function loadExisting(pipelineId: string) {
         line_crossing: null,
         direction_detection: null,
       }
+  form.sahi = pipeline.sahi
+    ? {
+        nvsahipreprocess: { ...pipeline.sahi.nvsahipreprocess },
+        nvsahipostprocess: { ...pipeline.sahi.nvsahipostprocess },
+      }
+    : structuredClone(DEFAULT_SAHI)
+  form.input = pipeline.input ?? ''
+  form.output = pipeline.output ?? ''
   schema.value = await getPipelineSchema({ pipeline_type: pipeline.type })
   await refreshClassOptions()
 }
@@ -504,6 +626,7 @@ function applySchemaDefaults() {
   if (drawer?.params) {
     form.drawer.show_label = Boolean(asFieldDefault(drawer.params.show_label, true))
     form.drawer.show_conf = Boolean(asFieldDefault(drawer.params.show_conf, true))
+    form.drawer.show_id = Boolean(asFieldDefault(drawer.params.show_id, false))
     form.drawer.interval = Number(asFieldDefault(drawer.params.interval, 50))
     form.drawer.fade_time = Number(asFieldDefault(drawer.params.fade_time, 1))
   }
@@ -526,6 +649,26 @@ function applySchemaDefaults() {
   )
   const analyzer = schema.value.generator.params.analyzer
   analyzerEnabled.value = Boolean(analyzer?.available)
+  const sahi = schema.value.generator.params.sahi
+  if (sahi?.available && sahi.params) {
+    const preprocess = asFieldDefault(sahi.params.nvsahipreprocess, DEFAULT_SAHI.nvsahipreprocess) as
+      | SahiConfig['nvsahipreprocess']
+      | null
+    const postprocess = asFieldDefault(
+      sahi.params.nvsahipostprocess,
+      DEFAULT_SAHI.nvsahipostprocess,
+    ) as SahiConfig['nvsahipostprocess'] | null
+    form.sahi = {
+      nvsahipreprocess: { ...(preprocess ?? DEFAULT_SAHI.nvsahipreprocess) },
+      nvsahipostprocess: { ...(postprocess ?? DEFAULT_SAHI.nvsahipostprocess) },
+    }
+  } else {
+    form.sahi = structuredClone(DEFAULT_SAHI)
+  }
+  const inputDefault = asFieldDefault(schema.value.generator.params.input, null)
+  form.input = inputDefault == null ? '' : String(inputDefault)
+  const outputDefault = asFieldDefault(schema.value.generator.params.output, null)
+  form.output = outputDefault == null ? '' : String(outputDefault)
 }
 
 function asFieldDefault(field: unknown, fallback: unknown) {
@@ -625,6 +768,7 @@ function onClassConfirm(value: number[]) {
 function onStreamsConfirm(value: string[]) {
   form.streams = value
   form.analyzer.streams = form.analyzer.streams.filter((id) => value.includes(id))
+  streamsInvalid.value = false
   streamsPickOpen.value = false
 }
 
@@ -635,7 +779,9 @@ function onNameChange(value: string) {
 
 async function onSave() {
   nameInvalid.value = !form.name.trim()
-  if (nameInvalid.value) {
+  streamsInvalid.value =
+    blockAvailable('generator', 'streams') && form.streams.length === 0
+  if (nameInvalid.value || streamsInvalid.value) {
     return
   }
   localSaving.value = true
@@ -669,6 +815,14 @@ async function onSave() {
           direction_detection: form.analyzer.direction_detection,
         }
       : null,
+    sahi: blockAvailable('generator', 'sahi')
+      ? {
+          nvsahipreprocess: { ...form.sahi.nvsahipreprocess },
+          nvsahipostprocess: { ...form.sahi.nvsahipostprocess },
+        }
+      : null,
+    input: blockAvailable('generator', 'input') ? form.input.trim() || null : null,
+    output: blockAvailable('generator', 'output') ? form.output.trim() || null : null,
   }
   try {
     if (props.mode === 'edit' && props.pipelineId) {

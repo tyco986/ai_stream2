@@ -3,12 +3,22 @@
     <header class="servers-page__title">{{ t('servers.title') }}</header>
     <section class="servers-page__main">
       <ServersToolbar :refreshing="refreshing" @refresh="onRefresh" />
-      <ServersTable
-        :rows="rows"
-        :restarting-ids="restartingIds"
-        @restart="openRestart"
-        @log="openLog"
-      />
+      <div class="servers-page__groups">
+        <ServersTable
+          :title="t('servers.groupInfrastructure')"
+          :rows="infrastructureRows"
+          :restarting-ids="restartingIds"
+          @restart="openRestart"
+          @log="openLog"
+        />
+        <ServersTable
+          :title="t('servers.groupPipeline')"
+          :rows="pipelineRows"
+          :restarting-ids="restartingIds"
+          @restart="openRestart"
+          @log="openLog"
+        />
+      </div>
     </section>
 
     <ConfirmRestartDialog
@@ -23,7 +33,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Server } from '@/api/servers'
 import { ApiError } from '@/shared/http/client'
@@ -48,6 +58,13 @@ const {
   restartServer,
   getServerLogs,
 } = pageApi
+
+const infrastructureRows = computed(() =>
+  rows.value.filter((row) => row.category === 'infrastructure'),
+)
+const pipelineRows = computed(() =>
+  rows.value.filter((row) => row.category === 'pipeline'),
+)
 
 const confirmOpen = ref(false)
 const confirmLoading = ref(false)
@@ -125,5 +142,14 @@ async function openLog(row: Server) {
   min-width: 0;
   min-height: 0;
   background: #fff;
+}
+
+.servers-page__groups {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 </style>

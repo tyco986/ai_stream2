@@ -16,7 +16,7 @@ usage: $0 --config PATH
 Generate DeepStream pipeline configs via Generator API.
 
 Options:
-  --config PATH   Generator YAML (e.g. yolo26n_det_rtsp or servers/generator/templates/...)
+  --config PATH   Generator YAML (e.g. yolo26n_det_vis_rtsp or servers/generator/templates/...)
 
 Prerequisites: 1_build_dev_image.sh or 1_build_prod_image.sh, 2_run_dev_container.sh or 2_run_prod_container.sh
 EOF

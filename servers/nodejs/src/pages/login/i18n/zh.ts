@@ -1,0 +1,15 @@
+export default {
+  title: '登录',
+  username: '用户名',
+  password: '密码',
+  ticketOrPassword: '密码 / 授权票',
+  newPassword: '新密码',
+  confirmPassword: '确认新密码',
+  submit: '登录',
+  changePasswordSubmit: '修改密码并登录',
+  usernameRequired: '请输入用户名',
+  passwordRequired: '请输入密码',
+  newPasswordRequired: '请输入新密码',
+  passwordMismatch: '两次输入的密码不一致',
+  mustChangePassword: '请先设置新密码后再进入系统',
+}

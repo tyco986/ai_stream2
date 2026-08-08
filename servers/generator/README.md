@@ -34,13 +34,52 @@ Swagger：`http://127.0.0.1:8091/docs`（试调入口；完整说明见本文）
 | `configs/generator/{name}/` | `/root/configs/generator/{name}/` | 模板默认输出目录（`servers/generator/templates/**/*.yaml` 中 `config_save_dir`） |
 | `logs/` | `/root/logs` | 服务日志（`LOG_ROOT` 默认 `/root/logs/generator`） |
 
+`compile_units/*.yaml`：各 generator 的逻辑源文件闭包（供后期 prod Nuitka / editable 编译）；路径相对 `servers/generator/`。
+
 ## 接口
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
+| GET | `/ai_stream2/generator/types` | 列出已注册 generator 类名 |
+| POST | `/ai_stream2/generator/schema` | 按类名返回 `__init__` kwargs schema（`schemas/*.yaml`） |
 | POST | `/ai_stream2/generator/generate` | 上传 generator YAML，生成 DeepStream 配置并落盘 |
 
-### 请求
+### GET `/types`
+
+响应 `data`：
+
+```json
+{ "items": [{ "generator": "DetImageGenerator" }, ...] }
+```
+
+### POST `/schema`
+
+请求 JSON：`{ "generator": "DetImageGenerator" }`。
+
+响应 `data` 来自对应 YAML（对齐前端 TypeSchema 的 `generator` 段：`available` / `default` / 嵌套 `params`），例如：
+
+```json
+{
+  "type": "DetImageGenerator",
+  "params": {
+    "streams": { "available": false, "params": {} },
+    "pgie": { "available": true, "params": {} },
+    "interval": { "available": true, "default": 50 },
+    "tracker": {
+      "available": false,
+      "params": { "class_id": { "available": false, "default": [-1] } }
+    },
+    "analyzer": { "available": true, "params": { "...": "..." } },
+    "sahi": { "available": false },
+    "input": { "available": true, "default": null },
+    "output": { "available": true, "default": null }
+  }
+}
+```
+
+未知 `generator` → HTTP 404。
+
+### POST `/generate`
 
 `multipart/form-data`，字段 `input`：generator YAML 文件（与 `servers/generator/templates/**/*.yaml` 同结构）。
 
@@ -50,43 +89,54 @@ YAML 中相对路径 `models/*`、`configs/*` 会在服务端映射为 `/root/mo
 
 | generator | 场景 |
 |-----------|------|
-| `YoloDetImageGenerator` | 单张图片检测 |
-| `YoloSegImageGenerator` | 单张图片分割 |
-| `YoloDetSahiImageGenerator` | 单张图片 SAHI 检测 |
-| `YoloDetVideoGenerator` | 视频文件检测 |
-| `YoloSegVideoGenerator` | 视频文件分割 |
-| `YoloDetSahiVideoGenerator` | 视频文件 SAHI 检测 |
-| `YoloDetRTSPGenerator` | 多路 RTSP 检测 |
-| `YoloSegRTSPGenerator` | 多路 RTSP 分割 |
-| `YoloDetSahiRTSPGenerator` | 多路 RTSP SAHI 检测 |
+| `DetImageGenerator` | 单张图片检测 |
+| `SegImageGenerator` | 单张图片分割 |
+| `DetSahiImageGenerator` | 单张图片 SAHI 检测 |
+| `SegSahiImageGenerator` | 单张图片 SAHI 分割 |
+| `DetVideoGenerator` | 视频文件检测 |
+| `SegVideoGenerator` | 视频文件分割 |
+| `DetSahiVideoGenerator` | 视频文件 SAHI 检测 |
+| `SegSahiVideoGenerator` | 视频文件 SAHI 分割 |
+| `DetRTSPGenerator` | 多路 RTSP 检测（headless） |
+| `DetVisRTSPGenerator` | 多路 RTSP 检测（OSD preview） |
+| `SegRTSPGenerator` | 多路 RTSP 分割（headless） |
+| `SegVisRTSPGenerator` | 多路 RTSP 分割（OSD preview） |
+| `DetSahiRTSPGenerator` | 多路 RTSP SAHI 检测（headless） |
+| `DetSahiVisRTSPGenerator` | 多路 RTSP SAHI 检测（OSD preview） |
+| `SegSahiRTSPGenerator` | 多路 RTSP SAHI 分割（headless） |
+| `SegSahiVisRTSPGenerator` | 多路 RTSP SAHI 分割（OSD preview） |
+| `DetVideoPresenceGenerator` | 视频 presence / event |
+| `DetSahiVideoPresenceGenerator` | 视频 SAHI presence / event |
+| `DetVisRTSPPresenceGenerator` | RTSP presence / event |
+| `DetSahiVisRTSPPresenceGenerator` | RTSP SAHI presence / event |
 
-### 公共字段
+完整列表以 `GET /types` 为准；各 generator 的入参形状以 `POST /schema` / `schemas/*.yaml` 为准。
+
+### 公共字段（generate YAML）
 
 | 字段 | 说明 |
 |------|------|
 | `generator` | 生成器类名（必填） |
 | `config_save_dir` | 配置输出目录（必填；模板见 `servers/generator/templates/`，默认 `/root/configs/generator/{模板名}`） |
-| `pgie_model_dir` | 模型目录，含 `meta.json`、`labels.txt`、唯一 `.engine` |
-| `pgie.class_attrs` | 检测阈值等，默认 `{"all": {"conf": 0.25}}`；含 `all` 则全开，仅数字 key 则启用这些类 |
-| `enable_kafka` | 是否输出 Kafka 元数据分支 |
-
-Image / Video 额外字段：`input`、`output`。  
-RTSP 额外字段：`streams`、`enable_nvtracker`、`interval`、`nvdsanalytics_config`。  
-SAHI 额外字段：`sahi_config`。
+| `pgie` | `model_dir` + `class_attrs`（见 schema / templates） |
+| `analyzer` / `tracker` / `interval` | 见对应 generator schema |
+| `streams` | RTSP 专用 |
+| `input` / `output` | Image / Video 专用 |
+| `sahi` | SAHI 变体专用 |
 
 生成目录中除 pipeline 相关 YAML 外，还会写入 `params.yml`（完整入参快照，含 `generator`）。
 
-`pgie_model_dir` 要求见 `utils/subelement_generator/utils/pgie_parser.py`。RTSP 生成时会探测流地址，且多路流分辨率需一致。
+`pgie.model_dir` 要求见 `utils/subelement_generator/utils/pgie_parser.py`。RTSP 生成时会探测流地址，且多路流分辨率需一致。
 
 ### 响应格式
 
 成功：
 
 ```json
-{"success": true, "message": ""}
+{"success": true, "message": "", "data": ...}
 ```
 
-失败（HTTP 400 / 422）：
+失败（HTTP 400 / 404 / 422）：
 
 ```json
 {"success": false, "message": "..."}
@@ -95,6 +145,12 @@ SAHI 额外字段：`sahi_config`。
 ### curl 示例
 
 ```bash
+curl -s http://127.0.0.1:8091/ai_stream2/generator/types
+
+curl -s -X POST http://127.0.0.1:8091/ai_stream2/generator/schema \
+  -H 'Content-Type: application/json' \
+  -d '{"generator":"DetImageGenerator"}'
+
 curl -s -X POST http://127.0.0.1:8091/ai_stream2/generator/generate \
   -F "input=@servers/generator/templates/yolo/yolo26n_det_image.yaml"
 ```
@@ -102,7 +158,7 @@ curl -s -X POST http://127.0.0.1:8091/ai_stream2/generator/generate \
 ## 命令行
 
 ```bash
-./servers/generator/scripts/3_generate.sh --config yolo26n_det_rtsp
+./servers/generator/scripts/3_generate.sh --config yolo26n_det_vis_rtsp
 ./servers/generator/scripts/3_generate.sh --config servers/generator/templates/yolo/yolo26n_det_image.yaml
 ```
 

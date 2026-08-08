@@ -61,3 +61,6 @@ media/
 models/
 outputs/
 logs/
+recordings/
+# Runtime secrets (vendor private keys, site age keys, postgres data)
+secrets/

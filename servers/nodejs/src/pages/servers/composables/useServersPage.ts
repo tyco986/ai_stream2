@@ -47,6 +47,7 @@ export function useServersPage() {
   async function refreshAll() {
     refreshing.value = true
     const result = await refreshServers()
+    await loadList()
     applyRefreshResults(result.results)
     refreshing.value = false
   }

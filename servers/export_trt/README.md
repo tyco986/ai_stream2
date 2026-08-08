@@ -1,24 +1,37 @@
 # Export TRT API
 
-在 `ai_stream2_export_trt` 镜像中将 dsyolo 产出的 ONNX 目录编译为 TensorRT engine。
+在 Export TRT 容器内将 export_onnx 产出的 ONNX 目录编译为 TensorRT engine。
 
-## 构建与运行
+## 镜像分层
+
+| 镜像 | 构建 | 用途 |
+|------|------|------|
+| `ai_stream2_export_trt_dev` | `1_build_dev_image.sh` | 开发：运行时依赖 + YOLO static plugins |
+| `ai_stream2_export_trt_prod` | `1_build_prod_image.sh` | 生产：dev + 内置 `servers/export_trt` 代码 |
+
+原生产物：`libnvdsinfer_custom_impl_Yolo*.so` 在 `/opt/ai_stream2/servers/export_trt/libs`（不随 `/app` 挂载覆盖）。
+
+## 开发与生产
 
 ```bash
-# 项目根目录
-./servers/export_trt/scripts/0_pull_base_image.sh   # 可选
-./servers/export_trt/scripts/1_build_image.sh
-./servers/export_trt/scripts/2_run_container.sh
+# 开发：挂代码，改 Python 后 restart 即可
+./servers/export_trt/scripts/1_build_dev_image.sh   # 改 pip / native plugin 后
+./servers/export_trt/scripts/2_run_dev_container.sh
+
+# 生产：代码打进镜像
+./servers/export_trt/scripts/1_build_prod_image.sh
+./servers/export_trt/scripts/2_run_prod_container.sh
 ```
 
 API：`http://127.0.0.1:9000/ai_stream2/export_trt/export_engine`  
 Swagger：`http://127.0.0.1:9000/docs`  
 容器名：`ai_stream2_export_trt`（需 `--gpus all`）
 
-## 目录
+## 目录挂载
 
 | 宿主机 | 容器路径 | 用途 |
 |--------|----------|------|
+| `servers/export_trt` | `/app` | 开发模式：Python 代码 |
 | `models/` | `/root/models` | ONNX 输入目录、TRT 产物 |
 | `logs/` | `/root/logs` | 服务日志 |
 
@@ -32,7 +45,7 @@ Swagger：`http://127.0.0.1:9000/docs`
 1. `input` 传入容器内 ONNX 文件夹路径；目录不存在则报错
 2. 校验目录含 `*.onnx`、`labels.txt`、`meta.json`
 3. 调用镜像内 `trtexec` 构建 engine，写入 `trt/{name}/`
-4. 返回 JSON，`message` 为 TRT 目录路径
+4. 返回 JSON，`data` 为 TRT 目录路径
 
 ## 接口
 
@@ -44,8 +57,9 @@ Swagger：`http://127.0.0.1:9000/docs`
 | `batch_size` | — | 动态模型必填；静态模型勿传 |
 | `gpu_id` | `0` | 写入 meta.json |
 | `precision` | `fp16` | engine 精度：`fp32` / `fp16` / `int8` |
+| `opt_level` | — | `trtexec --builderOptimizationLevel`（可选） |
 
-成功返回 JSON（`message` 为 `/root/models/trt/{name}/`）。失败返回 JSON 错误。
+成功返回 JSON（`data` 为 `/root/models/trt/{name}/`）。失败返回 JSON 错误。
 
 ### curl 示例
 
@@ -62,10 +76,20 @@ curl -s -X POST http://127.0.0.1:9000/ai_stream2/export_trt/export_engine \
   -F "batch_size=4"
 ```
 
+YOLO10 smoke-fire 等需固定 opt_level：
+
+```bash
+curl -s -X POST http://127.0.0.1:9000/ai_stream2/export_trt/export_engine \
+  -F "input=/root/models/onnx/yolov10x-smoke-fire" \
+  -F "batch_size=1" \
+  -F "opt_level=0"
+```
+
 ## 命令行
 
 ```bash
 ./servers/export_trt/scripts/3_export_engine.sh --input models/onnx/yolo26n
+./servers/export_trt/scripts/3_export_engine.sh --input models/onnx/yolov10x-smoke-fire --batch-size 1 --opt-level 0
 ```
 
 `--input` 须为 `models/` 下的 ONNX 目录（映射为容器内 `/root/models/...`）。

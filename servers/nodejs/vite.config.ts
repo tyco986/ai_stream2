@@ -50,39 +50,118 @@ function readProjectName(): string {
 }
 
 const projectName = readProjectName()
+const backendProxyTarget =
+  process.env.VITE_BACKEND_PROXY_TARGET ||
+  `http://${projectName}_django:8000`
 
-export default defineConfig({
-  plugins: [
-    vue(),
-    AutoImport({
-      resolvers: [ElementPlusResolver()],
-    }),
-    Components({
-      resolvers: [ElementPlusResolver()],
-    }),
-    {
-      name: 'html-project-name',
-      transformIndexHtml(html: string) {
-        return html.replaceAll('%VITE_PROJECT_NAME%', projectName)
+function resolveApiLayer(mode: string): 'mock' | 'http' {
+  return mode === 'mock' ? 'mock' : 'http'
+}
+
+export default defineConfig(({ mode }) => {
+  const apiLayer = resolveApiLayer(mode)
+  return {
+    plugins: [
+      vue(),
+      AutoImport({
+        resolvers: [ElementPlusResolver()],
+      }),
+      Components({
+        resolvers: [ElementPlusResolver()],
+      }),
+      {
+        name: 'html-project-name',
+        transformIndexHtml(html: string) {
+          return html.replaceAll('%VITE_PROJECT_NAME%', projectName)
+        },
+      },
+      {
+        name: 'health-check',
+        configureServer(server) {
+          server.middlewares.use((req, res, next) => {
+            if (req.url === '/health' || req.url === '/health/') {
+              res.statusCode = 200
+              res.setHeader('Content-Type', 'application/json')
+              res.end(JSON.stringify({ success: true, message: '' }))
+              return
+            }
+            next()
+          })
+        },
+      },
+      {
+        name: 'api-runtime-alias',
+        enforce: 'pre',
+        resolveId(source, importer) {
+          if (source !== './runtime' || !importer) {
+            return null
+          }
+          const normalized = importer.replace(/\\/g, '/')
+          if (!/\/api\/[^/]+\/index\.ts$/.test(normalized)) {
+            return null
+          }
+          return path.join(path.dirname(importer), `${apiLayer}.ts`)
+        },
+      },
+    ],
+    define: {
+      'import.meta.env.VITE_PROJECT_NAME': JSON.stringify(projectName),
+    },
+    resolve: {
+      alias: {
+        '@': fileURLToPath(new URL('./src', import.meta.url)),
       },
     },
-  ],
-  define: {
-    'import.meta.env.VITE_PROJECT_NAME': JSON.stringify(projectName),
-  },
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
-    },
-  },
-  server: {
-    host: true,
-    port: 5173,
-    proxy: {
-      [`/${projectName}/backend`]: {
-        target: 'http://127.0.0.1:8000',
-        changeOrigin: true,
+    server: {
+      host: true,
+      port: apiLayer === 'mock' ? 5174 : 5173,
+      allowedHosts: true,
+      proxy: {
+        [`/${projectName}/backend`]: {
+          target: backendProxyTarget,
+          changeOrigin: true,
+          configure(proxy) {
+            // Container DNS names contain underscores; Django rejects them as Host.
+            proxy.on('proxyReq', (proxyReq) => {
+              proxyReq.setHeader('host', '127.0.0.1')
+            })
+          },
+        },
+        [`/${projectName}/media`]: {
+          target: backendProxyTarget,
+          changeOrigin: true,
+          configure(proxy) {
+            proxy.on('proxyReq', (proxyReq) => {
+              proxyReq.setHeader('host', '127.0.0.1')
+            })
+          },
+        },
       },
     },
-  },
+    preview: {
+      host: true,
+      port: 5173,
+      allowedHosts: true,
+      proxy: {
+        [`/${projectName}/backend`]: {
+          target: backendProxyTarget,
+          changeOrigin: true,
+          configure(proxy) {
+            proxy.on('proxyReq', (proxyReq) => {
+              proxyReq.setHeader('host', '127.0.0.1')
+            })
+          },
+        },
+        [`/${projectName}/media`]: {
+          target: backendProxyTarget,
+          changeOrigin: true,
+          configure(proxy) {
+            proxy.on('proxyReq', (proxyReq) => {
+              proxyReq.setHeader('host', '127.0.0.1')
+            })
+          },
+        },
+      },
+    },
+  }
 })

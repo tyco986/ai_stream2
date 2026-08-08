@@ -5,11 +5,16 @@
       <UiButton type="danger" :disabled="!hasSelection" @click="emit('remove')">
         {{ t('pipelines.remove') }}
       </UiButton>
-      <UiButton type="success" :loading="refreshing" @click="emit('refresh')">
+      <UiButton
+        type="primary"
+        :disabled="!hasSelection"
+        @click="emit('refresh')"
+      >
         {{ t('pipelines.refresh') }}
       </UiButton>
-      <UiButton @click="emit('open-gie')">{{ t('pipelines.gie') }}</UiButton>
-      <UiButton @click="emit('open-analyzer')">{{ t('pipelines.analyzer') }}</UiButton>
+      <span class="pipelines-toolbar__divider" />
+      <UiButton type="primary" @click="emit('open-gie')">{{ t('pipelines.gie') }}</UiButton>
+      <UiButton type="primary" @click="emit('open-analyzer')">{{ t('pipelines.analyzer') }}</UiButton>
     </div>
     <div class="pipelines-toolbar__search">
       <UiInput
@@ -29,7 +34,6 @@ import UiInput from '@/shared/ui/Input.vue'
 defineProps<{
   search: string
   hasSelection: boolean
-  refreshing: boolean
 }>()
 
 const emit = defineEmits<{
@@ -58,6 +62,13 @@ const { t } = useI18n()
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+}
+
+.pipelines-toolbar__divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background: #dcdfe6;
 }
 
 .pipelines-toolbar__search {

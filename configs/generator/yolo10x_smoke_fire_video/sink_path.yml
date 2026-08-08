@@ -1,0 +1,47 @@
+appsink_raw0:
+- nvurisrcbin
+- nvstreammux
+- nvinfer
+- nvtracker
+- nvdsanalytics
+- nvvideoconvert
+- tee_raw
+- queue_raw
+- nvvideoconvert_raw
+- capsfilter_raw
+- appsink_raw0
+appsink_vis0:
+- nvurisrcbin
+- nvstreammux
+- nvinfer
+- nvtracker
+- nvdsanalytics
+- nvvideoconvert
+- tee_raw
+- queue_osd
+- nvvideoconvert_osd
+- capsfilter_osd
+- nvosdbin
+- tee_vis
+- queue_vis
+- nvvideoconvert_vis
+- capsfilter_vis
+- appsink_vis0
+filesink:
+- nvurisrcbin
+- nvstreammux
+- nvinfer
+- nvtracker
+- nvdsanalytics
+- nvvideoconvert
+- tee_raw
+- queue_osd
+- nvvideoconvert_osd
+- capsfilter_osd
+- nvosdbin
+- tee_vis
+- queue_enc
+- nvv4l2h264enc
+- h264parse
+- mp4mux
+- filesink

@@ -4,14 +4,12 @@ from pathlib import Path
 import yaml
 
 from ..subelement_generator.pipeline import PipelineGenerator, TRACKER_LL_LIB
-from ..subelement_generator import (
-    NvdsanalyticsGenerator,
-    NvtrackerGenerator,
-    PgieGenerator,
-)
+from ..subelement_generator.nvdsanalytics import NvdsanalyticsGenerator
+from ..subelement_generator.nvtracker import NvtrackerGenerator
+from ..subelement_generator.pgie import PgieGenerator
 from ..subelement_generator.utils.pgie_parser import PgieParser
 from ..subelement_generator.utils.nvdsanalytics_parser import NvdsanalyticsParser
-from ..subelement_generator.utils.nvtracker_utils import align_tracker_dimension, format_operate_on_class_ids, validate_tracker
+from ..subelement_generator.utils.nvtracker_parser import NvtrackerParser
 from ..subelement_generator.utils.validate_video import probe_video
 
 VIDEO_STREAM_NAME = "video"
@@ -19,8 +17,8 @@ VIDEO_STREAM_NAME = "video"
 VIDEO_TOPOLOGY_DOC = """
     Topology::
 
-        src → mux → pgie → tracker → analyzer → osd → nvvidconv
-            → encoder → h264parse → mp4mux → filesink
+        nvurisrcbin → nvstreammux → nvinfer → nvtracker → nvdsanalytics → nvosdbin → nvvideoconvert
+            → nvv4l2h264enc → h264parse → mp4mux → filesink
 """
 
 
@@ -30,6 +28,22 @@ class BaseVideoGenerator(PipelineGenerator):
     TRACKER_CONFIG_NAME = "nvtracker.yml"
     ANALYTICS_CONFIG_NAME = "nvdsanalytics.yml"
     PARAMS_NAME = "params.yml"
+    SINK_PATH_CONFIG_NAME = "sink_path.yml"
+    SINK_PATH_TEMPLATES = {
+        "filesink": [
+            "nvurisrcbin",
+            "nvstreammux",
+            "nvinfer",
+            "nvtracker",
+            "nvdsanalytics",
+            "nvosdbin",
+            "nvvideoconvert",
+            "nvv4l2h264enc",
+            "h264parse",
+            "mp4mux",
+            "filesink",
+        ],
+    }
 
     f"""Generate YOLO video pipeline YAML.
 
@@ -122,33 +136,64 @@ class BaseVideoGenerator(PipelineGenerator):
     def init_nvtracker(self) -> None:
         self.nvtracker_generator = None
         self.nvtracker_yml = None
-        self.enable_nvtracker = validate_tracker(
+        parser = NvtrackerParser(self.interval)
+        self.enable_nvtracker = parser.validate(
             self.tracker,
             self.pgie_config_parser.class_ids,
         )
         if self.enable_nvtracker:
-            self.nvtracker_generator = NvtrackerGenerator()
+            self.nvtracker_generator = NvtrackerGenerator(
+                maxShadowTrackingAge=parser.maxShadowTrackingAge,
+                earlyTerminationAge=parser.earlyTerminationAge,
+                probationAge=parser.probationAge,
+            )
             self.nvtracker_yml = self.nvtracker_generator.config
-            self.tracker_width = align_tracker_dimension(self.width)
-            self.tracker_height = align_tracker_dimension(self.height)
-            self.operate_on_class_ids = format_operate_on_class_ids(self.tracker)
+            self.tracker_width = parser.align_tracker_dimension(self.width)
+            self.tracker_height = parser.align_tracker_dimension(self.height)
+            self.operate_on_class_ids = parser.format_operate_on_class_ids(self.tracker)
 
     def apply_save_paths(self, config_save_dir: Path) -> None:
         for node in self.pipeline_yml["deepstream"]["nodes"]:
             name = node["name"]
             properties = node.get("properties", {})
-            if name == "pgie":
+            if name == "nvinfer":
                 properties["config-file-path"] = str(
                     config_save_dir / self.PGIE_CONFIG_NAME
                 )
-            if name == "tracker":
+            if name == "nvtracker":
                 properties["ll-config-file"] = str(
                     config_save_dir / self.TRACKER_CONFIG_NAME
                 )
-            if name == "analyzer":
+            if name == "nvdsanalytics":
                 properties["config-file"] = str(
                     config_save_dir / self.ANALYTICS_CONFIG_NAME
                 )
+
+
+    def build_sink_paths(self) -> dict[str, list[str]]:
+        templates = self.SINK_PATH_TEMPLATES
+        indexed = any("{index}" in key for key in templates)
+        sink_paths = {}
+        if indexed:
+            for index in range(len(self.streams)):
+                for key_template, path_template in templates.items():
+                    sink_paths[key_template.format(index=index)] = [
+                        part.format(index=index) for part in path_template
+                    ]
+        else:
+            sink_paths = {key: list(path) for key, path in templates.items()}
+        return sink_paths
+
+    def write_sink_path(self, config_save_dir: Path | str) -> None:
+        path = Path(config_save_dir) / self.SINK_PATH_CONFIG_NAME
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("w", encoding="utf-8") as handle:
+            yaml.safe_dump(
+                self.build_sink_paths(),
+                handle,
+                sort_keys=False,
+                default_flow_style=False,
+            )
 
     def write(self, config_save_dir: str | Path) -> None:
         config_save_dir = Path(config_save_dir)
@@ -180,6 +225,7 @@ class BaseVideoGenerator(PipelineGenerator):
             yaml.safe_dump(
                 self.pipeline_yml, handle, sort_keys=False, default_flow_style=False
             )
+        self.write_sink_path(config_save_dir)
         params = dict(self.params_yml)
         params["config_save_dir"] = str(config_save_dir)
         with open(params_save_path, "w", encoding="utf-8") as handle:
@@ -195,7 +241,7 @@ class BaseVideoGenerator(PipelineGenerator):
     def add(self) -> None:
         self._append_node(
             "nvurisrcbin",
-            "src",
+            "nvurisrcbin",
             self._add_nvurisrcbin(
                 self.file_uri(self.input),
                 disable_audio=True,
@@ -203,7 +249,7 @@ class BaseVideoGenerator(PipelineGenerator):
         )
         self._append_node(
             "nvstreammux",
-            "mux",
+            "nvstreammux",
             self._add_nvstreammux(
                 batch_size=1,
                 width=self.width,
@@ -216,7 +262,7 @@ class BaseVideoGenerator(PipelineGenerator):
         )
         self._append_node(
             "nvinfer",
-            "pgie",
+            "nvinfer",
             self._add_nvinfer(
                 config_file_path=self.PGIE_CONFIG_NAME,
                 batch_size=self.pgie_generator.batch_size,
@@ -226,7 +272,7 @@ class BaseVideoGenerator(PipelineGenerator):
         if self.enable_nvtracker:
             self._append_node(
                 "nvtracker",
-                "tracker",
+                "nvtracker",
                 self._add_nvtracker(
                     TRACKER_LL_LIB,
                     self.TRACKER_CONFIG_NAME,
@@ -238,7 +284,7 @@ class BaseVideoGenerator(PipelineGenerator):
             )
         self._append_node(
             "nvdsanalytics",
-            "analyzer",
+            "nvdsanalytics",
             self._add_nvdsanalytics(
                 self.ANALYTICS_CONFIG_NAME,
                 gpu_id=self.pgie_generator.gpu_id,
@@ -247,17 +293,17 @@ class BaseVideoGenerator(PipelineGenerator):
         gpu_id = self.pgie_generator.gpu_id
         self._append_node(
             "nvosdbin",
-            "osd",
+            "nvosdbin",
             self._add_nvosdbin(**self.osd_kwargs(gpu_id)),
         )
         self._append_node(
             "nvvideoconvert",
-            "nvvidconv",
+            "nvvideoconvert",
             self._add_nvvideoconvert(gpu_id=gpu_id),
         )
         self._append_node(
             "nvv4l2h264enc",
-            "encoder",
+            "nvv4l2h264enc",
             self._add_nvv4l2h264enc(
                 bitrate=4_000_000,
                 iframeinterval=self.fps,
@@ -269,26 +315,26 @@ class BaseVideoGenerator(PipelineGenerator):
         self._append_node("mp4mux", "mp4mux", self._add_mp4mux())
         self._append_node(
             "filesink",
-            "sink",
+            "filesink",
             self._add_filesink(self.output, sync=False, async_=False),
         )
 
     def link(self) -> None:
         edges = {
-            "src": "mux",
-            "mux": "pgie",
+            "nvurisrcbin": "nvstreammux",
+            "nvstreammux": "nvinfer",
         }
-        inference_tail = "pgie"
+        inference_tail = "nvinfer"
         if self.enable_nvtracker:
-            edges[inference_tail] = "tracker"
-            inference_tail = "tracker"
-        edges[inference_tail] = "analyzer"
-        edges["analyzer"] = "osd"
-        edges["osd"] = "nvvidconv"
-        edges["nvvidconv"] = "encoder"
-        edges["encoder"] = "h264parse"
+            edges[inference_tail] = "nvtracker"
+            inference_tail = "nvtracker"
+        edges[inference_tail] = "nvdsanalytics"
+        edges["nvdsanalytics"] = "nvosdbin"
+        edges["nvosdbin"] = "nvvideoconvert"
+        edges["nvvideoconvert"] = "nvv4l2h264enc"
+        edges["nvv4l2h264enc"] = "h264parse"
         edges["h264parse"] = "mp4mux"
-        edges["mp4mux"] = "sink"
+        edges["mp4mux"] = "filesink"
         self.pipeline["deepstream"]["edges"] = edges
 
     @staticmethod

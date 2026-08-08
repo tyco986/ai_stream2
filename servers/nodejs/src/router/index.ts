@@ -1,15 +1,16 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { getMe, isLoggedIn } from '@/api/shell'
 import ShellPage from '@/pages/shell/Page.vue'
-import PlaceholderPage from '@/pages/shared/PlaceholderPage.vue'
-
-const placeholder = (title: string) => ({
-  component: PlaceholderPage,
-  props: { title },
-})
 
 export const router = createRouter({
   history: createWebHistory(),
   routes: [
+    {
+      path: '/login',
+      name: 'login',
+      component: () => import('@/pages/login/Page.vue'),
+      meta: { public: true },
+    },
     {
       path: '/',
       component: ShellPage,
@@ -45,9 +46,29 @@ export const router = createRouter({
           name: 'servers',
           component: () => import('@/pages/servers/Page.vue'),
         },
-        { path: 'warnings', name: 'warnings', ...placeholder('Warnings') },
-        { path: 'users', name: 'users', ...placeholder('Users') },
+        { path: 'events', name: 'events', component: () => import('@/pages/events/Page.vue') },
+        { path: 'users', name: 'users', component: () => import('@/pages/users/Page.vue') },
       ],
     },
   ],
+})
+
+router.beforeEach(async (to) => {
+  if (to.meta.public) {
+    return true
+  }
+  // Avoid awaiting /shell/me while media Range requests saturate the host
+  // connection pool (blocks navigation from Recordings playback).
+  if (isLoggedIn()) {
+    return true
+  }
+  try {
+    await getMe()
+    return true
+  } catch {
+    return {
+      name: 'login',
+      query: { redirect: to.fullPath },
+    }
+  }
 })

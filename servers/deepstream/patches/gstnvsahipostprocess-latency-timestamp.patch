@@ -1,0 +1,31 @@
+--- a/deepstream_source/gst-plugins/gst-nvsahipostprocess/gstnvsahipostprocess.cpp
++++ b/deepstream_source/gst-plugins/gst-nvsahipostprocess/gstnvsahipostprocess.cpp
+@@ -22,6 +22,7 @@
+ #include <vector>
+ #include <unordered_map>
+ #include "greedy_nmm.h"
++#include "nvds_latency_meta.h"
+ 
+ #ifdef _OPENMP
+ #include <omp.h>
+@@ -290,9 +291,12 @@
+ 
+   GST_DEBUG_OBJECT (self, "transform_ip: buffer %p", inbuf);
+ 
++  nvds_set_input_system_timestamp (inbuf, GST_ELEMENT_NAME (self));
++
+   NvDsBatchMeta *batch_meta = gst_buffer_get_nvds_batch_meta (inbuf);
+   if (!batch_meta) {
+     GST_DEBUG_OBJECT (self, "transform_ip: no batch_meta, passthrough");
++    nvds_set_output_system_timestamp (inbuf, GST_ELEMENT_NAME (self));
+     return GST_FLOW_OK;
+   }
+ 
+@@ -333,6 +337,7 @@
+     }
+   }
+ 
++  nvds_set_output_system_timestamp (inbuf, GST_ELEMENT_NAME (self));
+   return GST_FLOW_OK;
+ }
+ 

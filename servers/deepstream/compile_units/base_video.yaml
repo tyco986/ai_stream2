@@ -1,0 +1,6 @@
+type: BaseVideoPipeline
+entry: utils/base_pipeline/base_video.py
+files:
+- utils/base_pipeline/base_video.py
+- utils/probe/times_probe.py
+- utils/base_pipeline/times_attach.py

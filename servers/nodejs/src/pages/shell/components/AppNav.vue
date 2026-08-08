@@ -1,7 +1,7 @@
 <template>
   <nav :class="['app-nav', `app-nav--${layout}`]">
     <RouterLink
-      v-for="item in NAV_ITEMS"
+      v-for="item in visibleItems"
       :key="item.path"
       :to="item.path"
       class="app-nav__link"
@@ -13,12 +13,23 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { NAV_ITEMS } from '../nav'
+import { useShellSettings } from '../composables/useShellSettings'
 
 defineProps<{
   layout: 'sidebar' | 'topbar'
 }>()
+
+const { hasPerm, loggedIn } = useShellSettings()
+
+const visibleItems = computed(() => {
+  if (!loggedIn.value) {
+    return []
+  }
+  return NAV_ITEMS.filter((item) => hasPerm(item.viewPerm))
+})
 </script>
 
 <style scoped>

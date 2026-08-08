@@ -25,10 +25,13 @@
           :search="searchInput"
           :has-selection="selectedIds.length > 0"
           @add="openAddStream"
+          @publish="openPublishVideo"
           @remove="openBatchDelete"
           @enable="onBatchEnable"
           @disable="onBatchDisable"
-          @test="onBatchTest"
+          @probe="onBatchProbe"
+          @record="onBatchRecord"
+          @unrecord="onBatchUnrecord"
           @update:search="onSearchInput"
         />
         <div class="streams-page__meta">
@@ -39,11 +42,11 @@
         </div>
         <StreamsTable
           :rows="rows"
-          :testing-ids="testingIds"
+          :probing-ids="probingIds"
           @selection-change="selectedIds = $event"
           @toggle-enabled="onToggleEnabled"
           @toggle-recording="onToggleRecording"
-          @test="onRowTest"
+          @probe="onRowProbe"
           @edit="openEditStream"
           @log="openLog"
           @delete="openRowDelete"
@@ -66,12 +69,24 @@
       :groups="groupOptions"
       :default-group-id="formDefaultGroupId"
       :saving="formSaving"
-      :testing="formTesting"
-      :test-info="formTestInfo"
-      :error="formError"
-      @update:form="formDraft = $event"
+      :probing="formProbing"
+      :name-invalid="formNameInvalid"
+      :url-invalid="formUrlInvalid"
+      :probe="formProbe"
+      @update:form="onFormDraftUpdate"
       @save="onSaveStream"
-      @test="onFormTest"
+      @probe="onFormProbe"
+    />
+
+    <PublishVideoDialog
+      v-model="publishOpen"
+      :groups="groupOptions"
+      :default-group-id="publishDefaultGroupId"
+      :publishing="publishSaving"
+      :result-url="publishResultUrl"
+      @update:form="onPublishDraftUpdate"
+      @publish="onPublishVideo"
+      @copy="onCopyPublishUrl"
     />
 
     <TransferListDialog
@@ -99,10 +114,12 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Group, Stream, StreamSummary } from '@/api/streams'
+import { ApiError } from '@/shared/http/client'
 import UiPagination from '@/shared/ui/Pagination.vue'
 import { toast } from '@/shared/ui/toast'
 import ConfirmDeleteDialog from './components/ConfirmDeleteDialog.vue'
 import GroupsSide from './components/GroupsSide.vue'
+import PublishVideoDialog from './components/PublishVideoDialog.vue'
 import StreamFormDialog from './components/StreamFormDialog.vue'
 import StreamLogDialog from './components/StreamLogDialog.vue'
 import StreamsTable from './components/StreamsTable.vue'
@@ -142,12 +159,16 @@ const {
   createStream,
   patchStream,
   deleteStream,
-  testStream,
+  probeStream,
+  probeStreamUrl,
   getStreamLogs,
   batchDelete,
   batchEnable,
   batchDisable,
-  batchTest,
+  batchRecord,
+  batchUnrecord,
+  batchProbe,
+  publishVideo,
 } = pageApi
 
 const expandedIds = ref(new Set<string>())
@@ -155,7 +176,7 @@ const draft = ref<GroupDraft>(null)
 const draftName = ref('')
 const searchInput = ref('')
 const searchTimer = ref<ReturnType<typeof setTimeout> | null>(null)
-const testingIds = ref(new Set<string>())
+const probingIds = ref(new Set<string>())
 
 const formOpen = ref(false)
 const formMode = ref<'add' | 'edit'>('add')
@@ -163,9 +184,14 @@ const editingStream = ref<Stream | null>(null)
 const groupOptions = ref<Group[]>([])
 const formDefaultGroupId = ref(ALL_GROUP_ID)
 const formSaving = ref(false)
-const formTesting = ref(false)
-const formTestInfo = ref('')
-const formError = ref('')
+const formProbing = ref(false)
+const formNameInvalid = ref(false)
+const formUrlInvalid = ref(false)
+const formProbe = ref<{
+  url: string
+  resolution: string | null
+  fps: number | null
+} | null>(null)
 const formDraft = ref({
   name: '',
   group_id: ALL_GROUP_ID,
@@ -173,6 +199,47 @@ const formDraft = ref({
   enabled: true,
   recording: false,
 })
+
+const publishOpen = ref(false)
+const publishSaving = ref(false)
+const publishDefaultGroupId = ref(ALL_GROUP_ID)
+const publishResultUrl = ref('')
+const publishDraft = ref({
+  name: '',
+  group_id: ALL_GROUP_ID,
+  also_add: false,
+  url: '',
+  file: null as File | null,
+})
+
+function onFormDraftUpdate(draft: typeof formDraft.value) {
+  if (formProbe.value && formProbe.value.url !== draft.url.trim()) {
+    formProbe.value = null
+  }
+  if (draft.name !== formDraft.value.name) {
+    formNameInvalid.value = false
+  }
+  if (draft.url !== formDraft.value.url) {
+    formUrlInvalid.value = false
+  }
+  formDraft.value = draft
+}
+
+function onPublishDraftUpdate(draft: typeof publishDraft.value) {
+  publishDraft.value = draft
+}
+
+function isNameRequiredError(message: string) {
+  return message.toLowerCase().includes('name is required')
+}
+
+function isNameExistsError(message: string) {
+  return message.toLowerCase().includes('stream name already exists')
+}
+
+function isUrlExistsError(message: string) {
+  return message.toLowerCase().includes('stream url already exists')
+}
 
 const transferOpen = ref(false)
 const transferGroupId = ref('')
@@ -245,6 +312,7 @@ function ensureExpanded(id: string) {
 
 async function onRefresh() {
   await refreshAll()
+  toast.success(t('streams.toastRefreshed'))
 }
 
 async function onSelectGroup(payload: { id: string; name: string }) {
@@ -331,9 +399,68 @@ async function openAddStream() {
   formMode.value = 'add'
   editingStream.value = null
   formDefaultGroupId.value = filterGroupId.value || ALL_GROUP_ID
-  formTestInfo.value = ''
-  formError.value = ''
+  formNameInvalid.value = false
+  formUrlInvalid.value = false
+  formProbe.value = null
   formOpen.value = true
+}
+
+async function openPublishVideo() {
+  const groups = await getGroupsList()
+  groupOptions.value = groups.items
+  publishDefaultGroupId.value = filterGroupId.value || ALL_GROUP_ID
+  publishResultUrl.value = ''
+  publishOpen.value = true
+}
+
+async function onPublishVideo() {
+  const draft = publishDraft.value
+  if (!draft.file) {
+    toast.error(t('streams.toastPublishFileRequired'))
+    return
+  }
+  publishSaving.value = true
+  try {
+    const result = await publishVideo({
+      file: draft.file,
+      name: draft.name.trim() || undefined,
+    })
+    publishResultUrl.value = result.url
+    toast.success(t('streams.toastPublished', { url: result.url }))
+    if (draft.also_add) {
+      const streamName = draft.name.trim() || result.name
+      await createStream({
+        name: streamName,
+        group_id: draft.group_id || ALL_GROUP_ID,
+        url: result.url,
+        enabled: true,
+        recording: false,
+      })
+      toast.success(t('streams.toastCreated'))
+      publishOpen.value = false
+      await refreshAll()
+    }
+  } catch (err) {
+    const message = err instanceof ApiError ? err.message : String(err)
+    if (isNameExistsError(message)) {
+      toast.error(t('streams.toastNameExists'))
+    } else if (isUrlExistsError(message)) {
+      toast.error(t('streams.toastUrlExists'))
+    } else {
+      toast.error(message)
+    }
+  } finally {
+    publishSaving.value = false
+  }
+}
+
+async function onCopyPublishUrl() {
+  const url = publishResultUrl.value || publishDraft.value.url
+  if (!url) {
+    return
+  }
+  await navigator.clipboard.writeText(url)
+  toast.success(t('streams.toastCopied'))
 }
 
 async function openEditStream(row: Stream) {
@@ -342,63 +469,143 @@ async function openEditStream(row: Stream) {
   formMode.value = 'edit'
   editingStream.value = row
   formDefaultGroupId.value = row.group_id
-  formTestInfo.value = ''
-  formError.value = ''
+  formNameInvalid.value = false
+  formUrlInvalid.value = false
+  formProbe.value =
+    row.resolution != null || row.fps != null
+      ? {
+          url: row.url.trim(),
+          resolution: row.resolution,
+          fps: row.fps,
+        }
+      : null
   formOpen.value = true
+  toast.info(t('streams.toastEdit'))
 }
 
 async function onSaveStream() {
-  formSaving.value = true
-  formError.value = ''
-  const body = { ...formDraft.value }
-  if (formMode.value === 'add') {
-    await createStream(body)
-    toast.success(t('streams.toastCreated'))
-  } else if (editingStream.value) {
-    await patchStream(editingStream.value.id, body)
-    toast.success(t('streams.toastSaved'))
-  }
-  formOpen.value = false
-  formSaving.value = false
-  await refreshAll()
-}
-
-async function onFormTest() {
-  formTesting.value = true
-  formTestInfo.value = ''
-  formError.value = ''
-  if (formMode.value === 'edit' && editingStream.value) {
-    const result = await testStream(editingStream.value.id)
-    formTestInfo.value = `${result.resolution} / ${result.fps} FPS`
-    formTesting.value = false
-    await refreshAll()
+  formNameInvalid.value = false
+  formUrlInvalid.value = false
+  if (!formDraft.value.name.trim()) {
+    formNameInvalid.value = true
+    toast.error(t('streams.toastNameRequired'))
     return
   }
-  formTestInfo.value = '1920x1080 / 25 FPS'
-  formTesting.value = false
+  formSaving.value = true
+  try {
+    const body: {
+      name: string
+      group_id: string
+      url: string
+      enabled: boolean
+      recording: boolean
+      resolution?: string | null
+      fps?: number | null
+    } = { ...formDraft.value }
+    const probe = formProbe.value
+    if (probe && probe.url === formDraft.value.url.trim()) {
+      body.resolution = probe.resolution
+      body.fps = probe.fps
+    }
+    if (formMode.value === 'add') {
+      await createStream(body)
+      toast.success(t('streams.toastCreated'))
+    } else if (editingStream.value) {
+      await patchStream(editingStream.value.id, body)
+      toast.success(t('streams.toastSaved'))
+    }
+    formOpen.value = false
+    formProbe.value = null
+    await refreshAll()
+  } catch (err) {
+    const message = err instanceof ApiError ? err.message : String(err)
+    if (isNameRequiredError(message)) {
+      formNameInvalid.value = true
+      toast.error(t('streams.toastNameRequired'))
+    } else if (isNameExistsError(message)) {
+      formNameInvalid.value = true
+      toast.error(t('streams.toastNameExists'))
+    } else if (isUrlExistsError(message)) {
+      formUrlInvalid.value = true
+      toast.error(t('streams.toastUrlExists'))
+    } else {
+      toast.error(message)
+    }
+  } finally {
+    formSaving.value = false
+  }
+}
+
+async function onFormProbe() {
+  formProbing.value = true
+  formProbe.value = null
+  try {
+    const result = await probeStreamUrl(formDraft.value.url)
+    if (result.success) {
+      formProbe.value = {
+        url: formDraft.value.url.trim(),
+        resolution: result.resolution ?? null,
+        fps: result.fps ?? null,
+      }
+      toast.success(
+        t('streams.toastProbeOk', {
+          resolution: result.resolution || '—',
+          fps: result.fps ?? '—',
+        }),
+      )
+    } else {
+      toast.error(
+        t('streams.toastProbeFail', { error: result.error || 'probe failed' }),
+      )
+    }
+  } catch (err) {
+    const message = err instanceof ApiError ? err.message : String(err)
+    toast.error(t('streams.toastProbeFail', { error: message }))
+  } finally {
+    formProbing.value = false
+  }
 }
 
 async function onToggleEnabled(row: Stream) {
   const next = !row.enabled
-  await patchStream(row.id, { enabled: next })
+  const body: { enabled: boolean; recording?: boolean } = { enabled: next }
+  if (!next) {
+    body.recording = false
+  }
+  await patchStream(row.id, body)
   toast.success(next ? t('streams.toastEnabled') : t('streams.toastDisabled'))
   await refreshAll()
 }
 
 async function onToggleRecording(row: Stream) {
+  if (!row.enabled) {
+    return
+  }
   const next = !row.recording
   await patchStream(row.id, { recording: next })
   toast.success(next ? t('streams.toastRecordingOn') : t('streams.toastRecordingOff'))
   await refreshAll()
 }
 
-async function onRowTest(row: Stream) {
-  const next = new Set(testingIds.value)
-  next.add(row.id)
-  testingIds.value = next
-  await testStream(row.id)
-  next.delete(row.id)
-  testingIds.value = new Set(next)
+async function onRowProbe(row: Stream) {
+  const active = new Set(probingIds.value)
+  active.add(row.id)
+  probingIds.value = active
+  const result = await probeStream(row.id)
+  active.delete(row.id)
+  probingIds.value = new Set(active)
+  if (result.success) {
+    toast.success(
+      t('streams.toastProbeOk', {
+        resolution: result.resolution || '—',
+        fps: result.fps ?? '—',
+      }),
+    )
+  } else {
+    toast.error(
+      t('streams.toastProbeFail', { error: result.error || 'probe failed' }),
+    )
+  }
   await refreshAll()
 }
 
@@ -406,6 +613,7 @@ async function openLog(row: Stream) {
   const result = await getStreamLogs(row.id)
   logContent.value = result.content
   logOpen.value = true
+  toast.info(t('streams.toastLog'))
 }
 
 function openRowDelete(row: Stream) {
@@ -414,6 +622,7 @@ function openRowDelete(row: Stream) {
   confirmMessage.value = t('streams.deleteStreams', { n: 1 })
   confirmHint.value = t('streams.cannotUndo')
   confirmOpen.value = true
+  toast.info(t('streams.toastDeleteConfirm'))
 }
 
 function openBatchDelete() {
@@ -424,6 +633,7 @@ function openBatchDelete() {
   })
   confirmHint.value = t('streams.cannotUndo')
   confirmOpen.value = true
+  toast.info(t('streams.toastDeleteConfirm'))
 }
 
 async function onConfirmDelete() {
@@ -437,7 +647,7 @@ async function onConfirmDelete() {
       await deleteStream(ids[0])
       toast.success(t('streams.toastDeleted'))
     } else {
-      await batchDelete({ stream_ids: ids })
+      await batchDelete({ ids })
       toast.success(t('streams.toastDeletedN', { n: ids.length }))
     }
     selectedIds.value = []
@@ -449,23 +659,41 @@ async function onConfirmDelete() {
 
 async function onBatchEnable() {
   const ids = [...selectedIds.value]
-  await batchEnable({ stream_ids: ids })
+  await batchEnable({ ids })
   toast.success(t('streams.toastEnabledN', { n: ids.length }))
   await refreshAll()
 }
 
 async function onBatchDisable() {
   const ids = [...selectedIds.value]
-  await batchDisable({ stream_ids: ids })
+  await batchDisable({ ids })
   toast.success(t('streams.toastDisabledN', { n: ids.length }))
   await refreshAll()
 }
 
-async function onBatchTest() {
+async function onBatchRecord() {
   const ids = [...selectedIds.value]
-  testingIds.value = new Set(ids)
-  await batchTest({ stream_ids: ids })
-  testingIds.value = new Set()
+  await batchRecord({ ids })
+  toast.success(t('streams.toastRecordingOnN', { n: ids.length }))
+  await refreshAll()
+}
+
+async function onBatchUnrecord() {
+  const ids = [...selectedIds.value]
+  await batchUnrecord({ ids })
+  toast.success(t('streams.toastRecordingOffN', { n: ids.length }))
+  await refreshAll()
+}
+
+async function onBatchProbe() {
+  const ids = [...selectedIds.value]
+  probingIds.value = new Set(ids)
+  const payload = await batchProbe({ ids })
+  probingIds.value = new Set()
+  const results = payload.results || []
+  const ok = results.filter((item) => item.success).length
+  const fail = results.length - ok
+  toast.success(t('streams.toastProbeBatch', { ok, fail }))
   await refreshAll()
 }
 

@@ -2,8 +2,11 @@
   <div class="ui-input" :class="{ 'ui-input--invalid': invalid }">
     <el-input
       :model-value="modelValue"
+      :type="type"
+      :show-password="type === 'password'"
       :placeholder="placeholder"
       :clearable="clearable"
+      :disabled="disabled"
       @update:model-value="emit('update:modelValue', String($event))"
       @blur="emit('blur')"
     />
@@ -17,11 +20,15 @@ withDefaults(
     placeholder?: string
     clearable?: boolean
     invalid?: boolean
+    disabled?: boolean
+    type?: 'text' | 'password'
   }>(),
   {
     placeholder: '',
     clearable: true,
     invalid: false,
+    disabled: false,
+    type: 'text',
   },
 )
 

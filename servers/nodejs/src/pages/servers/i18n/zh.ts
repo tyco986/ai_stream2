@@ -1,6 +1,8 @@
 export default {
   title: 'Servers',
   refresh: '刷新',
+  groupInfrastructure: '基础设施',
+  groupPipeline: 'Pipeline',
   name: '名称',
   status: '状态',
   lastRefresh: '最近探测',

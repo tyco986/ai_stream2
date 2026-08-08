@@ -1,7 +1,7 @@
 import copy
 
-from ..base_generator import BaseVideoGenerator, VIDEO_TOPOLOGY_DOC
-from ..subelement_generator import YoloDet
+from ..base_generator.base_video import BaseVideoGenerator, VIDEO_TOPOLOGY_DOC
+from ..subelement_generator.utils.default_pgie import YoloDet
 
 
 class DetVideoGenerator(BaseVideoGenerator):

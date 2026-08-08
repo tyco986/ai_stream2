@@ -18,6 +18,7 @@ docker run -d \
   --name "${NAME}" \
   --network "${NET}" \
   --restart unless-stopped \
+  -v /etc/localtime:/etc/localtime:ro \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
   -p "${HOST_PORT}:2375" \
   -e LOG_LEVEL=info \
@@ -26,6 +27,7 @@ docker run -d \
   -e ALLOW_START=1 \
   -e ALLOW_STOP=1 \
   -e ALLOW_RESTARTS=1 \
+  -e LOGS=1 \
   -e NETWORKS=1 \
   -e IMAGES=1 \
   -e INFO=1 \

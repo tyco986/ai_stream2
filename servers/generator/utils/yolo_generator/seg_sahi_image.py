@@ -1,7 +1,7 @@
 import copy
 
-from ..base_generator import BaseSahiImageGenerator, SAHI_IMAGE_TOPOLOGY_DOC
-from ..subelement_generator import YoloSegSahi
+from ..base_generator.base_sahi_image import BaseSahiImageGenerator, SAHI_IMAGE_TOPOLOGY_DOC
+from ..subelement_generator.utils.default_pgie import YoloSeg
 
 
 class SegSahiImageGenerator(BaseSahiImageGenerator):
@@ -15,7 +15,7 @@ class SegSahiImageGenerator(BaseSahiImageGenerator):
     """
 
     def apply_pgie_config(self) -> None:
-        self.pgie_generator.config = copy.deepcopy(YoloSegSahi)
+        self.pgie_generator.config = copy.deepcopy(YoloSeg)
         self.pgie_generator.update_config()
         self.pgie_yml = self.pgie_generator.config
 

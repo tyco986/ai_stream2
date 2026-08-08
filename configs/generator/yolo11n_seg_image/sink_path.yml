@@ -1,0 +1,9 @@
+filesink:
+- nvurisrcbin
+- nvstreammux
+- nvinfer
+- nvdsanalytics
+- nvosdbin
+- nvvideoconvert
+- nvjpegenc
+- filesink

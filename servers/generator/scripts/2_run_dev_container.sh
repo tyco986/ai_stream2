@@ -17,6 +17,7 @@ docker run -d \
   --network "${PROJECT_NAME}_default" \
   -p 8091:8091 \
   -e PROJECT_NAME="${PROJECT_NAME}" \
+  -v /etc/localtime:/etc/localtime:ro \
   -v "${ROOT}/configs:/root/configs" \
   -v "${ROOT}/models:/root/models" \
   -v "${ROOT}/attachments:/root/attachments" \

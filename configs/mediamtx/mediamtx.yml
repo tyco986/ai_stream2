@@ -1,7 +1,8 @@
 # MediaMTX for ai_stream2. Mount as /mediamtx.yml.
-# Ingest: RTSP publisher (ffmpeg video2rtsp, DeepStream rtspclientsink, etc.).
+# Ingest: RTSP publisher (ffmpeg /rtsp/publishers, DeepStream rtspclientsink, etc.).
 # Play:  rtsp://<host>:8554/<path>  or  http://<host>:8889/<path>/  (WebRTC)
 # API:   http://<host>:9997/v3/...  (Control API, hot-reload via PATCH /v3/config/paths/...)
+# Playback: http://<host>:9996/get?path=&start=&duration=
 # Logs:  host logs/mediamtx/ -> container /logs/mediamtx/
 logLevel: info
 logDestinations: [stdout, file]
@@ -14,9 +15,13 @@ webrtcLocalUDPAddress: :8189
 webrtcLocalTCPAddress: :8189
 # Host-reachable address for browser ICE candidates (WSL/local: 127.0.0.1).
 webrtcAdditionalHosts: [127.0.0.1]
+webrtcAllowOrigins: ["*"]
 
 api: yes
 apiAddress: :9997
+
+playback: yes
+playbackAddress: :9996
 
 # Allow API from host and other containers on ai_stream2_default (not localhost-only).
 authInternalUsers:
@@ -35,6 +40,10 @@ authInternalUsers:
     ips: []
     permissions:
       - action: api
+
+# recordPath must match streams upsert so Playback can find on-disk segments.
+pathDefaults:
+  recordPath: /recordings/%path/%Y-%m-%d_%H-%M-%S-%f
 
 paths:
   all_others:

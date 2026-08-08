@@ -7,7 +7,7 @@ ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 source "${ROOT}/scripts/load_project_env.sh"
 
 IMAGE="${PROJECT_NAME}_deepstream_prod"
-mkdir -p "${ROOT}/models" "${ROOT}/configs" "${ROOT}/logs"
+mkdir -p "${ROOT}/models" "${ROOT}/configs" "${ROOT}/logs" "${ROOT}/attachments" "${ROOT}/outputs"
 
 docker network create "${PROJECT_NAME}_default" 2>/dev/null || true
 docker rm -f "${PROJECT_NAME}_deepstream" 2>/dev/null || true
@@ -23,6 +23,11 @@ docker run \
   -e KAFKA_EVENT_TOPIC=deepstream-events \
   -e KAFKA_COMMAND_TOPIC=deepstream-commands \
   -e DS_PREVIEW_RTP_HOST="${PROJECT_NAME}_mediamtx" \
+  -e NVDS_ENABLE_LATENCY_MEASUREMENT=1 \
+  -e NVDS_ENABLE_COMPONENT_LATENCY_MEASUREMENT=1 \
+  -e LATENCY_PROBE_SO=/opt/nvidia/deepstream/deepstream/service-maker/modules/liblatency_probe.so \
+  -e LD_PRELOAD=/opt/ai_stream2/servers/deepstream/libs/libnvdsinfer_custom_impl_Yolo_seg.so \
+  -v /etc/localtime:/etc/localtime:ro \
   -v "${ROOT}/models:/root/models" \
   -v "${ROOT}/configs:/root/configs" \
   -v "${ROOT}/attachments:/root/attachments" \

@@ -1,5 +1,6 @@
 <template>
   <div class="servers-table">
+    <h2 v-if="title" class="servers-table__title">{{ title }}</h2>
     <UiTable :data="rows" row-key="id">
       <UiTableColumn prop="name" :label="t('servers.name')" min-width="140" />
       <UiTableColumn :label="t('servers.status')" width="120">
@@ -9,7 +10,7 @@
           </span>
         </template>
       </UiTableColumn>
-      <UiTableColumn :label="t('servers.lastRefresh')" width="160">
+      <UiTableColumn :label="t('servers.lastRefresh')" width="180">
         <template #default="{ row }">
           {{ formatLastRefresh(row.last_refresh_at) }}
         </template>
@@ -52,6 +53,7 @@ import UiTableColumn from '@/shared/ui/TableColumn.vue'
 defineProps<{
   rows: Server[]
   restartingIds: Set<string>
+  title?: string
 }>()
 
 const emit = defineEmits<{
@@ -74,16 +76,21 @@ function formatLastRefresh(value: string | null) {
   const dd = String(date.getDate()).padStart(2, '0')
   const hh = String(date.getHours()).padStart(2, '0')
   const mi = String(date.getMinutes()).padStart(2, '0')
-  return `${mm}-${dd} ${hh}:${mi}`
+  const ss = String(date.getSeconds()).padStart(2, '0')
+  return `${mm}-${dd} ${hh}:${mi}:${ss}`
 }
 </script>
 
 <style scoped>
 .servers-table {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding: 0 16px;
+  padding: 0 16px 12px;
+}
+
+.servers-table__title {
+  margin: 12px 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
 }
 
 .status-online {
