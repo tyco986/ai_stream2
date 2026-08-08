@@ -16,22 +16,12 @@ RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 COPY servers/export_trt/requirements.txt /tmp/requirements.txt
 RUN pip install --break-system-packages --no-cache-dir -r /tmp/requirements.txt
 
-COPY attachments/DeepStream-Yolo /root/attachments/DeepStream-Yolo
 COPY attachments/deepstream-sahi/nvdsinfer_custom_impl_Yolo_seg.zip /root/attachments/deepstream-sahi/nvdsinfer_custom_impl_Yolo_seg.zip
 
 RUN bash -ec '\
 set -euo pipefail; \
 mkdir -p /root/src "${EXPORT_TRT_LIBS_ROOT}"; \
-for f in /root/attachments/DeepStream-Yolo/*.zip; do \
-  [[ -f "$f" ]] && unzip -o -q "$f" -d /root/src; \
-done; \
 unzip -o -q /root/attachments/deepstream-sahi/nvdsinfer_custom_impl_Yolo_seg.zip -d /root/src; \
-make -C /root/src/DeepStream-Yolo-master/nvdsinfer_custom_impl_Yolo clean; \
-make -C /root/src/DeepStream-Yolo-master/nvdsinfer_custom_impl_Yolo; \
-cp /root/src/DeepStream-Yolo-master/nvdsinfer_custom_impl_Yolo/libnvdsinfer_custom_impl_Yolo.so "${EXPORT_TRT_LIBS_ROOT}/"; \
-make -C /root/src/DeepStream-Yolo-Face-master/nvdsinfer_custom_impl_Yolo_face clean; \
-make -C /root/src/DeepStream-Yolo-Face-master/nvdsinfer_custom_impl_Yolo_face; \
-cp /root/src/DeepStream-Yolo-Face-master/nvdsinfer_custom_impl_Yolo_face/libnvdsinfer_custom_impl_Yolo_face.so "${EXPORT_TRT_LIBS_ROOT}/"; \
 SM=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader -i 0 2>/dev/null | head -1 | tr -d "." || echo "89"); \
 export SM; \
 SEG_SRC=/root/src/nvdsinfer_custom_impl_Yolo_seg; \

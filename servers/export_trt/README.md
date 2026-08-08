@@ -6,10 +6,10 @@
 
 | 镜像 | 构建 | 用途 |
 |------|------|------|
-| `ai_stream2_export_trt_dev` | `1_build_dev_image.sh` | 开发：运行时依赖 + YOLO static plugins |
+| `ai_stream2_export_trt_dev` | `1_build_dev_image.sh` | 开发：运行时依赖 + seg static plugin |
 | `ai_stream2_export_trt_prod` | `1_build_prod_image.sh` | 生产：dev + 内置 `servers/export_trt` 代码 |
 
-原生产物：`libnvdsinfer_custom_impl_Yolo*.so` 在 `/opt/ai_stream2/servers/export_trt/libs`（不随 `/app` 挂载覆盖）。
+原生产物：`libnvdsinfer_custom_impl_Yolo_seg.so`（来自 `attachments/deepstream-sahi/nvdsinfer_custom_impl_Yolo_seg.zip`）在 `/opt/ai_stream2/servers/export_trt/libs`（不随 `/app` 挂载覆盖）。segment 导出时经 `--staticPlugins` 注入。
 
 ## 开发与生产
 

@@ -16,4 +16,4 @@ AVAILABLE_PRECISION = frozenset({"fp32", "fp16", "int8"})
 PRECISION_FLAGS = {"fp16": "--fp16", "int8": "--int8"}
 META_JSON_NAME = "meta.json"
 LABELS_NAME = "labels.txt"
-YOLO_PLUGIN_SUFFIX = {"detect": "", "segment": "_seg"}
+YOLO_SEG_PLUGIN_NAME = "libnvdsinfer_custom_impl_Yolo_seg.so"

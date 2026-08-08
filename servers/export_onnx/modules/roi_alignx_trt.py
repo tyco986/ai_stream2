@@ -6,7 +6,7 @@ import torch
 class RoiAlignXTrt(torch.autograd.Function):
     """ONNX symbolic → TRT::ROIAlignX_TRT.
 
-    Args mirror DeepStream-Yolo-Seg export:
+    Args match NvDsInferYoloMask / EfficientNMSX+ROIAlignX export:
       X: feature map [B, C, H, W]
       rois: boxes [N, 4] in feature/input pixel space
       batch_indices: [N] int32 batch id per roi

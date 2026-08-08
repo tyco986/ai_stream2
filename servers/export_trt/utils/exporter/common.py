@@ -15,7 +15,7 @@ from utils.api.constants import (
     PRECISION_FLAGS,
     TRTEXEC,
     WORKSPACE_MIB,
-    YOLO_PLUGIN_SUFFIX,
+    YOLO_SEG_PLUGIN_NAME,
 )
 
 
@@ -90,11 +90,8 @@ class OnnxBundle:
     def task(self) -> str:
         return self.meta["task"]
 
-    def yolo_plugin_path(self) -> Path:
-        suffix = YOLO_PLUGIN_SUFFIX.get(self.task)
-        if suffix is None:
-            raise AppError(f"unsupported task {self.task!r}")
-        plugin_path = LIBS_ROOT / f"libnvdsinfer_custom_impl_Yolo{suffix}.so"
+    def yolo_seg_plugin_path(self) -> Path:
+        plugin_path = LIBS_ROOT / YOLO_SEG_PLUGIN_NAME
         if not plugin_path.is_file():
             raise AppError(f"missing static plugin: {plugin_path}")
         return plugin_path
@@ -123,7 +120,7 @@ class OnnxBundle:
             f"--memPoolSize=workspace:{WORKSPACE_MIB}M",
         ]
         if self.task == "segment":
-            command.append(f"--staticPlugins={self.yolo_plugin_path()}")
+            command.append(f"--staticPlugins={self.yolo_seg_plugin_path()}")
         if opt_level is not None:
             command.append(f"--builderOptimizationLevel={opt_level}")
         if flag := PRECISION_FLAGS.get(precision):
