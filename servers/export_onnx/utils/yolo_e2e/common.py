@@ -1,4 +1,3 @@
-import argparse
 from pathlib import Path
 
 import onnx
@@ -7,6 +6,13 @@ import onnx
 def write_labels(names, labels_path: Path) -> None:
     lines = [str(name) for name in names.values()]
     labels_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def validate_export_args(weights: Path, dynamic: bool, batch: int) -> None:
+    if dynamic and batch > 1:
+        raise ValueError("dynamic batch and static batch > 1 are incompatible")
+    if not weights.is_file():
+        raise ValueError(f"invalid weights file: {weights}")
 
 
 def set_dim_value(dim, value: int) -> None:
@@ -48,36 +54,3 @@ def fix_batch_only_dynamic(onnx_path: Path, size: int, max_det: int) -> None:
             set_dim_value(out0_dims[2], 6 + mask_channels)
 
     onnx.save(model, str(onnx_path))
-
-
-def run_export_cli(exporter, description: str, default_max_det: int = 30) -> None:
-    parser = argparse.ArgumentParser(description=description)
-    parser.add_argument("-w", "--weights", required=True, help="Path to .pt weights")
-    parser.add_argument("-s", "--size", type=int, default=640, help="Square input size")
-    parser.add_argument("--opset", type=int, default=17, help="ONNX opset")
-    parser.add_argument("--batch", type=int, default=1, help="Static batch size")
-    parser.add_argument("--dynamic", action="store_true", help="Dynamic batch axis")
-    parser.add_argument("--simplify", action="store_true", help="ONNX graph simplify")
-    parser.add_argument("--conf", type=float, default=0.25, help="Confidence threshold")
-    parser.add_argument(
-        "--max-det",
-        type=int,
-        default=default_max_det,
-        help="Maximum detections per image",
-    )
-    args = parser.parse_args()
-    if args.dynamic and args.batch > 1:
-        raise SystemExit("Cannot set dynamic batch-size and static batch-size at same time")
-    if not Path(args.weights).is_file():
-        raise SystemExit(f"Invalid weights file: {args.weights}")
-    exporter.export(
-        weights=Path(args.weights),
-        size=args.size,
-        opset=args.opset,
-        batch=args.batch,
-        dynamic=args.dynamic,
-        simplify=args.simplify,
-        max_det=args.max_det,
-        conf=args.conf,
-        output_dir=Path.cwd(),
-    )

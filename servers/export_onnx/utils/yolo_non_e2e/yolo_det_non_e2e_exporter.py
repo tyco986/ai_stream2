@@ -9,8 +9,8 @@ from ultralytics import YOLO
 from utils.yolo_non_e2e.common import (
     fix_batch_only_dynamic,
     prepare_yolo_core,
-    run_export_cli,
     suppress_export_warnings,
+    validate_export_args,
     write_labels,
 )
 
@@ -96,6 +96,7 @@ class YoloDetNonE2EExporter:
         output_dir: Path,
     ) -> None:
         suppress_export_warnings()
+        validate_export_args(weights, dynamic, batch)
         yolo = YOLO(str(weights))
         write_labels(yolo.names, output_dir / "labels.txt")
 
@@ -127,10 +128,3 @@ class YoloDetNonE2EExporter:
             onnx.save(onnxslim.slim(onnx.load(str(onnx_path))), str(onnx_path))
         if dynamic:
             fix_batch_only_dynamic(onnx_path, size, max_det)
-
-
-if __name__ == "__main__":
-    run_export_cli(
-        YoloDetNonE2EExporter(),
-        "Export YOLO11 detect ONNX (EfficientNMS_TRT → images/output0) for NvDsInferYoloE2E",
-    )

@@ -9,7 +9,7 @@ drawer:
   interval: 50
   fade_time: 1
 logger:
-  root: /root/logs/deepstream/yolo26n-seg-vis-rtsp/probe
+  root: /root/logs/deepstream
   interval: 50
 messager:
   topic: deepstream-detections

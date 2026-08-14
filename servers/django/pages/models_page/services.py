@@ -384,6 +384,7 @@ class BuildOrchestrator:
                 iou=row.iou,
             )
             self.logs.append(model_id, f"export_onnx export done: {onnx_dir}")
+            meta = self.load_meta(onnx_dir)
             self.logs.append(model_id, "export_trt start")
             engine_dir = self.export_trt.export_engine(
                 onnx_dir,
@@ -391,9 +392,10 @@ class BuildOrchestrator:
                 dynamic=(row.batch_mode == BATCH_MODE_DYNAMIC),
                 precision=row.precision or PRECISION_FP16,
                 optimization_level=row.optimization_level,
+                family=row.family,
+                task=meta.get("task"),
             )
             self.logs.append(model_id, f"export_trt done: {engine_dir}")
-            meta = self.load_meta(onnx_dir)
             classes = self.load_classes(onnx_dir)
             row.engine_path = engine_dir
             row.version = self.next_version(row)

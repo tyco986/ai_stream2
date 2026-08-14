@@ -9,7 +9,7 @@ from torchvision.ops import roi_align
 from ultralytics import YOLO
 from ultralytics.nn.modules import Detect
 
-from utils.yolo_e2e.common import run_export_cli, set_dim_value, write_labels
+from utils.yolo_e2e.common import set_dim_value, validate_export_args, write_labels
 
 
 class E2eSegMaskDecode(nn.Module):
@@ -126,6 +126,8 @@ class YoloSegE2EExporter:
         conf: float,
         output_dir: Path,
     ) -> None:
+        validate_export_args(weights, dynamic, batch)
+
         yolo = YOLO(str(weights))
         write_labels(yolo.names, output_dir / "labels.txt")
 
@@ -159,10 +161,3 @@ class YoloSegE2EExporter:
             onnx.save(onnxslim.slim(onnx.load(str(onnx_path))), str(onnx_path))
         if dynamic:
             self.fix_batch_only_dynamic(onnx_path, size, max_det)
-
-
-if __name__ == "__main__":
-    run_export_cli(
-        YoloSegE2EExporter(),
-        "Export YOLO26-seg e2e ONNX (MatMul/Sigmoid/RoiAlign → five mask outputs)",
-    )

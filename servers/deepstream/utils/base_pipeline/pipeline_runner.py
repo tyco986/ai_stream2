@@ -1,6 +1,7 @@
 import logging
 from logging.handlers import RotatingFileHandler
-from pathlib import Path
+
+from utils.api.constants import LOG_ROOT
 
 LOG_FORMAT = "[%(asctime)s] %(levelname)s %(name)s: %(message)s"
 
@@ -8,9 +9,9 @@ LOG_FORMAT = "[%(asctime)s] %(levelname)s %(name)s: %(message)s"
 class PipelineRunner:
     """Start and block until a pyservicemaker pipeline finishes."""
 
-    def __init__(self, pipeline, logger=dict()):
+    def __init__(self, pipeline):
         self.pipeline = pipeline
-        self.root = Path(logger["root"])
+        self.root = LOG_ROOT
         self.logger = self.init_logger()
 
     def init_logger(self) -> logging.Logger:

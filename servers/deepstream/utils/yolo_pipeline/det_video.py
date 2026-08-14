@@ -33,7 +33,7 @@ class DetVideoPipeline(BaseVideoPipeline):
 
     def build(self):
         logger = DetLogger(**self.logger)
-        self.attach_latency_and_times(logger, target="mp4mux")
+        self.attach_latency_and_times(logger)
         self.pipeline.attach(
             "nvdsanalytics",
             Probe(

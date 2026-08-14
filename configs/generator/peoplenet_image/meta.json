@@ -1,0 +1,47 @@
+{
+  "batch_mode": "dynamic",
+  "input_tensor_name": "input_1:0",
+  "output_tensor_name": "output_cov/Sigmoid:0",
+  "output_tensor_names": [
+    "output_cov/Sigmoid:0",
+    "output_bbox/BiasAdd:0"
+  ],
+  "classes": [
+    "person",
+    "bag",
+    "face"
+  ],
+  "input_tensor_shape": [
+    18,
+    3,
+    544,
+    960
+  ],
+  "output_tensor_shape": [
+    18,
+    3,
+    34,
+    60
+  ],
+  "output_tensor_shapes": [
+    [
+      18,
+      3,
+      34,
+      60
+    ],
+    [
+      18,
+      12,
+      34,
+      60
+    ]
+  ],
+  "batch_size": 18,
+  "precision": "int8",
+  "version": "peoplenet",
+  "task": "detect",
+  "gpu_id": 0,
+  "opt_level": null,
+  "build_time": "2026-08-13T08:54:21.862710+00:00"
+}

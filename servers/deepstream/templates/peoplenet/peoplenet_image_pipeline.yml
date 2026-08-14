@@ -1,0 +1,15 @@
+# Prerequisite: servers/generator/scripts/3_generate.sh --config peoplenet_image
+
+type: DetImagePipeline
+name: peoplenet-image
+config_dir: /root/configs/generator/peoplenet_image
+drawer:
+  show_label: true
+  show_conf: true
+logger:
+  root: /root/logs/deepstream
+  interval: 0
+messager:
+  topic: deepstream-detections
+  host: ai_stream2_kafka
+  port: 9092

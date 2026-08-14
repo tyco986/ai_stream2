@@ -3,6 +3,8 @@ from pathlib import Path
 
 
 class PgieParser:
+    """Parse a TensorRT bundle dir (not onnx): meta.json, labels.txt, one *.engine."""
+
     META_JSON_NAME = "meta.json"
     LABELS_NAME = "labels.txt"
     NETWORK_MODE_MAP = {
@@ -10,7 +12,7 @@ class PgieParser:
         "fp16": 2,
         "int8": 1,
     }
-    SUPPORTED_YOLO_VERSIONS = ("yolo8", "yolo11", "yolo10", "yolo26")
+    SUPPORTED_VERSIONS = ("yolo8", "yolo11", "yolo10", "yolo26", "peoplenet")
     CLASS_ATTR_KEY_MAP = {
         "conf": "pre-cluster-threshold",
         "topk": "topk",
@@ -22,7 +24,7 @@ class PgieParser:
 
     def __init__(
         self,
-        model_dir: str | Path,
+        model_dir: str | Path,  # TRT engine dir (export_trt output), not models/onnx
         runtime_batch_size: int,
         class_attrs: dict,
         interval: int = 0,
@@ -88,7 +90,7 @@ class PgieParser:
             f"unsupported precision in {self.META_JSON_NAME}: {precision}"
         )
         version = self.meta.get("version")
-        assert version in self.SUPPORTED_YOLO_VERSIONS, (
+        assert version in self.SUPPORTED_VERSIONS, (
             f"unsupported version in {self.META_JSON_NAME}: {version}"
         )
         num_classes = self.num_classes

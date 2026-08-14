@@ -23,6 +23,6 @@ docker run -d \
   -v "${ROOT}/logs:/root/logs" \
   "${IMAGE}"
 
-echo "Export TRT API: http://127.0.0.1:9000/${PROJECT_NAME}/export_trt/export_engine"
+echo "Export TRT API: http://127.0.0.1:9000/${PROJECT_NAME}/export_trt/health"
 echo "Swagger:        http://127.0.0.1:9000/docs"
 echo "Mode:           prod image=${IMAGE}"

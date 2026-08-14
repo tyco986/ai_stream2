@@ -7,7 +7,7 @@ drawer:
   show_label: true
   show_conf: true
 logger:
-  root: /root/logs/deepstream/yolo11n-seg-video/probe
+  root: /root/logs/deepstream
   interval: 0
 messager:
   topic: deepstream-detections

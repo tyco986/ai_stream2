@@ -1,0 +1,9 @@
+# bash servers/export_onnx/scripts/3_export.sh --input models/pt/yolo26n.pt --config servers/export_onnx/templates/yolo26_det.yaml
+type: YOLO26-DET
+size: 640
+opset: 18
+batch: 1
+dynamic: false
+simplify: false
+max_det: 30
+conf: 0.25

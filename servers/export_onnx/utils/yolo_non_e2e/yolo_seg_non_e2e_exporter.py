@@ -9,9 +9,9 @@ from ultralytics import YOLO
 from modules import EfficientNmsXTrt, RoiAlignXTrt
 from utils.yolo_non_e2e.common import (
     prepare_yolo_core,
-    run_export_cli,
     set_dim_value,
     suppress_export_warnings,
+    validate_export_args,
     write_labels,
 )
 
@@ -131,6 +131,7 @@ class YoloSegNonE2EExporter:
         output_dir: Path,
     ) -> None:
         suppress_export_warnings()
+        validate_export_args(weights, dynamic, batch)
         yolo = YOLO(str(weights))
         write_labels(yolo.names, output_dir / "labels.txt")
 
@@ -163,11 +164,3 @@ class YoloSegNonE2EExporter:
             onnx.save(onnxslim.slim(onnx.load(str(onnx_path))), str(onnx_path))
         if dynamic:
             self.fix_batch_only_dynamic(onnx_path, size, max_det)
-
-
-if __name__ == "__main__":
-    run_export_cli(
-        YoloSegNonE2EExporter(),
-        "Export YOLO11-seg ONNX (EfficientNMSX_TRT + ROIAlignX_TRT) for NvDsInferYoloMask",
-        default_max_det=100,
-    )

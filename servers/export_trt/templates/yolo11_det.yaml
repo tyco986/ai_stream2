@@ -1,0 +1,2 @@
+# bash servers/export_trt/scripts/3_export.sh --input models/onnx/yolo11n --config servers/export_trt/templates/yolo11_det.yaml
+type: YOLO11-DET

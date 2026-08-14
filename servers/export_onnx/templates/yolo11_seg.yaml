@@ -1,0 +1,10 @@
+# bash servers/export_onnx/scripts/3_export.sh --input models/pt/yolo11n-seg.pt --config servers/export_onnx/templates/yolo11_seg.yaml
+type: YOLO11-SEG
+size: 640
+opset: 18
+batch: 1
+dynamic: false
+simplify: false
+max_det: 30
+conf: 0.25
+iou: 0.45

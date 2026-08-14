@@ -1,7 +1,5 @@
-import copy
-
 from ..base_generator.base_rtsp_vis import BaseRTSPVisGenerator, VIS_RTSP_TOPOLOGY_DOC
-from ..subelement_generator.utils.default_pgie import YoloDet
+from ..subelement_generator.utils.default_pgie.manager import PgieManager
 
 
 class DetVisRTSPGenerator(BaseRTSPVisGenerator):
@@ -14,6 +12,8 @@ class DetVisRTSPGenerator(BaseRTSPVisGenerator):
     """
 
     def apply_pgie_config(self) -> None:
-        self.pgie_generator.config = copy.deepcopy(YoloDet)
+        self.pgie_generator.config = PgieManager().config(
+            self.pgie_config_parser.meta["version"]
+        )
         self.pgie_generator.update_config()
         self.pgie_yml = self.pgie_generator.config

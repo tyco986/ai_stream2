@@ -23,7 +23,7 @@
 ./servers/export_trt/scripts/2_run_prod_container.sh
 ```
 
-API：`http://127.0.0.1:9000/ai_stream2/export_trt/export_engine`  
+API：`http://127.0.0.1:9000/ai_stream2/export_trt/health`  
 Swagger：`http://127.0.0.1:9000/docs`  
 容器名：`ai_stream2_export_trt`（需 `--gpus all`）
 
@@ -42,57 +42,38 @@ Swagger：`http://127.0.0.1:9000/docs`
 
 ## 导出流程
 
-1. `input` 传入容器内 ONNX 文件夹路径；目录不存在则报错
-2. 校验目录含 `*.onnx`、`labels.txt`、`meta.json`
-3. 调用镜像内 `trtexec` 构建 engine，写入 `trt/{name}/`
-4. 返回 JSON，`data` 为 TRT 目录路径
+1. `input` 上传 ONNX 目录的 zip，`config` 上传 YAML（见 `templates/`）
+2. 解压到 `/root/models/onnx/{zip_stem}/`，调用 `trtexec` 写入 `trt/{name}/`
+3. 返回 JSON，`data` 为 TRT 目录路径
 
 ## 接口
 
-`POST /ai_stream2/export_trt/export_engine`，`multipart/form-data`：
-
-| 字段 | 默认 | 说明 |
+| 方法 | 路径 | 说明 |
 |------|------|------|
-| `input` | — | ONNX 文件夹路径（必填） |
-| `batch_size` | — | 动态模型必填；静态模型勿传 |
-| `gpu_id` | `0` | 写入 meta.json |
-| `precision` | `fp16` | engine 精度：`fp32` / `fp16` / `int8` |
-| `opt_level` | — | `trtexec --builderOptimizationLevel`（可选） |
+| GET | `/ai_stream2/export_trt/health` | 健康检查 |
+| GET | `/ai_stream2/export_trt/types` | 可用导出类型 |
+| POST | `/ai_stream2/export_trt/export` | 导出 TensorRT engine |
 
-成功返回 JSON（`data` 为 `/root/models/trt/{name}/`）。失败返回 JSON 错误。
+`POST` 为 `multipart/form-data`：`input` 为 zip，`config` 为 YAML。
 
-### curl 示例
+YAML 字段：`type`（必填）、`batch_size`（动态模型必填）、`gpu_id`、`precision`、`opt_level`。
 
 ```bash
-curl -s -X POST http://127.0.0.1:9000/ai_stream2/export_trt/export_engine \
-  -F "input=/root/models/onnx/yolo26n"
-```
-
-动态 batch：
-
-```bash
-curl -s -X POST http://127.0.0.1:9000/ai_stream2/export_trt/export_engine \
-  -F "input=/root/models/onnx/yolo26n" \
-  -F "batch_size=4"
-```
-
-YOLO10 smoke-fire 等需固定 opt_level：
-
-```bash
-curl -s -X POST http://127.0.0.1:9000/ai_stream2/export_trt/export_engine \
-  -F "input=/root/models/onnx/yolov10x-smoke-fire" \
-  -F "batch_size=1" \
-  -F "opt_level=0"
+curl -s -X POST http://127.0.0.1:9000/ai_stream2/export_trt/export \
+  -F "input=@peoplenet.zip" \
+  -F "config=@servers/export_trt/templates/peoplenet.yaml"
 ```
 
 ## 命令行
 
 ```bash
-./servers/export_trt/scripts/3_export_engine.sh --input models/onnx/yolo26n
-./servers/export_trt/scripts/3_export_engine.sh --input models/onnx/yolov10x-smoke-fire --batch-size 1 --opt-level 0
+./servers/export_trt/scripts/3_export.sh --input models/onnx/yolo26n --config servers/export_trt/templates/yolo26_det.yaml
+./servers/export_trt/scripts/3_export.sh --input models/onnx/yolov10x-smoke-fire --config servers/export_trt/templates/yolo10x_smoke_fire.yaml
+./servers/export_trt/scripts/3_export.sh --input models/onnx/peoplenet --config servers/export_trt/templates/peoplenet.yaml
+./servers/export_trt/scripts/3_export.sh --input models/onnx/rtmpose --config servers/export_trt/templates/rtmpose.yaml
 ```
 
-`--input` 须为 `models/` 下的 ONNX 目录（映射为容器内 `/root/models/...`）。
+`--input` 为 ONNX 目录路径；`--config` 为 YAML 路径。脚本会打包成 zip 再上传。
 
 ## 服务参数
 

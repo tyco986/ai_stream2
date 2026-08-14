@@ -17,7 +17,7 @@ debouncer:
     "0": Fire
     "1": Smoke
 logger:
-  root: /root/logs/deepstream/yolo10x-smoke-fire-video/probe
+  root: /root/logs/deepstream
   interval: 50
   times: [latency, nvinfer, nvstreammux, nvurisrcbin]
 messager:

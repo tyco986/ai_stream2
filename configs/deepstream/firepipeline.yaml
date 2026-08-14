@@ -2,7 +2,7 @@ type: PresenceRTSPPipeline
 name: firepipeline
 config_dir: /root/configs/generator/firepipeline
 logger:
-  root: /root/logs/deepstream/firepipeline/probe
+  root: /root/logs/deepstream
   interval: 50
 messager:
   topic: deepstream-detections

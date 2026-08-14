@@ -9,9 +9,9 @@ from pydantic import ValidationError
 
 from utils.api.constants import (
     BASE_PIPELINE_TYPES,
+    CONFIG_SAVE_DIR,
     LOGGER_NAME,
     PRESENCE_PIPELINE_TYPES,
-    RUNNER_LOG_ROOT,
 )
 from utils.api.schemas import ApiEnvelope, StartPipelineRequest
 
@@ -93,8 +93,18 @@ class PipelineStartService:
             kwargs["drawer"] = body.drawer
         return kwargs
 
+    def save_config(self, filename: str, raw: bytes) -> None:
+        name = Path(filename).name
+        if not name or name in {".", ".."}:
+            name = "pipeline.yaml"
+        CONFIG_SAVE_DIR.mkdir(parents=True, exist_ok=True)
+        path = CONFIG_SAVE_DIR / name
+        path.write_bytes(raw)
+
     def start(self, upload: UploadFile) -> ApiEnvelope:
-        config = yaml.safe_load(upload.file.read())
+        raw = upload.file.read()
+        self.save_config(upload.filename or "pipeline.yaml", raw)
+        config = yaml.safe_load(raw)
         if not isinstance(config, dict):
             raise AppError("pipeline YAML must be a mapping")
 
@@ -122,10 +132,7 @@ class PipelineStartService:
             )
         self.pipeline = builder.build()
         runner_cls = self.resolve_runner()
-        self.runner = runner_cls(
-            self.pipeline,
-            logger={"root": f"{RUNNER_LOG_ROOT}/{body.name}/runner"},
-        )
+        self.runner = runner_cls(self.pipeline)
         self.pipeline_name = body.name
         self.pipeline_type = body.type
         self.runner_thread = threading.Thread(target=self.runner.start, daemon=True)

@@ -7,7 +7,7 @@ drawer:
   show_label: true
   show_conf: true
 logger:
-  root: /root/logs/deepstream/yolo26n-seg-sahi-video/probe
+  root: /root/logs/deepstream
   interval: 50
 messager:
   topic: deepstream-detections

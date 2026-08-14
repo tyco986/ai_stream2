@@ -1,0 +1,3 @@
+# bash servers/export_trt/scripts/3_export.sh --input models/onnx/peoplenet --config servers/export_trt/templates/peoplenet.yaml
+type: PEOPLENET
+batch_size: 18

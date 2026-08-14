@@ -1,0 +1,2 @@
+# bash servers/export_trt/scripts/3_export.sh --input models/onnx/yolo26n-seg --config servers/export_trt/templates/yolo26_seg.yaml
+type: YOLO26-SEG

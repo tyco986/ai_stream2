@@ -3,12 +3,10 @@ from pathlib import Path
 
 from ultralytics import YOLO
 
-from utils.yolo_e2e.common import fix_batch_only_dynamic, run_export_cli, write_labels
+from utils.yolo_e2e.common import fix_batch_only_dynamic, validate_export_args, write_labels
 
 
 class YoloDetE2EExporter:
-    """Ultralytics e2e ONNX detect → images/output0."""
-
     def export(
         self,
         weights: Path,
@@ -21,6 +19,8 @@ class YoloDetE2EExporter:
         conf: float,
         output_dir: Path,
     ) -> None:
+        validate_export_args(weights, dynamic, batch)
+
         model = YOLO(str(weights))
         write_labels(model.names, output_dir / "labels.txt")
 
@@ -48,10 +48,3 @@ class YoloDetE2EExporter:
             shutil.move(produced_data, output_dir / produced_data.name)
         if dynamic:
             fix_batch_only_dynamic(onnx_path, size, max_det)
-
-
-if __name__ == "__main__":
-    run_export_cli(
-        YoloDetE2EExporter(),
-        "Export e2e ONNX detect (images/output0)",
-    )

@@ -96,8 +96,15 @@ class ExportTrtClient:
         dynamic,
         precision="fp16",
         optimization_level=None,
+        family=None,
+        task=None,
     ):
-        url = f"{self.base_url}{self.prefix}/export_engine"
+        if not family:
+            raise AppError("family is required", status_code=400)
+        route = f"export_{family}"
+        if task == "segment":
+            route = f"{route}_seg"
+        url = f"{self.base_url}{self.prefix}/{route}"
         data = {
             "input": onnx_dir,
             "precision": precision,
