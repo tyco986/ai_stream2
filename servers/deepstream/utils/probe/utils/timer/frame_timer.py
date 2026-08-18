@@ -13,6 +13,7 @@ AVAILABLE_TIME = (
     "nvstreammux",
     "nvsahipreprocess",
     "nvinfer",
+    "sgie",
     "nvsahipostprocess",
     "nvtracker",
     "nvdsanalytics",

@@ -1,0 +1,22 @@
+fakesink0:
+- nvurisrcbin0
+- nvstreammux
+- nvinfer
+- nvtracker
+- sgie
+- nvdsanalytics
+- nvstreamdemux
+- queue_demux0
+- nvvideoconvert0
+- fakesink0
+fakesink1:
+- nvurisrcbin1
+- nvstreammux
+- nvinfer
+- nvtracker
+- sgie
+- nvdsanalytics
+- nvstreamdemux
+- queue_demux1
+- nvvideoconvert1
+- fakesink1

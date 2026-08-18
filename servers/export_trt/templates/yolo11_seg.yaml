@@ -1,2 +1,6 @@
 # bash servers/export_trt/scripts/3_export.sh --input models/onnx/yolo11n-seg --config servers/export_trt/templates/yolo11_seg.yaml
 type: YOLO11-SEG
+batch_size: 18
+gpu_id: 0
+precision: fp16
+opt_level: null

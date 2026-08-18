@@ -1,7 +1,7 @@
 import copy
 
 from ..base_generator.base_sahi_image import BaseSahiImageGenerator, SAHI_IMAGE_TOPOLOGY_DOC
-from ..subelement_generator.utils.default_pgie import YoloSeg
+from ..subelement_generator.utils.default_gie import YoloSeg
 
 
 class SegSahiImageGenerator(BaseSahiImageGenerator):

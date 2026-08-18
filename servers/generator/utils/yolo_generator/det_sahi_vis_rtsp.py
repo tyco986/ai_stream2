@@ -1,7 +1,7 @@
 import copy
 
 from ..base_generator.base_sahi_rtsp_vis import BaseSahiVisRTSPGenerator, SAHI_VIS_RTSP_TOPOLOGY_DOC
-from ..subelement_generator.utils.default_pgie import YoloDet
+from ..subelement_generator.utils.default_gie import YoloDet
 
 
 class DetSahiVisRTSPGenerator(BaseSahiVisRTSPGenerator):

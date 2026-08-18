@@ -25,6 +25,10 @@ class GeneratorRegistry:
         "DetSahiVisRTSPGenerator": "utils.yolo_generator.det_sahi_vis_rtsp",
         "SegSahiRTSPGenerator": "utils.yolo_generator.seg_sahi_rtsp",
         "SegSahiVisRTSPGenerator": "utils.yolo_generator.seg_sahi_vis_rtsp",
+        "SingleSgieImageGenerator": "utils.sgie_generator.single_sgie_image_generator",
+        "SingleSgieVideoGenerator": "utils.sgie_generator.single_sgie_video_generator",
+        "SingleSgieRTSPGenerator": "utils.sgie_generator.single_sgie_rtsp_generator",
+        "SingleSgieVisRTSPGenerator": "utils.sgie_generator.single_sgie_vis_rtsp_generator",
     }
 
     def __init__(self) -> None:

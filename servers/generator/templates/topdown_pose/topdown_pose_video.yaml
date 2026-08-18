@@ -1,0 +1,20 @@
+# bash servers/generator/scripts/3_generate.sh --config topdown_pose_video
+#
+# Artifacts: pipeline.yml, pgie.yml, sgie.yml, params.yml, ... under config_save_dir.
+# Reference frame: attachments/images/video1.png (1920x1080), main flow is vertical.
+
+generator: SingleSgieVideoGenerator
+config_save_dir: /root/configs/generator/topdown_pose_video
+interval: 50
+pgie:
+  model_dir: /root/models/trt/peoplenet
+  class_attrs:
+    0:
+      conf: 0.25
+sgie:
+  model_dir: /root/models/trt/rtmpose
+tracker:
+  class_id: 0
+analyzer: null
+input: /root/attachments/videos/video1.mp4
+output: /root/outputs/deepstream/topdown_pose_video.mp4

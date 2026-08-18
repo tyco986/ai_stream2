@@ -1,10 +1,11 @@
 import json
 import subprocess
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 
 import onnx
 
+from utils.rtmpose.simcc_decode import SimccDecodeGraft
 from utils.rtmpose.utils.constants import (
     DEFAULT_PRECISION,
     KEYPOINT_NAMES,
@@ -12,8 +13,9 @@ from utils.rtmpose.utils.constants import (
     META_JSON_NAME,
     ONNX_PRECISION,
     PRECISION_FLAGS,
+    RTMPOSE_BACKBONE_OUTPUT_NAMES,
     RTMPOSE_INPUT_NAME,
-    RTMPOSE_OUTPUT_NAMES,
+    RTMPOSE_OUTPUT_NAME,
     RTMPOSE_TASK,
     RTMPOSE_VERSION,
     TRTEXEC,
@@ -44,7 +46,18 @@ class RtmposeExporter:
             shape[0] = batch_size
         return shape
 
-    def validate_graph(self, inputs: list[dict], outputs: list[dict]) -> None:
+    def parse_model(self, model) -> tuple[list[dict], list[dict]]:
+        graph = model.graph
+        initializer_names = {item.name for item in graph.initializer}
+        inputs = [
+            self.parse_tensor(item)
+            for item in graph.input
+            if item.name not in initializer_names
+        ]
+        outputs = [self.parse_tensor(item) for item in graph.output]
+        return inputs, outputs
+
+    def validate_backbone(self, inputs: list[dict], outputs: list[dict]) -> None:
         if len(inputs) != 1:
             raise ValueError(f"rtmpose expected one graph input, got {len(inputs)}")
         input_t = inputs[0]
@@ -67,9 +80,10 @@ class RtmposeExporter:
         if len(outputs) != 2:
             raise ValueError(f"rtmpose expected two graph outputs, got {len(outputs)}")
         output_names = tuple(tensor["name"] for tensor in outputs)
-        if set(output_names) != set(RTMPOSE_OUTPUT_NAMES):
+        if set(output_names) != set(RTMPOSE_BACKBONE_OUTPUT_NAMES):
             raise ValueError(
-                f"rtmpose expected outputs {RTMPOSE_OUTPUT_NAMES}, got {output_names}"
+                f"rtmpose expected outputs {RTMPOSE_BACKBONE_OUTPUT_NAMES}, "
+                f"got {output_names}"
             )
         for tensor in outputs:
             if len(tensor["dims"]) != 3:
@@ -84,6 +98,25 @@ class RtmposeExporter:
         k_dims = [tensor["dims"][1] for tensor in outputs]
         if k_dims[0] != k_dims[1]:
             raise ValueError(f"rtmpose keypoint dims mismatch: {k_dims}")
+
+    def validate_grafted(self, outputs: list[dict], num_keypoints: int) -> None:
+        if len(outputs) != 1:
+            raise ValueError(f"rtmpose expected one grafted output, got {len(outputs)}")
+        output_t = outputs[0]
+        dims = output_t["dims"]
+        if output_t["name"] != RTMPOSE_OUTPUT_NAME:
+            raise ValueError(
+                f"rtmpose expected output {RTMPOSE_OUTPUT_NAME!r}, "
+                f"got {output_t['name']!r}"
+            )
+        if len(dims) != 3 or dims[2] != 3:
+            raise ValueError(
+                f"rtmpose expected keypoints [B, K, 3], got {dims}"
+            )
+        if dims[1] > 0 and dims[1] != num_keypoints:
+            raise ValueError(
+                f"rtmpose expected K={num_keypoints}, got {dims}"
+            )
 
     def resolve_num_keypoints(self, graph, outputs: list[dict]) -> int:
         k_dims = [tensor["dims"][1] for tensor in outputs]
@@ -113,19 +146,12 @@ class RtmposeExporter:
             raise ValueError("folder must contain exactly one .onnx file")
         return onnx_paths[0]
 
-    def build_meta(self, onnx_path: Path) -> dict:
-        graph = onnx.load(str(onnx_path), load_external_data=False).graph
-        initializer_names = {item.name for item in graph.initializer}
-        inputs = [
-            self.parse_tensor(item)
-            for item in graph.input
-            if item.name not in initializer_names
-        ]
-        outputs = [self.parse_tensor(item) for item in graph.output]
-        self.validate_graph(inputs, outputs)
-        num_keypoints = self.resolve_num_keypoints(graph, outputs)
+    def build_meta(
+        self, inputs: list[dict], outputs: list[dict], num_keypoints: int
+    ) -> dict:
         for tensor in outputs:
-            tensor["dims"][1] = num_keypoints
+            if tensor["dims"][1] <= 0:
+                tensor["dims"][1] = num_keypoints
         input_t = inputs[0]
         is_dynamic = any(dim < 0 for dim in input_t["dims"]) or any(
             any(dim < 0 for dim in tensor["dims"]) for tensor in outputs
@@ -215,12 +241,21 @@ class RtmposeExporter:
         if not onnx_dir.is_dir():
             raise ValueError(f"input not found or not a directory: {onnx_dir}")
         onnx_path = self.find_onnx(onnx_dir)
-        meta = self.build_meta(onnx_path)
+        model = onnx.load(str(onnx_path), load_external_data=False)
+        backbone_inputs, backbone_outputs = self.parse_model(model)
+        self.validate_backbone(backbone_inputs, backbone_outputs)
+        num_keypoints = self.resolve_num_keypoints(model.graph, backbone_outputs)
+        grafted = SimccDecodeGraft(model, num_keypoints).graft()
+        grafted_path = output_dir / f"{onnx_path.stem}.onnx"
+        onnx.save(grafted, str(grafted_path))
+        inputs, outputs = self.parse_model(grafted)
+        self.validate_grafted(outputs, num_keypoints)
+        meta = self.build_meta(inputs, outputs, num_keypoints)
         resolved_batch = self.resolve_batch(meta, batch_size)
 
         engine_path = output_dir / f"{onnx_path.stem}.engine"
         command = self.build_trtexec_command(
-            onnx_path,
+            grafted_path,
             engine_path,
             meta,
             resolved_batch,
@@ -245,7 +280,7 @@ class RtmposeExporter:
                 "precision": precision,
                 "gpu_id": gpu_id,
                 "opt_level": opt_level,
-                "build_time": datetime.now(timezone.utc).isoformat(),
+                "build_time": datetime.now().astimezone().isoformat(),
             }
         )
         (output_dir / LABELS_NAME).write_text(

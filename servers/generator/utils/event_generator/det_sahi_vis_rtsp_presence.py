@@ -4,7 +4,7 @@ from ..base_generator.base_event_sahi_vis_rtsp import (
     BaseEventSahiVisRTSPGenerator,
     SAHI_VIS_RTSP_EVENT_TOPOLOGY_DOC,
 )
-from ..subelement_generator.utils.default_pgie import YoloDet
+from ..subelement_generator.utils.default_gie import YoloDet
 
 
 class DetSahiVisRTSPPresenceGenerator(BaseEventSahiVisRTSPGenerator):

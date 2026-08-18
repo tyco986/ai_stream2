@@ -1,7 +1,7 @@
 import json
 import shutil
 import subprocess
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 
 from utils.yolo.utils.constants import DEFAULT_PRECISION, LABELS_NAME, META_JSON_NAME
@@ -67,7 +67,7 @@ class YoloDetExporter:
                 "precision": precision,
                 "gpu_id": gpu_id,
                 "opt_level": opt_level,
-                "build_time": datetime.now(timezone.utc).isoformat(),
+                "build_time": datetime.now().astimezone().isoformat(),
             }
         )
         (output_dir / META_JSON_NAME).write_text(

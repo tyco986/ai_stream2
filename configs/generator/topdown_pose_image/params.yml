@@ -1,0 +1,13 @@
+generator: SingleSgieImageGenerator
+input: /root/attachments/images/video1.png
+output: /root/outputs/deepstream/topdown_pose_image.jpg
+pgie:
+  model_dir: /root/models/trt/peoplenet
+  class_attrs:
+    0:
+      conf: 0.25
+analyzer: null
+interval: 0
+sgie:
+  model_dir: /root/models/trt/rtmpose
+config_save_dir: /root/configs/generator/topdown_pose_image

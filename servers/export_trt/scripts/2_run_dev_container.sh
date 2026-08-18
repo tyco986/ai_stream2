@@ -18,6 +18,7 @@ docker run -d \
   --gpus all \
   -p 9000:9000 \
   -e PROJECT_NAME="${PROJECT_NAME}" \
+  -e TZ="${TZ:-$(cat /etc/timezone 2>/dev/null || echo UTC)}" \
   -v /etc/localtime:/etc/localtime:ro \
   -v "${ROOT}/models:/root/models" \
   -v "${ROOT}/logs:/root/logs" \

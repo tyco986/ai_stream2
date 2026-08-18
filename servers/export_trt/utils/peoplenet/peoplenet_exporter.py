@@ -1,6 +1,6 @@
 import json
 import subprocess
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 
 import onnx
@@ -215,7 +215,7 @@ class PeopleNetExporter:
                 "precision": precision,
                 "gpu_id": gpu_id,
                 "opt_level": opt_level,
-                "build_time": datetime.now(timezone.utc).isoformat(),
+                "build_time": datetime.now().astimezone().isoformat(),
             }
         )
         (output_dir / LABELS_NAME).write_text(

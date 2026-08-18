@@ -1,0 +1,70 @@
+type: Pose2DVisRTSPPipeline
+params:
+  drawer:
+    available: true
+    params:
+      show_label:
+        available: true
+        default: true
+      show_conf:
+        available: true
+        default: true
+      show_id:
+        available: true
+        default: false
+      kpt_threshold:
+        available: true
+        default: 0.0
+      infer_height:
+        available: true
+        default: 256
+      infer_width:
+        available: true
+        default: 192
+      sgie_unique_id:
+        available: true
+        default: 2
+      interval:
+        available: true
+        default: 50
+      fade_time:
+        available: true
+        default: 1
+  logger:
+    available: true
+    params:
+      interval:
+        available: true
+        default: 50
+      times:
+        available: false
+        default:
+        - latency
+        - nvinfer
+        - nvtracker
+        - sgie
+  messager:
+    available: true
+    params:
+      interval:
+        available: true
+        default: 0
+  debouncer:
+    available: false
+    params:
+      length:
+        available: false
+        default: 10
+      threshold:
+        available: false
+        default: 0.5
+      class_ids:
+        available: false
+        default:
+        - 0
+        - 1
+      mode:
+        available: false
+        default: fold
+  capturer:
+    available: false

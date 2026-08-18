@@ -1,4 +1,4 @@
-# SimCC pose SGIE: person crop → simcc_x/simcc_y tensor meta (no bbox parser)
+# Top-down pose SGIE: person crop → keypoints [B, K, 3] tensor meta (no bbox parser)
 
 RtmPose = {
     "property": {
@@ -21,7 +21,7 @@ RtmPose = {
         "net-scale-factor": 0.017124753831663668,
         "offsets": "123.675;116.28;103.53",
         "infer-dims": "3;256;192",
-        "output-blob-names": "simcc_x;simcc_y",
+        "output-blob-names": "keypoints",
         "output-tensor-meta": 1,
         "input-object-min-width": 32,
         "input-object-min-height": 32,

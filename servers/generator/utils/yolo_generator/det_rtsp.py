@@ -1,5 +1,5 @@
 from ..base_generator.base_rtsp import BaseRTSPGenerator, RTSP_TOPOLOGY_DOC
-from ..subelement_generator.utils.default_pgie.manager import PgieManager
+from ..subelement_generator.utils.default_gie.manager import PgieManager
 
 
 class DetRTSPGenerator(BaseRTSPGenerator):

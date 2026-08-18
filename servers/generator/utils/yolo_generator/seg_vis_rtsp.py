@@ -1,7 +1,7 @@
 import copy
 
 from ..base_generator.base_rtsp_vis import BaseRTSPVisGenerator, VIS_RTSP_TOPOLOGY_DOC
-from ..subelement_generator.utils.default_pgie import YoloSeg
+from ..subelement_generator.utils.default_gie import YoloSeg
 
 
 class SegVisRTSPGenerator(BaseRTSPVisGenerator):

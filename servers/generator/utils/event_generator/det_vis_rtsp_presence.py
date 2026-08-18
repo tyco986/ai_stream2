@@ -4,7 +4,7 @@ from ..base_generator.base_event_vis_rtsp import (
     VIS_RTSP_EVENT_TOPOLOGY_DOC,
     BaseEventVisRTSPGenerator,
 )
-from ..subelement_generator.utils.default_pgie import YoloDet
+from ..subelement_generator.utils.default_gie import YoloDet
 
 
 class DetVisRTSPPresenceGenerator(BaseEventVisRTSPGenerator):

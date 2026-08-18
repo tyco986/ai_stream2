@@ -1,0 +1,26 @@
+# bash servers/generator/scripts/3_generate.sh --config topdown_pose_rtsp
+
+generator: SingleSgieRTSPGenerator
+config_save_dir: /root/configs/generator/topdown_pose_rtsp
+interval: 50
+pgie:
+  model_dir: /root/models/trt/peoplenet
+  class_attrs:
+    0:
+      conf: 0.25
+sgie:
+  model_dir: /root/models/trt/rtmpose
+tracker:
+  class_id: 0
+analyzer: null
+streams:
+  video1:
+    url: rtsp://ai_stream2_mediamtx:8554/video1
+    width: 1920
+    height: 1080
+    fps: 25
+  video2:
+    url: rtsp://ai_stream2_mediamtx:8554/video2
+    width: 1920
+    height: 1080
+    fps: 25

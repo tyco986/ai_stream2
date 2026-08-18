@@ -1,7 +1,7 @@
 import copy
 
 from ..base_generator.base_rtsp import BaseRTSPGenerator, RTSP_TOPOLOGY_DOC
-from ..subelement_generator.utils.default_pgie import YoloSeg
+from ..subelement_generator.utils.default_gie import YoloSeg
 
 
 class SegRTSPGenerator(BaseRTSPGenerator):
