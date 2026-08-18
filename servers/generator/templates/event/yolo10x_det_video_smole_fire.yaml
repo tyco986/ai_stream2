@@ -4,8 +4,8 @@
 
 generator: DetVideoPresenceGenerator
 config_save_dir: /root/configs/generator/yolo10x_smoke_fire_video
-interval: 50
 pgie:
+  interval: 50
   model_dir: /root/models/trt/yolov10x-smoke-fire
   class_attrs:
     all:

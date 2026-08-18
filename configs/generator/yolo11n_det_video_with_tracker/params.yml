@@ -6,8 +6,8 @@ pgie:
   class_attrs:
     all:
       conf: 0.25
+  interval: 50
 analyzer: null
 tracker:
   class_id: -1
-interval: 50
 config_save_dir: /root/configs/generator/yolo11n_det_video_with_tracker

@@ -55,7 +55,6 @@ class BaseSahiRTSPGenerator(BaseRTSPGenerator):
         pgie: dict,
         sahi: dict,
         tracker: dict | None = None,
-        interval: int = 0,
     ) -> None:
         self.sahi = sahi
         super().__init__(
@@ -63,7 +62,6 @@ class BaseSahiRTSPGenerator(BaseRTSPGenerator):
             analyzer=analyzer,
             pgie=pgie,
             tracker=tracker,
-            interval=interval,
         )
 
     def init_streams(self) -> None:

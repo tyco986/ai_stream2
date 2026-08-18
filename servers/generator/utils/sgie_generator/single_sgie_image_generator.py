@@ -39,7 +39,6 @@ class SingleSgieImageGenerator(SingleSgieMixin, BaseImageGenerator):
         analyzer: dict | None,
         pgie: dict,
         sgie: dict,
-        interval: int = 0,
     ) -> None:
         self.sgie = sgie
         super().__init__(
@@ -47,7 +46,6 @@ class SingleSgieImageGenerator(SingleSgieMixin, BaseImageGenerator):
             output=output,
             analyzer=analyzer,
             pgie=pgie,
-            interval=interval,
         )
 
     def add(self) -> None:

@@ -5,6 +5,7 @@ import yaml
 from pyservicemaker import Pipeline, Probe
 
 from utils.base_pipeline.times_attach import LatencyTimesAttach
+from utils.base_pipeline.validate import nvinfer_period
 
 PIPELINE_YML = "pipeline.yml"
 PAD_LINKS_YML = "pad_links.yml"
@@ -19,7 +20,7 @@ class BaseRTSPPipeline(LatencyTimesAttach):
         self.pipeline_name = pipeline_name
         self.meta, self.pgie, self.pad_links, self.sink_path = self.load_config(config_dir)
         self.yolo_task = self.meta["task"]
-        self.pgie_interval = int(self.pgie["property"].get("interval", 0))
+        self.pgie_interval = nvinfer_period(int(self.pgie["property"].get("interval", 0)))
         self.pipeline = Pipeline(pipeline_name, str(self.config_dir / PIPELINE_YML))
         self.link_demux_pads()
 

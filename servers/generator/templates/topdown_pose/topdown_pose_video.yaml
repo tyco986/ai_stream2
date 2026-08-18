@@ -5,16 +5,18 @@
 
 generator: SingleSgieVideoGenerator
 config_save_dir: /root/configs/generator/topdown_pose_video
-interval: 50
 pgie:
+  interval: 50
   model_dir: /root/models/trt/peoplenet
   class_attrs:
     0:
       conf: 0.25
 sgie:
+  interval: 5
   model_dir: /root/models/trt/rtmpose
-tracker:
-  class_id: 0
+# tracker:
+#   class_id: 0
+tracker: null
 analyzer: null
 input: /root/attachments/videos/video1.mp4
 output: /root/outputs/deepstream/topdown_pose_video.mp4

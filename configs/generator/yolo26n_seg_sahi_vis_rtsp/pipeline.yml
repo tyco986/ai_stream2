@@ -41,6 +41,7 @@ deepstream:
       batch-size: 18
       gpu-id: 0
       input-tensor-meta: true
+      clip-object-outside-roi: false
   - type: queue
     name: queue_sahi
     properties:

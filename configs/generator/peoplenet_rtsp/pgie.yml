@@ -10,14 +10,15 @@ property:
   model-color-format: 0
   num-detected-classes: 3
   gie-unique-id: 1
-  interval: 50
-  cluster-mode: 2
+  interval: 49
+  cluster-mode: 4
   maintain-aspect-ratio: 0
   net-scale-factor: 0.003921569790691137
   offsets: 0.0;0.0;0.0
   infer-dims: 3;544;960
-  output-blob-names: output_bbox/BiasAdd:0;output_cov/Sigmoid:0
+  custom-lib-path: /opt/nvidia/deepstream/deepstream/lib/libnvds_infer_yolo.so
+  parse-bbox-func-name: NvDsInferYoloE2E
+  output-blob-names: output0
 class-attrs-all:
   topk: 300
-  nms-iou-threshold: 0.5
   pre-cluster-threshold: 0.25

@@ -6,7 +6,7 @@ pgie:
   class_attrs:
     all:
       conf: 0.25
+  interval: 50
 analyzer: null
 tracker: null
-interval: 50
 config_save_dir: /root/configs/generator/yolo10x_smoke_fire_video

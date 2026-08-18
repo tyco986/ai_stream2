@@ -1,6 +1,6 @@
 # bash servers/export_trt/scripts/3_export.sh --input models/onnx/rtmpose --config servers/export_trt/templates/rtmpose.yaml
 type: RTMPOSE
-batch_size: 18
+batch_size: 64
 gpu_id: 0
 precision: fp32
 opt_level: null

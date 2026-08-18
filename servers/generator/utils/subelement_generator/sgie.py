@@ -3,6 +3,8 @@ from pathlib import Path
 
 import yaml
 
+from .utils.nvinfer_interval import nvinfer_skip
+
 
 class SgieGenerator:
     def __init__(
@@ -30,7 +32,7 @@ class SgieGenerator:
         self.config["property"]["batch-size"] = self.batch_size
         self.config["property"]["network-mode"] = self.network_mode
         self.config["property"]["gpu-id"] = self.gpu_id
-        self.config["property"]["interval"] = self.interval
+        self.config["property"]["interval"] = nvinfer_skip(self.interval)
         self.config["property"]["model-engine-file"] = self.model_engine_file
         self.config["property"]["labelfile-path"] = self.labelfile_path
         self.config["property"]["infer-dims"] = self.infer_dims

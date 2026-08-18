@@ -15,8 +15,8 @@ pgie:
   class_attrs:
     all:
       conf: 0.4
+  interval: 50
 analyzer: null
 tracker:
   class_id: 0
-interval: 50
 config_save_dir: /root/configs/generator/yolo26n_det_vis_rtsp

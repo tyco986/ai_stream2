@@ -25,7 +25,7 @@ class DetFadeDrawer(DetDrawer):
     def is_inference_frame(self, frame_meta) -> bool:
         inference = (
             self.interval <= 0
-            or int(frame_meta.frame_number) % (self.interval + 1) == 0
+            or int(frame_meta.frame_number) % self.interval == 0
         )
         return inference
 
@@ -89,10 +89,11 @@ class DetFadeDrawer(DetDrawer):
         if fade_time <= 0:
             result = [1.0]
         else:
-            mid = interval // 2
-            tail = interval - mid
+            period = interval if interval > 0 else 1
+            mid = period // 2
+            tail = period - mid
             triangle = []
-            for i in range(interval + 1):
+            for i in range(period):
                 if i <= mid:
                     t = 1.0 - i / mid if mid > 0 else 1.0
                 else:

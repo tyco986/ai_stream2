@@ -1,7 +1,11 @@
 import copy
 import os
-import yaml
 from pathlib import Path
+
+import yaml
+
+from .utils.nvinfer_interval import nvinfer_skip
+
 
 class PgieGenerator:
     def __init__(
@@ -33,7 +37,7 @@ class PgieGenerator:
         self.config["property"]["network-mode"] = self.network_mode
         self.config["property"]["num-detected-classes"] = self.num_detected_classes
         self.config["property"]["gpu-id"] = self.gpu_id
-        self.config["property"]["interval"] = self.interval
+        self.config["property"]["interval"] = nvinfer_skip(self.interval)
         self.config["property"]["model-engine-file"] = self.model_engine_file
         self.config["property"]["labelfile-path"] = self.labelfile_path
         if self.filter_out_class_ids is not None:

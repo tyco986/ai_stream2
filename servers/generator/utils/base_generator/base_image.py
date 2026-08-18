@@ -51,13 +51,11 @@ class BaseImageGenerator(PipelineGenerator):
         output: str | Path,
         analyzer: dict | None,
         pgie: dict,
-        interval: int = 0,
     ) -> None:
         self.input = Path(input).expanduser().resolve()
         self.output = Path(output).expanduser().resolve()
         self.analyzer = analyzer
         self.pgie = pgie
-        self.interval = interval
 
         super().__init__()
 
@@ -81,7 +79,6 @@ class BaseImageGenerator(PipelineGenerator):
         self.params_yml["output"] = str(self.output)
         self.params_yml["pgie"] = self.pgie
         self.params_yml["analyzer"] = self.analyzer
-        self.params_yml["interval"] = self.interval
 
     def init_pipeline(self) -> None:
         self.add()
@@ -92,12 +89,13 @@ class BaseImageGenerator(PipelineGenerator):
         self.pgie = {
             "model_dir": self.pgie["model_dir"],
             "class_attrs": self.pgie["class_attrs"],
+            "interval": int(self.pgie.get("interval", 0)),
         }
         self.pgie_config_parser = PgieParser(
             self.pgie["model_dir"],
             self.runtime_batch_size,
             self.pgie["class_attrs"],
-            self.interval,
+            self.pgie["interval"],
         )
         self.pgie_generator = PgieGenerator(**self.pgie_config_parser.build())
         self.apply_pgie_config()

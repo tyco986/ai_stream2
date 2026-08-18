@@ -6,9 +6,9 @@ pgie:
   class_attrs:
     all:
       conf: 0.25
+  interval: 50
 analyzer: null
 tracker: null
-interval: 50
 sahi:
   nvsahipreprocess:
     slice_width: 640

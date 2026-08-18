@@ -6,10 +6,10 @@ pgie:
   class_attrs:
     0:
       conf: 0.25
+  interval: 50
 analyzer: null
-tracker:
-  class_id: 0
-interval: 50
+tracker: null
 sgie:
   model_dir: /root/models/trt/rtmpose
+  interval: 5
 config_save_dir: /root/configs/generator/topdown_pose_video

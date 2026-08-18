@@ -6,8 +6,9 @@ pgie:
   class_attrs:
     0:
       conf: 0.25
+  interval: 0
 analyzer: null
-interval: 0
 sgie:
   model_dir: /root/models/trt/rtmpose
+  interval: 0
 config_save_dir: /root/configs/generator/topdown_pose_image

@@ -6,6 +6,7 @@ pgie:
   class_attrs:
     all:
       conf: 0.25
+  interval: 50
 analyzer:
   streams:
   - video
@@ -47,5 +48,4 @@ analyzer:
         - 960;720;960;400
 tracker:
   class_id: -1
-interval: 50
 config_save_dir: /root/configs/generator/yolo26n_det_video_with_analyzer

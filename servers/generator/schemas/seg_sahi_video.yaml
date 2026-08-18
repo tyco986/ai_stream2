@@ -5,10 +5,10 @@ params:
     params: {}
   pgie:
     available: true
-    params: {}
-  interval:
-    available: true
-    default: 50
+    params:
+      interval:
+        available: true
+        default: 50
   tracker:
     available: true
     params:

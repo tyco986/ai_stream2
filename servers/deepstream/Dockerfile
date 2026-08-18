@@ -23,7 +23,13 @@ WORKDIR /app
 
 RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 
-RUN apt-get update \
+RUN find /etc/apt -type f \( -name "*.list" -o -name "*.sources" \) -print0 \
+    | xargs -0 sed -i \
+      -e "s|http://archive.ubuntu.com/ubuntu|https://mirrors.tuna.tsinghua.edu.cn/ubuntu|g" \
+      -e "s|https://archive.ubuntu.com/ubuntu|https://mirrors.tuna.tsinghua.edu.cn/ubuntu|g" \
+      -e "s|http://security.ubuntu.com/ubuntu|https://mirrors.tuna.tsinghua.edu.cn/ubuntu|g" \
+      -e "s|https://security.ubuntu.com/ubuntu|https://mirrors.tuna.tsinghua.edu.cn/ubuntu|g" \
+    && apt-get update \
     && apt-get install -y --no-install-recommends \
         librdkafka-dev \
         patch \

@@ -5,8 +5,8 @@
 
 generator: DetSahiVideoGenerator
 config_save_dir: /root/configs/generator/yolo11n_det_sahi_video
-interval: 50
 pgie:
+  interval: 50
   model_dir: /root/models/trt/yolo11n
   class_attrs:
     all:

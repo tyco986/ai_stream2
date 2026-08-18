@@ -1,6 +1,22 @@
 --- sources/gst-plugins/gst-nvinfer/gstnvinfer.cpp
 +++ sources/gst-plugins/gst-nvinfer/gstnvinfer.cpp
-@@ -2166,4 +2166,13 @@
+@@ -1930,6 +1930,15 @@
+         ("NvDsBatchMeta not found for input buffer."), (NULL));
+     return GST_FLOW_ERROR;
+   }
++  gboolean skip_batch;
++
++  /* Process batch only when interval_counter is 0. */
++  skip_batch = (nvinfer->interval_counter++ % (nvinfer->interval + 1) > 0);
++
++  if (skip_batch) {
++    return GST_FLOW_OK;
++  }
++
+ 
+   for (NvDsMetaList * l_frame = batch_meta->frame_meta_list; l_frame != NULL;
+       l_frame = l_frame->next) {
+@@ -2166,6 +2175,15 @@
          ("NvDsBatchMeta not found for input buffer."), (NULL));
      return GST_FLOW_ERROR;
    }
@@ -14,3 +30,5 @@
 +  }
 +
    std::unordered_map<guint, TensorInputBatch> tensormeta_map;
+ 
+   for (NvDsMetaList * l_user = batch_meta->batch_user_meta_list; l_user != NULL;

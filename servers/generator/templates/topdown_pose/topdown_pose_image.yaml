@@ -4,13 +4,14 @@
 
 generator: SingleSgieImageGenerator
 config_save_dir: /root/configs/generator/topdown_pose_image
-interval: 0
 pgie:
+  interval: 0
   model_dir: /root/models/trt/peoplenet
   class_attrs:
     0:
       conf: 0.25
 sgie:
+  interval: 0
   model_dir: /root/models/trt/rtmpose
 analyzer: null
 input: /root/attachments/images/video1.png

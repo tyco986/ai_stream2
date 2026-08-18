@@ -2,13 +2,14 @@
 
 generator: SingleSgieRTSPGenerator
 config_save_dir: /root/configs/generator/topdown_pose_rtsp
-interval: 50
 pgie:
+  interval: 50
   model_dir: /root/models/trt/peoplenet
   class_attrs:
     0:
       conf: 0.25
 sgie:
+  interval: 50
   model_dir: /root/models/trt/rtmpose
 tracker:
   class_id: 0

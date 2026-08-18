@@ -63,8 +63,10 @@ Swagger：`http://127.0.0.1:8091/docs`（试调入口；完整说明见本文）
   "type": "DetImageGenerator",
   "params": {
     "streams": { "available": false, "params": {} },
-    "pgie": { "available": true, "params": {} },
-    "interval": { "available": true, "default": 50 },
+    "pgie": {
+      "available": true,
+      "params": { "interval": { "available": true, "default": 50 } }
+    },
     "tracker": {
       "available": false,
       "params": { "class_id": { "available": false, "default": [-1] } }
@@ -118,8 +120,8 @@ YAML 中相对路径 `models/*`、`configs/*` 会在服务端映射为 `/root/mo
 |------|------|
 | `generator` | 生成器类名（必填） |
 | `config_save_dir` | 配置输出目录（必填；模板见 `servers/generator/templates/`，默认 `/root/configs/generator/{模板名}`） |
-| `pgie` | `model_dir` + `class_attrs`（见 schema / templates） |
-| `analyzer` / `tracker` / `interval` | 见对应 generator schema |
+| `pgie` | `model_dir` + `class_attrs` + `interval`（见 schema / templates） |
+| `analyzer` / `tracker` / `sgie.interval` | 见对应 generator schema |
 | `streams` | RTSP 专用 |
 | `input` / `output` | Image / Video 专用 |
 | `sahi` | SAHI 变体专用 |

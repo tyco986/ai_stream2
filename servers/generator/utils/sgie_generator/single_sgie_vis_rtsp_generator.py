@@ -44,7 +44,6 @@ class SingleSgieVisRTSPGenerator(SingleSgieMixin, BaseRTSPVisGenerator):
         pgie: dict,
         sgie: dict,
         tracker: dict | None = None,
-        interval: int = 0,
     ) -> None:
         self.sgie = sgie
         super().__init__(
@@ -52,7 +51,6 @@ class SingleSgieVisRTSPGenerator(SingleSgieMixin, BaseRTSPVisGenerator):
             analyzer=analyzer,
             pgie=pgie,
             tracker=tracker,
-            interval=interval,
         )
 
     def add(self) -> None:

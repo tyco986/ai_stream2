@@ -133,13 +133,13 @@
       25600
     ]
   ],
-  "bundle_sha256": "e1c3928234d41c1514bf7c2c1f812ebc2548fa684ef41caa28db427ab6c18820",
+  "bundle_sha256": "35893866274b1067232c7937e785dc5c4b28ff2ff84b99e8bc1f596c306cecfa",
   "bundle_files": {
-    "yolo11n-seg.onnx": "385e2d4b2035490d39fa5f9eb94756a451088345496666154415e2f042ddc3fb"
+    "yolo11n-seg.onnx": "0659292c8f65b587ed91febc8de16f4496c9d4c2f83bae0901e22a48dd9c66e2"
   },
   "gpu_id": 0,
   "opt_level": null,
   "cuda_version": "13.1",
   "tensorrt_version": "101401",
-  "build_time": "2026-08-07T11:00:49.734372+00:00"
+  "build_time": "2026-08-08T02:59:30.303601+00:00"
 }

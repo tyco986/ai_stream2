@@ -24,13 +24,13 @@
   "yolo_export": "e2e",
   "max_det": 30,
   "conf": 0.25,
-  "bundle_sha256": "347c9420f2ba96c0f69ef8f17b2074c75a9a073960af62b71761462a2da48428",
+  "bundle_sha256": "999b97337e53dced4a6b5a7d08df66fb309ef4621efe1332c0e5eff4fe9fb35c",
   "bundle_files": {
-    "yolov10x-smoke-fire.onnx": "913f525ef76e3b1f5bce09022fbde1766b61afa2397b77d3a37540ea927a168e"
+    "yolov10x-smoke-fire.onnx": "854c14e93b9de41a044e8f5eb59aaeb3d7b8548e1b04639eb85a9da0425807aa"
   },
   "gpu_id": 0,
   "opt_level": 0,
   "cuda_version": "13.1",
   "tensorrt_version": "101401",
-  "build_time": "2026-08-07T11:01:18.768365+00:00"
+  "build_time": "2026-08-08T03:20:58.825024+00:00"
 }

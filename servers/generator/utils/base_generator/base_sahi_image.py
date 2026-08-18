@@ -49,7 +49,6 @@ class BaseSahiImageGenerator(BaseImageGenerator):
         analyzer: dict | None,
         pgie: dict,
         sahi: dict,
-        interval: int = 0,
     ) -> None:
         self.sahi = sahi
         super().__init__(
@@ -57,7 +56,6 @@ class BaseSahiImageGenerator(BaseImageGenerator):
             output=output,
             analyzer=analyzer,
             pgie=pgie,
-            interval=interval,
         )
 
     def init_input(self) -> None:

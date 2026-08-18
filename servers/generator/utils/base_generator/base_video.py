@@ -59,14 +59,12 @@ class BaseVideoGenerator(PipelineGenerator):
         analyzer: dict | None,
         pgie: dict,
         tracker: dict | None = None,
-        interval: int = 0,
     ) -> None:
         self.input = Path(input).expanduser().resolve()
         self.output = Path(output).expanduser().resolve()
         self.analyzer = analyzer
         self.tracker = tracker
         self.pgie = pgie
-        self.interval = interval
 
         super().__init__()
 
@@ -93,7 +91,6 @@ class BaseVideoGenerator(PipelineGenerator):
         self.params_yml["pgie"] = self.pgie
         self.params_yml["analyzer"] = self.analyzer
         self.params_yml["tracker"] = self.tracker
-        self.params_yml["interval"] = self.interval
 
     def init_pipeline(self) -> None:
         self.add()
@@ -104,12 +101,13 @@ class BaseVideoGenerator(PipelineGenerator):
         self.pgie = {
             "model_dir": self.pgie["model_dir"],
             "class_attrs": self.pgie["class_attrs"],
+            "interval": int(self.pgie.get("interval", 0)),
         }
         self.pgie_config_parser = PgieParser(
             self.pgie["model_dir"],
             self.runtime_batch_size,
             self.pgie["class_attrs"],
-            self.interval,
+            self.pgie["interval"],
         )
         self.pgie_generator = PgieGenerator(**self.pgie_config_parser.build())
         self.apply_pgie_config()
@@ -136,7 +134,7 @@ class BaseVideoGenerator(PipelineGenerator):
     def init_nvtracker(self) -> None:
         self.nvtracker_generator = None
         self.nvtracker_yml = None
-        parser = NvtrackerParser(self.interval)
+        parser = NvtrackerParser(self.pgie["interval"])
         self.enable_nvtracker = parser.validate(
             self.tracker,
             self.pgie_config_parser.class_ids,
@@ -214,6 +212,8 @@ class BaseVideoGenerator(PipelineGenerator):
                 yaml.safe_dump(
                     self.nvtracker_yml, handle, sort_keys=False, default_flow_style=False
                 )
+        else:
+            nvtracker_save_path.unlink(missing_ok=True)
         with open(nvdsanalytics_save_path, "w", encoding="utf-8") as handle:
             yaml.safe_dump(
                 self.nvdsanalytics_yml,

@@ -11,7 +11,7 @@ class DetMessager:
         self.host = host
         self.port = int(port)
         self.interval = int(interval)
-        self.runtime_interval = self.interval + 1 if self.interval > 0 else 0
+        self.runtime_interval = self.interval if self.interval > 0 else 0
         self.counter = 0
         assert self.interval >= 0, "interval must be greater than or equal to 0"
         self.producer = Producer({"bootstrap.servers": f"{self.host}:{self.port}"})

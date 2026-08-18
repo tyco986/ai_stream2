@@ -5,8 +5,8 @@
 
 generator: DetSahiImageGenerator
 config_save_dir: /root/configs/generator/yolo11n_det_sahi_image
-interval: 0
 pgie:
+  interval: 0
   model_dir: /root/models/trt/yolo11n
   class_attrs:
     all:

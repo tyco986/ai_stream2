@@ -3,7 +3,7 @@ property:
   onnx-file: ''
   model-engine-file: /root/models/trt/rtmpose/rtmpoase-s.engine
   labelfile-path: /root/models/trt/rtmpose/labels.txt
-  batch-size: 1
+  batch-size: 64
   network-mode: 0
   network-type: 100
   process-mode: 2

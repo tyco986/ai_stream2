@@ -25,28 +25,28 @@
     "right_ankle"
   ],
   "input_tensor_shape": [
-    18,
+    64,
     3,
     256,
     192
   ],
   "output_tensor_shape": [
-    18,
+    64,
     17,
     3
   ],
   "output_tensor_shapes": [
     [
-      18,
+      64,
       17,
       3
     ]
   ],
-  "batch_size": 18,
+  "batch_size": 64,
   "precision": "fp32",
   "version": "rtmpose",
   "task": "pose",
   "gpu_id": 0,
   "opt_level": null,
-  "build_time": "2026-08-14T07:03:33.339730+00:00"
+  "build_time": "2026-08-18T17:06:44.677680+08:00"
 }

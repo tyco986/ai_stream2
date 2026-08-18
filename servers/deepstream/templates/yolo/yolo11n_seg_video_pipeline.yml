@@ -7,7 +7,6 @@ drawer:
   show_label: true
   show_conf: true
 logger:
-  root: /root/logs/deepstream
   interval: 0
 messager:
   topic: deepstream-detections

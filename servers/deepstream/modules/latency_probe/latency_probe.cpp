@@ -59,6 +59,7 @@ constexpr const char* kLogicalNames[] = {
     "queue_sahi",
     "queue_vis",
     "rtspclientsink",
+    "sgie",
     "tee_raw",
     "tee_vis",
 };

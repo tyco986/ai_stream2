@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from utils.api.constants import (
     BASE_PIPELINE_TYPES,
     CONFIG_SAVE_DIR,
+    LOG_ROOT,
     LOGGER_NAME,
     PRESENCE_PIPELINE_TYPES,
 )
@@ -81,9 +82,9 @@ class PipelineStartService:
             self.loaded[pipeline_type] = cls
         return cls
 
-    def build_pipeline_kwargs(self, body: StartPipelineRequest) -> dict:
+    def build_pipeline_kwargs(self, body: StartPipelineRequest, logger: dict) -> dict:
         kwargs = {
-            "logger": body.logger,
+            "logger": logger,
             "messager": body.messager,
         }
         if body.type in PRESENCE_PIPELINE_TYPES:
@@ -125,6 +126,8 @@ class PipelineStartService:
                 f"(supported: {', '.join(sorted(self.PIPELINE_MODULES))})"
             )
 
+        logger = dict(body.logger)
+        logger["root"] = logger.get("root") or str(LOG_ROOT / body.name)
         builder_cls = self.resolve_pipeline(body.type)
         if body.type in BASE_PIPELINE_TYPES:
             builder = builder_cls(body.config_dir, body.name)
@@ -132,11 +135,11 @@ class PipelineStartService:
             builder = builder_cls(
                 body.config_dir,
                 body.name,
-                **self.build_pipeline_kwargs(body),
+                **self.build_pipeline_kwargs(body, logger),
             )
         self.pipeline = builder.build()
         runner_cls = self.resolve_runner()
-        self.runner = runner_cls(self.pipeline)
+        self.runner = runner_cls(self.pipeline, logger=logger)
         self.pipeline_name = body.name
         self.pipeline_type = body.type
         self.runner_thread = threading.Thread(target=self.runner.start, daemon=True)

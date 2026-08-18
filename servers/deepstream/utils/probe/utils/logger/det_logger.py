@@ -2,7 +2,6 @@ import json
 import logging
 from pathlib import Path
 
-from utils.api.constants import LOG_ROOT
 from utils.probe.utils.timer import Timer
 
 LOG_FORMAT = "%(asctime)s %(message)s"
@@ -51,12 +50,12 @@ class ProbeLogFileHandler(logging.FileHandler):
 
 
 class DetLogger:
-    def __init__(self, root=None, interval=0, times=None):
-        self.root = LOG_ROOT
+    def __init__(self, root, interval=0, times=None):
+        self.root = Path(root)
         self.interval = int(interval)
         self.times = times
         self.timer = Timer() if times is None else Timer(elements=times)
-        self.runtime_interval = self.interval + 1 if self.interval > 0 else 0
+        self.runtime_interval = self.interval if self.interval > 0 else 0
         self.counters = {}
         self.loggers = {}
         self.pending_times = set()

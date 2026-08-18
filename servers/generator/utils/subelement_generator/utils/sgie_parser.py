@@ -17,11 +17,9 @@ class SgieParser:
     def __init__(
         self,
         model_dir: str | Path,
-        runtime_batch_size: int,
         interval: int = 0,
     ) -> None:
         self.model_dir = model_dir
-        self.runtime_batch_size = runtime_batch_size
         self.interval = interval
 
         path = Path(model_dir).expanduser().resolve()
@@ -51,20 +49,13 @@ class SgieParser:
             f"unsupported version in {self.META_JSON_NAME}: {version}"
         )
         batch_mode = self.meta["batch_mode"]
-        engine_batch_size = self.meta["batch_size"]
-        if batch_mode == "static":
-            assert self.runtime_batch_size == engine_batch_size, (
-                f"runtime_batch_size {self.runtime_batch_size} must equal "
-                f"engine batch_size {engine_batch_size} for static model"
-            )
-        else:
-            assert batch_mode == "dynamic", (
-                f"unsupported batch_mode in {self.META_JSON_NAME}: {batch_mode}"
-            )
-            assert self.runtime_batch_size <= engine_batch_size, (
-                f"runtime_batch_size {self.runtime_batch_size} must be <= "
-                f"engine batch_size {engine_batch_size} for dynamic model"
-            )
+        engine_batch_size = int(self.meta["batch_size"])
+        assert batch_mode in ("static", "dynamic"), (
+            f"unsupported batch_mode in {self.META_JSON_NAME}: {batch_mode}"
+        )
+        assert engine_batch_size > 0, (
+            f"batch_size in {self.META_JSON_NAME} must be > 0"
+        )
 
         input_shape = self.meta["input_tensor_shape"]
         assert len(input_shape) == 4, f"expected NCHW input_tensor_shape, got {input_shape}"
@@ -74,7 +65,7 @@ class SgieParser:
         return {
             "model_engine_file": str(self.engine_path),
             "labelfile_path": str(self.labels_path),
-            "batch_size": self.runtime_batch_size,
+            "batch_size": engine_batch_size,
             "network_mode": self.NETWORK_MODE_MAP[precision],
             "gpu_id": self.meta["gpu_id"],
             "interval": self.interval,

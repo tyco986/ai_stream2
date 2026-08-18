@@ -1,7 +1,12 @@
+import yaml
 from pyservicemaker import Probe
 
-from utils.base_pipeline.base_video import BaseVideoPipeline
-from utils.base_pipeline.validate import validate_probe_interval
+from utils.base_pipeline.base_video import PIPELINE_YML, BaseVideoPipeline
+from utils.base_pipeline.validate import (
+    sgie_period_from_config,
+    validate_probe_interval,
+    validate_sgie_interval,
+)
 from utils.probe.pose2d_video_probe import Pose2DVideoProbe
 from utils.probe.rect_expand_probe import RectExpandProbe
 from utils.probe.utils.drawer.pose2d_drawer import PADDING
@@ -31,14 +36,30 @@ class Pose2DVideoPipeline(BaseVideoPipeline):
         self.logger = logger
         self.logger["times"] = self.SINK_PATHS
         self.messager = messager
-        validate_probe_interval(self.pgie_interval, self.messager.get("interval", 0))
-        validate_probe_interval(self.pgie_interval, self.logger.get("interval", 0))
+        sgie_interval = sgie_period_from_config(self.config_dir)
+        validate_probe_interval(
+            self.pgie_interval, self.messager.get("interval", 0), sgie_interval
+        )
+        validate_probe_interval(
+            self.pgie_interval, self.logger.get("interval", 0), sgie_interval
+        )
+        validate_sgie_interval(self.pgie_interval, sgie_interval)
+
+    def rect_expand_target(self):
+        pipeline = yaml.safe_load(
+            (self.config_dir / PIPELINE_YML).read_text(encoding="utf-8")
+        )
+        names = {node["name"] for node in pipeline["deepstream"]["nodes"]}
+        target = "nvinfer"
+        if "nvtracker" in names:
+            target = "nvtracker"
+        return target
 
     def build(self):
         logger = DetLogger(**self.logger)
         self.attach_latency_and_times(logger)
         self.pipeline.attach(
-            "nvtracker",
+            self.rect_expand_target(),
             Probe(
                 "rect_expand",
                 RectExpandProbe(

@@ -4,8 +4,8 @@
 
 generator: SegVideoGenerator
 config_save_dir: /root/configs/generator/yolo26n_seg_video
-interval: 0
 pgie:
+  interval: 0
   model_dir: /root/models/trt/yolo26n-seg
   class_attrs:
     all:

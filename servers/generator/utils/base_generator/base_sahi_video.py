@@ -55,7 +55,6 @@ class BaseSahiVideoGenerator(BaseVideoGenerator):
         pgie: dict,
         sahi: dict,
         tracker: dict | None = None,
-        interval: int = 0,
     ) -> None:
         self.sahi = sahi
         super().__init__(
@@ -64,7 +63,6 @@ class BaseSahiVideoGenerator(BaseVideoGenerator):
             analyzer=analyzer,
             pgie=pgie,
             tracker=tracker,
-            interval=interval,
         )
 
     def init_input(self) -> None:

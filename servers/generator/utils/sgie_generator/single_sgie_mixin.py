@@ -21,10 +21,13 @@ class SingleSgieMixin:
         self.params_yml["sgie"] = self.sgie
 
     def init_sgie(self) -> None:
-        self.sgie = {"model_dir": self.sgie["model_dir"]}
+        self.sgie = {
+            "model_dir": self.sgie["model_dir"],
+            "interval": int(self.sgie.get("interval", 0)),
+        }
         self.sgie_config_parser = SgieParser(
             self.sgie["model_dir"],
-            self.runtime_batch_size,
+            self.sgie["interval"],
         )
         self.sgie_generator = SgieGenerator(**self.sgie_config_parser.build())
         self.apply_sgie_config()
