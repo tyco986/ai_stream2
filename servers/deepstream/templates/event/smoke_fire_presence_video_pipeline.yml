@@ -18,7 +18,7 @@ debouncer:
     "1": Smoke
 logger:
   interval: 50
-  times: [latency, nvinfer, nvstreammux, nvurisrcbin]
+  times: [latency, pgie, nvstreammux, nvurisrcbin]
 messager:
   topic: deepstream-detections
   host: ai_stream2_kafka

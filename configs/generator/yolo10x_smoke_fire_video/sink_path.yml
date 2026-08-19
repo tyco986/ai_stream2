@@ -1,7 +1,7 @@
 appsink_raw0:
 - nvurisrcbin
 - nvstreammux
-- nvinfer
+- pgie
 - nvtracker
 - nvdsanalytics
 - nvvideoconvert
@@ -13,7 +13,7 @@ appsink_raw0:
 appsink_vis0:
 - nvurisrcbin
 - nvstreammux
-- nvinfer
+- pgie
 - nvtracker
 - nvdsanalytics
 - nvvideoconvert
@@ -30,7 +30,7 @@ appsink_vis0:
 filesink:
 - nvurisrcbin
 - nvstreammux
-- nvinfer
+- pgie
 - nvtracker
 - nvdsanalytics
 - nvvideoconvert

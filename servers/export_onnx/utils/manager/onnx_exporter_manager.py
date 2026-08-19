@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from utils.stgcnpp.stgcnpp_exporter import StgcnppExporter
 from utils.yolo_e2e.yolo_det_e2e_exporter import YoloDetE2EExporter
 from utils.yolo_e2e.yolo_seg_e2e_exporter import YoloSegE2EExporter
 from utils.yolo_non_e2e.yolo_det_non_e2e_exporter import YoloDetNonE2EExporter
@@ -15,6 +16,7 @@ class OnnxExporterManager:
         "YOLO11-SEG": YoloSegNonE2EExporter,
         "YOLO26-DET": YoloDetE2EExporter,
         "YOLO26-SEG": YoloSegE2EExporter,
+        "STGCNPP": StgcnppExporter,
     }
 
     @classmethod
@@ -28,7 +30,7 @@ class OnnxExporterManager:
         weights: Path,
         size: int,
         opset: int,
-        batch: int,
+        batch: int | None,
         dynamic: bool,
         simplify: bool,
         max_det: int,

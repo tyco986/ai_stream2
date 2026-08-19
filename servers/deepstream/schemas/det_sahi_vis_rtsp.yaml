@@ -28,7 +28,7 @@ params:
         available: false
         default:
         - latency
-        - nvinfer
+        - pgie
   messager:
     available: true
     params:

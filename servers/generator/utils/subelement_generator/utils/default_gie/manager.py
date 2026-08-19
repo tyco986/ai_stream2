@@ -2,6 +2,7 @@ from copy import deepcopy
 
 from .peoplenet import PeopleNet
 from .rtmpose import RtmPose
+from .stgcnpp import Stgcnpp
 from .yolo_det import YoloDet
 
 
@@ -31,5 +32,18 @@ class SgieManager:
         template = self.CONFIGS.get(version)
         if template is None:
             raise ValueError(f"unsupported sgie version: {version}")
+        config = deepcopy(template)
+        return config
+
+
+class StgcnppManager:
+    CONFIGS = {
+        "stgcnpp": Stgcnpp,
+    }
+
+    def config(self, version: str) -> dict:
+        template = self.CONFIGS.get(version)
+        if template is None:
+            raise ValueError(f"unsupported stgcnpp version: {version}")
         config = deepcopy(template)
         return config

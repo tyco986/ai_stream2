@@ -9,8 +9,8 @@ from ..subelement_generator.utils.sgie_parser import SgieParser
 
 
 class SingleSgieMixin:
-    SGIE_CONFIG_NAME = "sgie.yml"
-    SGIE_META_NAME = "sgie_meta.json"
+    SGIE_CONFIG_NAME = "sgie0.yml"
+    SGIE_META_NAME = "sgie0_meta.json"
 
     def init_pipeline(self) -> None:
         self.init_sgie()
@@ -50,7 +50,7 @@ class SingleSgieMixin:
     def append_sgie_node(self) -> None:
         self._append_node(
             "nvinfer",
-            "sgie",
+            "sgie0",
             self._add_nvinfer(
                 config_file_path=self.SGIE_CONFIG_NAME,
                 batch_size=self.sgie_generator.batch_size,
@@ -61,7 +61,7 @@ class SingleSgieMixin:
     def apply_save_paths(self, config_save_dir: Path) -> None:
         super().apply_save_paths(config_save_dir)
         for node in self.pipeline_yml["deepstream"]["nodes"]:
-            if node["name"] == "sgie":
+            if node["name"] == "sgie0":
                 node.setdefault("properties", {})["config-file-path"] = str(
                     config_save_dir / self.SGIE_CONFIG_NAME
                 )

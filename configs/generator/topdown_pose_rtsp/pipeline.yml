@@ -23,7 +23,7 @@ deepstream:
       gpu-id: 0
       live-source: true
   - type: nvinfer
-    name: nvinfer
+    name: pgie
     properties:
       config-file-path: /root/configs/generator/topdown_pose_rtsp/pgie.yml
       batch-size: 2
@@ -38,9 +38,9 @@ deepstream:
       gpu-id: 0
       operate-on-class-ids: '0'
   - type: nvinfer
-    name: sgie
+    name: sgie0
     properties:
-      config-file-path: /root/configs/generator/topdown_pose_rtsp/sgie.yml
+      config-file-path: /root/configs/generator/topdown_pose_rtsp/sgie0.yml
       batch-size: 64
       gpu-id: 0
   - type: nvdsanalytics
@@ -81,10 +81,10 @@ deepstream:
   edges:
     nvurisrcbin0: nvstreammux
     nvurisrcbin1: nvstreammux
-    nvstreammux: nvinfer
-    nvinfer: nvtracker
-    nvtracker: sgie
-    sgie: nvdsanalytics
+    nvstreammux: pgie
+    pgie: nvtracker
+    nvtracker: sgie0
+    sgie0: nvdsanalytics
     nvdsanalytics: nvstreamdemux
     queue_demux0: nvvideoconvert0
     nvvideoconvert0: fakesink0

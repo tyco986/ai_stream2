@@ -69,11 +69,19 @@ cp "${SEG_SRC}/libnvdsinfer_custom_impl_Yolo_seg.so" "${DEEPSTREAM_LIBS_ROOT}/";
 '
 
 COPY servers/deepstream/modules/latency_probe /tmp/latency_probe
+COPY servers/deepstream/modules/stgcnpp_preprocess /tmp/stgcnpp_preprocess
 RUN cmake -S /tmp/latency_probe -B /tmp/latency_probe/build \
     && cmake --build /tmp/latency_probe/build -j"$(nproc)" \
     && cp /tmp/latency_probe/build/liblatency_probe.so \
         /opt/nvidia/deepstream/deepstream/service-maker/modules/ \
-    && rm -rf /tmp/latency_probe
+    && rm -rf /tmp/latency_probe \
+    && cmake -S /tmp/stgcnpp_preprocess -B /tmp/stgcnpp_preprocess/build \
+    && cmake --build /tmp/stgcnpp_preprocess/build -j"$(nproc)" \
+    && mkdir -p "${DEEPSTREAM_LIBS_ROOT}" \
+    && cp /tmp/stgcnpp_preprocess/build/libnvds_stgcnpp_preprocess.so \
+        "${DEEPSTREAM_LIBS_ROOT}/" \
+    && test -f "${DEEPSTREAM_LIBS_ROOT}/libnvds_stgcnpp_preprocess.so" \
+    && rm -rf /tmp/stgcnpp_preprocess
 
 ENV LD_PRELOAD=/opt/ai_stream2/servers/deepstream/libs/libnvdsinfer_custom_impl_Yolo_seg.so
 

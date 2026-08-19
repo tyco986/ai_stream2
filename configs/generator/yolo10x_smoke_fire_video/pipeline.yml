@@ -17,7 +17,7 @@ deepstream:
       gpu-id: 0
       live-source: false
   - type: nvinfer
-    name: nvinfer
+    name: pgie
     properties:
       config-file-path: /root/configs/generator/yolo10x_smoke_fire_video/pgie.yml
       batch-size: 1
@@ -121,8 +121,8 @@ deepstream:
       async: false
   edges:
     nvurisrcbin: nvstreammux
-    nvstreammux: nvinfer
-    nvinfer: nvdsanalytics
+    nvstreammux: pgie
+    pgie: nvdsanalytics
     nvdsanalytics: nvvideoconvert
     nvvideoconvert: tee_raw
     tee_raw:

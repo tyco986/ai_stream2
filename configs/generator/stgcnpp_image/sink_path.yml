@@ -1,0 +1,12 @@
+filesink:
+- nvurisrcbin
+- nvstreammux
+- pgie
+- sgie0
+- nvdspreprocess
+- sgie1
+- nvdsanalytics
+- nvosdbin
+- nvvideoconvert
+- nvjpegenc
+- filesink

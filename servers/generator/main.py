@@ -1,7 +1,6 @@
 import argparse
 import logging
 import time
-from contextlib import asynccontextmanager
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
@@ -21,9 +20,7 @@ from utils.api.constants import (
     LOGGER_NAME,
 )
 from utils.api.routes import router
-from utils.api.schemas import ApiEnvelope
-from utils.api.services import AppError, GenerateService, SchemaService
-from utils.registry import GeneratorRegistry
+from utils.api.schemas import ApiEnvelope, AppError
 
 
 def configure_logging(log_root: Path = LOG_ROOT) -> None:
@@ -64,22 +61,6 @@ class RequestLogMiddleware(BaseHTTPMiddleware):
         return response
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    registry = GeneratorRegistry()
-    app.state.generate_service = GenerateService(registry)
-    app.state.schema_service = SchemaService(registry)
-    logger = logging.getLogger(LOGGER_NAME)
-    generators = ", ".join(registry.names())
-    logger.info(
-        "Generator API started log_root=%s generators=%s",
-        LOG_ROOT,
-        generators,
-    )
-    yield
-    logger.info("Generator API stopped")
-
-
 async def handle_app_error(request: Request, exc: AppError) -> JSONResponse:
     return JSONResponse(
         status_code=exc.status_code,
@@ -114,7 +95,7 @@ async def handle_unhandled(request: Request, exc: Exception) -> JSONResponse:
 
 def create_app() -> FastAPI:
     configure_logging()
-    app = FastAPI(title="Generator API", version="1.0.0", lifespan=lifespan)
+    app = FastAPI(title="Generator API", version="1.0.0")
     app.add_middleware(RequestLogMiddleware)
     app.add_exception_handler(AppError, handle_app_error)
     app.add_exception_handler(HTTPException, handle_http_exception)

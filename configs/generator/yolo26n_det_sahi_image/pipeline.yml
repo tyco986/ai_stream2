@@ -30,7 +30,7 @@ deepstream:
       unique-id: 15
       target-unique-ids: '1'
   - type: nvinfer
-    name: nvinfer
+    name: pgie
     properties:
       config-file-path: /root/configs/generator/yolo26n_det_sahi_image/pgie.yml
       batch-size: 9
@@ -80,8 +80,8 @@ deepstream:
   edges:
     nvurisrcbin: nvstreammux
     nvstreammux: nvsahipreprocess
-    nvsahipreprocess: nvinfer
-    nvinfer: queue_sahi
+    nvsahipreprocess: pgie
+    pgie: queue_sahi
     queue_sahi: nvsahipostprocess
     nvsahipostprocess: nvdsanalytics
     nvdsanalytics: nvosdbin

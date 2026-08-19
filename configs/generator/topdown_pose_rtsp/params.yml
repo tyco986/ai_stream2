@@ -20,6 +20,6 @@ analyzer: null
 tracker:
   class_id: 0
 sgie:
-  model_dir: /root/models/trt/rtmpose
+  model_dir: /root/models/trt/rtmpose-s-aic
   interval: 50
 config_save_dir: /root/configs/generator/topdown_pose_rtsp

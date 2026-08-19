@@ -7,7 +7,7 @@ from .single_sgie_mixin import SingleSgieMixin
 SINGLE_SGIE_VIDEO_TOPOLOGY_DOC = """
     Topology::
 
-        nvurisrcbin → nvstreammux → nvinfer → nvtracker → sgie → nvdsanalytics → nvosdbin
+        nvurisrcbin → nvstreammux → pgie → nvtracker → sgie0 → nvdsanalytics → nvosdbin
             → nvvideoconvert → nvv4l2h264enc → h264parse → mp4mux → filesink
 """
 
@@ -18,9 +18,9 @@ class SingleSgieVideoGenerator(SingleSgieMixin, BaseVideoGenerator):
         "filesink": [
             "nvurisrcbin",
             "nvstreammux",
-            "nvinfer",
+            "pgie",
             "nvtracker",
-            "sgie",
+            "sgie0",
             "nvdsanalytics",
             "nvosdbin",
             "nvvideoconvert",
@@ -78,7 +78,7 @@ class SingleSgieVideoGenerator(SingleSgieMixin, BaseVideoGenerator):
         )
         self._append_node(
             "nvinfer",
-            "nvinfer",
+            "pgie",
             self._add_nvinfer(
                 config_file_path=self.PGIE_CONFIG_NAME,
                 batch_size=self.pgie_generator.batch_size,
@@ -139,14 +139,14 @@ class SingleSgieVideoGenerator(SingleSgieMixin, BaseVideoGenerator):
     def link(self) -> None:
         edges = {
             "nvurisrcbin": "nvstreammux",
-            "nvstreammux": "nvinfer",
+            "nvstreammux": "pgie",
         }
-        inference_tail = "nvinfer"
+        inference_tail = "pgie"
         if self.enable_nvtracker:
             edges[inference_tail] = "nvtracker"
             inference_tail = "nvtracker"
-        edges[inference_tail] = "sgie"
-        edges["sgie"] = "nvdsanalytics"
+        edges[inference_tail] = "sgie0"
+        edges["sgie0"] = "nvdsanalytics"
         edges["nvdsanalytics"] = "nvosdbin"
         edges["nvosdbin"] = "nvvideoconvert"
         edges["nvvideoconvert"] = "nvv4l2h264enc"

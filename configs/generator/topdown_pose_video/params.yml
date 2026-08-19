@@ -10,6 +10,6 @@ pgie:
 analyzer: null
 tracker: null
 sgie:
-  model_dir: /root/models/trt/rtmpose
-  interval: 5
+  model_dir: /root/models/trt/rtmpose-s-aic
+  interval: 50
 config_save_dir: /root/configs/generator/topdown_pose_video

@@ -1,7 +1,7 @@
 filesink:
 - nvurisrcbin
 - nvstreammux
-- nvinfer
+- pgie
 - nvtracker
 - nvdsanalytics
 - nvosdbin

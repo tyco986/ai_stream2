@@ -11,7 +11,7 @@ class DetVideoPipeline(BaseVideoPipeline):
         "latency",
         "nvurisrcbin",
         "nvstreammux",
-        "nvinfer",
+        "pgie",
         "nvtracker",
         "nvdsanalytics",
         "nvosdbin",

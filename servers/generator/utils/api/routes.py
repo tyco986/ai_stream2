@@ -1,24 +1,17 @@
-from fastapi import APIRouter, Depends, File, UploadFile
-from starlette.requests import Request
+from fastapi import APIRouter, File, UploadFile
 
 from utils.api.constants import PROJECT_NAME
 from utils.api.schemas import ApiEnvelope, SchemaRequest
-from utils.api.services import GenerateService, SchemaService
+from utils.api.services import GeneratorService
+from utils.manager.generator_manager import GeneratorManager
 
 router = APIRouter(prefix=f"/{PROJECT_NAME}/generator", tags=["generator"])
 
 
-def get_generate(request: Request) -> GenerateService:
-    return request.app.state.generate_service
-
-
-def get_schema_service(request: Request) -> SchemaService:
-    return request.app.state.schema_service
-
-
 @router.get("/health", response_model=ApiEnvelope, summary="Health check")
 def health() -> ApiEnvelope:
-    return ApiEnvelope.ok()
+    payload = ApiEnvelope.ok()
+    return payload
 
 
 @router.get(
@@ -26,8 +19,9 @@ def health() -> ApiEnvelope:
     response_model=ApiEnvelope,
     summary="List supported generator types",
 )
-def route_types(svc: GenerateService = Depends(get_generate)) -> ApiEnvelope:
-    return svc.list_types()
+def types() -> ApiEnvelope:
+    payload = ApiEnvelope.ok(data={"items": GeneratorManager.types()})
+    return payload
 
 
 @router.post(
@@ -35,11 +29,9 @@ def route_types(svc: GenerateService = Depends(get_generate)) -> ApiEnvelope:
     response_model=ApiEnvelope,
     summary="Get generator __init__ schema",
 )
-def route_schema(
-    body: SchemaRequest,
-    svc: SchemaService = Depends(get_schema_service),
-) -> ApiEnvelope:
-    return svc.get_schema(body.generator)
+def schema(body: SchemaRequest) -> ApiEnvelope:
+    payload = GeneratorService().schema(body.generator)
+    return payload
 
 
 @router.post(
@@ -47,8 +39,6 @@ def route_schema(
     response_model=ApiEnvelope,
     summary="Generate DeepStream pipeline configs",
 )
-def route_generate(
-    input: UploadFile = File(...),
-    svc: GenerateService = Depends(get_generate),
-) -> ApiEnvelope:
-    return svc.generate(input)
+def generate(input: UploadFile = File(...)) -> ApiEnvelope:
+    payload = GeneratorService().generate(input)
+    return payload

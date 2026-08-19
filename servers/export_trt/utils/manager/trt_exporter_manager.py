@@ -2,6 +2,7 @@ from pathlib import Path
 
 from utils.peoplenet.peoplenet_exporter import PeopleNetExporter
 from utils.rtmpose.rtmpose_exporter import RtmposeExporter
+from utils.stgcnpp.stgcnpp_exporter import StgcnppExporter
 from utils.yolo.yolo_det_exporter import YoloDetExporter
 from utils.yolo.yolo_seg_exporter import YoloSegExporter
 
@@ -15,6 +16,7 @@ class TrtExporterManager:
         "YOLO26-SEG": YoloSegExporter,
         "PEOPLENET": PeopleNetExporter,
         "RTMPOSE": RtmposeExporter,
+        "STGCNPP": StgcnppExporter,
     }
 
     @classmethod

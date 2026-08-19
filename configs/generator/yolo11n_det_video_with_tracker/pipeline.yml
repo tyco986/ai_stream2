@@ -17,7 +17,7 @@ deepstream:
       gpu-id: 0
       live-source: false
   - type: nvinfer
-    name: nvinfer
+    name: pgie
     properties:
       config-file-path: /root/configs/generator/yolo11n_det_video_with_tracker/pgie.yml
       batch-size: 1
@@ -66,8 +66,8 @@ deepstream:
       async: false
   edges:
     nvurisrcbin: nvstreammux
-    nvstreammux: nvinfer
-    nvinfer: nvtracker
+    nvstreammux: pgie
+    pgie: nvtracker
     nvtracker: nvdsanalytics
     nvdsanalytics: nvosdbin
     nvosdbin: nvvideoconvert

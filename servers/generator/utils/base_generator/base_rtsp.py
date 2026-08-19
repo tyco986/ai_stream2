@@ -14,7 +14,7 @@ from ..subelement_generator.utils.nvtracker_parser import NvtrackerParser
 RTSP_TOPOLOGY_DOC = """
     Topology::
 
-        nvurisrcbin{N} → nvstreammux → nvinfer → nvtracker → nvdsanalytics → nvstreamdemux
+        nvurisrcbin{N} → nvstreammux → pgie → nvtracker → nvdsanalytics → nvstreamdemux
               → queue_demux{N} → nvvideoconvert{N} → fakesink{N}
 
     Python (not in pipeline.yml)::
@@ -27,6 +27,7 @@ class BaseRTSPGenerator(PipelineGenerator):
     PIPELINE_CONFIG_NAME = "pipeline.yml"
     PAD_LINKS_CONFIG_NAME = "pad_links.yml"
     PGIE_CONFIG_NAME = "pgie.yml"
+    PGIE_META_NAME = "pgie_meta.json"
     TRACKER_CONFIG_NAME = "nvtracker.yml"
     ANALYTICS_CONFIG_NAME = "nvdsanalytics.yml"
     PARAMS_NAME = "params.yml"
@@ -35,7 +36,7 @@ class BaseRTSPGenerator(PipelineGenerator):
         "fakesink{index}": [
             "nvurisrcbin{index}",
             "nvstreammux",
-            "nvinfer",
+            "pgie",
             "nvtracker",
             "nvdsanalytics",
             "nvstreamdemux",
@@ -162,7 +163,7 @@ class BaseRTSPGenerator(PipelineGenerator):
         for node in self.pipeline_yml["deepstream"]["nodes"]:
             name = node["name"]
             properties = node.get("properties", {})
-            if name == "nvinfer":
+            if name == "pgie":
                 properties["config-file-path"] = str(
                     config_save_dir / self.PGIE_CONFIG_NAME
                 )
@@ -212,7 +213,7 @@ class BaseRTSPGenerator(PipelineGenerator):
         self.apply_save_paths(config_save_dir)
         shutil.copy2(
             self.pgie_config_parser.meta_path,
-            config_save_dir / self.pgie_config_parser.meta_path.name,
+            config_save_dir / self.PGIE_META_NAME,
         )
         with open(pgie_save_path, "w", encoding="utf-8") as handle:
             yaml.safe_dump(self.pgie_yml, handle, sort_keys=False, default_flow_style=False)
@@ -271,7 +272,7 @@ class BaseRTSPGenerator(PipelineGenerator):
         )
         self._append_node(
             "nvinfer",
-            "nvinfer",
+            "pgie",
             self._add_nvinfer(
                 config_file_path=self.PGIE_CONFIG_NAME,
                 batch_size=self.pgie_generator.batch_size,
@@ -319,8 +320,8 @@ class BaseRTSPGenerator(PipelineGenerator):
         edges: dict = {}
         for index in range(len(self.streams)):
             edges[f"nvurisrcbin{index}"] = "nvstreammux"
-        edges["nvstreammux"] = "nvinfer"
-        inference_tail = "nvinfer"
+        edges["nvstreammux"] = "pgie"
+        inference_tail = "pgie"
         if self.enable_nvtracker:
             edges[inference_tail] = "nvtracker"
             inference_tail = "nvtracker"

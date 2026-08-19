@@ -4,7 +4,7 @@ from .base_sahi_video import BaseSahiVideoGenerator
 SAHI_VIDEO_EVENT_TOPOLOGY_DOC = """
     Topology::
 
-        nvurisrcbin → nvstreammux → nvsahipreprocess → nvinfer → queue_sahi → nvsahipostprocess
+        nvurisrcbin → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
             → nvtracker → nvdsanalytics → nvvideoconvert → tee_raw
               ─┬→ queue_raw → nvvideoconvert_raw → capsfilter_raw → appsink_raw0
               └→ queue_osd → nvvideoconvert_osd → capsfilter_osd(RGBA) → nvosdbin → tee_vis
@@ -32,7 +32,7 @@ class BaseEventSahiVideoGenerator(BaseSahiVideoGenerator):
             "nvurisrcbin",
             "nvstreammux",
             "nvsahipreprocess",
-            "nvinfer",
+            "pgie",
             "queue_sahi",
             "nvsahipostprocess",
             "nvtracker",
@@ -48,7 +48,7 @@ class BaseEventSahiVideoGenerator(BaseSahiVideoGenerator):
             "nvurisrcbin",
             "nvstreammux",
             "nvsahipreprocess",
-            "nvinfer",
+            "pgie",
             "queue_sahi",
             "nvsahipostprocess",
             "nvtracker",
@@ -69,7 +69,7 @@ class BaseEventSahiVideoGenerator(BaseSahiVideoGenerator):
             "nvurisrcbin",
             "nvstreammux",
             "nvsahipreprocess",
-            "nvinfer",
+            "pgie",
             "queue_sahi",
             "nvsahipostprocess",
             "nvtracker",
@@ -135,7 +135,7 @@ class BaseEventSahiVideoGenerator(BaseSahiVideoGenerator):
         )
         self._append_node(
             "nvinfer",
-            "nvinfer",
+            "pgie",
             self._add_nvinfer(
                 config_file_path=self.PGIE_CONFIG_NAME,
                 batch_size=self.pgie_generator.batch_size,
@@ -245,8 +245,8 @@ class BaseEventSahiVideoGenerator(BaseSahiVideoGenerator):
         edges = {
             "nvurisrcbin": "nvstreammux",
             "nvstreammux": "nvsahipreprocess",
-            "nvsahipreprocess": "nvinfer",
-            "nvinfer": "queue_sahi",
+            "nvsahipreprocess": "pgie",
+            "pgie": "queue_sahi",
             "queue_sahi": "nvsahipostprocess",
         }
         inference_tail = "nvsahipostprocess"

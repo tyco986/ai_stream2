@@ -9,7 +9,7 @@ from ..subelement_generator.utils.sahi import get_sahi_box, get_sahi_preview
 SAHI_VIDEO_TOPOLOGY_DOC = """
     Topology::
 
-        nvurisrcbin → nvstreammux → nvsahipreprocess → nvinfer → queue_sahi → nvsahipostprocess
+        nvurisrcbin → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
             → nvtracker → nvdsanalytics → nvosdbin → nvvideoconvert → nvv4l2h264enc → h264parse
             → mp4mux → filesink
 
@@ -26,7 +26,7 @@ class BaseSahiVideoGenerator(BaseVideoGenerator):
             "nvurisrcbin",
             "nvstreammux",
             "nvsahipreprocess",
-            "nvinfer",
+            "pgie",
             "queue_sahi",
             "nvsahipostprocess",
             "nvtracker",
@@ -174,7 +174,7 @@ class BaseSahiVideoGenerator(BaseVideoGenerator):
         )
         self._append_node(
             "nvinfer",
-            "nvinfer",
+            "pgie",
             self._add_nvinfer(
                 config_file_path=self.PGIE_CONFIG_NAME,
                 batch_size=self.pgie_generator.batch_size,
@@ -249,8 +249,8 @@ class BaseSahiVideoGenerator(BaseVideoGenerator):
         edges = {
             "nvurisrcbin": "nvstreammux",
             "nvstreammux": "nvsahipreprocess",
-            "nvsahipreprocess": "nvinfer",
-            "nvinfer": "queue_sahi",
+            "nvsahipreprocess": "pgie",
+            "pgie": "queue_sahi",
             "queue_sahi": "nvsahipostprocess",
         }
         inference_tail = "nvsahipostprocess"

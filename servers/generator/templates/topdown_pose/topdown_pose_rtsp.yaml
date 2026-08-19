@@ -10,7 +10,7 @@ pgie:
       conf: 0.25
 sgie:
   interval: 50
-  model_dir: /root/models/trt/rtmpose
+  model_dir: /root/models/trt/rtmpose-s-aic
 tracker:
   class_id: 0
 analyzer: null

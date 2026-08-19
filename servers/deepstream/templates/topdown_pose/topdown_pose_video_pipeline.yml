@@ -9,7 +9,7 @@ drawer:
   interval: 50
   fade_time: 1
 logger:
-  interval: 5
+  interval: 50
 messager:
   topic: deepstream-detections
   host: ai_stream2_kafka

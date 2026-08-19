@@ -8,7 +8,7 @@ from ..subelement_generator.utils.sahi import get_sahi_box, get_sahi_preview
 SAHI_IMAGE_TOPOLOGY_DOC = """
     Topology::
 
-        nvurisrcbin → nvstreammux → nvsahipreprocess → nvinfer → queue_sahi → nvsahipostprocess
+        nvurisrcbin → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
             → nvdsanalytics → nvosdbin → nvvideoconvert → nvjpegenc → filesink
 
     Notes::
@@ -24,7 +24,7 @@ class BaseSahiImageGenerator(BaseImageGenerator):
             "nvurisrcbin",
             "nvstreammux",
             "nvsahipreprocess",
-            "nvinfer",
+            "pgie",
             "queue_sahi",
             "nvsahipostprocess",
             "nvdsanalytics",
@@ -168,7 +168,7 @@ class BaseSahiImageGenerator(BaseImageGenerator):
         )
         self._append_node(
             "nvinfer",
-            "nvinfer",
+            "pgie",
             self._add_nvinfer(
                 config_file_path=self.PGIE_CONFIG_NAME,
                 batch_size=self.pgie_generator.batch_size,
@@ -219,8 +219,8 @@ class BaseSahiImageGenerator(BaseImageGenerator):
         edges = {
             "nvurisrcbin": "nvstreammux",
             "nvstreammux": "nvsahipreprocess",
-            "nvsahipreprocess": "nvinfer",
-            "nvinfer": "queue_sahi",
+            "nvsahipreprocess": "pgie",
+            "pgie": "queue_sahi",
             "queue_sahi": "nvsahipostprocess",
             "nvsahipostprocess": "nvdsanalytics",
             "nvdsanalytics": "nvosdbin",

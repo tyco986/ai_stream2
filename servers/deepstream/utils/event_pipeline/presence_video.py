@@ -13,7 +13,7 @@ class PresenceVideoPipeline(BaseVideoPipeline):
         "latency",
         "nvurisrcbin",
         "nvstreammux",
-        "nvinfer",
+        "pgie",
         "nvtracker",
         "nvdsanalytics",
         "nvvideoconvert",

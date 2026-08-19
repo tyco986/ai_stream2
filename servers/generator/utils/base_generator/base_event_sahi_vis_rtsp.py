@@ -4,7 +4,7 @@ from .base_sahi_rtsp import BaseSahiRTSPGenerator
 SAHI_VIS_RTSP_EVENT_TOPOLOGY_DOC = """
     Topology::
 
-        nvurisrcbin{N} → nvstreammux → nvsahipreprocess → nvinfer → queue_sahi → nvsahipostprocess
+        nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
               → nvtracker → nvdsanalytics → nvstreamdemux
               → queue_demux{N} → nvvideoconvert{N} → tee_raw{N}
                     ─┬→ queue_raw{N} → nvvideoconvert_raw{N} → capsfilter_raw{N} → appsink_raw{N}
@@ -33,7 +33,7 @@ class BaseEventSahiVisRTSPGenerator(BaseSahiRTSPGenerator):
             "nvurisrcbin{index}",
             "nvstreammux",
             "nvsahipreprocess",
-            "nvinfer",
+            "pgie",
             "queue_sahi",
             "nvsahipostprocess",
             "nvtracker",
@@ -51,7 +51,7 @@ class BaseEventSahiVisRTSPGenerator(BaseSahiRTSPGenerator):
             "nvurisrcbin{index}",
             "nvstreammux",
             "nvsahipreprocess",
-            "nvinfer",
+            "pgie",
             "queue_sahi",
             "nvsahipostprocess",
             "nvtracker",
@@ -74,7 +74,7 @@ class BaseEventSahiVisRTSPGenerator(BaseSahiRTSPGenerator):
             "nvurisrcbin{index}",
             "nvstreammux",
             "nvsahipreprocess",
-            "nvinfer",
+            "pgie",
             "queue_sahi",
             "nvsahipostprocess",
             "nvtracker",
@@ -138,7 +138,7 @@ class BaseEventSahiVisRTSPGenerator(BaseSahiRTSPGenerator):
         )
         self._append_node(
             "nvinfer",
-            "nvinfer",
+            "pgie",
             self._add_nvinfer(
                 config_file_path=self.PGIE_CONFIG_NAME,
                 batch_size=self.pgie_generator.batch_size,
@@ -257,8 +257,8 @@ class BaseEventSahiVisRTSPGenerator(BaseSahiRTSPGenerator):
         for index in range(len(self.streams)):
             edges[f"nvurisrcbin{index}"] = "nvstreammux"
         edges["nvstreammux"] = "nvsahipreprocess"
-        edges["nvsahipreprocess"] = "nvinfer"
-        edges["nvinfer"] = "queue_sahi"
+        edges["nvsahipreprocess"] = "pgie"
+        edges["pgie"] = "queue_sahi"
         edges["queue_sahi"] = "nvsahipostprocess"
         inference_tail = "nvsahipostprocess"
         if self.enable_nvtracker:

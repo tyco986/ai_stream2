@@ -4,7 +4,7 @@ from .base_rtsp import BaseRTSPGenerator
 RTSP_EVENT_TOPOLOGY_DOC = """
     Topology::
 
-        nvurisrcbin{N} → nvstreammux → nvinfer → nvtracker → nvdsanalytics → nvstreamdemux
+        nvurisrcbin{N} → nvstreammux → pgie → nvtracker → nvdsanalytics → nvstreamdemux
               → queue_demux{N} → nvvideoconvert{N} → tee_raw{N}
                     ─┬→ queue_raw{N} → nvvideoconvert_raw{N} → capsfilter_raw{N} → appsink_raw{N}
                     └→ queue_osd{N} → nvvideoconvert_osd{N} → capsfilter_osd{N}(RGBA) → nvosdbin{N}
@@ -30,7 +30,7 @@ class BaseEventRTSPGenerator(BaseRTSPGenerator):
         "appsink_raw{index}": [
             "nvurisrcbin{index}",
             "nvstreammux",
-            "nvinfer",
+            "pgie",
             "nvtracker",
             "nvdsanalytics",
             "nvstreamdemux",
@@ -45,7 +45,7 @@ class BaseEventRTSPGenerator(BaseRTSPGenerator):
         "appsink_vis{index}": [
             "nvurisrcbin{index}",
             "nvstreammux",
-            "nvinfer",
+            "pgie",
             "nvtracker",
             "nvdsanalytics",
             "nvstreamdemux",
@@ -91,7 +91,7 @@ class BaseEventRTSPGenerator(BaseRTSPGenerator):
         )
         self._append_node(
             "nvinfer",
-            "nvinfer",
+            "pgie",
             self._add_nvinfer(
                 config_file_path=self.PGIE_CONFIG_NAME,
                 batch_size=self.pgie_generator.batch_size,
@@ -176,8 +176,8 @@ class BaseEventRTSPGenerator(BaseRTSPGenerator):
         edges: dict = {}
         for index in range(len(self.streams)):
             edges[f"nvurisrcbin{index}"] = "nvstreammux"
-        edges["nvstreammux"] = "nvinfer"
-        inference_tail = "nvinfer"
+        edges["nvstreammux"] = "pgie"
+        inference_tail = "pgie"
         if self.enable_nvtracker:
             edges[inference_tail] = "nvtracker"
             inference_tail = "nvtracker"

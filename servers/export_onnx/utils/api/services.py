@@ -19,8 +19,8 @@ class ExportOnnxService:
 
     def save_weights(self, upload: UploadFile) -> Path:
         filename = Path(upload.filename or "model.pt").name
-        if Path(filename).suffix.lower() != ".pt":
-            raise AppError(f"input must be a .pt file: {filename}")
+        if Path(filename).suffix.lower() not in {".pt", ".pth"}:
+            raise AppError(f"input must be a .pt or .pth file: {filename}")
         weights = DEFAULT_MODEL_ROOT / "pt" / filename
         weights.parent.mkdir(parents=True, exist_ok=True)
         weights.unlink(missing_ok=True)

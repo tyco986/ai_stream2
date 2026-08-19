@@ -18,9 +18,9 @@ class Pose2DVideoPipeline(BaseVideoPipeline):
         "latency",
         "nvurisrcbin",
         "nvstreammux",
-        "nvinfer",
+        "pgie",
         "nvtracker",
-        "sgie",
+        "sgie0",
         "nvdsanalytics",
         "nvosdbin",
         "nvvideoconvert",
@@ -50,7 +50,7 @@ class Pose2DVideoPipeline(BaseVideoPipeline):
             (self.config_dir / PIPELINE_YML).read_text(encoding="utf-8")
         )
         names = {node["name"] for node in pipeline["deepstream"]["nodes"]}
-        target = "nvinfer"
+        target = "pgie"
         if "nvtracker" in names:
             target = "nvtracker"
         return target

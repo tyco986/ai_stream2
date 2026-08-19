@@ -28,7 +28,7 @@ class OnnxExportConfig(BaseModel):
     type: str
     size: int = 640
     opset: int = 18
-    batch: int = 1
+    batch: int | None = 1
     dynamic: bool = False
     simplify: bool = False
     max_det: int = 30
@@ -37,6 +37,6 @@ class OnnxExportConfig(BaseModel):
 
     @model_validator(mode="after")
     def check_batch_mode(self) -> "OnnxExportConfig":
-        if self.dynamic and self.batch > 1:
+        if self.dynamic and self.batch is not None and self.batch > 1:
             raise ValueError("dynamic batch and static batch > 1 are incompatible")
         return self

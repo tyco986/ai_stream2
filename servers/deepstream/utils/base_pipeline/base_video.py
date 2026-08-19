@@ -8,7 +8,7 @@ from utils.base_pipeline.times_attach import LatencyTimesAttach
 from utils.base_pipeline.validate import nvinfer_period
 
 PIPELINE_YML = "pipeline.yml"
-META_JSON = "meta.json"
+META_JSON = "pgie_meta.json"
 PGIE_YML = "pgie.yml"
 SINK_PATH_YML = "sink_path.yml"
 

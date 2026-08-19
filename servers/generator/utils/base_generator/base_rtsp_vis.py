@@ -4,7 +4,7 @@ from .base_rtsp import BaseRTSPGenerator
 VIS_RTSP_TOPOLOGY_DOC = """
     Topology::
 
-        nvurisrcbin{N} → nvstreammux → nvinfer → nvtracker → nvdsanalytics → nvstreamdemux
+        nvurisrcbin{N} → nvstreammux → pgie → nvtracker → nvdsanalytics → nvstreamdemux
               → queue_demux{N} → nvvideoconvert{N} → nvosdbin{N}
               → queue_enc{N} → nvv4l2h264enc{N} → h264parse{N} → rtspclientsink{N}
 
@@ -19,7 +19,7 @@ class BaseRTSPVisGenerator(BaseRTSPGenerator):
         "rtspclientsink{index}": [
             "nvurisrcbin{index}",
             "nvstreammux",
-            "nvinfer",
+            "pgie",
             "nvtracker",
             "nvdsanalytics",
             "nvstreamdemux",
@@ -61,7 +61,7 @@ class BaseRTSPVisGenerator(BaseRTSPGenerator):
         )
         self._append_node(
             "nvinfer",
-            "nvinfer",
+            "pgie",
             self._add_nvinfer(
                 config_file_path=self.PGIE_CONFIG_NAME,
                 batch_size=self.pgie_generator.batch_size,
@@ -128,8 +128,8 @@ class BaseRTSPVisGenerator(BaseRTSPGenerator):
         edges: dict = {}
         for index in range(len(self.streams)):
             edges[f"nvurisrcbin{index}"] = "nvstreammux"
-        edges["nvstreammux"] = "nvinfer"
-        inference_tail = "nvinfer"
+        edges["nvstreammux"] = "pgie"
+        inference_tail = "pgie"
         if self.enable_nvtracker:
             edges[inference_tail] = "nvtracker"
             inference_tail = "nvtracker"

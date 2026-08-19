@@ -187,6 +187,16 @@ class PipelineGenerator:
             "target-unique-ids": target_unique_ids,
         }
 
+    def _add_nvdspreprocess(self, config_file: str) -> dict:
+        """Build properties for ``nvdspreprocess`` (custom tensor prep for nvinfer).
+
+        Args:
+            config_file: Path to the preprocess INI (tensor shape, custom lib, groups).
+        """
+        return {
+            "config-file": config_file,
+        }
+
     def _add_nvsahipostprocess(
         self,
         gie_ids: str = "1",

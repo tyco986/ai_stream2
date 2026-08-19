@@ -12,7 +12,7 @@ pgie:
       conf: 0.25
 sgie:
   interval: 0
-  model_dir: /root/models/trt/rtmpose
+  model_dir: /root/models/trt/rtmpose-s-aic
 analyzer: null
 input: /root/attachments/images/video1.png
 output: /root/outputs/deepstream/topdown_pose_image.jpg

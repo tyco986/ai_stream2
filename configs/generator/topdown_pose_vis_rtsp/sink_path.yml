@@ -1,9 +1,9 @@
 rtspclientsink0:
 - nvurisrcbin0
 - nvstreammux
-- nvinfer
+- pgie
 - nvtracker
-- sgie
+- sgie0
 - nvdsanalytics
 - nvstreamdemux
 - queue_demux0
@@ -16,9 +16,9 @@ rtspclientsink0:
 rtspclientsink1:
 - nvurisrcbin1
 - nvstreammux
-- nvinfer
+- pgie
 - nvtracker
-- sgie
+- sgie0
 - nvdsanalytics
 - nvstreamdemux
 - queue_demux1

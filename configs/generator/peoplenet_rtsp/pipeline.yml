@@ -23,7 +23,7 @@ deepstream:
       gpu-id: 0
       live-source: true
   - type: nvinfer
-    name: nvinfer
+    name: pgie
     properties:
       config-file-path: /root/configs/generator/peoplenet_rtsp/pgie.yml
       batch-size: 2
@@ -75,8 +75,8 @@ deepstream:
   edges:
     nvurisrcbin0: nvstreammux
     nvurisrcbin1: nvstreammux
-    nvstreammux: nvinfer
-    nvinfer: nvtracker
+    nvstreammux: pgie
+    pgie: nvtracker
     nvtracker: nvdsanalytics
     nvdsanalytics: nvstreamdemux
     queue_demux0: nvvideoconvert0

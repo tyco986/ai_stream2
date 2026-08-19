@@ -6,7 +6,7 @@ from .single_sgie_mixin import SingleSgieMixin
 SINGLE_SGIE_IMAGE_TOPOLOGY_DOC = """
     Topology::
 
-        nvurisrcbin → nvstreammux → nvinfer → sgie → nvdsanalytics → nvosdbin
+        nvurisrcbin → nvstreammux → pgie → sgie0 → nvdsanalytics → nvosdbin
             → nvvideoconvert → nvjpegenc → filesink
 """
 
@@ -17,8 +17,8 @@ class SingleSgieImageGenerator(SingleSgieMixin, BaseImageGenerator):
         "filesink": [
             "nvurisrcbin",
             "nvstreammux",
-            "nvinfer",
-            "sgie",
+            "pgie",
+            "sgie0",
             "nvdsanalytics",
             "nvosdbin",
             "nvvideoconvert",
@@ -73,7 +73,7 @@ class SingleSgieImageGenerator(SingleSgieMixin, BaseImageGenerator):
         )
         self._append_node(
             "nvinfer",
-            "nvinfer",
+            "pgie",
             self._add_nvinfer(
                 config_file_path=self.PGIE_CONFIG_NAME,
                 batch_size=self.pgie_generator.batch_size,
@@ -110,9 +110,9 @@ class SingleSgieImageGenerator(SingleSgieMixin, BaseImageGenerator):
     def link(self) -> None:
         edges = {
             "nvurisrcbin": "nvstreammux",
-            "nvstreammux": "nvinfer",
-            "nvinfer": "sgie",
-            "sgie": "nvdsanalytics",
+            "nvstreammux": "pgie",
+            "pgie": "sgie0",
+            "sgie0": "nvdsanalytics",
             "nvdsanalytics": "nvosdbin",
             "nvosdbin": "nvvideoconvert",
             "nvvideoconvert": "nvjpegenc",

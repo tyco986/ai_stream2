@@ -10,7 +10,7 @@ class SegSahiVisRTSPPipeline(BaseRTSPPipeline):
         "nvurisrcbin",
         "nvstreammux",
         "nvsahipreprocess",
-        "nvinfer",
+        "pgie",
         "queue_sahi",
         "nvsahipostprocess",
         "nvtracker",

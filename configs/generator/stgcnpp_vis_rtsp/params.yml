@@ -1,0 +1,28 @@
+streams:
+  video1:
+    url: rtsp://ai_stream2_mediamtx:8554/video1
+    width: 1920
+    height: 1080
+    fps: 25
+  video2:
+    url: rtsp://ai_stream2_mediamtx:8554/video2
+    width: 1920
+    height: 1080
+    fps: 25
+generator: StgcnppVisRTSPGenerator
+pgie:
+  model_dir: /root/models/trt/peoplenet
+  class_attrs:
+    0:
+      conf: 0.4
+  interval: 50
+analyzer: null
+tracker:
+  class_id: 0
+sgie:
+  model_dir: /root/models/trt/rtmpose-s-aic
+  interval: 0
+stgcnpp:
+  model_dir: /root/models/trt/stgcnpp-ntu60
+  interval: 0
+config_save_dir: /root/configs/generator/stgcnpp_vis_rtsp

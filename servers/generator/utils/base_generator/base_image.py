@@ -15,13 +15,14 @@ IMAGE_STREAM_NAME = "image"
 IMAGE_TOPOLOGY_DOC = """
     Topology::
 
-        nvurisrcbin → nvstreammux → nvinfer → nvdsanalytics → nvosdbin → nvvideoconvert → nvjpegenc → filesink
+        nvurisrcbin → nvstreammux → pgie → nvdsanalytics → nvosdbin → nvvideoconvert → nvjpegenc → filesink
 """
 
 
 class BaseImageGenerator(PipelineGenerator):
     PIPELINE_CONFIG_NAME = "pipeline.yml"
     PGIE_CONFIG_NAME = "pgie.yml"
+    PGIE_META_NAME = "pgie_meta.json"
     ANALYTICS_CONFIG_NAME = "nvdsanalytics.yml"
     PARAMS_NAME = "params.yml"
     SINK_PATH_CONFIG_NAME = "sink_path.yml"
@@ -29,7 +30,7 @@ class BaseImageGenerator(PipelineGenerator):
         "filesink": [
             "nvurisrcbin",
             "nvstreammux",
-            "nvinfer",
+            "pgie",
             "nvdsanalytics",
             "nvosdbin",
             "nvvideoconvert",
@@ -136,7 +137,7 @@ class BaseImageGenerator(PipelineGenerator):
         for node in self.pipeline_yml["deepstream"]["nodes"]:
             name = node["name"]
             properties = node.get("properties", {})
-            if name == "nvinfer":
+            if name == "pgie":
                 properties["config-file-path"] = str(
                     config_save_dir / self.PGIE_CONFIG_NAME
                 )
@@ -180,7 +181,7 @@ class BaseImageGenerator(PipelineGenerator):
         self.apply_save_paths(config_save_dir)
         shutil.copy2(
             self.pgie_config_parser.meta_path,
-            config_save_dir / self.pgie_config_parser.meta_path.name,
+            config_save_dir / self.PGIE_META_NAME,
         )
         with open(pgie_save_path, "w", encoding="utf-8") as handle:
             yaml.safe_dump(self.pgie_yml, handle, sort_keys=False, default_flow_style=False)
@@ -233,7 +234,7 @@ class BaseImageGenerator(PipelineGenerator):
         )
         self._append_node(
             "nvinfer",
-            "nvinfer",
+            "pgie",
             self._add_nvinfer(
                 config_file_path=self.PGIE_CONFIG_NAME,
                 batch_size=self.pgie_generator.batch_size,
@@ -269,8 +270,8 @@ class BaseImageGenerator(PipelineGenerator):
     def link(self) -> None:
         edges = {
             "nvurisrcbin": "nvstreammux",
-            "nvstreammux": "nvinfer",
-            "nvinfer": "nvdsanalytics",
+            "nvstreammux": "pgie",
+            "pgie": "nvdsanalytics",
             "nvdsanalytics": "nvosdbin",
             "nvosdbin": "nvvideoconvert",
             "nvvideoconvert": "nvjpegenc",

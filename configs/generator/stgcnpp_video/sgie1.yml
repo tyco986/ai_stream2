@@ -1,0 +1,18 @@
+property:
+  gpu-id: 0
+  onnx-file: ''
+  model-engine-file: /root/models/trt/stgcnpp-ntu60/stgcnpp-ntu60.engine
+  labelfile-path: /root/models/trt/stgcnpp-ntu60/labels.txt
+  batch-size: 64
+  network-mode: 0
+  network-type: 1
+  process-mode: 2
+  gie-unique-id: 4
+  interval: 0
+  operate-on-gie-id: 1
+  operate-on-class-ids: 0
+  force-implicit-batch-dim: 0
+  output-blob-names: output
+  input-tensor-from-meta: 1
+  output-tensor-meta: 1
+  classifier-threshold: 0.51

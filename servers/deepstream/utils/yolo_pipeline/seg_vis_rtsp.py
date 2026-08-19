@@ -9,7 +9,7 @@ class SegVisRTSPPipeline(BaseRTSPPipeline):
         "latency",
         "nvurisrcbin",
         "nvstreammux",
-        "nvinfer",
+        "pgie",
         "nvtracker",
         "nvdsanalytics",
         "nvstreamdemux",

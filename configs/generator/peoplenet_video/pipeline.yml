@@ -17,7 +17,7 @@ deepstream:
       gpu-id: 0
       live-source: false
   - type: nvinfer
-    name: nvinfer
+    name: pgie
     properties:
       config-file-path: /root/configs/generator/peoplenet_video/pgie.yml
       batch-size: 1
@@ -57,8 +57,8 @@ deepstream:
       async: false
   edges:
     nvurisrcbin: nvstreammux
-    nvstreammux: nvinfer
-    nvinfer: nvdsanalytics
+    nvstreammux: pgie
+    pgie: nvdsanalytics
     nvdsanalytics: nvosdbin
     nvosdbin: nvvideoconvert
     nvvideoconvert: nvv4l2h264enc

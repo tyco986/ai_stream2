@@ -2,7 +2,7 @@ rtspclientsink0:
 - nvurisrcbin0
 - nvstreammux
 - nvsahipreprocess
-- nvinfer
+- pgie
 - queue_sahi
 - nvsahipostprocess
 - nvtracker
@@ -19,7 +19,7 @@ rtspclientsink1:
 - nvurisrcbin1
 - nvstreammux
 - nvsahipreprocess
-- nvinfer
+- pgie
 - queue_sahi
 - nvsahipostprocess
 - nvtracker

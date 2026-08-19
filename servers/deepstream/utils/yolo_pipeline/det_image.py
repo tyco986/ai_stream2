@@ -11,7 +11,7 @@ class DetImagePipeline(BaseImagePipeline):
         "latency",
         "nvurisrcbin",
         "nvstreammux",
-        "nvinfer",
+        "pgie",
         "nvdsanalytics",
         "nvosdbin",
         "nvvideoconvert",

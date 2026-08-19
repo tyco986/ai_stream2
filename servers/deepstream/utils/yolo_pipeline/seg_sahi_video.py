@@ -12,7 +12,7 @@ class SegSahiVideoPipeline(BaseVideoPipeline):
         "nvurisrcbin",
         "nvstreammux",
         "nvsahipreprocess",
-        "nvinfer",
+        "pgie",
         "queue_sahi",
         "nvsahipostprocess",
         "nvtracker",

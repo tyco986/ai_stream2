@@ -2,7 +2,7 @@ from pathlib import Path
 
 import yaml
 
-SGIE_YML = "sgie.yml"
+SGIE_YML = "sgie0.yml"
 
 
 def nvinfer_period(ds_interval: int) -> int:

@@ -9,7 +9,7 @@ from ..subelement_generator.utils.sahi import get_sahi_box, get_sahi_preview
 SAHI_RTSP_TOPOLOGY_DOC = """
     Topology::
 
-        nvurisrcbin{N} → nvstreammux → nvsahipreprocess → nvinfer → queue_sahi → nvsahipostprocess
+        nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
               → nvtracker → nvdsanalytics → nvstreamdemux
               → queue_demux{N} → nvvideoconvert{N} → fakesink{N}
 
@@ -30,7 +30,7 @@ class BaseSahiRTSPGenerator(BaseRTSPGenerator):
             "nvurisrcbin{index}",
             "nvstreammux",
             "nvsahipreprocess",
-            "nvinfer",
+            "pgie",
             "queue_sahi",
             "nvsahipostprocess",
             "nvtracker",
@@ -171,7 +171,7 @@ class BaseSahiRTSPGenerator(BaseRTSPGenerator):
         )
         self._append_node(
             "nvinfer",
-            "nvinfer",
+            "pgie",
             self._add_nvinfer(
                 config_file_path=self.PGIE_CONFIG_NAME,
                 batch_size=self.pgie_generator.batch_size,
@@ -234,8 +234,8 @@ class BaseSahiRTSPGenerator(BaseRTSPGenerator):
         for index in range(len(self.streams)):
             edges[f"nvurisrcbin{index}"] = "nvstreammux"
         edges["nvstreammux"] = "nvsahipreprocess"
-        edges["nvsahipreprocess"] = "nvinfer"
-        edges["nvinfer"] = "queue_sahi"
+        edges["nvsahipreprocess"] = "pgie"
+        edges["pgie"] = "queue_sahi"
         edges["queue_sahi"] = "nvsahipostprocess"
         inference_tail = "nvsahipostprocess"
         if self.enable_nvtracker:

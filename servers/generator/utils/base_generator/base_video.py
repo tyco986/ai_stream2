@@ -17,7 +17,7 @@ VIDEO_STREAM_NAME = "video"
 VIDEO_TOPOLOGY_DOC = """
     Topology::
 
-        nvurisrcbin → nvstreammux → nvinfer → nvtracker → nvdsanalytics → nvosdbin → nvvideoconvert
+        nvurisrcbin → nvstreammux → pgie → nvtracker → nvdsanalytics → nvosdbin → nvvideoconvert
             → nvv4l2h264enc → h264parse → mp4mux → filesink
 """
 
@@ -25,6 +25,7 @@ VIDEO_TOPOLOGY_DOC = """
 class BaseVideoGenerator(PipelineGenerator):
     PIPELINE_CONFIG_NAME = "pipeline.yml"
     PGIE_CONFIG_NAME = "pgie.yml"
+    PGIE_META_NAME = "pgie_meta.json"
     TRACKER_CONFIG_NAME = "nvtracker.yml"
     ANALYTICS_CONFIG_NAME = "nvdsanalytics.yml"
     PARAMS_NAME = "params.yml"
@@ -33,7 +34,7 @@ class BaseVideoGenerator(PipelineGenerator):
         "filesink": [
             "nvurisrcbin",
             "nvstreammux",
-            "nvinfer",
+            "pgie",
             "nvtracker",
             "nvdsanalytics",
             "nvosdbin",
@@ -154,7 +155,7 @@ class BaseVideoGenerator(PipelineGenerator):
         for node in self.pipeline_yml["deepstream"]["nodes"]:
             name = node["name"]
             properties = node.get("properties", {})
-            if name == "nvinfer":
+            if name == "pgie":
                 properties["config-file-path"] = str(
                     config_save_dir / self.PGIE_CONFIG_NAME
                 )
@@ -203,7 +204,7 @@ class BaseVideoGenerator(PipelineGenerator):
         self.apply_save_paths(config_save_dir)
         shutil.copy2(
             self.pgie_config_parser.meta_path,
-            config_save_dir / self.pgie_config_parser.meta_path.name,
+            config_save_dir / self.PGIE_META_NAME,
         )
         with open(pgie_save_path, "w", encoding="utf-8") as handle:
             yaml.safe_dump(self.pgie_yml, handle, sort_keys=False, default_flow_style=False)
@@ -262,7 +263,7 @@ class BaseVideoGenerator(PipelineGenerator):
         )
         self._append_node(
             "nvinfer",
-            "nvinfer",
+            "pgie",
             self._add_nvinfer(
                 config_file_path=self.PGIE_CONFIG_NAME,
                 batch_size=self.pgie_generator.batch_size,
@@ -322,9 +323,9 @@ class BaseVideoGenerator(PipelineGenerator):
     def link(self) -> None:
         edges = {
             "nvurisrcbin": "nvstreammux",
-            "nvstreammux": "nvinfer",
+            "nvstreammux": "pgie",
         }
-        inference_tail = "nvinfer"
+        inference_tail = "pgie"
         if self.enable_nvtracker:
             edges[inference_tail] = "nvtracker"
             inference_tail = "nvtracker"

@@ -17,8 +17,8 @@ class Pose2DImagePipeline(BaseImagePipeline):
         "latency",
         "nvurisrcbin",
         "nvstreammux",
-        "nvinfer",
-        "sgie",
+        "pgie",
+        "sgie0",
         "nvdsanalytics",
         "nvosdbin",
         "nvvideoconvert",
@@ -45,7 +45,7 @@ class Pose2DImagePipeline(BaseImagePipeline):
         logger = DetLogger(**self.logger)
         self.attach_latency_and_times(logger)
         self.pipeline.attach(
-            "nvinfer",
+            "pgie",
             Probe(
                 "rect_expand",
                 RectExpandProbe(

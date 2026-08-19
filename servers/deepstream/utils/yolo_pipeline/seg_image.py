@@ -11,7 +11,7 @@ class SegImagePipeline(BaseImagePipeline):
         "latency",
         "nvurisrcbin",
         "nvstreammux",
-        "nvinfer",
+        "pgie",
         "nvdsanalytics",
         "nvosdbin",
         "nvvideoconvert",

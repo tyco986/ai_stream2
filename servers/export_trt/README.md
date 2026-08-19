@@ -70,7 +70,7 @@ curl -s -X POST http://127.0.0.1:9000/ai_stream2/export_trt/export \
 ./servers/export_trt/scripts/3_export.sh --input models/onnx/yolo26n --config servers/export_trt/templates/yolo26_det.yaml
 ./servers/export_trt/scripts/3_export.sh --input models/onnx/yolov10x-smoke-fire --config servers/export_trt/templates/yolo10x_smoke_fire.yaml
 ./servers/export_trt/scripts/3_export.sh --input models/onnx/peoplenet --config servers/export_trt/templates/peoplenet.yaml
-./servers/export_trt/scripts/3_export.sh --input models/onnx/rtmpose --config servers/export_trt/templates/rtmpose.yaml
+./servers/export_trt/scripts/3_export.sh --input models/onnx/rtmpose-s-aic --config servers/export_trt/templates/rtmpose.yaml
 ```
 
 `--input` 为 ONNX 目录路径；`--config` 为 YAML 路径。脚本会打包成 zip 再上传。

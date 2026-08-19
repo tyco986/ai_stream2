@@ -1,7 +1,6 @@
 import argparse
 import logging
 import time
-from contextlib import asynccontextmanager
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
@@ -9,6 +8,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
@@ -21,8 +21,7 @@ from utils.api.constants import (
     LOGGER_NAME,
 )
 from utils.api.routes import router
-from utils.api.schemas import ApiEnvelope
-from utils.api.services import AppError, PipelineStartService, SchemaService
+from utils.api.schemas import ApiEnvelope, AppError
 
 
 def configure_logging(log_root: Path = LOG_ROOT) -> None:
@@ -63,18 +62,6 @@ class RequestLogMiddleware(BaseHTTPMiddleware):
         return response
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    pipeline_service = PipelineStartService()
-    app.state.pipeline_service = pipeline_service
-    app.state.schema_service = SchemaService(PipelineStartService.PIPELINE_MODULES)
-    logger = logging.getLogger(LOGGER_NAME)
-    types = ", ".join(sorted(PipelineStartService.PIPELINE_MODULES))
-    logger.info("DeepStream API started log_root=%s types=%s", LOG_ROOT, types)
-    yield
-    logger.info("DeepStream API stopped")
-
-
 async def handle_app_error(request: Request, exc: AppError) -> JSONResponse:
     return JSONResponse(
         status_code=exc.status_code,
@@ -99,6 +86,13 @@ async def handle_validation_error(
     )
 
 
+async def handle_pydantic_error(request: Request, exc: ValidationError) -> JSONResponse:
+    return JSONResponse(
+        status_code=400,
+        content=ApiEnvelope(success=False, message=str(exc.errors())).model_dump(),
+    )
+
+
 async def handle_unhandled(request: Request, exc: Exception) -> JSONResponse:
     logging.getLogger(LOGGER_NAME).exception("unhandled error path=%s", request.url.path)
     return JSONResponse(
@@ -109,11 +103,12 @@ async def handle_unhandled(request: Request, exc: Exception) -> JSONResponse:
 
 def create_app() -> FastAPI:
     configure_logging()
-    app = FastAPI(title="DeepStream API", version="1.0.0", lifespan=lifespan)
+    app = FastAPI(title="DeepStream API", version="1.0.0")
     app.add_middleware(RequestLogMiddleware)
     app.add_exception_handler(AppError, handle_app_error)
     app.add_exception_handler(HTTPException, handle_http_exception)
     app.add_exception_handler(RequestValidationError, handle_validation_error)
+    app.add_exception_handler(ValidationError, handle_pydantic_error)
     app.add_exception_handler(Exception, handle_unhandled)
     app.include_router(router)
     return app

@@ -12,7 +12,7 @@ class DetSahiImagePipeline(BaseImagePipeline):
         "nvurisrcbin",
         "nvstreammux",
         "nvsahipreprocess",
-        "nvinfer",
+        "pgie",
         "queue_sahi",
         "nvsahipostprocess",
         "nvdsanalytics",

@@ -1,0 +1,42 @@
+# nvdspreprocess for PYSKL ST-GCN++ ONNX: input (N, 2, 100, 17, 3)
+# Place after RTMPose SGIE (gie-unique-id=2). Pair with nvinfer input-tensor-from-meta=1.
+
+[property]
+enable=1
+unique-id=3
+target-unique-ids=4
+# 0=NCHW, 1=NHWC, 2=CUSTOM
+network-input-order=2
+network-input-shape=8;2;100;17;3
+process-on-frame=0
+processing-width=17
+processing-height=100
+scaling-buf-pool-size=6
+tensor-buf-pool-size=6
+network-color-format=0
+# 0=FP32
+tensor-data-type=0
+tensor-name=input
+scaling-pool-memory-type=0
+scaling-pool-compute-hw=1
+scaling-filter=0
+custom-lib-path=/opt/ai_stream2/servers/deepstream/libs/libnvds_stgcnpp_preprocess.so
+custom-tensor-preparation-function=CustomTensorPreparation
+
+[user-configs]
+frames-sequence-length=100
+num-joints=17
+num-person=2
+pose-gie-id=2
+infer-width=192
+infer-height=256
+
+[group-0]
+src-ids=0
+custom-input-transformation-function=CustomTransformation
+process-on-roi=1
+process-on-all-objects=1
+roi-params-src-0=0;0;100;100
+input-object-min-width=32
+input-object-min-height=32
+draw-roi=0

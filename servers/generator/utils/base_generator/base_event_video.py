@@ -4,7 +4,7 @@ from .base_video import BaseVideoGenerator
 VIDEO_EVENT_TOPOLOGY_DOC = """
     Topology::
 
-        nvurisrcbin → nvstreammux → nvinfer → nvtracker → nvdsanalytics → nvvideoconvert → tee_raw
+        nvurisrcbin → nvstreammux → pgie → nvtracker → nvdsanalytics → nvvideoconvert → tee_raw
               ─┬→ queue_raw → nvvideoconvert_raw → capsfilter_raw → appsink_raw0
               └→ queue_osd → nvvideoconvert_osd → capsfilter_osd(RGBA) → nvosdbin → tee_vis
                     ─┬→ queue_vis → nvvideoconvert_vis → capsfilter_vis → appsink_vis0
@@ -29,7 +29,7 @@ class BaseEventVideoGenerator(BaseVideoGenerator):
         "appsink_raw0": [
             "nvurisrcbin",
             "nvstreammux",
-            "nvinfer",
+            "pgie",
             "nvtracker",
             "nvdsanalytics",
             "nvvideoconvert",
@@ -42,7 +42,7 @@ class BaseEventVideoGenerator(BaseVideoGenerator):
         "appsink_vis0": [
             "nvurisrcbin",
             "nvstreammux",
-            "nvinfer",
+            "pgie",
             "nvtracker",
             "nvdsanalytics",
             "nvvideoconvert",
@@ -60,7 +60,7 @@ class BaseEventVideoGenerator(BaseVideoGenerator):
         "filesink": [
             "nvurisrcbin",
             "nvstreammux",
-            "nvinfer",
+            "pgie",
             "nvtracker",
             "nvdsanalytics",
             "nvvideoconvert",
@@ -109,7 +109,7 @@ class BaseEventVideoGenerator(BaseVideoGenerator):
         )
         self._append_node(
             "nvinfer",
-            "nvinfer",
+            "pgie",
             self._add_nvinfer(
                 config_file_path=self.PGIE_CONFIG_NAME,
                 batch_size=self.pgie_generator.batch_size,
@@ -204,9 +204,9 @@ class BaseEventVideoGenerator(BaseVideoGenerator):
     def link(self) -> None:
         edges = {
             "nvurisrcbin": "nvstreammux",
-            "nvstreammux": "nvinfer",
+            "nvstreammux": "pgie",
         }
-        inference_tail = "nvinfer"
+        inference_tail = "pgie"
         if self.enable_nvtracker:
             edges[inference_tail] = "nvtracker"
             inference_tail = "nvtracker"
