@@ -67,7 +67,10 @@ class NvsahipreprocessGenerator:
         self.tensor_data_type = tensor_data_type
         self.tensor_name = tensor_name
         self.network_input_shape = network_input_shape
+        shape_parts = [int(value) for value in str(network_input_shape).split(";")]
         self.config[self.config.index('network-input-shape=16;3;640;640')] = f'network-input-shape={self.network_input_shape}'
+        self.config[self.config.index('processing-height=640')] = f'processing-height={shape_parts[2]}'
+        self.config[self.config.index('processing-width=640')] = f'processing-width={shape_parts[3]}'
         self.config[self.config.index('tensor-data-type=0')] = f'tensor-data-type={self.tensor_data_type}'
         self.config[self.config.index('tensor-name=images')] = f'tensor-name={self.tensor_name}'
         self.config[self.config.index('target-unique-ids=1')] = f'target-unique-ids={self.target_unique_ids}'

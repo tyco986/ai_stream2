@@ -132,7 +132,7 @@ class BaseEventSahiVisRTSPGenerator(BaseSahiRTSPGenerator):
                 slice_height=sahi["slice_height"],
                 overlap_width_ratio=sahi["overlap_width_ratio"],
                 overlap_height_ratio=sahi["overlap_height_ratio"],
-                enable_full_frame=True,
+                enable_full_frame=sahi.get("enable_full_frame", True),
                 gpu_id=self.pgie_generator.gpu_id,
             ),
         )

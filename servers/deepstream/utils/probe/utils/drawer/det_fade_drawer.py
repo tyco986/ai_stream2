@@ -15,6 +15,7 @@ class DetFadeDrawer(DetDrawer):
         self.interval = int(interval)
         self.fade_time = int(fade_time)
         self.min_alpha = 0.2
+        self.shadow_box_color = (0.6, 0.0, 1.0, 1.0)
         self.frame_count = {}
         self.phase = {}
         self.object_cache = {}
@@ -28,6 +29,18 @@ class DetFadeDrawer(DetDrawer):
             or int(frame_meta.frame_number) % self.interval == 0
         )
         return inference
+
+    def cache_item(self, object_meta) -> dict:
+        return self.parse_object(object_meta)
+
+    def cache_detections(self, batch_meta) -> None:
+        for frame_meta in batch_meta.frame_items:
+            if self.is_inference_frame(frame_meta):
+                pad_index = int(frame_meta.pad_index)
+                self.object_cache[pad_index] = [
+                    self.cache_item(object_meta)
+                    for object_meta in frame_meta.object_items
+                ]
 
     def apply_id_conf(self, old_cache, new_cache, object_meta, item) -> None:
         obj = item["object"]
@@ -129,35 +142,42 @@ class DetFadeDrawer(DetDrawer):
         faded_box_color = self.fade_color(box_color, fade_alpha)
         faded_text_color = self.fade_color(text_color, fade_alpha)
         faded_text_bg_color = self.fade_color(text_bg_color, fade_alpha)
-        if inference:
-            old_cache = self.conf_cache.get(pad_index, {})
-            new_cache = {}
-            for object_meta in frame_meta.object_items:
-                item = self.parse_object(object_meta)
-                self.apply_id_conf(old_cache, new_cache, object_meta, item)
-                self.draw_inplace(
-                    object_meta,
-                    item,
-                    faded_box_color,
-                    box_width,
-                    faded_text_color,
-                    faded_text_bg_color,
-                )
-                result["objects"].append(item)
-            self.conf_cache[pad_index] = new_cache
-            self.object_cache[pad_index] = result["objects"]
-            next_phase = 1 % self.runtime_interval
-        else:
-            result["objects"] = self.draw_non_inference_rebuild(
-                batch_meta,
-                frame_meta,
-                pad_index,
-                faded_box_color,
+        draw_box_color = faded_box_color
+        draw_text_color = faded_text_color
+        draw_text_bg_color = faded_text_bg_color
+        if not inference:
+            draw_box_color = self.shadow_box_color
+            draw_text_color = text_color
+            draw_text_bg_color = text_bg_color
+        next_phase = (phase + 1) % self.runtime_interval
+        old_cache = self.conf_cache.get(pad_index, {})
+        new_cache = {}
+        for object_meta in frame_meta.object_items:
+            item = self.parse_object(object_meta)
+            self.apply_id_conf(old_cache, new_cache, object_meta, item)
+            self.draw_inplace(
+                object_meta,
+                item,
+                draw_box_color,
                 box_width,
-                faded_text_color,
-                faded_text_bg_color,
+                draw_text_color,
+                draw_text_bg_color,
             )
-            next_phase = (phase + 1) % self.runtime_interval
+            result["objects"].append(item)
+        if inference:
+            self.conf_cache[pad_index] = new_cache
+            next_phase = 1 % self.runtime_interval
+        fade_objects = self.draw_non_inference_rebuild(
+            batch_meta,
+            frame_meta,
+            pad_index,
+            faded_box_color,
+            box_width,
+            faded_text_color,
+            faded_text_bg_color,
+        )
+        if not result["objects"]:
+            result["objects"] = fade_objects
         result["num_objects"] = len(result["objects"])
         self.frame_count[pad_index] = self.frame_count.get(pad_index, 0) + 1
         self.phase[pad_index] = next_phase

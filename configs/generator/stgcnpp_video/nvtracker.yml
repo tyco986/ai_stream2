@@ -6,8 +6,8 @@ TargetManagement:
   minIouDiff4NewTarget: 0.5
   minTrackerConfidence: 0.2
   probationAge: 3
-  maxShadowTrackingAge: 60
-  earlyTerminationAge: 55
+  maxShadowTrackingAge: 35
+  earlyTerminationAge: 30
 TrajectoryManagement:
   useUniqueID: 0
 DataAssociator:

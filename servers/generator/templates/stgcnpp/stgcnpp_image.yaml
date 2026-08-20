@@ -6,13 +6,13 @@ generator: StgcnppImageGenerator
 config_save_dir: /root/configs/generator/stgcnpp_image
 pgie:
   interval: 0
-  model_dir: /root/models/trt/peoplenet
+  model_dir: /root/models/trt/yolo26n
   class_attrs:
     0:
       conf: 0.25
 sgie:
   interval: 0
-  model_dir: /root/models/trt/rtmpose-s-aic
+  model_dir: /root/models/trt/rtmpose-s-coco-pruned
 stgcnpp:
   interval: 0
   model_dir: /root/models/trt/stgcnpp-ntu60

@@ -2,17 +2,17 @@
 #
 # Artifacts: pipeline.yml, pgie.yml, sgie.yml, params.yml, ... under config_save_dir.
 
-generator: SingleSgieImageGenerator
+generator: TopdownPoseImageGenerator
 config_save_dir: /root/configs/generator/topdown_pose_image
 pgie:
   interval: 0
-  model_dir: /root/models/trt/peoplenet
+  model_dir: /root/models/trt/yolo26n
   class_attrs:
     0:
       conf: 0.25
 sgie:
   interval: 0
-  model_dir: /root/models/trt/rtmpose-s-aic
+  model_dir: /root/models/trt/rtmpose-s-coco-pruned
 analyzer: null
 input: /root/attachments/images/video1.png
 output: /root/outputs/deepstream/topdown_pose_image.jpg

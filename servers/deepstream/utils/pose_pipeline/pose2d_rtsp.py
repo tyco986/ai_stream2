@@ -1,6 +1,7 @@
+import yaml
 from pyservicemaker import Probe
 
-from utils.base_pipeline.base_rtsp import BaseRTSPPipeline
+from utils.base_pipeline.base_rtsp import PIPELINE_YML, BaseRTSPPipeline
 from utils.base_pipeline.validate import (
     sgie_period_from_config,
     validate_probe_interval,
@@ -42,11 +43,21 @@ class Pose2DRTSPPipeline(BaseRTSPPipeline):
         )
         validate_sgie_interval(self.pgie_interval, sgie_interval)
 
+    def rect_expand_target(self):
+        pipeline = yaml.safe_load(
+            (self.config_dir / PIPELINE_YML).read_text(encoding="utf-8")
+        )
+        names = {node["name"] for node in pipeline["deepstream"]["nodes"]}
+        target = "pgie"
+        if "nvtracker" in names:
+            target = "nvtracker"
+        return target
+
     def build(self):
         logger = DetLogger(**self.logger)
         self.attach_latency_and_times(logger)
         self.pipeline.attach(
-            "nvtracker",
+            self.rect_expand_target(),
             Probe(
                 "rect_expand",
                 RectExpandProbe(

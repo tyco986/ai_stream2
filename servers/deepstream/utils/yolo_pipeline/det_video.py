@@ -2,7 +2,9 @@ from pyservicemaker import Probe
 
 from utils.base_pipeline.base_video import BaseVideoPipeline
 from utils.base_pipeline.validate import validate_probe_interval
+from utils.probe.det_fade_cache_probe import DetFadeCacheProbe
 from utils.probe.det_video_probe import DetVideoProbe
+from utils.probe.utils.drawer.det_fade_drawer import DetFadeDrawer
 from utils.probe.utils.logger.det_logger import DetLogger
 
 
@@ -33,12 +35,17 @@ class DetVideoPipeline(BaseVideoPipeline):
 
     def build(self):
         logger = DetLogger(**self.logger)
+        drawer = DetFadeDrawer(**self.drawer)
         self.attach_latency_and_times(logger)
+        self.pipeline.attach(
+            "pgie",
+            Probe("det_cache", DetFadeCacheProbe(drawer)),
+        )
         self.pipeline.attach(
             "nvdsanalytics",
             Probe(
                 "yolo",
-                DetVideoProbe(drawer=self.drawer, logger=logger, messager=self.messager),
+                DetVideoProbe(drawer=drawer, logger=logger, messager=self.messager),
             ),
         )
         return self.pipeline

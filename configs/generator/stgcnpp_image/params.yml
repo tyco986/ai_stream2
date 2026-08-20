@@ -2,14 +2,14 @@ generator: StgcnppImageGenerator
 input: /root/attachments/images/video1.png
 output: /root/outputs/deepstream/stgcnpp_image.jpg
 pgie:
-  model_dir: /root/models/trt/peoplenet
+  model_dir: /root/models/trt/yolo26n
   class_attrs:
     0:
       conf: 0.25
   interval: 0
 analyzer: null
 sgie:
-  model_dir: /root/models/trt/rtmpose-s-aic
+  model_dir: /root/models/trt/rtmpose-s-coco-pruned
   interval: 0
 stgcnpp:
   model_dir: /root/models/trt/stgcnpp-ntu60

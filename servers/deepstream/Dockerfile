@@ -53,7 +53,9 @@ mkdir -p /root/src; \
 for f in /root/attachments/deepstream-sahi/*.zip; do \
   [[ -f "$f" ]] && unzip -o -q "$f" -d /root/src; \
 done; \
-cd /root/src/deepstream-sahi-master && patch -p1 < /app/patches/gstnvsahipostprocess-latency-timestamp.patch; \
+cd /root/src/deepstream-sahi-master && \
+  patch -p1 < /app/patches/gstnvsahipostprocess-latency-timestamp.patch && \
+  patch -p1 < /app/patches/nvdsinfer-yolo-zero-rotation-angle.patch; \
 bash /root/src/deepstream-sahi-master/install.sh --plugins-only; \
 test -f /opt/nvidia/deepstream/deepstream/lib/gst-plugins/libnvdsgst_sahipreprocess.so; \
 test -f /opt/nvidia/deepstream/deepstream/lib/gst-plugins/libnvdsgst_sahipostprocess.so; \

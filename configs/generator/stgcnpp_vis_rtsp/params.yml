@@ -11,7 +11,7 @@ streams:
     fps: 25
 generator: StgcnppVisRTSPGenerator
 pgie:
-  model_dir: /root/models/trt/peoplenet
+  model_dir: /root/models/trt/yolo26n
   class_attrs:
     0:
       conf: 0.4
@@ -20,7 +20,7 @@ analyzer: null
 tracker:
   class_id: 0
 sgie:
-  model_dir: /root/models/trt/rtmpose-s-aic
+  model_dir: /root/models/trt/rtmpose-s-coco-pruned
   interval: 0
 stgcnpp:
   model_dir: /root/models/trt/stgcnpp-ntu60

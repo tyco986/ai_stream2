@@ -1,14 +1,17 @@
+import yaml
 from pyservicemaker import Probe
 
-from utils.base_pipeline.base_rtsp import BaseRTSPPipeline
+from utils.base_pipeline.base_rtsp import PIPELINE_YML, BaseRTSPPipeline
 from utils.base_pipeline.validate import (
     sgie_period_from_config,
     validate_probe_interval,
     validate_sgie_interval,
 )
+from utils.probe.det_fade_cache_probe import DetFadeCacheProbe
 from utils.probe.pose2d_vis_rtsp_probe import Pose2DVisRTSPProbe
 from utils.probe.rect_expand_probe import RectExpandProbe
 from utils.probe.utils.drawer.pose2d_drawer import PADDING
+from utils.probe.utils.drawer.pose2d_fade_drawer import Pose2DFadeDrawer
 from utils.probe.utils.logger.det_logger import DetLogger
 
 
@@ -46,11 +49,29 @@ class Pose2DVisRTSPPipeline(BaseRTSPPipeline):
         )
         validate_sgie_interval(self.pgie_interval, sgie_interval)
 
+    def cache_target(self):
+        return "pgie"
+
+    def rect_expand_target(self):
+        pipeline = yaml.safe_load(
+            (self.config_dir / PIPELINE_YML).read_text(encoding="utf-8")
+        )
+        names = {node["name"] for node in pipeline["deepstream"]["nodes"]}
+        target = "pgie"
+        if "nvtracker" in names:
+            target = "nvtracker"
+        return target
+
     def build(self):
         logger = DetLogger(**self.logger)
+        drawer = Pose2DFadeDrawer(**self.drawer)
         self.attach_latency_and_times(logger)
         self.pipeline.attach(
-            "nvtracker",
+            self.cache_target(),
+            Probe("det_cache", DetFadeCacheProbe(drawer)),
+        )
+        self.pipeline.attach(
+            self.rect_expand_target(),
             Probe(
                 "rect_expand",
                 RectExpandProbe(
@@ -63,7 +84,7 @@ class Pose2DVisRTSPPipeline(BaseRTSPPipeline):
         self.attach_nvdsanalytics_probe(
             "pose2d",
             Pose2DVisRTSPProbe(
-                drawer=self.drawer,
+                drawer=drawer,
                 logger=logger,
                 messager=self.messager,
             ),

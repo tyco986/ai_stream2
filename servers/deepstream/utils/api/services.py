@@ -1,3 +1,6 @@
+from typing import Any
+
+
 from pathlib import Path
 
 import yaml
@@ -28,7 +31,7 @@ class PipelineService:
             raise AppError(f"unknown type {body.type!r}")
         if PipelineManager.is_running():
             raise AppError("pipeline is running")
-        logger = dict(body.logger)
+        logger = dict[Any, Any](body.logger)
         logger["root"] = logger.get("root") or str(LOG_ROOT / body.name)
         PipelineManager.start(
             body.type,

@@ -1,0 +1,13 @@
+# Prerequisite: servers/generator/scripts/3_generate.sh --config stgcnpp_video
+
+type: StgcnppVideoPipeline
+name: stgcnpp-video
+config_dir: /root/configs/generator/stgcnpp_video
+drawer:
+  show_pose: true
+logger:
+  interval: 25
+messager:
+  topic: deepstream-detections
+  host: ai_stream2_kafka
+  port: 9092

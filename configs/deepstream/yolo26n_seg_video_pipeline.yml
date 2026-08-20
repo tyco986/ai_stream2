@@ -1,0 +1,14 @@
+# Prerequisite: servers/generator/scripts/3_generate.sh --config yolo26n_seg_video
+
+type: SegVideoPipeline
+name: yolo26n-seg-video
+config_dir: /root/configs/generator/yolo26n_seg_video
+drawer:
+  show_label: true
+  show_conf: true
+logger:
+  interval: 0
+messager:
+  topic: deepstream-detections
+  host: ai_stream2_kafka
+  port: 9092

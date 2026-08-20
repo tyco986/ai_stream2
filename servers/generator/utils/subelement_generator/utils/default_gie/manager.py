@@ -1,6 +1,5 @@
 from copy import deepcopy
 
-from .peoplenet import PeopleNet
 from .rtmpose import RtmPose
 from .stgcnpp import Stgcnpp
 from .yolo_det import YoloDet
@@ -12,7 +11,6 @@ class PgieManager:
         "yolo10": YoloDet,
         "yolo11": YoloDet,
         "yolo26": YoloDet,
-        "peoplenet": PeopleNet,
     }
 
     def config(self, version: str) -> dict:

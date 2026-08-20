@@ -8,7 +8,6 @@ files:
 - utils/subelement_generator/pipeline.py
 - utils/subelement_generator/utils/default_gie/__init__.py
 - utils/subelement_generator/utils/default_gie/manager.py
-- utils/subelement_generator/utils/default_gie/peoplenet.py
 - utils/subelement_generator/utils/default_gie/rtmpose.py
 - utils/subelement_generator/utils/default_gie/yolo_det.py
 - utils/subelement_generator/utils/default_gie/yolo_seg.py

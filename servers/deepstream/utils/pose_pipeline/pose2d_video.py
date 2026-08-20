@@ -7,9 +7,11 @@ from utils.base_pipeline.validate import (
     validate_probe_interval,
     validate_sgie_interval,
 )
+from utils.probe.det_fade_cache_probe import DetFadeCacheProbe
 from utils.probe.pose2d_video_probe import Pose2DVideoProbe
 from utils.probe.rect_expand_probe import RectExpandProbe
 from utils.probe.utils.drawer.pose2d_drawer import PADDING
+from utils.probe.utils.drawer.pose2d_fade_drawer import Pose2DFadeDrawer
 from utils.probe.utils.logger.det_logger import DetLogger
 
 
@@ -45,6 +47,9 @@ class Pose2DVideoPipeline(BaseVideoPipeline):
         )
         validate_sgie_interval(self.pgie_interval, sgie_interval)
 
+    def cache_target(self):
+        return "pgie"
+
     def rect_expand_target(self):
         pipeline = yaml.safe_load(
             (self.config_dir / PIPELINE_YML).read_text(encoding="utf-8")
@@ -57,7 +62,12 @@ class Pose2DVideoPipeline(BaseVideoPipeline):
 
     def build(self):
         logger = DetLogger(**self.logger)
+        drawer = Pose2DFadeDrawer(**self.drawer)
         self.attach_latency_and_times(logger)
+        self.pipeline.attach(
+            self.cache_target(),
+            Probe("det_cache", DetFadeCacheProbe(drawer)),
+        )
         self.pipeline.attach(
             self.rect_expand_target(),
             Probe(
@@ -73,7 +83,7 @@ class Pose2DVideoPipeline(BaseVideoPipeline):
             "nvdsanalytics",
             Probe(
                 "pose2d",
-                Pose2DVideoProbe(drawer=self.drawer, logger=logger, messager=self.messager),
+                Pose2DVideoProbe(drawer=drawer, logger=logger, messager=self.messager),
             ),
         )
         return self.pipeline

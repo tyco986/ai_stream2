@@ -1,0 +1,33 @@
+streams:
+  video1:
+    url: rtsp://ai_stream2_mediamtx:8554/video1
+    width: 1920
+    height: 1080
+    fps: 25
+  video2:
+    url: rtsp://ai_stream2_mediamtx:8554/video2
+    width: 1920
+    height: 1080
+    fps: 25
+generator: TopdownPoseSahiVisRTSPGenerator
+pgie:
+  model_dir: /root/models/trt/yolo26n
+  class_attrs:
+    0:
+      conf: 0.4
+  interval: 50
+analyzer: null
+tracker: null
+sahi:
+  nvsahipreprocess:
+    slice_width: 640
+    slice_height: 640
+    overlap_width_ratio: 0.2
+    overlap_height_ratio: 0.2
+    enable_full_frame: true
+  nvsahipostprocess:
+    match_threshold: 0.5
+sgie:
+  model_dir: /root/models/trt/rtmpose-s-coco-pruned
+  interval: 50
+config_save_dir: /root/configs/generator/topdown_pose_sahi_vis_rtsp

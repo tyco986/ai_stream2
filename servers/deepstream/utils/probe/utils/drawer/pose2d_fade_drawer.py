@@ -29,12 +29,17 @@ class Pose2DFadeDrawer(DetFadeDrawer, Pose2DDrawer):
         self.frame_height = 1
         self.fade_alpha = 1.0
         self.min_alpha = 0.2
+        self.shadow_box_color = (0.6, 0.0, 1.0, 1.0)
         self.frame_count = {}
         self.phase = {}
         self.object_cache = {}
         self.conf_cache = {}
+        self.pose_cache = {}
         self.alpha_lut = self.build_alpha_lut(self.interval, self.fade_time)
         self.runtime_interval = len(self.alpha_lut)
+
+    def cache_item(self, object_meta) -> dict:
+        return self.parse_object(object_meta, [])
 
     def osd_color(self, color):
         faded = self.fade_color(color, self.fade_alpha)
@@ -64,6 +69,48 @@ class Pose2DFadeDrawer(DetFadeDrawer, Pose2DDrawer):
             self.draw_pose(batch_meta, frame_meta, item)
         return cache
 
+    def item_rect(self, item) -> tuple[float, float, float, float]:
+        rect = item["rect_params"]
+        return (rect["left"], rect["top"], rect["width"], rect["height"])
+
+    def transform_keypoints(self, keypoints, src_rect, dst_rect) -> list:
+        src_left, src_top, src_width, src_height = src_rect
+        dst_left, dst_top, dst_width, dst_height = dst_rect
+        scale_x = dst_width / src_width if src_width else 1.0
+        scale_y = dst_height / src_height if src_height else 1.0
+        mapped = [
+            [
+                round(dst_left + (float(x) - src_left) * scale_x, 1),
+                round(dst_top + (float(y) - src_top) * scale_y, 1),
+                score,
+            ]
+            for x, y, score in keypoints
+        ]
+        return mapped
+
+    def apply_pose_cache(self, pad_index, item) -> None:
+        track_id = int(item["object"][7])
+        cache = self.pose_cache.get(pad_index, {})
+        keypoints = item["keypoints"]
+        if keypoints and track_id >= 0:
+            cache[track_id] = {
+                "keypoints": keypoints,
+                "rect": self.item_rect(item),
+            }
+            self.pose_cache[pad_index] = cache
+        elif track_id >= 0 and track_id in cache:
+            stored = cache[track_id]
+            item["keypoints"] = self.transform_keypoints(
+                stored["keypoints"],
+                stored["rect"],
+                self.item_rect(item),
+            )
+
+    def prune_pose_cache(self, pad_index, items) -> None:
+        seen_ids = {int(item["object"][7]) for item in items if int(item["object"][7]) >= 0}
+        cache = self.pose_cache.get(pad_index, {})
+        self.pose_cache[pad_index] = {tid: cache[tid] for tid in seen_ids if tid in cache}
+
     def process_frame(
         self,
         batch_meta,
@@ -82,10 +129,18 @@ class Pose2DFadeDrawer(DetFadeDrawer, Pose2DDrawer):
         result["inference"] = inference
         phase = 0 if inference else self.phase.get(pad_index, 0)
         fade_alpha = self.alpha_lut[phase]
-        self.fade_alpha = fade_alpha
         faded_box_color = self.fade_color(box_color, fade_alpha)
         faded_text_color = self.fade_color(text_color, fade_alpha)
         faded_text_bg_color = self.fade_color(text_bg_color, fade_alpha)
+        draw_box_color = faded_box_color
+        draw_text_color = faded_text_color
+        draw_text_bg_color = faded_text_bg_color
+        self.fade_alpha = fade_alpha
+        if not inference:
+            draw_box_color = self.shadow_box_color
+            draw_text_color = text_color
+            draw_text_bg_color = text_bg_color
+            self.fade_alpha = 1.0
         next_phase = (phase + 1) % self.runtime_interval
         old_cache = self.conf_cache.get(pad_index, {})
         new_cache = {}
@@ -94,30 +149,33 @@ class Pose2DFadeDrawer(DetFadeDrawer, Pose2DDrawer):
         for object_index, object_meta in enumerate(frame_meta.object_items):
             item = self.restore_object(object_meta, source_id, frame_number, object_index)
             self.apply_id_conf(old_cache, new_cache, object_meta, item)
+            self.apply_pose_cache(pad_index, item)
             self.draw_inplace(
                 object_meta,
                 item,
-                faded_box_color,
+                draw_box_color,
                 box_width,
-                faded_text_color,
-                faded_text_bg_color,
+                draw_text_color,
+                draw_text_bg_color,
             )
             self.draw_pose(batch_meta, frame_meta, item)
             result["objects"].append(item)
         if inference:
             self.conf_cache[pad_index] = new_cache
-            self.object_cache[pad_index] = result["objects"]
             next_phase = 1 % self.runtime_interval
-        elif not result["objects"]:
-            result["objects"] = self.draw_non_inference_rebuild(
-                batch_meta,
-                frame_meta,
-                pad_index,
-                faded_box_color,
-                box_width,
-                faded_text_color,
-                faded_text_bg_color,
-            )
+        self.fade_alpha = fade_alpha
+        fade_objects = self.draw_non_inference_rebuild(
+            batch_meta,
+            frame_meta,
+            pad_index,
+            faded_box_color,
+            box_width,
+            faded_text_color,
+            faded_text_bg_color,
+        )
+        if not result["objects"]:
+            result["objects"] = fade_objects
+        self.prune_pose_cache(pad_index, result["objects"])
         result["num_objects"] = len(result["objects"])
         self.frame_count[pad_index] = self.frame_count.get(pad_index, 0) + 1
         self.phase[pad_index] = next_phase

@@ -1,0 +1,28 @@
+fakesink0:
+- nvurisrcbin0
+- nvstreammux
+- nvsahipreprocess
+- pgie
+- queue_sahi
+- nvsahipostprocess
+- nvtracker
+- sgie0
+- nvdsanalytics
+- nvstreamdemux
+- queue_demux0
+- nvvideoconvert0
+- fakesink0
+fakesink1:
+- nvurisrcbin1
+- nvstreammux
+- nvsahipreprocess
+- pgie
+- queue_sahi
+- nvsahipostprocess
+- nvtracker
+- sgie0
+- nvdsanalytics
+- nvstreamdemux
+- queue_demux1
+- nvvideoconvert1
+- fakesink1

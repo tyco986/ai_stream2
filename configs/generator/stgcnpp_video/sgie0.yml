@@ -1,8 +1,8 @@
 property:
   gpu-id: 0
   onnx-file: ''
-  model-engine-file: /root/models/trt/rtmpose-s-aic/rtmpose-s-aic.engine
-  labelfile-path: /root/models/trt/rtmpose-s-aic/labels.txt
+  model-engine-file: /root/models/trt/rtmpose-s-coco-pruned/rtmpose-s-coco-pruned.engine
+  labelfile-path: /root/models/trt/rtmpose-s-coco-pruned/labels.txt
   batch-size: 64
   network-mode: 0
   network-type: 100

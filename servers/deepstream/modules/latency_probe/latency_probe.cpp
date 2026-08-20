@@ -38,6 +38,7 @@ constexpr const char* kLogicalNames[] = {
     "h264parse",
     "mp4mux",
     "nvdsanalytics",
+    "nvdspreprocess",
     "nvjpegenc",
     "nvosdbin",
     "nvsahipostprocess",

@@ -41,11 +41,15 @@ class Pose2DImagePipeline(BaseImagePipeline):
         )
         validate_sgie_interval(self.pgie_interval, sgie_interval)
 
+    def rect_expand_target(self):
+        target = "pgie"
+        return target
+
     def build(self):
         logger = DetLogger(**self.logger)
         self.attach_latency_and_times(logger)
         self.pipeline.attach(
-            "pgie",
+            self.rect_expand_target(),
             Probe(
                 "rect_expand",
                 RectExpandProbe(

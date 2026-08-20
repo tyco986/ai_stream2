@@ -30,8 +30,6 @@ TAO 分三类：**Foundation**（基础大模型）、**Purpose-built**（领域
 
 | 模型 | 任务 | TAO 微调 |
 |------|------|----------|
-| PeopleNet | 人 / 包 / 脸检测 | ✅ |
-| PeopleNet Transformer v2 | 人检测（Transformer） | ✅ |
 | TrafficCamNet | 车辆检测 | ✅ |
 | DashCamNet | 车载检测 | ✅ |
 | FaceDetect / FaceDetect-IR | 人脸检测 | ✅ |

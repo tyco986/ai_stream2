@@ -12,7 +12,7 @@ class PgieParser:
         "fp16": 2,
         "int8": 1,
     }
-    SUPPORTED_VERSIONS = ("yolo8", "yolo11", "yolo10", "yolo26", "peoplenet")
+    SUPPORTED_VERSIONS = ("yolo8", "yolo11", "yolo10", "yolo26")
     CLASS_ATTR_KEY_MAP = {
         "conf": "pre-cluster-threshold",
         "topk": "topk",

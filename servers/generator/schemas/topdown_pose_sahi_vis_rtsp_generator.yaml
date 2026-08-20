@@ -1,0 +1,66 @@
+type: TopdownPoseSahiVisRTSPGenerator
+params:
+  streams:
+    available: true
+    params: {}
+  pgie:
+    available: true
+    params:
+      interval:
+        available: true
+        default: 50
+  sgie:
+    available: true
+    params:
+      interval:
+        available: true
+        default: 50
+  tracker:
+    available: true
+    params:
+      class_id:
+        available: true
+        default:
+        - -1
+  analyzer:
+    available: true
+    params:
+      streams:
+        available: true
+        default: []
+      template:
+        available: true
+        default: null
+      roi_filtering:
+        available: true
+        default:
+          class_id:
+          - -1
+      overcrowding:
+        available: true
+        default: null
+      line_crossing:
+        available: true
+        default: null
+      direction_detection:
+        available: true
+        default: null
+  sahi:
+    available: true
+    params:
+      nvsahipreprocess:
+        available: true
+        default:
+          slice_width: 960
+          slice_height: 540
+          overlap_width_ratio: 0.2
+          overlap_height_ratio: 0.2
+          enable_full_frame: true
+      nvsahipostprocess:
+        available: true
+        default:
+          match_threshold: 0.5
+  input:
+    available: false
+  output:
+    available: false

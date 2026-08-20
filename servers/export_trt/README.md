@@ -60,8 +60,8 @@ YAML 字段：`type`（必填）、`batch_size`（动态模型必填）、`gpu_i
 
 ```bash
 curl -s -X POST http://127.0.0.1:9000/ai_stream2/export_trt/export \
-  -F "input=@peoplenet.zip" \
-  -F "config=@servers/export_trt/templates/peoplenet.yaml"
+  -F "input=@yolo26n.zip" \
+  -F "config=@servers/export_trt/templates/yolo26_det.yaml"
 ```
 
 ## 命令行
@@ -69,7 +69,6 @@ curl -s -X POST http://127.0.0.1:9000/ai_stream2/export_trt/export \
 ```bash
 ./servers/export_trt/scripts/3_export.sh --input models/onnx/yolo26n --config servers/export_trt/templates/yolo26_det.yaml
 ./servers/export_trt/scripts/3_export.sh --input models/onnx/yolov10x-smoke-fire --config servers/export_trt/templates/yolo10x_smoke_fire.yaml
-./servers/export_trt/scripts/3_export.sh --input models/onnx/peoplenet --config servers/export_trt/templates/peoplenet.yaml
 ./servers/export_trt/scripts/3_export.sh --input models/onnx/rtmpose-s-aic --config servers/export_trt/templates/rtmpose.yaml
 ```
 

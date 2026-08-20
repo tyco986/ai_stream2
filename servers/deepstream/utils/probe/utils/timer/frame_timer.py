@@ -18,6 +18,7 @@ AVAILABLE_TIME = (
     "nvsahipostprocess",
     "nvtracker",
     "nvdsanalytics",
+    "nvdspreprocess",
     "nvstreamdemux",
     "queue_demux",
     "nvvideoconvert",

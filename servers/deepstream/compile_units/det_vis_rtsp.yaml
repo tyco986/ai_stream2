@@ -4,6 +4,7 @@ files:
 - utils/base_pipeline/base_rtsp.py
 - utils/base_pipeline/times_attach.py
 - utils/base_pipeline/validate.py
+- utils/probe/det_fade_cache_probe.py
 - utils/probe/det_vis_rtsp_probe.py
 - utils/probe/utils/timer/__init__.py
 - utils/probe/utils/timer/decorator.py

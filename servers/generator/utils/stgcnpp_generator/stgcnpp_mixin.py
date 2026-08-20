@@ -3,14 +3,14 @@ from pathlib import Path
 
 import yaml
 
-from ..sgie_generator.single_sgie_mixin import SingleSgieMixin
+from ..topdown_pose_generator.topdown_pose_mixin import TopdownPoseMixin
 from ..subelement_generator.stgcnpp import StgcnppGenerator
 from ..subelement_generator.stgcnpp_preprocess import StgcnppPreprocessGenerator
 from ..subelement_generator.utils.default_gie.manager import StgcnppManager
 from ..subelement_generator.utils.stgcnpp_parser import StgcnppParser
 
 
-class StgcnppMixin(SingleSgieMixin):
+class StgcnppMixin(TopdownPoseMixin):
     STGCNPP_CONFIG_NAME = "sgie1.yml"
     STGCNPP_META_NAME = "sgie1_meta.json"
     PREPROCESS_CONFIG_NAME = "preprocess_stgcnpp.txt"

@@ -1,0 +1,26 @@
+--- a/deepstream_source/libs/nvdsinfer_yolo/nvdsinfer_yolo.cpp
++++ b/deepstream_source/libs/nvdsinfer_yolo/nvdsinfer_yolo.cpp
+@@ -177,9 +177,10 @@
+             }
+             assert((unsigned int) p_classes[i] < detectionParams.numClassesConfigured);
+ 
+-            NvDsInferObjectDetectionInfo object;
++            NvDsInferObjectDetectionInfo object{};
+             object.classId = (int) p_classes[i];
+             object.detectionConfidence = p_scores[i];
++            object.rotation_angle = 0.0f;
+ 
+             object.left=p_bboxes[4*i];
+             object.top=p_bboxes[4*i+1];
+@@ -295,9 +296,10 @@
+             continue;
+         }
+ 
+-        NvDsInferObjectDetectionInfo object;
++        NvDsInferObjectDetectionInfo object{};
+         object.classId = classId;
+         object.detectionConfidence = conf;
++        object.rotation_angle = 0.0f;
+         object.left   = det[0];
+         object.top    = det[1];
+         object.width  = det[2] - det[0];

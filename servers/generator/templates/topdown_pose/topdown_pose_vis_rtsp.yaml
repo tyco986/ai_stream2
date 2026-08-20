@@ -1,16 +1,16 @@
 # bash servers/generator/scripts/3_generate.sh --config topdown_pose_vis_rtsp
 
-generator: SingleSgieVisRTSPGenerator
+generator: TopdownPoseVisRTSPGenerator
 config_save_dir: /root/configs/generator/topdown_pose_vis_rtsp
 pgie:
   interval: 50
-  model_dir: /root/models/trt/peoplenet
+  model_dir: /root/models/trt/yolo26n
   class_attrs:
     0:
       conf: 0.4
 sgie:
   interval: 50
-  model_dir: /root/models/trt/rtmpose-s-aic
+  model_dir: /root/models/trt/rtmpose-s-coco-pruned
 tracker:
   class_id: 0
 analyzer: null
