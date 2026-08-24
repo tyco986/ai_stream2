@@ -85,10 +85,10 @@
     ]
   ],
   "batch_size": 64,
-  "precision": "fp32",
+  "precision": "fp16",
   "version": "stgcnpp",
   "task": "action",
   "gpu_id": 0,
   "opt_level": null,
-  "build_time": "2026-08-19T09:58:16.104252+08:00"
+  "build_time": "2026-08-20T21:53:30.504555+08:00"
 }

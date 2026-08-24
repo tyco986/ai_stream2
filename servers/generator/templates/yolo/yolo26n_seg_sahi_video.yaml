@@ -6,7 +6,7 @@
 generator: SegSahiVideoGenerator
 config_save_dir: /root/configs/generator/yolo26n_seg_sahi_video
 pgie:
-  interval: 0
+  interval: 50
   model_dir: /root/models/trt/yolo26n-seg
   class_attrs:
     all:
@@ -14,7 +14,6 @@ pgie:
 tracker: null
 analyzer: null
 input: /root/attachments/videos/video1.mp4
-output: /root/outputs/deepstream/yolo26n_seg_sahi_video.mp4
 sahi:
   nvsahipreprocess:
     slice_width: 640

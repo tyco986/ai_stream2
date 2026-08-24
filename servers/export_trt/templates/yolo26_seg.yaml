@@ -2,5 +2,5 @@
 type: YOLO26-SEG
 batch_size: 18
 gpu_id: 0
-precision: fp16
-opt_level: null
+precision: int8
+opt_level: 3

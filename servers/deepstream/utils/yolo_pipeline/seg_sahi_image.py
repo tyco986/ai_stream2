@@ -1,9 +1,8 @@
-from pyservicemaker import Probe
-
 from utils.base_pipeline.base_image import BaseImagePipeline
-from utils.base_pipeline.validate import validate_probe_interval
-from utils.probe.seg_sahi_image_probe import SegSahiImageProbe
-from utils.probe.utils.logger.det_logger import DetLogger
+from utils.base_pipeline.utils.validate import validate_probe_interval
+from utils.tool.drawer.seg_drawer import SegDrawer
+from utils.tool.logger.det_logger import DetLogger
+from utils.tool.messager.det_messager import DetMessager
 
 
 class SegSahiImagePipeline(BaseImagePipeline):
@@ -32,13 +31,10 @@ class SegSahiImagePipeline(BaseImagePipeline):
         validate_probe_interval(self.pgie_interval, self.logger.get("interval", 0))
 
     def build(self):
-        logger = DetLogger(**self.logger)
-        self.attach_latency_and_times(logger)
-        self.pipeline.attach(
-            "nvdsanalytics",
-            Probe(
-                "yolo",
-                SegSahiImageProbe(drawer=self.drawer, logger=logger, messager=self.messager),
-            ),
-        )
+        self.logger = DetLogger(**self.logger)
+        self.drawer = SegDrawer(**self.drawer)
+        self.parser = self.drawer
+        self.messager = DetMessager(**self.messager)
+        self.attach_latency_and_times(self.logger)
+        self.attach_detections("yolo")
         return self.pipeline

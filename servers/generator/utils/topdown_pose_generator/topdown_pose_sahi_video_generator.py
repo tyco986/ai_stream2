@@ -8,8 +8,7 @@ TOPDOWN_POSE_SAHI_VIDEO_TOPOLOGY_DOC = """
     Topology::
 
         nvurisrcbin → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
-            → nvtracker → sgie0 → nvdsanalytics → nvosdbin → nvvideoconvert → nvv4l2h264enc
-            → h264parse → mp4mux → filesink
+            → nvtracker → sgie0 → nvdsanalytics → nvvideoconvert → fakesink
 
     Notes::
 
@@ -20,7 +19,7 @@ TOPDOWN_POSE_SAHI_VIDEO_TOPOLOGY_DOC = """
 class TopdownPoseSahiVideoGenerator(TopdownPoseMixin, BaseSahiVideoGenerator):
     GENERATOR = "TopdownPoseSahiVideoGenerator"
     SINK_PATH_TEMPLATES = {
-        "filesink": [
+        "fakesink": [
             "nvurisrcbin",
             "nvstreammux",
             "nvsahipreprocess",
@@ -30,16 +29,12 @@ class TopdownPoseSahiVideoGenerator(TopdownPoseMixin, BaseSahiVideoGenerator):
             "nvtracker",
             "sgie0",
             "nvdsanalytics",
-            "nvosdbin",
             "nvvideoconvert",
-            "nvv4l2h264enc",
-            "h264parse",
-            "mp4mux",
-            "filesink",
+            "fakesink",
         ],
     }
 
-    f"""Generate topdown-pose SAHI video pipeline YAML.
+    f"""Generate topdown-pose SAHI video pipeline YAML (headless, ends at fakesink).
 
     {TOPDOWN_POSE_SAHI_VIDEO_TOPOLOGY_DOC}
     """
@@ -47,7 +42,6 @@ class TopdownPoseSahiVideoGenerator(TopdownPoseMixin, BaseSahiVideoGenerator):
     def __init__(
         self,
         input: str | Path,
-        output: str | Path,
         analyzer: dict | None,
         pgie: dict,
         sgie: dict,
@@ -57,7 +51,6 @@ class TopdownPoseSahiVideoGenerator(TopdownPoseMixin, BaseSahiVideoGenerator):
         self.sgie = sgie
         super().__init__(
             input=input,
-            output=output,
             analyzer=analyzer,
             pgie=pgie,
             sahi=sahi,
@@ -148,31 +141,14 @@ class TopdownPoseSahiVideoGenerator(TopdownPoseMixin, BaseSahiVideoGenerator):
         )
         gpu_id = self.pgie_generator.gpu_id
         self._append_node(
-            "nvosdbin",
-            "nvosdbin",
-            self._add_nvosdbin(**self.osd_kwargs(gpu_id)),
-        )
-        self._append_node(
             "nvvideoconvert",
             "nvvideoconvert",
             self._add_nvvideoconvert(gpu_id=gpu_id),
         )
         self._append_node(
-            "nvv4l2h264enc",
-            "nvv4l2h264enc",
-            self._add_nvv4l2h264enc(
-                bitrate=4_000_000,
-                iframeinterval=self.fps,
-                preset_id=1,
-                gpu_id=gpu_id,
-            ),
-        )
-        self._append_node("h264parse", "h264parse", self._add_h264parse())
-        self._append_node("mp4mux", "mp4mux", self._add_mp4mux())
-        self._append_node(
-            "filesink",
-            "filesink",
-            self._add_filesink(self.output, sync=False, async_=False),
+            "fakesink",
+            "fakesink",
+            self._add_fakesink(sync=False, async_=False),
         )
 
     def link(self) -> None:
@@ -189,10 +165,6 @@ class TopdownPoseSahiVideoGenerator(TopdownPoseMixin, BaseSahiVideoGenerator):
             inference_tail = "nvtracker"
         edges[inference_tail] = "sgie0"
         edges["sgie0"] = "nvdsanalytics"
-        edges["nvdsanalytics"] = "nvosdbin"
-        edges["nvosdbin"] = "nvvideoconvert"
-        edges["nvvideoconvert"] = "nvv4l2h264enc"
-        edges["nvv4l2h264enc"] = "h264parse"
-        edges["h264parse"] = "mp4mux"
-        edges["mp4mux"] = "filesink"
+        edges["nvdsanalytics"] = "nvvideoconvert"
+        edges["nvvideoconvert"] = "fakesink"
         self.pipeline["deepstream"]["edges"] = edges

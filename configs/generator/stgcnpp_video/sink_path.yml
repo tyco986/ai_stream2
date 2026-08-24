@@ -1,4 +1,4 @@
-filesink:
+fakesink:
 - nvurisrcbin
 - nvstreammux
 - pgie
@@ -7,9 +7,5 @@ filesink:
 - nvdspreprocess
 - sgie1
 - nvdsanalytics
-- nvosdbin
 - nvvideoconvert
-- nvv4l2h264enc
-- h264parse
-- mp4mux
-- filesink
+- fakesink

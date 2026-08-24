@@ -6,7 +6,7 @@ from utils.yolo.yolo_det_exporter import YoloDetExporter
 
 
 class YoloSegExporter(YoloDetExporter):
-    def static_plugin_path(self) -> Path:
+    def plugin_path(self) -> Path | None:
         plugin_path = LIBS_ROOT / YOLO_SEG_PLUGIN_NAME
         if not plugin_path.is_file():
             raise ValueError(f"missing static plugin: {plugin_path}")
@@ -24,5 +24,5 @@ class YoloSegExporter(YoloDetExporter):
         command = super().build_trtexec_command(
             bundle, engine_path, batch_size, gpu_id, precision, opt_level
         )
-        command.append(f"--staticPlugins={self.static_plugin_path()}")
+        command.append(f"--staticPlugins={self.plugin_path()}")
         return command

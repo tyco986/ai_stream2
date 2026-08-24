@@ -12,10 +12,8 @@ pgie:
     0:
       conf: 0.25
 sgie:
-  interval: 5
+  interval: 50
   model_dir: /root/models/trt/rtmpose-s-coco-pruned
-tracker:
-  class_id: 0
+tracker: null
 analyzer: null
 input: /root/attachments/videos/video1.mp4
-output: /root/outputs/deepstream/topdown_pose_video.mp4

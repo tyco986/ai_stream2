@@ -2,6 +2,8 @@
 
 构建镜像时由 `Dockerfile` 自动应用（`gstnvinfer` 为 `-p0`，sahi 为 `-p1`）。改补丁后需重新跑 `scripts/1_build_dev_image.sh`。
 
+YOLO-Pose 解析与 SAHI OKS-NMS 不走 patch：见 `modules/nvdsinfer_yolo_pose`（`libnvds_infer_yolo_pose.so`）和 `modules/nvsahipostprocess_pose`（element `nvsahipostprocess_pose`）。
+
 | 补丁 | 作用 |
 |------|------|
 | `gstnvinfer-interval-tensor-input.patch` | `interval` 在 `process_full_frame`（PGIE）里生效，但 `process_objects`（SGIE `process-mode: 2`）和 `process_tensor_input`（SAHI）都不读它。补丁让这两条路径同样按 `interval_counter % (interval + 1)` 跳帧，空 object list 时直接 `GST_FLOW_OK`。 |

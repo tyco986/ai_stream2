@@ -33,7 +33,7 @@ class StgcnppMixin(TopdownPoseMixin):
     def init_stgcnpp(self) -> None:
         self.stgcnpp = {
             "model_dir": self.stgcnpp["model_dir"],
-            "interval": int(self.stgcnpp.get("interval", 0)),
+            "interval": int(self.stgcnpp.get("interval", 1)),
         }
         self.stgcnpp_config_parser = StgcnppParser(
             self.stgcnpp["model_dir"],

@@ -1,0 +1,12 @@
+filesink:
+- nvurisrcbin
+- nvstreammux
+- nvsahipreprocess
+- pgie
+- queue_sahi
+- nvsahipostprocess_pose
+- nvdsanalytics
+- nvosdbin
+- nvvideoconvert
+- nvjpegenc
+- filesink

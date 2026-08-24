@@ -109,7 +109,7 @@ class BaseRTSPGenerator(PipelineGenerator):
         self.pgie = {
             "model_dir": self.pgie["model_dir"],
             "class_attrs": self.pgie["class_attrs"],
-            "interval": int(self.pgie.get("interval", 0)),
+            "interval": int(self.pgie.get("interval", 1)),
         }
         self.pgie_config_parser = PgieParser(
             self.pgie["model_dir"],

@@ -18,7 +18,7 @@ class StgcnppParser:
     def __init__(
         self,
         model_dir: str | Path,
-        interval: int = 0,
+        interval: int = 1,
     ) -> None:
         self.model_dir = model_dir
         self.interval = interval

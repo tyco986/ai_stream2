@@ -25,6 +25,7 @@ SAHI_RTSP_TOPOLOGY_DOC = """
 
 class BaseSahiRTSPGenerator(BaseRTSPGenerator):
     SAHI_PREPROCESS_CONFIG_NAME = "nvsahipreprocess.ini"
+    SAHI_POSTPROCESS = "nvsahipostprocess"
     SINK_PATH_TEMPLATES = {
         "fakesink{index}": [
             "nvurisrcbin{index}",
@@ -155,7 +156,7 @@ class BaseSahiRTSPGenerator(BaseRTSPGenerator):
             ),
         )
         sahi = self.sahi["nvsahipreprocess"]
-        postprocess = self.sahi["nvsahipostprocess"]
+        postprocess = self.sahi[self.SAHI_POSTPROCESS]
         self._append_node(
             "nvsahipreprocess",
             "nvsahipreprocess",
@@ -181,16 +182,9 @@ class BaseSahiRTSPGenerator(BaseRTSPGenerator):
         )
         self._append_node("queue", "queue_sahi", self._add_queue())
         self._append_node(
-            "nvsahipostprocess",
-            "nvsahipostprocess",
-            self._add_nvsahipostprocess(
-                gie_ids=str(self.pgie_generator.config["property"]["gie-unique-id"]),
-                match_metric=1,
-                match_threshold=postprocess["match_threshold"],
-                class_agnostic=False,
-                enable_merge=True,
-                two_phase_nmm=True,
-            ),
+            self.SAHI_POSTPROCESS,
+            self.SAHI_POSTPROCESS,
+            self.sahi_postprocess_properties(postprocess),
         )
         if self.enable_nvtracker:
             self._append_node(
@@ -236,8 +230,8 @@ class BaseSahiRTSPGenerator(BaseRTSPGenerator):
         edges["nvstreammux"] = "nvsahipreprocess"
         edges["nvsahipreprocess"] = "pgie"
         edges["pgie"] = "queue_sahi"
-        edges["queue_sahi"] = "nvsahipostprocess"
-        inference_tail = "nvsahipostprocess"
+        edges["queue_sahi"] = self.SAHI_POSTPROCESS
+        inference_tail = self.SAHI_POSTPROCESS
         if self.enable_nvtracker:
             edges[inference_tail] = "nvtracker"
             inference_tail = "nvtracker"
@@ -248,3 +242,13 @@ class BaseSahiRTSPGenerator(BaseRTSPGenerator):
             edges[f"queue_demux{index}"] = f"nvvideoconvert{index}"
             edges[f"nvvideoconvert{index}"] = f"fakesink{index}"
         self.pipeline["deepstream"]["edges"] = edges
+
+    def sahi_postprocess_properties(self, postprocess: dict) -> dict:
+        return self._add_nvsahipostprocess(
+            gie_ids=str(self.pgie_generator.config["property"]["gie-unique-id"]),
+            match_metric=1,
+            match_threshold=postprocess["match_threshold"],
+            class_agnostic=False,
+            enable_merge=postprocess.get("enable_merge", True),
+            two_phase_nmm=True,
+        )

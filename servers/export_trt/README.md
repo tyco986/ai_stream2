@@ -9,6 +9,8 @@
 | `ai_stream2_export_trt_dev` | `1_build_dev_image.sh` | 开发：运行时依赖 + seg static plugin |
 | `ai_stream2_export_trt_prod` | `1_build_prod_image.sh` | 生产：dev + 内置 `servers/export_trt` 代码 |
 
+改 `requirements.txt`（含 YOLO INT8 的 `tensorrt` / `pillow`）后需重建 dev 镜像。
+
 原生产物：`libnvdsinfer_custom_impl_Yolo_seg.so`（来自 `attachments/deepstream-sahi/nvdsinfer_custom_impl_Yolo_seg.zip`）在 `/opt/ai_stream2/servers/export_trt/libs`（不随 `/app` 挂载覆盖）。segment 导出时经 `--staticPlugins` 注入。
 
 ## 开发与生产
@@ -57,6 +59,15 @@ Swagger：`http://127.0.0.1:9000/docs`
 `POST` 为 `multipart/form-data`：`input` 为 zip，`config` 为 YAML。
 
 YAML 字段：`type`（必填）、`batch_size`（动态模型必填）、`gpu_id`、`precision`、`opt_level`。
+
+INT8（YOLO MinMax PTQ）：YAML 只改 `precision: int8`，且 `batch_size >= 8`（static ONNX 的固定 batch 同样）。校准图统一用 `/root/attachments/int8_calib.zip`（500 张，校准 batch=8）；或把已有 `{stem}.cache` 放在 ONNX 目录里复用。产物 `{stem}.cache` 在 TRT 目录。RTMPose / ST-GCN++ 的 INT8 仍走 `trtexec --int8`，未接校准。
+
+```yaml
+type: YOLO26-DET
+batch_size: 18
+gpu_id: 0
+precision: int8
+```
 
 ```bash
 curl -s -X POST http://127.0.0.1:9000/ai_stream2/export_trt/export \

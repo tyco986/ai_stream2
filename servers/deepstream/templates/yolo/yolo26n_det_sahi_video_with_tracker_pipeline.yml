@@ -3,12 +3,6 @@
 type: DetSahiVideoPipeline
 name: yolo26n-det-sahi-video-with-tracker
 config_dir: /root/configs/generator/yolo26n_det_sahi_video_with_tracker
-drawer:
-  show_label: true
-  show_conf: true
-  show_id: true
-  interval: 50
-  fade_time: 1
 logger:
   interval: 50
 messager:

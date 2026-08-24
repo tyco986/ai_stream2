@@ -1,0 +1,43 @@
+type: PoseRTSPPipeline
+params:
+  drawer:
+    available: false
+  parser:
+    available: true
+    params: {}
+  logger:
+    available: true
+    params:
+      interval:
+        available: true
+        default: 50
+      times:
+        available: false
+        default:
+        - latency
+        - pgie
+  messager:
+    available: true
+    params:
+      interval:
+        available: true
+        default: 0
+  debouncer:
+    available: false
+    params:
+      length:
+        available: false
+        default: 10
+      threshold:
+        available: false
+        default: 0.5
+      class_ids:
+        available: false
+        default:
+        - 0
+        - 1
+      mode:
+        available: false
+        default: fold
+  capturer:
+    available: false

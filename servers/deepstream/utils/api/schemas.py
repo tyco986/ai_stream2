@@ -29,6 +29,7 @@ class StartPipelineRequest(BaseModel):
     logger: dict = {}
     messager: dict = {}
     drawer: dict | None = None
+    parser: dict | None = None
     debouncer: dict | None = None
     capturer: dict | None = None
 

@@ -8,6 +8,7 @@ files:
 - utils/subelement_generator/nvsahipreprocess.py
 - utils/subelement_generator/nvtracker.py
 - utils/subelement_generator/pgie.py
+- utils/subelement_generator/utils/nvinfer_interval.py
 - utils/subelement_generator/pipeline.py
 - utils/subelement_generator/utils/default_gie/__init__.py
 - utils/subelement_generator/utils/default_gie/yolo_det.py

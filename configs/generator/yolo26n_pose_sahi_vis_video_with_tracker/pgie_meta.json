@@ -1,0 +1,34 @@
+{
+  "batch_mode": "dynamic",
+  "input_tensor_name": "images",
+  "output_tensor_name": "output0",
+  "classes": [
+    "person"
+  ],
+  "input_tensor_shape": [
+    18,
+    3,
+    640,
+    640
+  ],
+  "output_tensor_shape": [
+    18,
+    30,
+    57
+  ],
+  "batch_size": 18,
+  "precision": "fp16",
+  "version": "yolo26",
+  "task": "pose",
+  "yolo_export": "e2e",
+  "max_det": 30,
+  "conf": 0.25,
+  "bundle_sha256": "30b24c0d40665dd61dc7b13c93e853904f6fd690a1143a77df439f43ff30e5fb",
+  "bundle_files": {
+    "labels.txt": "51d7a35f479052ab571dc6996a486c94d766358e9dab8d223c98e455544e8080",
+    "yolo26n-pose.onnx": "2717f4cf181bf6b05f4baca4d0e3ff50625b16d3e41bd22a3cc0c1055becd49a"
+  },
+  "gpu_id": 0,
+  "opt_level": null,
+  "build_time": "2026-08-21T19:32:20.009545+08:00"
+}

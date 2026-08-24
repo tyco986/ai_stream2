@@ -62,5 +62,6 @@ models/
 outputs/
 logs/
 recordings/
+attachments/coco_2017_val/
 # Runtime secrets (vendor private keys, site age keys, postgres data)
 secrets/

@@ -7,10 +7,8 @@ from ..subelement_generator.utils.default_gie import YoloSeg
 class SegVideoGenerator(BaseVideoGenerator):
     GENERATOR = "SegVideoGenerator"
 
-    f"""Generate YOLO segmentation video pipeline YAML.
+    f"""Generate YOLO segmentation video pipeline YAML (headless, ends at fakesink).
 
-    Reads ``input`` video via DeepStream, runs inference with OSD, and writes the
-    annotated result to ``output``. Does not insert ``nvmsgconv`` / ``nvmsgbroker``.
     {VIDEO_TOPOLOGY_DOC}
     """
 
@@ -18,11 +16,3 @@ class SegVideoGenerator(BaseVideoGenerator):
         self.pgie_generator.config = copy.deepcopy(YoloSeg)
         self.pgie_generator.update_config()
         self.pgie_yml = self.pgie_generator.config
-
-    def osd_kwargs(self, gpu_id: int) -> dict:
-        return {
-            "gpu_id": gpu_id,
-            "display_bbox": True,
-            "display_text": True,
-            "display_mask": True,
-        }

@@ -6,6 +6,6 @@ pgie:
   class_attrs:
     all:
       conf: 0.25
-  interval: 0
+  interval: 50
 analyzer: null
 config_save_dir: /root/configs/generator/yolo11n_seg_image

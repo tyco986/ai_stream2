@@ -17,8 +17,8 @@ VIDEO_STREAM_NAME = "video"
 VIDEO_TOPOLOGY_DOC = """
     Topology::
 
-        nvurisrcbin → nvstreammux → pgie → nvtracker → nvdsanalytics → nvosdbin → nvvideoconvert
-            → nvv4l2h264enc → h264parse → mp4mux → filesink
+        nvurisrcbin → nvstreammux → pgie → nvtracker → nvdsanalytics → nvvideoconvert
+            → fakesink
 """
 
 
@@ -31,38 +31,32 @@ class BaseVideoGenerator(PipelineGenerator):
     PARAMS_NAME = "params.yml"
     SINK_PATH_CONFIG_NAME = "sink_path.yml"
     SINK_PATH_TEMPLATES = {
-        "filesink": [
+        "fakesink": [
             "nvurisrcbin",
             "nvstreammux",
             "pgie",
             "nvtracker",
             "nvdsanalytics",
-            "nvosdbin",
             "nvvideoconvert",
-            "nvv4l2h264enc",
-            "h264parse",
-            "mp4mux",
-            "filesink",
+            "fakesink",
         ],
     }
 
-    f"""Generate YOLO video pipeline YAML.
+    f"""Generate YOLO video pipeline YAML (headless, ends at fakesink).
 
-    Reads ``input`` video via DeepStream, runs inference with OSD, and writes the
-    annotated result to ``output``. Does not insert ``nvmsgconv`` / ``nvmsgbroker``.
+    Reads ``input`` video via DeepStream and runs inference without OSD encode.
+    Does not insert ``nvmsgconv`` / ``nvmsgbroker``.
     {VIDEO_TOPOLOGY_DOC}
     """
 
     def __init__(
         self,
         input: str | Path,
-        output: str | Path,
         analyzer: dict | None,
         pgie: dict,
         tracker: dict | None = None,
     ) -> None:
         self.input = Path(input).expanduser().resolve()
-        self.output = Path(output).expanduser().resolve()
         self.analyzer = analyzer
         self.tracker = tracker
         self.pgie = pgie
@@ -82,13 +76,11 @@ class BaseVideoGenerator(PipelineGenerator):
         self.height = video_info["height"]
         self.fps = video_info["fps"]
         self.runtime_batch_size = 1
-        self.output.parent.mkdir(parents=True, exist_ok=True)
 
     def init_params(self) -> None:
         self.params_yml = {}
         self.params_yml["generator"] = self.GENERATOR
         self.params_yml["input"] = str(self.input)
-        self.params_yml["output"] = str(self.output)
         self.params_yml["pgie"] = self.pgie
         self.params_yml["analyzer"] = self.analyzer
         self.params_yml["tracker"] = self.tracker
@@ -102,7 +94,7 @@ class BaseVideoGenerator(PipelineGenerator):
         self.pgie = {
             "model_dir": self.pgie["model_dir"],
             "class_attrs": self.pgie["class_attrs"],
-            "interval": int(self.pgie.get("interval", 0)),
+            "interval": int(self.pgie.get("interval", 1)),
         }
         self.pgie_config_parser = PgieParser(
             self.pgie["model_dir"],
@@ -167,7 +159,6 @@ class BaseVideoGenerator(PipelineGenerator):
                 properties["config-file"] = str(
                     config_save_dir / self.ANALYTICS_CONFIG_NAME
                 )
-
 
     def build_sink_paths(self) -> dict[str, list[str]]:
         templates = self.SINK_PATH_TEMPLATES
@@ -293,31 +284,14 @@ class BaseVideoGenerator(PipelineGenerator):
         )
         gpu_id = self.pgie_generator.gpu_id
         self._append_node(
-            "nvosdbin",
-            "nvosdbin",
-            self._add_nvosdbin(**self.osd_kwargs(gpu_id)),
-        )
-        self._append_node(
             "nvvideoconvert",
             "nvvideoconvert",
             self._add_nvvideoconvert(gpu_id=gpu_id),
         )
         self._append_node(
-            "nvv4l2h264enc",
-            "nvv4l2h264enc",
-            self._add_nvv4l2h264enc(
-                bitrate=4_000_000,
-                iframeinterval=self.fps,
-                preset_id=1,
-                gpu_id=gpu_id,
-            ),
-        )
-        self._append_node("h264parse", "h264parse", self._add_h264parse())
-        self._append_node("mp4mux", "mp4mux", self._add_mp4mux())
-        self._append_node(
-            "filesink",
-            "filesink",
-            self._add_filesink(self.output, sync=False, async_=False),
+            "fakesink",
+            "fakesink",
+            self._add_fakesink(sync=False, async_=False),
         )
 
     def link(self) -> None:
@@ -330,12 +304,8 @@ class BaseVideoGenerator(PipelineGenerator):
             edges[inference_tail] = "nvtracker"
             inference_tail = "nvtracker"
         edges[inference_tail] = "nvdsanalytics"
-        edges["nvdsanalytics"] = "nvosdbin"
-        edges["nvosdbin"] = "nvvideoconvert"
-        edges["nvvideoconvert"] = "nvv4l2h264enc"
-        edges["nvv4l2h264enc"] = "h264parse"
-        edges["h264parse"] = "mp4mux"
-        edges["mp4mux"] = "filesink"
+        edges["nvdsanalytics"] = "nvvideoconvert"
+        edges["nvvideoconvert"] = "fakesink"
         self.pipeline["deepstream"]["edges"] = edges
 
     @staticmethod

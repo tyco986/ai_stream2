@@ -2,10 +2,11 @@ import json
 from pathlib import Path
 
 import yaml
-from pyservicemaker import Pipeline, Probe
+from pyservicemaker import Pipeline
 
-from utils.base_pipeline.times_attach import LatencyTimesAttach
-from utils.base_pipeline.validate import nvinfer_period
+from utils.base_pipeline.utils.detection_attach import DetectionAttach
+from utils.base_pipeline.utils.times_attach import LatencyTimesAttach
+from utils.base_pipeline.utils.validate import nvinfer_period
 
 PIPELINE_YML = "pipeline.yml"
 PAD_LINKS_YML = "pad_links.yml"
@@ -14,7 +15,7 @@ PGIE_YML = "pgie.yml"
 SINK_PATH_YML = "sink_path.yml"
 
 
-class BaseRTSPPipeline(LatencyTimesAttach):
+class BaseRTSPPipeline(LatencyTimesAttach, DetectionAttach):
     def __init__(self, config_dir, pipeline_name):
         self.config_dir = Path(config_dir)
         self.pipeline_name = pipeline_name
@@ -54,6 +55,3 @@ class BaseRTSPPipeline(LatencyTimesAttach):
 
     def attach_latency_and_times(self, logger, target="nvvideoconvert"):
         self.attach_latency_and_times_indexed(logger, self.stream_indices(), target)
-
-    def attach_nvdsanalytics_probe(self, name, operator):
-        self.pipeline.attach("nvdsanalytics", Probe(name, operator))

@@ -1,0 +1,14 @@
+# Prerequisite: servers/generator/scripts/3_generate.sh --config yolo26n_seg_sahi_vis_video
+
+type: SegSahiVisVideoPipeline
+name: yolo26n-seg-sahi-vis-video
+config_dir: /root/configs/generator/yolo26n_seg_sahi_vis_video
+drawer:
+  show_label: true
+  show_conf: true
+logger:
+  interval: 50
+messager:
+  topic: deepstream-detections
+  host: ai_stream2_kafka
+  port: 9092

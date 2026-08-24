@@ -9,10 +9,10 @@ pgie:
     0:
       conf: 0.25
 sgie:
-  interval: 0
+  interval: 50
   model_dir: /root/models/trt/rtmpose-s-coco-pruned
 stgcnpp:
-  interval: 0
+  interval: 50
   model_dir: /root/models/trt/stgcnpp-ntu60
 tracker:
   class_id: 0

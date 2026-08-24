@@ -7,37 +7,66 @@ import yaml
 
 class PipelineManager:
     SCHEMA_DIR = Path(__file__).resolve().parents[2] / "schemas"
-    RUNNER_MODULE = "utils.base_pipeline.pipeline_runner"
+    RUNNER_MODULE = "utils.base_pipeline.utils.pipeline_runner"
     PIPELINES = {
         "BaseImagePipeline": "utils.base_pipeline.base_image",
         "BaseVideoPipeline": "utils.base_pipeline.base_video",
         "BaseRTSPPipeline": "utils.base_pipeline.base_rtsp",
-        "DetVisRTSPPipeline": "utils.yolo_pipeline.det_vis_rtsp",
-        "SegVisRTSPPipeline": "utils.yolo_pipeline.seg_vis_rtsp",
         "DetImagePipeline": "utils.yolo_pipeline.det_image",
-        "Pose2DImagePipeline": "utils.pose_pipeline.pose2d_image",
-        "Pose2DVideoPipeline": "utils.pose_pipeline.pose2d_video",
-        "Pose2DRTSPPipeline": "utils.pose_pipeline.pose2d_rtsp",
-        "Pose2DVisRTSPPipeline": "utils.pose_pipeline.pose2d_vis_rtsp",
-        "Pose2DSahiImagePipeline": "utils.pose_pipeline.pose2d_sahi_image",
-        "Pose2DSahiVideoPipeline": "utils.pose_pipeline.pose2d_sahi_video",
-        "Pose2DSahiRTSPPipeline": "utils.pose_pipeline.pose2d_sahi_rtsp",
-        "Pose2DSahiVisRTSPPipeline": "utils.pose_pipeline.pose2d_sahi_vis_rtsp",
-        "StgcnppImagePipeline": "utils.stgcnpp_pipeline.stgcnpp_image",
-        "StgcnppVideoPipeline": "utils.stgcnpp_pipeline.stgcnpp_video",
-        "StgcnppRTSPPipeline": "utils.stgcnpp_pipeline.stgcnpp_rtsp",
-        "StgcnppVisRTSPPipeline": "utils.stgcnpp_pipeline.stgcnpp_vis_rtsp",
+        "DetSahiImagePipeline": "utils.yolo_pipeline.det_sahi_image",
+        "DetVideoPipeline": "utils.yolo_pipeline.det_video",
+        "DetVisVideoPipeline": "utils.yolo_pipeline.det_vis_video",
+        "DetSahiVideoPipeline": "utils.yolo_pipeline.det_sahi_video",
+        "DetSahiVisVideoPipeline": "utils.yolo_pipeline.det_sahi_vis_video",
+        "DetRTSPPipeline": "utils.yolo_pipeline.det_rtsp",
+        "DetVisRTSPPipeline": "utils.yolo_pipeline.det_vis_rtsp",
+        "DetSahiRTSPPipeline": "utils.yolo_pipeline.det_sahi_rtsp",
+        "DetSahiVisRTSPPipeline": "utils.yolo_pipeline.det_sahi_vis_rtsp",
         "SegImagePipeline": "utils.yolo_pipeline.seg_image",
         "SegSahiImagePipeline": "utils.yolo_pipeline.seg_sahi_image",
-        "SegSahiVideoPipeline": "utils.yolo_pipeline.seg_sahi_video",
-        "SegSahiVisRTSPPipeline": "utils.yolo_pipeline.seg_sahi_vis_rtsp",
-        "DetVideoPipeline": "utils.yolo_pipeline.det_video",
         "SegVideoPipeline": "utils.yolo_pipeline.seg_video",
-        "DetSahiVisRTSPPipeline": "utils.yolo_pipeline.det_sahi_vis_rtsp",
-        "DetSahiImagePipeline": "utils.yolo_pipeline.det_sahi_image",
-        "DetSahiVideoPipeline": "utils.yolo_pipeline.det_sahi_video",
+        "SegVisVideoPipeline": "utils.yolo_pipeline.seg_vis_video",
+        "SegSahiVideoPipeline": "utils.yolo_pipeline.seg_sahi_video",
+        "SegSahiVisVideoPipeline": "utils.yolo_pipeline.seg_sahi_vis_video",
+        "SegRTSPPipeline": "utils.yolo_pipeline.seg_rtsp",
+        "SegVisRTSPPipeline": "utils.yolo_pipeline.seg_vis_rtsp",
+        "SegSahiRTSPPipeline": "utils.yolo_pipeline.seg_sahi_rtsp",
+        "SegSahiVisRTSPPipeline": "utils.yolo_pipeline.seg_sahi_vis_rtsp",
+        "PoseImagePipeline": "utils.yolo_pipeline.pose_image",
+        "PoseSahiImagePipeline": "utils.yolo_pipeline.pose_sahi_image",
+        "PoseVideoPipeline": "utils.yolo_pipeline.pose_video",
+        "PoseVisVideoPipeline": "utils.yolo_pipeline.pose_vis_video",
+        "PoseSahiVideoPipeline": "utils.yolo_pipeline.pose_sahi_video",
+        "PoseSahiVisVideoPipeline": "utils.yolo_pipeline.pose_sahi_vis_video",
+        "PoseRTSPPipeline": "utils.yolo_pipeline.pose_rtsp",
+        "PoseVisRTSPPipeline": "utils.yolo_pipeline.pose_vis_rtsp",
+        "PoseSahiRTSPPipeline": "utils.yolo_pipeline.pose_sahi_rtsp",
+        "PoseSahiVisRTSPPipeline": "utils.yolo_pipeline.pose_sahi_vis_rtsp",
+        "RtmposeImagePipeline": "utils.rtmpose_pipeline.rtmpose_image",
+        "RtmposeSahiImagePipeline": "utils.rtmpose_pipeline.rtmpose_sahi_image",
+        "RtmposeVideoPipeline": "utils.rtmpose_pipeline.rtmpose_video",
+        "RtmposeVisVideoPipeline": "utils.rtmpose_pipeline.rtmpose_vis_video",
+        "RtmposeSahiVideoPipeline": "utils.rtmpose_pipeline.rtmpose_sahi_video",
+        "RtmposeSahiVisVideoPipeline": "utils.rtmpose_pipeline.rtmpose_sahi_vis_video",
+        "RtmposeRTSPPipeline": "utils.rtmpose_pipeline.rtmpose_rtsp",
+        "RtmposeVisRTSPPipeline": "utils.rtmpose_pipeline.rtmpose_vis_rtsp",
+        "RtmposeSahiRTSPPipeline": "utils.rtmpose_pipeline.rtmpose_sahi_rtsp",
+        "RtmposeSahiVisRTSPPipeline": "utils.rtmpose_pipeline.rtmpose_sahi_vis_rtsp",
+        "StgcnppImagePipeline": "utils.stgcnpp_pipeline.stgcnpp_image",
+        "StgcnppVideoPipeline": "utils.stgcnpp_pipeline.stgcnpp_video",
+        "StgcnppVisVideoPipeline": "utils.stgcnpp_pipeline.stgcnpp_vis_video",
+        "StgcnppSahiVideoPipeline": "utils.stgcnpp_pipeline.stgcnpp_sahi_video",
+        "StgcnppSahiVisVideoPipeline": "utils.stgcnpp_pipeline.stgcnpp_sahi_vis_video",
+        "StgcnppRTSPPipeline": "utils.stgcnpp_pipeline.stgcnpp_rtsp",
+        "StgcnppVisRTSPPipeline": "utils.stgcnpp_pipeline.stgcnpp_vis_rtsp",
+        "StgcnppSahiRTSPPipeline": "utils.stgcnpp_pipeline.stgcnpp_sahi_rtsp",
+        "StgcnppSahiVisRTSPPipeline": "utils.stgcnpp_pipeline.stgcnpp_sahi_vis_rtsp",
+        "PresenceVisVideoPipeline": "utils.event_pipeline.presence_vis_video",
+        "PresenceSahiVisVideoPipeline": "utils.event_pipeline.presence_sahi_vis_video",
         "PresenceRTSPPipeline": "utils.event_pipeline.presence_rtsp",
-        "PresenceVideoPipeline": "utils.event_pipeline.presence_video",
+        "PresenceVisRTSPPipeline": "utils.event_pipeline.presence_vis_rtsp",
+        "PresenceSahiRTSPPipeline": "utils.event_pipeline.presence_sahi_rtsp",
+        "PresenceSahiVisRTSPPipeline": "utils.event_pipeline.presence_sahi_vis_rtsp",
     }
     BASE_TYPES = frozenset(
         {
@@ -46,7 +75,16 @@ class PipelineManager:
             "BaseRTSPPipeline",
         }
     )
-    PRESENCE_TYPES = frozenset({"PresenceRTSPPipeline", "PresenceVideoPipeline"})
+    PRESENCE_TYPES = frozenset(
+        {
+            "PresenceVisVideoPipeline",
+            "PresenceSahiVisVideoPipeline",
+            "PresenceRTSPPipeline",
+            "PresenceVisRTSPPipeline",
+            "PresenceSahiRTSPPipeline",
+            "PresenceSahiVisRTSPPipeline",
+        }
+    )
     SCHEMAS = {}
     pipeline = None
     runner = None
@@ -105,12 +143,15 @@ class PipelineManager:
         drawer: dict | None,
         debouncer: dict | None,
         capturer: dict | None,
+        parser: dict | None = None,
     ) -> dict:
         kwargs = {
             "logger": logger,
             "messager": messager,
         }
-        if type in cls.PRESENCE_TYPES:
+        if type in cls.PARSER_TYPES:
+            kwargs["parser"] = parser if parser is not None else {}
+        elif type in cls.PRESENCE_TYPES:
             if debouncer is not None:
                 kwargs["debouncer"] = debouncer
             if drawer is not None:
@@ -132,6 +173,7 @@ class PipelineManager:
         drawer: dict | None,
         debouncer: dict | None,
         capturer: dict | None,
+        parser: dict | None = None,
     ) -> None:
         module = importlib.import_module(cls.PIPELINES[type])
         builder_cls = getattr(module, type)
@@ -141,7 +183,9 @@ class PipelineManager:
             builder = builder_cls(
                 config_dir,
                 name,
-                **cls.build_kwargs(type, logger, messager, drawer, debouncer, capturer),
+                **cls.build_kwargs(
+                    type, logger, messager, drawer, debouncer, capturer, parser
+                ),
             )
         runner_module = importlib.import_module(cls.RUNNER_MODULE)
         runner_cls = getattr(runner_module, "PipelineRunner")
@@ -157,4 +201,12 @@ class PipelineManager:
         return data
 
 
+PipelineManager.PARSER_TYPES = frozenset(
+    name
+    for name in PipelineManager.PIPELINES
+    if name not in PipelineManager.BASE_TYPES
+    and name not in PipelineManager.PRESENCE_TYPES
+    and "Image" not in name
+    and "Vis" not in name
+)
 PipelineManager.SCHEMAS = PipelineManager.build_schemas()

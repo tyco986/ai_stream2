@@ -16,6 +16,7 @@ class PipelineBodySerializer(serializers.Serializer):
     name = serializers.CharField(max_length=150)
     type = serializers.CharField(max_length=64)
     drawer = serializers.JSONField(required=False)
+    parser = serializers.JSONField(required=False)
     logger = serializers.JSONField(required=False)
     messager = serializers.JSONField(required=False)
     debouncer = serializers.JSONField(required=False, allow_null=True)

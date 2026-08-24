@@ -8,6 +8,7 @@ params:
     params:
       interval:
         available: true
+        min: 1
         default: 50
   tracker:
     available: true
@@ -57,5 +58,5 @@ params:
     available: true
     default: null
   output:
-    available: true
+    available: false
     default: null

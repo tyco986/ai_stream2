@@ -350,6 +350,7 @@ import {
   type CreatePipelineBody,
   type Debouncer,
   type Drawer,
+  type Parser,
   type PipelineAnalyzer,
   type SahiConfig,
   type TypeSchema,
@@ -414,6 +415,7 @@ const DEFAULT_SAHI: SahiConfig = {
 const form = reactive({
   name: '',
   type: '',
+  parser: {} as Parser,
   drawer: {
     show_label: true,
     show_conf: true,
@@ -529,6 +531,7 @@ function resetForm() {
   trackerEnabled.value = false
   analyzerEnabled.value = false
   trackerClassIds.value = [-1]
+  form.parser = {}
   form.drawer = {
     show_label: true,
     show_conf: true,
@@ -559,6 +562,7 @@ async function loadExisting(pipelineId: string) {
   const pipeline = await getPipeline(pipelineId)
   form.name = pipeline.name
   form.type = pipeline.type
+  form.parser = { ...(pipeline.parser || {}) }
   form.drawer = {
     show_label: true,
     show_conf: true,
@@ -788,6 +792,7 @@ async function onSave() {
   const body: CreatePipelineBody = {
     name: form.name.trim(),
     type: form.type,
+    parser: { ...form.parser },
     drawer: { ...form.drawer },
     logger: { ...form.logger },
     messager: { ...form.messager },

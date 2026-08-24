@@ -1,0 +1,19 @@
+generator: StgcnppVisVideoGenerator
+input: /root/attachments/videos/video1.mp4
+pgie:
+  model_dir: /root/models/trt/yolo26n
+  class_attrs:
+    0:
+      conf: 0.25
+  interval: 50
+analyzer: null
+tracker:
+  class_id: 0
+output: /root/outputs/deepstream/stgcnpp_vis_video.mp4
+sgie:
+  model_dir: /root/models/trt/rtmpose-s-coco-pruned
+  interval: 50
+stgcnpp:
+  model_dir: /root/models/trt/stgcnpp-ntu60
+  interval: 50
+config_save_dir: /root/configs/generator/stgcnpp_vis_video

@@ -14,7 +14,8 @@ WORKDIR /app
 RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 
 COPY servers/export_trt/requirements.txt /tmp/requirements.txt
-RUN pip install --break-system-packages --no-cache-dir -r /tmp/requirements.txt
+RUN pip install --break-system-packages --no-cache-dir -r /tmp/requirements.txt \
+ && pip install --break-system-packages --no-cache-dir --no-deps tensorrt-cu13==10.14.1.48.post1
 
 COPY attachments/deepstream-sahi/nvdsinfer_custom_impl_Yolo_seg.zip /root/attachments/deepstream-sahi/nvdsinfer_custom_impl_Yolo_seg.zip
 

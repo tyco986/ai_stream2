@@ -3,6 +3,7 @@ from pathlib import Path
 from utils.rtmpose.rtmpose_exporter import RtmposeExporter
 from utils.stgcnpp.stgcnpp_exporter import StgcnppExporter
 from utils.yolo.yolo_det_exporter import YoloDetExporter
+from utils.yolo.yolo_pose_exporter import YoloPoseExporter
 from utils.yolo.yolo_seg_exporter import YoloSegExporter
 
 
@@ -12,6 +13,7 @@ class TrtExporterManager:
         "YOLO11-DET": YoloDetExporter,
         "YOLO11-SEG": YoloSegExporter,
         "YOLO26-DET": YoloDetExporter,
+        "YOLO26-POSE": YoloPoseExporter,
         "YOLO26-SEG": YoloSegExporter,
         "RTMPOSE": RtmposeExporter,
         "STGCNPP": StgcnppExporter,

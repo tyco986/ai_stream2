@@ -42,6 +42,7 @@ constexpr const char* kLogicalNames[] = {
     "nvjpegenc",
     "nvosdbin",
     "nvsahipostprocess",
+    "nvsahipostprocess_pose",
     "nvsahipreprocess",
     "nvstreamdemux",
     "nvstreammux",

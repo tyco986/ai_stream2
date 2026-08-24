@@ -1,1 +1,1 @@
-# Import leaf modules directly, e.g. ``from utils.event_pipeline.presence_rtsp import PresenceRTSPPipeline``.
+# Import leaf modules directly, e.g. ``from utils.event_pipeline.presence_vis_rtsp import PresenceVisRTSPPipeline``.

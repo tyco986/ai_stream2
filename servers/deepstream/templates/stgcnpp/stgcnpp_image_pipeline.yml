@@ -4,7 +4,7 @@ type: StgcnppImagePipeline
 name: stgcnpp-image
 config_dir: /root/configs/generator/stgcnpp_image
 drawer:
-  show_pose: true
+  show_pose: false
 logger:
   interval: 0
 messager:

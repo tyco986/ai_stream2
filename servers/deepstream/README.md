@@ -9,7 +9,7 @@
 | `ai_stream2_deepstream_dev` | `1_build_dev_image.sh` | 开发：运行时依赖 + `/opt/ai_stream2/servers/deepstream/libs` |
 | `ai_stream2_deepstream_prod` | `1_build_prod_image.sh` | 生产：dev + 内置 `servers/deepstream` 代码 |
 
-原生产物：`libnvds_custom_sequence_preprocess.so` 在 `/opt/ai_stream2/servers/deepstream/libs`；YOLO 解析用 deepstream-sahi 的 `libnvds_infer_yolo.so`（镜像内 `/opt/nvidia/deepstream/deepstream/lib/`）。
+原生产物：`libnvds_custom_sequence_preprocess.so`、YOLO-Pose 解析 `libnvds_infer_yolo_pose.so` 在 `/opt/ai_stream2/servers/deepstream/libs`；det/seg YOLO 解析用 deepstream-sahi 的 `libnvds_infer_yolo.so`（`/opt/nvidia/deepstream/deepstream/lib/`）；pose SAHI 插件 `libnvdsgst_sahipostprocess_pose.so` 在 `GST_PLUGIN_PATH`。
 
 ## 开发与生产
 

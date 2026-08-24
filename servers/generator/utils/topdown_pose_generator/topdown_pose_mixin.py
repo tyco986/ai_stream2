@@ -23,7 +23,7 @@ class TopdownPoseMixin:
     def init_sgie(self) -> None:
         self.sgie = {
             "model_dir": self.sgie["model_dir"],
-            "interval": int(self.sgie.get("interval", 0)),
+            "interval": int(self.sgie.get("interval", 1)),
         }
         self.sgie_config_parser = SgieParser(
             self.sgie["model_dir"],

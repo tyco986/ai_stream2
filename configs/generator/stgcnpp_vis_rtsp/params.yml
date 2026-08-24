@@ -21,8 +21,8 @@ tracker:
   class_id: 0
 sgie:
   model_dir: /root/models/trt/rtmpose-s-coco-pruned
-  interval: 0
+  interval: 50
 stgcnpp:
   model_dir: /root/models/trt/stgcnpp-ntu60
-  interval: 0
+  interval: 50
 config_save_dir: /root/configs/generator/stgcnpp_vis_rtsp

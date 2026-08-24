@@ -62,7 +62,7 @@ if __name__ == "__main__":
         batch_size=1,
         network_mode=2,
         gpu_id=0,   
-        interval=0,
+        interval=1,
         class_attrs=None,
         filter_out_class_ids=None,
         num_detected_classes=80,

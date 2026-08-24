@@ -1,6 +1,6 @@
 # Prerequisite: servers/generator/scripts/3_generate.sh --config topdown_pose_vis_rtsp
 
-type: Pose2DVisRTSPPipeline
+type: RtmposeVisRTSPPipeline
 name: topdown-pose-vis-rtsp
 config_dir: /root/configs/generator/topdown_pose_vis_rtsp
 drawer:

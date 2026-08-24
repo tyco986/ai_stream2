@@ -3,11 +3,6 @@
 type: DetVideoPipeline
 name: yolo26n-det-video
 config_dir: /root/configs/generator/yolo26n_det_video
-drawer:
-  show_label: true
-  show_conf: true
-  interval: 50
-  fade_time: 1
 logger:
   interval: 50
 messager:

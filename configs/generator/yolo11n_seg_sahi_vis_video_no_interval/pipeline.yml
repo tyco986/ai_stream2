@@ -1,0 +1,98 @@
+deepstream:
+  nodes:
+  - type: nvurisrcbin
+    name: nvurisrcbin
+    properties:
+      uri: file:///root/attachments/videos/video1.mp4
+      disable-audio: true
+      select-rtp-protocol: 4
+  - type: nvstreammux
+    name: nvstreammux
+    properties:
+      batch-size: 1
+      width: 1920
+      height: 1080
+      enable-padding: false
+      batched-push-timeout: 40000
+      gpu-id: 0
+      live-source: false
+  - type: nvsahipreprocess
+    name: nvsahipreprocess
+    properties:
+      config-file: /root/configs/generator/yolo11n_seg_sahi_vis_video_no_interval/nvsahipreprocess.ini
+      slice-width: 640
+      slice-height: 640
+      overlap-width-ratio: 0.2
+      overlap-height-ratio: 0.2
+      enable-full-frame: true
+      gpu-id: 0
+      unique-id: 15
+      target-unique-ids: '1'
+  - type: nvinfer
+    name: pgie
+    properties:
+      config-file-path: /root/configs/generator/yolo11n_seg_sahi_vis_video_no_interval/pgie.yml
+      batch-size: 9
+      gpu-id: 0
+      input-tensor-meta: true
+      clip-object-outside-roi: false
+  - type: queue
+    name: queue_sahi
+    properties:
+      leaky: 2
+      max-size-buffers: 4
+  - type: nvsahipostprocess
+    name: nvsahipostprocess
+    properties:
+      gie-ids: '1'
+      match-metric: 1
+      match-threshold: 0.5
+      class-agnostic: false
+      enable-merge: true
+      two-phase-nmm: true
+  - type: nvdsanalytics
+    name: nvdsanalytics
+    properties:
+      config-file: /root/configs/generator/yolo11n_seg_sahi_vis_video_no_interval/nvdsanalytics.yml
+      gpu-id: 0
+  - type: nvosdbin
+    name: nvosdbin
+    properties:
+      gpu-id: 0
+      display-bbox: true
+      display-text: true
+      display-mask: true
+  - type: nvvideoconvert
+    name: nvvideoconvert
+    properties:
+      gpu-id: 0
+  - type: nvv4l2h264enc
+    name: nvv4l2h264enc
+    properties:
+      bitrate: 4000000
+      iframeinterval: 25
+      preset-id: 1
+      gpu-id: 0
+  - type: h264parse
+    name: h264parse
+  - type: mp4mux
+    name: mp4mux
+  - type: filesink
+    name: filesink
+    properties:
+      location: /root/outputs/deepstream/yolo11n_seg_sahi_vis_video_no_interval.mp4
+      sync: false
+      async: false
+  edges:
+    nvurisrcbin: nvstreammux
+    nvstreammux: nvsahipreprocess
+    nvsahipreprocess: pgie
+    pgie: queue_sahi
+    queue_sahi: nvsahipostprocess
+    nvsahipostprocess: nvdsanalytics
+    nvdsanalytics: nvosdbin
+    nvosdbin: nvvideoconvert
+    nvvideoconvert: nvv4l2h264enc
+    nvv4l2h264enc: h264parse
+    h264parse: mp4mux
+    mp4mux: filesink

@@ -1,5 +1,5 @@
 # Prerequisite: servers/generator/scripts/3_generate.sh --config topdown_pose_sahi_rtsp
 
-type: Pose2DSahiRTSPPipeline
+type: RtmposeSahiRTSPPipeline
 name: topdown-pose-sahi-rtsp
 config_dir: /root/configs/generator/topdown_pose_sahi_rtsp

@@ -8,12 +8,6 @@ messager:
   topic: deepstream-detections
   host: ai_stream2_kafka
   port: 9092
-drawer:
-  show_label: true
-  show_conf: true
-  show_id: false
-  interval: 50
-  fade_time: 1
 debouncer:
   length: 10
   threshold: 0.5

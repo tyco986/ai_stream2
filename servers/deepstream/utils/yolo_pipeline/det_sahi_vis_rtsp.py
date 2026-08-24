@@ -1,11 +1,8 @@
-from pyservicemaker import Probe
-
 from utils.base_pipeline.base_rtsp import BaseRTSPPipeline
-from utils.base_pipeline.validate import validate_probe_interval
-from utils.probe.det_fade_cache_probe import DetFadeCacheProbe
-from utils.probe.det_sahi_vis_rtsp_probe import DetSahiVisRTSPProbe
-from utils.probe.utils.drawer.det_fade_drawer import DetFadeDrawer
-from utils.probe.utils.logger.det_logger import DetLogger
+from utils.base_pipeline.utils.validate import validate_probe_interval
+from utils.tool.drawer.det_fade_drawer import DetFadeDrawer
+from utils.tool.logger.det_logger import DetLogger
+from utils.tool.messager.det_messager import DetMessager
 
 
 class DetSahiVisRTSPPipeline(BaseRTSPPipeline):
@@ -37,21 +34,14 @@ class DetSahiVisRTSPPipeline(BaseRTSPPipeline):
         self.messager = messager
         validate_probe_interval(self.pgie_interval, self.messager.get("interval", 0))
         validate_probe_interval(self.pgie_interval, self.logger.get("interval", 0))
+        validate_probe_interval(self.pgie_interval, self.drawer.get("interval", 0))
 
     def build(self):
-        logger = DetLogger(**self.logger)
-        drawer = DetFadeDrawer(**self.drawer)
-        self.attach_latency_and_times(logger)
-        self.pipeline.attach(
-            "nvsahipostprocess",
-            Probe("det_cache", DetFadeCacheProbe(drawer)),
-        )
-        self.attach_nvdsanalytics_probe(
-            "yolo",
-            DetSahiVisRTSPProbe(
-                drawer=drawer,
-                logger=logger,
-                messager=self.messager,
-            ),
-        )
+        self.logger = DetLogger(**self.logger)
+        self.drawer = DetFadeDrawer(**self.fade_drawer_params())
+        self.parser = self.drawer
+        self.messager = DetMessager(**self.messager)
+        self.attach_latency_and_times(self.logger)
+        self.attach_handler("nvsahipostprocess", "det_cache", self.drawer.cache_detections)
+        self.attach_detections("yolo")
         return self.pipeline

@@ -66,7 +66,7 @@
 | `source_kind` | `file` \| `stream` | Analyzer 参考图来源 |
 | `line_mode` | `strict` \| `balanced` \| `loose` | Line Crossing / Direction Detection |
 
-`pipeline.type` 为 DeepStream / generator 注册类名字符串（如 `DetVisRTSPPipeline`、`PresenceVideoPipeline`）；下拉枚举以 `GET /types` 为准；选定 Type 后的表单可编辑性与默认值以 `POST /schema` 全量响应为准（见 [TypeSchema](#typeschema)）。
+`pipeline.type` 为 DeepStream / generator 注册类名字符串（如 `DetVisRTSPPipeline`、`PresenceVisVideoPipeline`）；下拉枚举以 `GET /types` 为准；选定 Type 后的表单可编辑性与默认值以 `POST /schema` 全量响应为准（见 [TypeSchema](#typeschema)）。
 
 ### 字段语义
 
@@ -498,7 +498,7 @@ Base：`/ai_stream2/backend/pipelines`
   "items": [
     { "type": "DetVisRTSPPipeline" },
     { "type": "SegVisRTSPPipeline" },
-    { "type": "PresenceVideoPipeline" }
+    { "type": "PresenceVisVideoPipeline" }
   ]
 }
 ```

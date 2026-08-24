@@ -1,5 +1,4 @@
 def nvinfer_skip(user_interval: int) -> int:
-    skip = 0
-    if user_interval > 0:
-        skip = user_interval - 1
+    assert user_interval >= 1, f"interval must be >= 1, got {user_interval}"
+    skip = user_interval - 1
     return skip

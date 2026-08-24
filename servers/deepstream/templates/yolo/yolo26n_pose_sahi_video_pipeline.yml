@@ -1,0 +1,11 @@
+# Prerequisite: servers/generator/scripts/3_generate.sh --config yolo26n_pose_sahi_video
+
+type: PoseSahiVideoPipeline
+name: yolo26n-pose-sahi-video
+config_dir: /root/configs/generator/yolo26n_pose_sahi_video
+logger:
+  interval: 50
+messager:
+  topic: deepstream-detections
+  host: ai_stream2_kafka
+  port: 9092

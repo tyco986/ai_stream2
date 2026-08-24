@@ -46,6 +46,7 @@ export default {
   pipelineEditorTitle: '流水线',
   sectionPipeline: 'Pipeline',
   sectionGenerator: 'Generator',
+  parser: 'Parser',
   drawer: 'Drawer',
   logger: 'Logger',
   messager: 'Messager',

@@ -1,0 +1,19 @@
+type: SegSahiVisVideoPipeline
+entry: utils/yolo_pipeline/seg_sahi_vis_video.py
+files:
+- utils/base_pipeline/base_video.py
+- utils/base_pipeline/utils/detection_attach.py
+- utils/base_pipeline/utils/times_attach.py
+- utils/base_pipeline/utils/validate.py
+- utils/base_pipeline/utils/call_probe.py
+- utils/tool/timer/__init__.py
+- utils/tool/timer/decorator.py
+- utils/tool/timer/frame_timer.py
+- utils/tool/parser/result.py
+- utils/tool/parser/det_parser.py
+- utils/tool/parser/seg_parser.py
+- utils/tool/drawer/det_drawer.py
+- utils/tool/logger/det_logger.py
+- utils/tool/messager/det_messager.py
+- utils/tool/drawer/seg_drawer.py
+- utils/yolo_pipeline/seg_sahi_vis_video.py

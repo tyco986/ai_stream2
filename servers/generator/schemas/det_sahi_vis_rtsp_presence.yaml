@@ -8,7 +8,8 @@ params:
     params:
       interval:
         available: true
-        default: 0
+        min: 1
+        default: 1
   tracker:
     available: false
     params:

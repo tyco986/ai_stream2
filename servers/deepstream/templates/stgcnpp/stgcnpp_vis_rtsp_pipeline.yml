@@ -4,7 +4,7 @@ type: StgcnppVisRTSPPipeline
 name: stgcnpp-vis-rtsp
 config_dir: /root/configs/generator/stgcnpp_vis_rtsp
 drawer:
-  show_pose: true
+  show_pose: false
 logger:
   interval: 50
 messager:

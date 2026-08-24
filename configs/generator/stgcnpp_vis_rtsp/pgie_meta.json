@@ -108,7 +108,5 @@
   },
   "gpu_id": 0,
   "opt_level": null,
-  "cuda_version": "13.1",
-  "tensorrt_version": "101401",
-  "build_time": "2026-08-07T10:58:57.810924+00:00"
+  "build_time": "2026-08-23T10:37:40.661432+08:00"
 }

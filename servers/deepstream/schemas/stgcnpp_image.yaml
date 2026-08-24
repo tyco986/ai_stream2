@@ -5,7 +5,7 @@ params:
     params:
       show_pose:
         available: true
-        default: true
+        default: false
   logger:
     available: true
     params:

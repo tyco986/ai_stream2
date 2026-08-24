@@ -42,6 +42,7 @@ class PipelineService:
             body.drawer,
             body.debouncer,
             body.capturer,
+            body.parser,
         )
         result = ApiEnvelope.ok(data={"name": body.name, "type": body.type})
         return result

@@ -10,8 +10,7 @@ SAHI_VIDEO_TOPOLOGY_DOC = """
     Topology::
 
         nvurisrcbin → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
-            → nvtracker → nvdsanalytics → nvosdbin → nvvideoconvert → nvv4l2h264enc → h264parse
-            → mp4mux → filesink
+            → nvtracker → nvdsanalytics → nvvideoconvert → fakesink
 
     Notes::
 
@@ -21,8 +20,9 @@ SAHI_VIDEO_TOPOLOGY_DOC = """
 
 class BaseSahiVideoGenerator(BaseVideoGenerator):
     SAHI_PREPROCESS_CONFIG_NAME = "nvsahipreprocess.ini"
+    SAHI_POSTPROCESS = "nvsahipostprocess"
     SINK_PATH_TEMPLATES = {
-        "filesink": [
+        "fakesink": [
             "nvurisrcbin",
             "nvstreammux",
             "nvsahipreprocess",
@@ -31,26 +31,20 @@ class BaseSahiVideoGenerator(BaseVideoGenerator):
             "nvsahipostprocess",
             "nvtracker",
             "nvdsanalytics",
-            "nvosdbin",
             "nvvideoconvert",
-            "nvv4l2h264enc",
-            "h264parse",
-            "mp4mux",
-            "filesink",
+            "fakesink",
         ],
     }
 
-    f"""Generate YOLO SAHI video pipeline YAML.
+    f"""Generate YOLO SAHI video pipeline YAML (headless, ends at fakesink).
 
-    Reads ``input`` video via DeepStream, runs SAHI inference with OSD, and writes the
-    annotated result to ``output``. Does not insert ``nvmsgconv`` / ``nvmsgbroker``.
+    Reads ``input`` video via DeepStream and runs SAHI inference without OSD encode.
     {SAHI_VIDEO_TOPOLOGY_DOC}
     """
 
     def __init__(
         self,
         input: str | Path,
-        output: str | Path,
         analyzer: dict | None,
         pgie: dict,
         sahi: dict,
@@ -59,7 +53,6 @@ class BaseSahiVideoGenerator(BaseVideoGenerator):
         self.sahi = sahi
         super().__init__(
             input=input,
-            output=output,
             analyzer=analyzer,
             pgie=pgie,
             tracker=tracker,
@@ -158,7 +151,7 @@ class BaseSahiVideoGenerator(BaseVideoGenerator):
             ),
         )
         sahi = self.sahi["nvsahipreprocess"]
-        postprocess = self.sahi["nvsahipostprocess"]
+        postprocess = self.sahi[self.SAHI_POSTPROCESS]
         self._append_node(
             "nvsahipreprocess",
             "nvsahipreprocess",
@@ -184,16 +177,9 @@ class BaseSahiVideoGenerator(BaseVideoGenerator):
         )
         self._append_node("queue", "queue_sahi", self._add_queue())
         self._append_node(
-            "nvsahipostprocess",
-            "nvsahipostprocess",
-            self._add_nvsahipostprocess(
-                gie_ids=str(self.pgie_generator.config["property"]["gie-unique-id"]),
-                match_metric=1,
-                match_threshold=postprocess["match_threshold"],
-                class_agnostic=False,
-                enable_merge=True,
-                two_phase_nmm=True,
-            ),
+            self.SAHI_POSTPROCESS,
+            self.SAHI_POSTPROCESS,
+            self.sahi_postprocess_properties(postprocess),
         )
         if self.enable_nvtracker:
             self._append_node(
@@ -218,31 +204,14 @@ class BaseSahiVideoGenerator(BaseVideoGenerator):
         )
         gpu_id = self.pgie_generator.gpu_id
         self._append_node(
-            "nvosdbin",
-            "nvosdbin",
-            self._add_nvosdbin(**self.osd_kwargs(gpu_id)),
-        )
-        self._append_node(
             "nvvideoconvert",
             "nvvideoconvert",
             self._add_nvvideoconvert(gpu_id=gpu_id),
         )
         self._append_node(
-            "nvv4l2h264enc",
-            "nvv4l2h264enc",
-            self._add_nvv4l2h264enc(
-                bitrate=4_000_000,
-                iframeinterval=self.fps,
-                preset_id=1,
-                gpu_id=gpu_id,
-            ),
-        )
-        self._append_node("h264parse", "h264parse", self._add_h264parse())
-        self._append_node("mp4mux", "mp4mux", self._add_mp4mux())
-        self._append_node(
-            "filesink",
-            "filesink",
-            self._add_filesink(self.output, sync=False, async_=False),
+            "fakesink",
+            "fakesink",
+            self._add_fakesink(sync=False, async_=False),
         )
 
     def link(self) -> None:
@@ -251,17 +220,23 @@ class BaseSahiVideoGenerator(BaseVideoGenerator):
             "nvstreammux": "nvsahipreprocess",
             "nvsahipreprocess": "pgie",
             "pgie": "queue_sahi",
-            "queue_sahi": "nvsahipostprocess",
+            "queue_sahi": self.SAHI_POSTPROCESS,
         }
-        inference_tail = "nvsahipostprocess"
+        inference_tail = self.SAHI_POSTPROCESS
         if self.enable_nvtracker:
             edges[inference_tail] = "nvtracker"
             inference_tail = "nvtracker"
         edges[inference_tail] = "nvdsanalytics"
-        edges["nvdsanalytics"] = "nvosdbin"
-        edges["nvosdbin"] = "nvvideoconvert"
-        edges["nvvideoconvert"] = "nvv4l2h264enc"
-        edges["nvv4l2h264enc"] = "h264parse"
-        edges["h264parse"] = "mp4mux"
-        edges["mp4mux"] = "filesink"
+        edges["nvdsanalytics"] = "nvvideoconvert"
+        edges["nvvideoconvert"] = "fakesink"
         self.pipeline["deepstream"]["edges"] = edges
+
+    def sahi_postprocess_properties(self, postprocess: dict) -> dict:
+        return self._add_nvsahipostprocess(
+            gie_ids=str(self.pgie_generator.config["property"]["gie-unique-id"]),
+            match_metric=1,
+            match_threshold=postprocess["match_threshold"],
+            class_agnostic=False,
+            enable_merge=postprocess.get("enable_merge", True),
+            two_phase_nmm=True,
+        )

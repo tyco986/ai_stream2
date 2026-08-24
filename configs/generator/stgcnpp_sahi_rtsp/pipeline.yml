@@ -1,0 +1,138 @@
+deepstream:
+  nodes:
+  - type: nvurisrcbin
+    name: nvurisrcbin0
+    properties:
+      uri: rtsp://ai_stream2_mediamtx:8554/video1
+      disable-audio: true
+      select-rtp-protocol: 4
+  - type: nvurisrcbin
+    name: nvurisrcbin1
+    properties:
+      uri: rtsp://ai_stream2_mediamtx:8554/video2
+      disable-audio: true
+      select-rtp-protocol: 4
+  - type: nvstreammux
+    name: nvstreammux
+    properties:
+      batch-size: 2
+      width: 1920
+      height: 1080
+      enable-padding: false
+      batched-push-timeout: 40000
+      gpu-id: 0
+      live-source: true
+  - type: nvsahipreprocess
+    name: nvsahipreprocess
+    properties:
+      config-file: /root/configs/generator/stgcnpp_sahi_rtsp/nvsahipreprocess.ini
+      slice-width: 640
+      slice-height: 640
+      overlap-width-ratio: 0.2
+      overlap-height-ratio: 0.2
+      enable-full-frame: true
+      gpu-id: 0
+      unique-id: 15
+      target-unique-ids: '1'
+  - type: nvinfer
+    name: pgie
+    properties:
+      config-file-path: /root/configs/generator/stgcnpp_sahi_rtsp/pgie.yml
+      batch-size: 18
+      gpu-id: 0
+      input-tensor-meta: true
+      clip-object-outside-roi: false
+  - type: queue
+    name: queue_sahi
+    properties:
+      leaky: 2
+      max-size-buffers: 4
+  - type: nvsahipostprocess
+    name: nvsahipostprocess
+    properties:
+      gie-ids: '1'
+      match-metric: 1
+      match-threshold: 0.5
+      class-agnostic: false
+      enable-merge: true
+      two-phase-nmm: true
+  - type: nvtracker
+    name: nvtracker
+    properties:
+      ll-lib-file: /opt/nvidia/deepstream/deepstream/lib/libnvds_nvmultiobjecttracker.so
+      ll-config-file: /root/configs/generator/stgcnpp_sahi_rtsp/nvtracker.yml
+      tracker-width: 1920
+      tracker-height: 1056
+      gpu-id: 0
+      operate-on-class-ids: '0'
+  - type: nvinfer
+    name: sgie0
+    properties:
+      config-file-path: /root/configs/generator/stgcnpp_sahi_rtsp/sgie0.yml
+      batch-size: 64
+      gpu-id: 0
+  - type: nvdspreprocess
+    name: nvdspreprocess
+    properties:
+      config-file: /root/configs/generator/stgcnpp_sahi_rtsp/preprocess_stgcnpp.txt
+  - type: nvinfer
+    name: sgie1
+    properties:
+      config-file-path: /root/configs/generator/stgcnpp_sahi_rtsp/sgie1.yml
+      batch-size: 64
+      gpu-id: 0
+      input-tensor-meta: true
+      clip-object-outside-roi: false
+  - type: nvdsanalytics
+    name: nvdsanalytics
+    properties:
+      config-file: /root/configs/generator/stgcnpp_sahi_rtsp/nvdsanalytics.yml
+      gpu-id: 0
+  - type: nvstreamdemux
+    name: nvstreamdemux
+    properties: {}
+  - type: queue
+    name: queue_demux0
+    properties:
+      leaky: 2
+      max-size-buffers: 4
+  - type: nvvideoconvert
+    name: nvvideoconvert0
+    properties:
+      gpu-id: 0
+  - type: fakesink
+    name: fakesink0
+    properties:
+      sync: false
+      async: false
+  - type: queue
+    name: queue_demux1
+    properties:
+      leaky: 2
+      max-size-buffers: 4
+  - type: nvvideoconvert
+    name: nvvideoconvert1
+    properties:
+      gpu-id: 0
+  - type: fakesink
+    name: fakesink1
+    properties:
+      sync: false
+      async: false
+  edges:
+    nvurisrcbin0: nvstreammux
+    nvurisrcbin1: nvstreammux
+    nvstreammux: nvsahipreprocess
+    nvsahipreprocess: pgie
+    pgie: queue_sahi
+    queue_sahi: nvsahipostprocess
+    nvsahipostprocess: nvtracker
+    nvtracker: sgie0
+    sgie0: nvdspreprocess
+    nvdspreprocess: sgie1
+    sgie1: nvdsanalytics
+    nvdsanalytics: nvstreamdemux
+    queue_demux0: nvvideoconvert0
+    nvvideoconvert0: fakesink0
+    queue_demux1: nvvideoconvert1
+    nvvideoconvert1: fakesink1

@@ -8,15 +8,14 @@ STGCNPP_VIDEO_TOPOLOGY_DOC = """
     Topology::
 
         nvurisrcbin → nvstreammux → pgie → nvtracker → sgie0 → nvdspreprocess → sgie1
-            → nvdsanalytics → nvosdbin → nvvideoconvert → nvv4l2h264enc → h264parse
-            → mp4mux → filesink
+            → nvdsanalytics → nvvideoconvert → fakesink
 """
 
 
 class StgcnppVideoGenerator(StgcnppMixin, BaseVideoGenerator):
     GENERATOR = "StgcnppVideoGenerator"
     SINK_PATH_TEMPLATES = {
-        "filesink": [
+        "fakesink": [
             "nvurisrcbin",
             "nvstreammux",
             "pgie",
@@ -25,16 +24,12 @@ class StgcnppVideoGenerator(StgcnppMixin, BaseVideoGenerator):
             "nvdspreprocess",
             "sgie1",
             "nvdsanalytics",
-            "nvosdbin",
             "nvvideoconvert",
-            "nvv4l2h264enc",
-            "h264parse",
-            "mp4mux",
-            "filesink",
+            "fakesink",
         ],
     }
 
-    f"""Generate ST-GCN++ video pipeline YAML.
+    f"""Generate ST-GCN++ video pipeline YAML (headless, ends at fakesink).
 
     {STGCNPP_VIDEO_TOPOLOGY_DOC}
     """
@@ -42,7 +37,6 @@ class StgcnppVideoGenerator(StgcnppMixin, BaseVideoGenerator):
     def __init__(
         self,
         input: str | Path,
-        output: str | Path,
         analyzer: dict | None,
         pgie: dict,
         sgie: dict,
@@ -53,7 +47,6 @@ class StgcnppVideoGenerator(StgcnppMixin, BaseVideoGenerator):
         self.stgcnpp = stgcnpp
         super().__init__(
             input=input,
-            output=output,
             analyzer=analyzer,
             pgie=pgie,
             tracker=tracker,
@@ -115,31 +108,14 @@ class StgcnppVideoGenerator(StgcnppMixin, BaseVideoGenerator):
         )
         gpu_id = self.pgie_generator.gpu_id
         self._append_node(
-            "nvosdbin",
-            "nvosdbin",
-            self._add_nvosdbin(**self.osd_kwargs(gpu_id)),
-        )
-        self._append_node(
             "nvvideoconvert",
             "nvvideoconvert",
             self._add_nvvideoconvert(gpu_id=gpu_id),
         )
         self._append_node(
-            "nvv4l2h264enc",
-            "nvv4l2h264enc",
-            self._add_nvv4l2h264enc(
-                bitrate=4_000_000,
-                iframeinterval=self.fps,
-                preset_id=1,
-                gpu_id=gpu_id,
-            ),
-        )
-        self._append_node("h264parse", "h264parse", self._add_h264parse())
-        self._append_node("mp4mux", "mp4mux", self._add_mp4mux())
-        self._append_node(
-            "filesink",
-            "filesink",
-            self._add_filesink(self.output, sync=False, async_=False),
+            "fakesink",
+            "fakesink",
+            self._add_fakesink(sync=False, async_=False),
         )
 
     def link(self) -> None:
@@ -153,10 +129,6 @@ class StgcnppVideoGenerator(StgcnppMixin, BaseVideoGenerator):
             inference_tail = "nvtracker"
         edges[inference_tail] = "sgie0"
         self.link_stgcnpp(edges)
-        edges["nvdsanalytics"] = "nvosdbin"
-        edges["nvosdbin"] = "nvvideoconvert"
-        edges["nvvideoconvert"] = "nvv4l2h264enc"
-        edges["nvv4l2h264enc"] = "h264parse"
-        edges["h264parse"] = "mp4mux"
-        edges["mp4mux"] = "filesink"
+        edges["nvdsanalytics"] = "nvvideoconvert"
+        edges["nvvideoconvert"] = "fakesink"
         self.pipeline["deepstream"]["edges"] = edges

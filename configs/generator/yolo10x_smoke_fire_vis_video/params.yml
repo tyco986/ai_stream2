@@ -1,0 +1,12 @@
+generator: DetVisVideoPresenceGenerator
+input: /root/attachments/videos/video2.mp4
+pgie:
+  model_dir: /root/models/trt/yolov10x-smoke-fire
+  class_attrs:
+    all:
+      conf: 0.25
+  interval: 50
+analyzer: null
+tracker: null
+output: /root/outputs/deepstream/yolo10x_smoke_fire_vis_video.mp4
+config_save_dir: /root/configs/generator/yolo10x_smoke_fire_vis_video

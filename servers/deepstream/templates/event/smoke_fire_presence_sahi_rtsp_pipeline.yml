@@ -1,0 +1,27 @@
+# Prerequisite: servers/generator/scripts/3_generate.sh --config yolo10x_smoke_fire_sahi_rtsp
+
+type: PresenceSahiRTSPPipeline
+name: yolo10x-smoke-fire-sahi-rtsp
+config_dir: /root/configs/generator/yolo10x_smoke_fire_sahi_rtsp
+drawer:
+  show_label: true
+  show_conf: true
+  interval: 50
+  fade_time: 1
+debouncer:
+  class_ids: [0, 1]
+  threshold: 0.5
+  length: 5
+  mode: fold
+  event_names:
+    "0": Fire
+    "1": Smoke
+logger:
+  interval: 50
+  times: [latency, pgie, nvstreammux, nvurisrcbin]
+messager:
+  topic: deepstream-detections
+  host: ai_stream2_kafka
+  port: 9092
+capturer:
+  output_dir: /root/outputs/deepstream/yolo10x-smoke-fire-sahi-rtsp

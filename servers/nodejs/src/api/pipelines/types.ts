@@ -17,6 +17,8 @@ export type AnnotationShape = 'rectangle' | 'polygon' | 'line_direction' | 'dire
 export type SourceKind = 'file' | 'stream'
 export type LineMode = 'strict' | 'balanced' | 'loose'
 
+export type Parser = Record<string, unknown>
+
 export type Drawer = {
   show_label: boolean
   show_conf: boolean
@@ -63,6 +65,7 @@ export type Pipeline = {
   type: string
   status: PipelineStatus
   drawer: Drawer
+  parser: Parser
   logger: { interval: number }
   messager: { interval: number }
   debouncer: Debouncer | null
@@ -99,6 +102,7 @@ export type TypeSchema = {
   pipeline: {
     type: string
     params: {
+      parser: SchemaBlock
       drawer: SchemaBlock
       logger: SchemaBlock
       messager: SchemaBlock

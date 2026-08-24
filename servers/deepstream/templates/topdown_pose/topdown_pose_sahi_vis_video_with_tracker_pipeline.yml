@@ -1,0 +1,17 @@
+# Prerequisite: servers/generator/scripts/3_generate.sh --config topdown_pose_sahi_vis_video_with_tracker
+
+type: RtmposeSahiVisVideoPipeline
+name: topdown-pose-sahi-vis-video-with-tracker
+config_dir: /root/configs/generator/topdown_pose_sahi_vis_video_with_tracker
+drawer:
+  show_label: true
+  show_conf: true
+  show_id: true
+  interval: 50
+  fade_time: 1
+logger:
+  interval: 50
+messager:
+  topic: deepstream-detections
+  host: ai_stream2_kafka
+  port: 9092

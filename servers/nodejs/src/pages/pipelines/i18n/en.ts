@@ -46,6 +46,7 @@ export default {
   pipelineEditorTitle: 'Pipeline',
   sectionPipeline: 'Pipeline',
   sectionGenerator: 'Generator',
+  parser: 'Parser',
   drawer: 'Drawer',
   logger: 'Logger',
   messager: 'Messager',

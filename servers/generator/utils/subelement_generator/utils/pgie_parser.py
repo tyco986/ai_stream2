@@ -27,7 +27,7 @@ class PgieParser:
         model_dir: str | Path,  # TRT engine dir (export_trt output), not models/onnx
         runtime_batch_size: int,
         class_attrs: dict,
-        interval: int = 0,
+        interval: int = 1,
     ) -> None:
         self.model_dir = model_dir
         self.runtime_batch_size = runtime_batch_size

@@ -2,5 +2,5 @@
 type: STGCNPP
 batch_size: 64
 gpu_id: 0
-precision: fp32
+precision: fp16
 opt_level: null

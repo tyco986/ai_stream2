@@ -9,7 +9,7 @@ property:
   process-mode: 2
   model-color-format: 0
   gie-unique-id: 2
-  interval: 0
+  interval: 49
   operate-on-gie-id: 1
   operate-on-class-ids: 0
   maintain-aspect-ratio: 1

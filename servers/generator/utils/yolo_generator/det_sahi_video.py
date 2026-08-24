@@ -7,10 +7,8 @@ from ..subelement_generator.utils.default_gie import YoloDet
 class DetSahiVideoGenerator(BaseSahiVideoGenerator):
     GENERATOR = "DetSahiVideoGenerator"
 
-    f"""Generate YOLO SAHI detection video pipeline YAML.
+    f"""Generate YOLO SAHI detection video pipeline YAML (headless, ends at fakesink).
 
-    Reads ``input`` video via DeepStream, runs SAHI inference with OSD, and writes the
-    annotated result to ``output``. Does not insert ``nvmsgconv`` / ``nvmsgbroker``.
     {SAHI_VIDEO_TOPOLOGY_DOC}
     """
 

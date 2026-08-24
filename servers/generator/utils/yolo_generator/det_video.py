@@ -5,10 +5,8 @@ from ..subelement_generator.utils.default_gie.manager import PgieManager
 class DetVideoGenerator(BaseVideoGenerator):
     GENERATOR = "DetVideoGenerator"
 
-    f"""Generate YOLO detection video pipeline YAML.
+    f"""Generate YOLO detection video pipeline YAML (headless, ends at fakesink).
 
-    Reads ``input`` video via DeepStream, runs inference with OSD, and writes the
-    annotated result to ``output``. Does not insert ``nvmsgconv`` / ``nvmsgbroker``.
     {VIDEO_TOPOLOGY_DOC}
     """
 

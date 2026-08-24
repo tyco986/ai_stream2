@@ -2,6 +2,7 @@ from pathlib import Path
 
 from utils.stgcnpp.stgcnpp_exporter import StgcnppExporter
 from utils.yolo_e2e.yolo_det_e2e_exporter import YoloDetE2EExporter
+from utils.yolo_e2e.yolo_pose_e2e_exporter import YoloPoseE2EExporter
 from utils.yolo_e2e.yolo_seg_e2e_exporter import YoloSegE2EExporter
 from utils.yolo_non_e2e.yolo_det_non_e2e_exporter import YoloDetNonE2EExporter
 from utils.yolo_non_e2e.yolo_seg_non_e2e_exporter import YoloSegNonE2EExporter
@@ -15,6 +16,7 @@ class OnnxExporterManager:
         "YOLO11-DET": YoloDetNonE2EExporter,
         "YOLO11-SEG": YoloSegNonE2EExporter,
         "YOLO26-DET": YoloDetE2EExporter,
+        "YOLO26-POSE": YoloPoseE2EExporter,
         "YOLO26-SEG": YoloSegE2EExporter,
         "STGCNPP": StgcnppExporter,
     }

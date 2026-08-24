@@ -1,17 +1,16 @@
 type: StgcnppVideoPipeline
 params:
   drawer:
+    available: false
+  parser:
     available: true
-    params:
-      show_pose:
-        available: true
-        default: true
+    params: {}
   logger:
     available: true
     params:
       interval:
         available: true
-        default: 50
+        default: 0
       times:
         available: false
         default:

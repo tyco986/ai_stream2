@@ -6,13 +6,13 @@
 generator: TopdownPoseSahiImageGenerator
 config_save_dir: /root/configs/generator/topdown_pose_sahi_image
 pgie:
-  interval: 0
+  interval: 50
   model_dir: /root/models/trt/yolo26n
   class_attrs:
     0:
       conf: 0.25
 sgie:
-  interval: 0
+  interval: 50
   model_dir: /root/models/trt/rtmpose-s-coco-pruned
 analyzer: null
 input: /root/attachments/images/video1.png

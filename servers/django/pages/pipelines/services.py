@@ -28,6 +28,7 @@ from pages.pipelines.models import (
 )
 from pages.pipelines.port_manager import DeepStreamPortManager
 from pages.pipelines.type_registry import (
+    PARSER_PIPELINE_TYPES,
     RTSP_PIPELINE_TYPES,
     TypeRegistry,
 )
@@ -297,6 +298,7 @@ class PipelineService:
         output_value = body.get("output")
         config = {
             "drawer": body.get("drawer") or {},
+            "parser": body.get("parser") or {},
             "logger": body.get("logger") or {"interval": 50},
             "messager": body.get("messager") or {"interval": 0},
             "debouncer": body.get("debouncer"),
@@ -338,6 +340,7 @@ class PipelineService:
             "type": row.type,
             "status": row.status,
             "drawer": config.get("drawer") or {},
+            "parser": config.get("parser") or {},
             "logger": config.get("logger") or {"interval": 50},
             "messager": config.get("messager") or {"interval": 0},
             "debouncer": config.get("debouncer"),
@@ -913,9 +916,14 @@ class StartStopOrchestrator:
                 "port": settings.DEEPSTREAM_KAFKA_PORT,
             },
         }
-        drawer = config.get("drawer")
-        if drawer is not None:
-            body["drawer"] = drawer
+        if row.type in PARSER_PIPELINE_TYPES:
+            parser = config.get("parser")
+            if parser is not None:
+                body["parser"] = parser
+        else:
+            drawer = config.get("drawer")
+            if drawer is not None:
+                body["drawer"] = drawer
         debouncer = config.get("debouncer")
         if debouncer is not None:
             body["debouncer"] = debouncer

@@ -10,7 +10,7 @@ property:
   model-color-format: 0
   num-detected-classes: 80
   gie-unique-id: 1
-  interval: 0
+  interval: 49
   cluster-mode: 4
   maintain-aspect-ratio: 1
   symmetric-padding: 1

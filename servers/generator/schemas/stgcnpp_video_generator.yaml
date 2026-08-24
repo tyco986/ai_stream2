@@ -8,19 +8,22 @@ params:
     params:
       interval:
         available: true
+        min: 1
         default: 50
   sgie:
     available: true
     params:
       interval:
         available: true
+        min: 1
         default: 50
   stgcnpp:
     available: true
     params:
       interval:
         available: true
-        default: 0
+        min: 1
+        default: 1
   tracker:
     available: true
     params:
@@ -57,5 +60,5 @@ params:
     available: true
     default: null
   output:
-    available: true
+    available: false
     default: null

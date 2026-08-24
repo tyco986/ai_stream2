@@ -72,6 +72,9 @@ cp "${SEG_SRC}/libnvdsinfer_custom_impl_Yolo_seg.so" "${DEEPSTREAM_LIBS_ROOT}/";
 
 COPY servers/deepstream/modules/latency_probe /tmp/latency_probe
 COPY servers/deepstream/modules/stgcnpp_preprocess /tmp/stgcnpp_preprocess
+COPY servers/deepstream/modules/stgcnpp_classifier_parse /tmp/stgcnpp_classifier_parse
+COPY servers/deepstream/modules/nvdsinfer_yolo_pose /tmp/nvdsinfer_yolo_pose
+COPY servers/deepstream/modules/nvsahipostprocess_pose /tmp/nvsahipostprocess_pose
 RUN cmake -S /tmp/latency_probe -B /tmp/latency_probe/build \
     && cmake --build /tmp/latency_probe/build -j"$(nproc)" \
     && cp /tmp/latency_probe/build/liblatency_probe.so \
@@ -83,7 +86,25 @@ RUN cmake -S /tmp/latency_probe -B /tmp/latency_probe/build \
     && cp /tmp/stgcnpp_preprocess/build/libnvds_stgcnpp_preprocess.so \
         "${DEEPSTREAM_LIBS_ROOT}/" \
     && test -f "${DEEPSTREAM_LIBS_ROOT}/libnvds_stgcnpp_preprocess.so" \
-    && rm -rf /tmp/stgcnpp_preprocess
+    && rm -rf /tmp/stgcnpp_preprocess \
+    && cmake -S /tmp/stgcnpp_classifier_parse -B /tmp/stgcnpp_classifier_parse/build \
+    && cmake --build /tmp/stgcnpp_classifier_parse/build -j"$(nproc)" \
+    && cp /tmp/stgcnpp_classifier_parse/build/libnvds_stgcnpp_classifier_parse.so \
+        "${DEEPSTREAM_LIBS_ROOT}/" \
+    && test -f "${DEEPSTREAM_LIBS_ROOT}/libnvds_stgcnpp_classifier_parse.so" \
+    && rm -rf /tmp/stgcnpp_classifier_parse \
+    && cmake -S /tmp/nvdsinfer_yolo_pose -B /tmp/nvdsinfer_yolo_pose/build \
+    && cmake --build /tmp/nvdsinfer_yolo_pose/build -j"$(nproc)" \
+    && cp /tmp/nvdsinfer_yolo_pose/build/libnvds_infer_yolo_pose.so \
+        "${DEEPSTREAM_LIBS_ROOT}/" \
+    && test -f "${DEEPSTREAM_LIBS_ROOT}/libnvds_infer_yolo_pose.so" \
+    && rm -rf /tmp/nvdsinfer_yolo_pose \
+    && cmake -S /tmp/nvsahipostprocess_pose -B /tmp/nvsahipostprocess_pose/build \
+    && cmake --build /tmp/nvsahipostprocess_pose/build -j"$(nproc)" \
+    && cp /tmp/nvsahipostprocess_pose/build/libnvdsgst_sahipostprocess_pose.so \
+        "${GST_PLUGIN_PATH}/" \
+    && test -f "${GST_PLUGIN_PATH}/libnvdsgst_sahipostprocess_pose.so" \
+    && rm -rf /tmp/nvsahipostprocess_pose
 
 ENV LD_PRELOAD=/opt/ai_stream2/servers/deepstream/libs/libnvdsinfer_custom_impl_Yolo_seg.so
 

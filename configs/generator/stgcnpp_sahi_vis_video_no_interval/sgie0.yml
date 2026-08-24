@@ -1,0 +1,24 @@
+property:
+  gpu-id: 0
+  onnx-file: ''
+  model-engine-file: /root/models/trt/rtmpose-s-coco-pruned/rtmpose-s-coco-pruned.engine
+  labelfile-path: /root/models/trt/rtmpose-s-coco-pruned/labels.txt
+  batch-size: 64
+  network-mode: 0
+  network-type: 100
+  process-mode: 2
+  model-color-format: 0
+  gie-unique-id: 2
+  interval: 0
+  operate-on-gie-id: 1
+  operate-on-class-ids: 0
+  maintain-aspect-ratio: 1
+  symmetric-padding: 1
+  force-implicit-batch-dim: 0
+  net-scale-factor: 0.017124753831663668
+  offsets: 123.675;116.28;103.53
+  infer-dims: 3;256;192
+  output-blob-names: keypoints
+  output-tensor-meta: 1
+  input-object-min-width: 32
+  input-object-min-height: 32

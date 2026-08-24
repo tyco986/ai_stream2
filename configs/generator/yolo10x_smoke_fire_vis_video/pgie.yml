@@ -1,0 +1,25 @@
+property:
+  gpu-id: 0
+  onnx-file: ''
+  model-engine-file: /root/models/trt/yolov10x-smoke-fire/yolov10x-smoke-fire.engine
+  labelfile-path: /root/models/trt/yolov10x-smoke-fire/labels.txt
+  batch-size: 1
+  network-mode: 2
+  network-type: 0
+  process-mode: 1
+  model-color-format: 0
+  num-detected-classes: 2
+  gie-unique-id: 1
+  interval: 49
+  cluster-mode: 4
+  maintain-aspect-ratio: 1
+  symmetric-padding: 1
+  force-implicit-batch-dim: 0
+  net-scale-factor: 0.003921569790691137
+  infer-dims: 3;640;640
+  custom-lib-path: /opt/nvidia/deepstream/deepstream/lib/libnvds_infer_yolo.so
+  parse-bbox-func-name: NvDsInferYoloE2E
+  output-blob-names: output0
+class-attrs-all:
+  topk: 300
+  pre-cluster-threshold: 0.25

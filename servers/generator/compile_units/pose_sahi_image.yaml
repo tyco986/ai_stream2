@@ -1,0 +1,19 @@
+type: PoseSahiImageGenerator
+entry: utils/yolo_generator/pose_sahi_image.py
+files:
+- utils/base_generator/base_image.py
+- utils/base_generator/base_sahi_image.py
+- utils/base_generator/base_sahi_pose.py
+- utils/base_generator/base_sahi_pose_image.py
+- utils/subelement_generator/nvdsanalytics.py
+- utils/subelement_generator/nvsahipreprocess.py
+- utils/subelement_generator/pgie.py
+- utils/subelement_generator/utils/nvinfer_interval.py
+- utils/subelement_generator/pipeline.py
+- utils/subelement_generator/utils/default_gie/__init__.py
+- utils/subelement_generator/utils/default_gie/yolo_det.py
+- utils/subelement_generator/utils/default_gie/yolo_pose.py
+- utils/subelement_generator/utils/nvdsanalytics_parser.py
+- utils/subelement_generator/utils/pgie_parser.py
+- utils/subelement_generator/utils/sahi.py
+- utils/yolo_generator/pose_sahi_image.py

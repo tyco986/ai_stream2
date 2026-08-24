@@ -112,6 +112,13 @@ function schemaField(available: boolean, defaultValue: unknown): SchemaField {
   return { available, default: defaultValue }
 }
 
+function parserBlock(available: boolean): SchemaBlock {
+  return {
+    available,
+    params: {},
+  }
+}
+
 function drawerBlock(available: boolean): SchemaBlock {
   return {
     available,
@@ -123,6 +130,31 @@ function drawerBlock(available: boolean): SchemaBlock {
       fade_time: schemaField(available, 1),
     },
   }
+}
+
+function usesParser(pipelineType: string): boolean {
+  const parserType =
+    !pipelineType.includes('Vis') &&
+    !pipelineType.includes('Image') &&
+    !pipelineType.startsWith('Presence')
+  return parserType
+}
+
+function toolParams(
+  pipelineType: string,
+  logger: SchemaBlock,
+  messager: SchemaBlock,
+  debouncer: SchemaBlock,
+) {
+  const parser = usesParser(pipelineType)
+  const params = {
+    parser: parserBlock(parser),
+    drawer: drawerBlock(!parser),
+    logger,
+    messager,
+    debouncer,
+  }
+  return params
 }
 
 function loggerBlock(available: boolean, interval = 50): SchemaBlock {
@@ -244,12 +276,12 @@ function buildRtspTypeSchema(pipelineType: string, generatorType: string): TypeS
   return {
     pipeline: {
       type: pipelineType,
-      params: {
-        drawer: drawerBlock(true),
-        logger: loggerBlock(true),
-        messager: messagerBlock(true),
-        debouncer: debouncerBlock(false),
-      },
+      params: toolParams(
+        pipelineType,
+        loggerBlock(true),
+        messagerBlock(true),
+        debouncerBlock(false),
+      ),
     },
     generator: {
       type: generatorType,
@@ -276,12 +308,12 @@ function buildFileTypeSchema(
   return {
     pipeline: {
       type: pipelineType,
-      params: {
-        drawer: drawerBlock(true),
-        logger: loggerBlock(true, options.interval ?? 50),
-        messager: messagerBlock(true, 0),
-        debouncer: debouncerBlock(false),
-      },
+      params: toolParams(
+        pipelineType,
+        loggerBlock(true, options.interval ?? 50),
+        messagerBlock(true, 0),
+        debouncerBlock(false),
+      ),
     },
     generator: {
       type: generatorType,
@@ -301,12 +333,12 @@ function buildPresenceVideoTypeSchema(): TypeSchema {
   return {
     pipeline: {
       type: 'PresenceVideoPipeline',
-      params: {
-        drawer: drawerBlock(true),
-        logger: loggerBlock(true, 0),
-        messager: messagerBlock(true, 0),
-        debouncer: debouncerBlock(true),
-      },
+      params: toolParams(
+        'PresenceVideoPipeline',
+        loggerBlock(true, 0),
+        messagerBlock(true, 0),
+        debouncerBlock(true),
+      ),
     },
     generator: {
       type: 'DetVideoPresenceGenerator',
@@ -360,12 +392,12 @@ function buildTypeSchema(pipelineType: string): TypeSchema {
     schema = {
       pipeline: {
         type: 'PresenceRTSPPipeline',
-        params: {
-          drawer: drawerBlock(true),
-          logger: loggerBlock(true, 0),
-          messager: messagerBlock(true, 0),
-          debouncer: debouncerBlock(true),
-        },
+        params: toolParams(
+          'PresenceRTSPPipeline',
+          loggerBlock(true, 0),
+          messagerBlock(true, 0),
+          debouncerBlock(true),
+        ),
       },
       generator: {
         type: 'DetVisRTSPPresenceGenerator',
@@ -439,6 +471,7 @@ function seedDetPipeline(): Pipeline {
     name: 'yolo26n-det-rtsp',
     type: 'DetVisRTSPPipeline',
     status: 'running',
+    parser: {},
     drawer: {
       show_label: true,
       show_conf: true,
@@ -477,6 +510,7 @@ function seedPresencePipeline(): Pipeline {
     name: 'smoke-fire',
     type: 'PresenceVideoPipeline',
     status: 'stopped',
+    parser: {},
     drawer: {
       show_label: true,
       show_conf: true,
@@ -809,6 +843,7 @@ export async function createPipeline(body: CreatePipelineBody): Promise<Pipeline
     name: body.name.trim(),
     type: body.type,
     status: 'stopped',
+    parser: body.parser,
     drawer: body.drawer,
     logger: body.logger,
     messager: body.messager,
@@ -847,6 +882,7 @@ export async function updatePipeline(
   findGieTemplate(store, body.gie_id)
   pipeline.name = body.name.trim()
   pipeline.type = body.type
+  pipeline.parser = body.parser
   pipeline.drawer = body.drawer
   pipeline.logger = body.logger
   pipeline.messager = body.messager

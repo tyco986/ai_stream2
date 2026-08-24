@@ -1,13 +1,12 @@
 # Prerequisite: servers/generator/scripts/3_generate.sh --config topdown_pose_image
 
-type: Pose2DImagePipeline
+type: RtmposeImagePipeline
 name: topdown-pose-image
 config_dir: /root/configs/generator/topdown_pose_image
 drawer:
   show_label: true
   show_conf: true
 logger:
-  root: /root/logs/deepstream
   interval: 0
 messager:
   topic: deepstream-detections

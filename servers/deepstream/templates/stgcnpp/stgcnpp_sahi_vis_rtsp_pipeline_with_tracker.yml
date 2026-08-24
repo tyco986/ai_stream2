@@ -1,0 +1,13 @@
+# Prerequisite: servers/generator/scripts/3_generate.sh --config stgcnpp_sahi_vis_rtsp_with_tracker
+
+type: StgcnppSahiVisRTSPPipeline
+name: stgcnpp-sahi-vis-rtsp-with-tracker
+config_dir: /root/configs/generator/stgcnpp_sahi_vis_rtsp_with_tracker
+drawer:
+  show_pose: false
+logger:
+  interval: 50
+messager:
+  topic: deepstream-detections
+  host: ai_stream2_kafka
+  port: 9092

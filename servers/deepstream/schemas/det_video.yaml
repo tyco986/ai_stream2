@@ -1,23 +1,10 @@
 type: DetVideoPipeline
 params:
   drawer:
+    available: false
+  parser:
     available: true
-    params:
-      show_label:
-        available: true
-        default: true
-      show_conf:
-        available: true
-        default: true
-      show_id:
-        available: true
-        default: false
-      interval:
-        available: true
-        default: 50
-      fade_time:
-        available: true
-        default: 1
+    params: {}
   logger:
     available: true
     params:

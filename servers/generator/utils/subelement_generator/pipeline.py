@@ -236,6 +236,33 @@ class PipelineGenerator:
             "two-phase-nmm": two_phase_nmm,
         }
 
+    def _add_nvsahipostprocess_pose(
+        self,
+        gie_ids: str = "1",
+        class_agnostic: bool = False,
+        oks_threshold: float = 0.5,
+        vis_threshold: float = 0.0,
+        num_keypoints: int = 0,
+    ) -> dict:
+        """Build properties for ``nvsahipostprocess_pose`` (OKS-NMS of slice poses).
+
+        Args:
+            gie_ids: Semicolon-separated ``gie-unique-id`` values whose poses to merge.
+                ``"-1"`` processes all GIEs in the batch.
+            class_agnostic: When False, OKS-NMS runs per class ID. When True, overlapping
+                poses of different classes can suppress each other.
+            oks_threshold: OKS above this suppresses the lower-score pose.
+            vis_threshold: Keypoint score must exceed this to count in OKS.
+            num_keypoints: K for Kx3 keypoints; ``0`` uses ``mask_params.height``.
+        """
+        return {
+            "gie-ids": gie_ids,
+            "class-agnostic": class_agnostic,
+            "oks-threshold": oks_threshold,
+            "vis-threshold": vis_threshold,
+            "num-keypoints": num_keypoints,
+        }
+
     def _add_nvtracker(
         self,
         ll_lib_file: str,

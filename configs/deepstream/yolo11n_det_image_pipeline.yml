@@ -1,0 +1,14 @@
+# Prerequisite: servers/generator/scripts/3_generate.sh --config yolo11n_det_image
+
+type: DetImagePipeline
+name: yolo11n-det-image
+config_dir: /root/configs/generator/yolo11n_det_image
+drawer:
+  show_label: true
+  show_conf: true
+logger:
+  interval: 0
+messager:
+  topic: deepstream-detections
+  host: ai_stream2_kafka
+  port: 9092

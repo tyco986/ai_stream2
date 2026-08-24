@@ -54,34 +54,13 @@ deepstream:
     properties:
       config-file: /root/configs/generator/stgcnpp_video/nvdsanalytics.yml
       gpu-id: 0
-  - type: nvosdbin
-    name: nvosdbin
-    properties:
-      gpu-id: 0
-      display-bbox: true
-      display-text: true
-      display-mask: false
   - type: nvvideoconvert
     name: nvvideoconvert
     properties:
       gpu-id: 0
-  - type: nvv4l2h264enc
-    name: nvv4l2h264enc
+  - type: fakesink
+    name: fakesink
     properties:
-      bitrate: 4000000
-      iframeinterval: 25
-      preset-id: 1
-      gpu-id: 0
-  - type: h264parse
-    name: h264parse
-    properties: {}
-  - type: mp4mux
-    name: mp4mux
-    properties: {}
-  - type: filesink
-    name: filesink
-    properties:
-      location: /root/outputs/deepstream/stgcnpp_video.mp4
       sync: false
       async: false
   edges:
@@ -92,9 +71,5 @@ deepstream:
     sgie0: nvdspreprocess
     nvdspreprocess: sgie1
     sgie1: nvdsanalytics
-    nvdsanalytics: nvosdbin
-    nvosdbin: nvvideoconvert
-    nvvideoconvert: nvv4l2h264enc
-    nvv4l2h264enc: h264parse
-    h264parse: mp4mux
-    mp4mux: filesink
+    nvdsanalytics: nvvideoconvert
+    nvvideoconvert: fakesink

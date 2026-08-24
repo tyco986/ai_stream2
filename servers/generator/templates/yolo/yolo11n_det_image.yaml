@@ -5,7 +5,7 @@
 generator: DetImageGenerator
 config_save_dir: /root/configs/generator/yolo11n_det_image
 pgie:
-  interval: 0
+  interval: 50
   model_dir: /root/models/trt/yolo11n
   class_attrs:
     all:

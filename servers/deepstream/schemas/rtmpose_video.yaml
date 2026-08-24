@@ -1,0 +1,54 @@
+type: RtmposeVideoPipeline
+params:
+  drawer:
+    available: false
+  parser:
+    available: true
+    params:
+      infer_height:
+        available: true
+        default: 256
+      infer_width:
+        available: true
+        default: 192
+      sgie_unique_id:
+        available: true
+        default: 2
+  logger:
+    available: true
+    params:
+      interval:
+        available: true
+        default: 0
+      times:
+        available: false
+        default:
+        - latency
+        - pgie
+        - nvtracker
+        - sgie0
+  messager:
+    available: true
+    params:
+      interval:
+        available: true
+        default: 0
+  debouncer:
+    available: false
+    params:
+      length:
+        available: false
+        default: 10
+      threshold:
+        available: false
+        default: 0.5
+      class_ids:
+        available: false
+        default:
+        - 0
+        - 1
+      mode:
+        available: false
+        default: fold
+  capturer:
+    available: false
