@@ -39,3 +39,4 @@ def sgie_period_from_config(config_dir) -> int:
     sgie = yaml.safe_load((Path(config_dir) / SGIE_YML).read_text(encoding="utf-8"))
     period = nvinfer_period(int(sgie["property"].get("interval", 0)))
     return period
+

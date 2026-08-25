@@ -40,6 +40,7 @@ class PoseSahiVisVideoPipeline(BaseVideoPipeline):
         self.parser = self.drawer
         self.messager = DetMessager(**self.messager)
         self.attach_latency_and_times(self.logger)
-        self.attach_handler("nvsahipostprocess_pose", "det_cache", self.drawer.cache_detections)
+        if self.has_tracker():
+            self.attach_handler("nvsahipostprocess_pose", "det_cache", self.drawer.cache_detections)
         self.attach_detections("yolo")
         return self.pipeline

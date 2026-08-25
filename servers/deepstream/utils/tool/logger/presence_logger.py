@@ -13,8 +13,6 @@ class PresenceLogger(DetLogger):
             logger.info("%s", json.dumps(result["event"], ensure_ascii=False))
             key = self.times_key(result)
             self.pending_times.add(key)
-            drawer_ms = result.get("drawer")
-            if drawer_ms is not None:
-                self.pending_drawer[key] = drawer_ms
+            self.stash_probe_ms(result, key)
             counter = 0
         self.counters[pad_index] = counter + 1

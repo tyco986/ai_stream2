@@ -1,6 +1,4 @@
-import yaml
-
-from utils.base_pipeline.base_rtsp import PIPELINE_YML, BaseRTSPPipeline
+from utils.base_pipeline.base_rtsp import BaseRTSPPipeline
 from utils.base_pipeline.utils.validate import (
     sgie_period_from_config,
     validate_probe_interval,
@@ -55,12 +53,8 @@ class StgcnppVisRTSPPipeline(BaseRTSPPipeline):
         return "pgie"
 
     def rect_expand_target(self):
-        pipeline = yaml.safe_load(
-            (self.config_dir / PIPELINE_YML).read_text(encoding="utf-8")
-        )
-        names = {node["name"] for node in pipeline["deepstream"]["nodes"]}
         target = "pgie"
-        if "nvtracker" in names:
+        if self.has_tracker():
             target = "nvtracker"
         return target
 
@@ -70,7 +64,8 @@ class StgcnppVisRTSPPipeline(BaseRTSPPipeline):
         self.parser = self.drawer
         self.messager = DetMessager(**self.messager)
         self.attach_latency_and_times(self.logger)
-        self.attach_handler(self.cache_target(), "det_cache", self.drawer.cache_detections)
+        if self.has_tracker():
+            self.attach_handler(self.cache_target(), "det_cache", self.drawer.cache_detections)
         self.attach_handler(
             self.rect_expand_target(),
             "rect_expand",

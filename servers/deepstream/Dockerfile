@@ -73,8 +73,10 @@ cp "${SEG_SRC}/libnvdsinfer_custom_impl_Yolo_seg.so" "${DEEPSTREAM_LIBS_ROOT}/";
 COPY servers/deepstream/modules/latency_probe /tmp/latency_probe
 COPY servers/deepstream/modules/stgcnpp_preprocess /tmp/stgcnpp_preprocess
 COPY servers/deepstream/modules/stgcnpp_classifier_parse /tmp/stgcnpp_classifier_parse
-COPY servers/deepstream/modules/nvdsinfer_yolo_pose /tmp/nvdsinfer_yolo_pose
-COPY servers/deepstream/modules/nvsahipostprocess_pose /tmp/nvsahipostprocess_pose
+COPY servers/deepstream/modules/gie_custom_lib/nvdsinfer_yolo_pose /tmp/nvdsinfer_yolo_pose
+COPY servers/deepstream/modules/plugins/nvsahipostprocess_pose /tmp/nvsahipostprocess_pose
+COPY servers/deepstream/modules/plugins/nvlogger /tmp/nvlogger
+COPY servers/deepstream/modules/plugins/nvfadedrawer /tmp/nvfadedrawer
 RUN cmake -S /tmp/latency_probe -B /tmp/latency_probe/build \
     && cmake --build /tmp/latency_probe/build -j"$(nproc)" \
     && cp /tmp/latency_probe/build/liblatency_probe.so \
@@ -104,7 +106,19 @@ RUN cmake -S /tmp/latency_probe -B /tmp/latency_probe/build \
     && cp /tmp/nvsahipostprocess_pose/build/libnvdsgst_sahipostprocess_pose.so \
         "${GST_PLUGIN_PATH}/" \
     && test -f "${GST_PLUGIN_PATH}/libnvdsgst_sahipostprocess_pose.so" \
-    && rm -rf /tmp/nvsahipostprocess_pose
+    && rm -rf /tmp/nvsahipostprocess_pose \
+    && cmake -S /tmp/nvlogger -B /tmp/nvlogger/build \
+    && cmake --build /tmp/nvlogger/build -j"$(nproc)" \
+    && cp /tmp/nvlogger/build/libnvdsgst_logger.so \
+        "${GST_PLUGIN_PATH}/" \
+    && test -f "${GST_PLUGIN_PATH}/libnvdsgst_logger.so" \
+    && rm -rf /tmp/nvlogger \
+    && cmake -S /tmp/nvfadedrawer -B /tmp/nvfadedrawer/build \
+    && cmake --build /tmp/nvfadedrawer/build -j"$(nproc)" \
+    && cp /tmp/nvfadedrawer/build/libnvdsgst_fadedrawer.so \
+        "${GST_PLUGIN_PATH}/" \
+    && test -f "${GST_PLUGIN_PATH}/libnvdsgst_fadedrawer.so" \
+    && rm -rf /tmp/nvfadedrawer
 
 ENV LD_PRELOAD=/opt/ai_stream2/servers/deepstream/libs/libnvdsinfer_custom_impl_Yolo_seg.so
 

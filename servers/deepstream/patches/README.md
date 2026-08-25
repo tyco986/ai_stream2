@@ -2,7 +2,7 @@
 
 构建镜像时由 `Dockerfile` 自动应用（`gstnvinfer` 为 `-p0`，sahi 为 `-p1`）。改补丁后需重新跑 `scripts/1_build_dev_image.sh`。
 
-YOLO-Pose 解析与 SAHI OKS-NMS 不走 patch：见 `modules/nvdsinfer_yolo_pose`（`libnvds_infer_yolo_pose.so`）和 `modules/nvsahipostprocess_pose`（element `nvsahipostprocess_pose`）。
+YOLO-Pose 解析与 SAHI OKS-NMS 不走 patch：见 `modules/gie_custom_lib/nvdsinfer_yolo_pose`（`libnvds_infer_yolo_pose.so`）和 `modules/plugins/nvsahipostprocess_pose`（element `nvsahipostprocess_pose`）。
 
 | 补丁 | 作用 |
 |------|------|

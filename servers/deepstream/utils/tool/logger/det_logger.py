@@ -60,6 +60,7 @@ class DetLogger:
         self.loggers = {}
         self.pending_times = set()
         self.pending_drawer = {}
+        self.pending_parser = {}
         assert self.interval >= 0, "interval must be greater than or equal to 0"
         self.root.mkdir(parents=True, exist_ok=True)
 
@@ -103,6 +104,7 @@ class DetLogger:
         )
         key = self.times_key(result)
         record["drawer"] = self.pending_drawer.pop(key, None)
+        record["parser"] = self.pending_parser.pop(key, None)
         return record
 
     def times_key(self, result: dict) -> tuple:
@@ -113,6 +115,14 @@ class DetLogger:
         )
         return key
 
+    def stash_probe_ms(self, result, key) -> None:
+        drawer_ms = result.get("drawer")
+        parser_ms = result.get("parser")
+        if drawer_ms is not None:
+            self.pending_drawer[key] = drawer_ms
+        if parser_ms is not None:
+            self.pending_parser[key] = parser_ms
+
     def log_detection(self, result: dict) -> None:
         pad_index = int(result["pad_index"])
         counter = self.counters.get(pad_index, 0)
@@ -121,9 +131,7 @@ class DetLogger:
             logger.info("%s", json.dumps(self.payload(result), ensure_ascii=False))
             key = self.times_key(result)
             self.pending_times.add(key)
-            drawer_ms = result.get("drawer")
-            if drawer_ms is not None:
-                self.pending_drawer[key] = drawer_ms
+            self.stash_probe_ms(result, key)
             counter = 0
         self.counters[pad_index] = counter + 1
 
