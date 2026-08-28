@@ -7,7 +7,8 @@ TOPDOWN_POSE_SAHI_IMAGE_TOPOLOGY_DOC = """
     Topology::
 
         nvurisrcbin → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
-            → sgie0 → nvdsanalytics → nvosdbin → nvvideoconvert → nvjpegenc → filesink
+            → nvdspreprocess_rtmpose → sgie0 → nvrtmposepostprocess → nvdsanalytics
+            → nvosdbin → nvvideoconvert → nvjpegenc → filesink
 
     Notes::
 
@@ -17,22 +18,6 @@ TOPDOWN_POSE_SAHI_IMAGE_TOPOLOGY_DOC = """
 
 class TopdownPoseSahiImageGenerator(TopdownPoseMixin, BaseSahiImageGenerator):
     GENERATOR = "TopdownPoseSahiImageGenerator"
-    SINK_PATH_TEMPLATES = {
-        "filesink": [
-            "nvurisrcbin",
-            "nvstreammux",
-            "nvsahipreprocess",
-            "pgie",
-            "queue_sahi",
-            "nvsahipostprocess",
-            "sgie0",
-            "nvdsanalytics",
-            "nvosdbin",
-            "nvvideoconvert",
-            "nvjpegenc",
-            "filesink",
-        ],
-    }
 
     f"""Generate topdown-pose SAHI image pipeline YAML.
 
@@ -41,20 +26,28 @@ class TopdownPoseSahiImageGenerator(TopdownPoseMixin, BaseSahiImageGenerator):
 
     def __init__(
         self,
+        pipeline_name: str,
         input: str | Path,
         output: str | Path,
         analyzer: dict | None,
         pgie: dict,
         sgie: dict,
         sahi: dict,
+        logger: dict | None = None,
+        drawer: dict | None = None,
+        event_coder: dict | None = None,
     ) -> None:
         self.sgie = sgie
         super().__init__(
+            pipeline_name=pipeline_name,
             input=input,
             output=output,
             analyzer=analyzer,
             pgie=pgie,
             sahi=sahi,
+            logger=logger,
+            drawer=drawer,
+            event_coder=event_coder,
         )
 
     def add(self) -> None:
@@ -127,7 +120,16 @@ class TopdownPoseSahiImageGenerator(TopdownPoseMixin, BaseSahiImageGenerator):
                 gpu_id=self.pgie_generator.gpu_id,
             ),
         )
+        self.append_event_coder()
+        self.append_kafka_nodes()
         gpu_id = self.pgie_generator.gpu_id
+        if self.drawer is not None:
+            drawer = self.drawer
+            self._append_node(
+                self.nvpose_drawer_element(),
+                "nvposefadedrawer",
+                self.nvpose_drawer_properties(drawer),
+            )
         self._append_node(
             "nvosdbin",
             "nvosdbin",
@@ -137,6 +139,14 @@ class TopdownPoseSahiImageGenerator(TopdownPoseMixin, BaseSahiImageGenerator):
             "nvvideoconvert",
             "nvvideoconvert",
             self._add_nvvideoconvert(gpu_id=gpu_id),
+        )
+        self._append_node(
+            "nvdetlogger",
+            "nvdetlogger",
+            self._add_nvdetlogger(
+                root=f"/root/logs/deepstream/{self.pipeline_name}",
+                interval=int(self.logger.get("interval", 0)),
+            ),
         )
         self._append_node("nvjpegenc", "nvjpegenc", self._add_nvjpegenc())
         self._append_node(
@@ -152,11 +162,17 @@ class TopdownPoseSahiImageGenerator(TopdownPoseMixin, BaseSahiImageGenerator):
             "nvsahipreprocess": "pgie",
             "pgie": "queue_sahi",
             "queue_sahi": "nvsahipostprocess",
-            "nvsahipostprocess": "sgie0",
-            "sgie0": "nvdsanalytics",
-            "nvdsanalytics": "nvosdbin",
-            "nvosdbin": "nvvideoconvert",
-            "nvvideoconvert": "nvjpegenc",
-            "nvjpegenc": "filesink",
         }
+        self.link_sgie_from(edges, "nvsahipostprocess")
+        edges[self.pose_gie_tail()] = "nvdsanalytics"
+        self.link_kafka_from_analytics(edges, self.vis_tee_next())
+        self.link_drawer_before_osd(edges)
+        edges.update({
+            "queue_msg": "nvmsgconv",
+            "nvmsgconv": "nvmsgbroker",
+            "nvosdbin": "nvvideoconvert",
+            "nvvideoconvert": "nvdetlogger",
+            "nvdetlogger": "nvjpegenc",
+            "nvjpegenc": "filesink",
+        })
         self.pipeline["deepstream"]["edges"] = edges

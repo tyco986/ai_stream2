@@ -1,14 +1,17 @@
 from pathlib import Path
 
-from ..subelement_generator.pipeline import TRACKER_LL_LIB
+from ..subelement_generator.kafka import KAFKA_CONN_STR, KAFKA_PROTO_LIB
+from ..subelement_generator.nvmsgconv import PAYLOAD_DEEPSTREAM_MINIMAL
+from ..subelement_generator.nvtracker import TRACKER_LL_LIB
 from .base_sahi_video import BaseSahiVideoGenerator
 
 SAHI_VIS_VIDEO_TOPOLOGY_DOC = """
     Topology::
 
         nvurisrcbin → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
-            → nvtracker → nvdsanalytics → nvosdbin → nvvideoconvert → nvv4l2h264enc → h264parse
-            → mp4mux → filesink
+            → nvbboxsnapshot → nvtracker → nvdsanalytics → tee_msg
+              ─┬→ nvosdbin → nvvideoconvert → nvdetlogger → nvv4l2h264enc → h264parse → mp4mux → filesink
+              └→ queue_msg → nvmsgconv → nvmsgbroker
 
     Notes::
 
@@ -17,24 +20,6 @@ SAHI_VIS_VIDEO_TOPOLOGY_DOC = """
 
 
 class BaseSahiVisVideoGenerator(BaseSahiVideoGenerator):
-    SINK_PATH_TEMPLATES = {
-        "filesink": [
-            "nvurisrcbin",
-            "nvstreammux",
-            "nvsahipreprocess",
-            "pgie",
-            "queue_sahi",
-            "nvsahipostprocess",
-            "nvtracker",
-            "nvdsanalytics",
-            "nvosdbin",
-            "nvvideoconvert",
-            "nvv4l2h264enc",
-            "h264parse",
-            "mp4mux",
-            "filesink",
-        ],
-    }
 
     f"""Generate YOLO SAHI video pipeline YAML with OSD and mp4 filesink.
 
@@ -45,20 +30,28 @@ class BaseSahiVisVideoGenerator(BaseSahiVideoGenerator):
 
     def __init__(
         self,
+        pipeline_name: str,
         input: str | Path,
         output: str | Path,
         analyzer: dict | None,
         pgie: dict,
         sahi: dict,
         tracker: dict | None = None,
+        logger: dict | None = None,
+        drawer: dict | None = None,
+        event_coder: dict | None = None,
     ) -> None:
         self.output = Path(output).expanduser().resolve()
         super().__init__(
+            pipeline_name=pipeline_name,
             input=input,
             analyzer=analyzer,
             pgie=pgie,
             sahi=sahi,
             tracker=tracker,
+            logger=logger,
+            drawer=drawer,
+            event_coder=event_coder,
         )
 
     def init_input(self) -> None:
@@ -123,6 +116,12 @@ class BaseSahiVisVideoGenerator(BaseSahiVideoGenerator):
             self.sahi_postprocess_properties(postprocess),
         )
         if self.enable_nvtracker:
+            if self.drawer is not None:
+                self._append_node(
+                    "nvbboxsnapshot",
+                    "nvbboxsnapshot",
+                    self._add_nvbboxsnapshot(),
+                )
             self._append_node(
                 "nvtracker",
                 "nvtracker",
@@ -143,7 +142,37 @@ class BaseSahiVisVideoGenerator(BaseSahiVideoGenerator):
                 gpu_id=self.pgie_generator.gpu_id,
             ),
         )
+        self.append_event_coder()
+        self._append_node("tee", "tee_msg", self._add_tee())
+        self._append_node("queue", "queue_msg", self._add_queue())
+        self._append_node(
+            "nvmsgconv",
+            "nvmsgconv",
+            self._add_nvmsgconv(
+                self.MSGCONV_CONFIG_NAME,
+                payload_type=PAYLOAD_DEEPSTREAM_MINIMAL,
+            ),
+        )
+        self._append_node(
+            "nvmsgbroker",
+            "nvmsgbroker",
+            self._add_nvmsgbroker(
+                KAFKA_PROTO_LIB,
+                KAFKA_CONN_STR,
+                self.kafka_topic,
+                self.KAFKA_CONFIG_NAME,
+                sync=False,
+                async_=False,
+            ),
+        )
         gpu_id = self.pgie_generator.gpu_id
+        if self.drawer is not None:
+            drawer = self.drawer
+            self._append_node(
+                self.nvdet_drawer_element(),
+                "nvdetfadedrawer",
+                self.nvdet_drawer_properties(drawer),
+            )
         self._append_node(
             "nvosdbin",
             "nvosdbin",
@@ -153,6 +182,14 @@ class BaseSahiVisVideoGenerator(BaseSahiVideoGenerator):
             "nvvideoconvert",
             "nvvideoconvert",
             self._add_nvvideoconvert(gpu_id=gpu_id),
+        )
+        self._append_node(
+            "nvdetlogger",
+            "nvdetlogger",
+            self._add_nvdetlogger(
+                root=f"/root/logs/deepstream/{self.pipeline_name}",
+                interval=int(self.logger.get("interval", 0)),
+            ),
         )
         self._append_node(
             "nvv4l2h264enc",
@@ -182,12 +219,26 @@ class BaseSahiVisVideoGenerator(BaseSahiVideoGenerator):
         }
         inference_tail = self.SAHI_POSTPROCESS
         if self.enable_nvtracker:
-            edges[inference_tail] = "nvtracker"
+            if self.drawer is not None:
+                edges[inference_tail] = "nvbboxsnapshot"
+                edges["nvbboxsnapshot"] = "nvtracker"
+            else:
+                edges[inference_tail] = "nvtracker"
             inference_tail = "nvtracker"
         edges[inference_tail] = "nvdsanalytics"
-        edges["nvdsanalytics"] = "nvosdbin"
+        edges["nvdsanalytics"] = self.after_analytics()
+        self.link_event_coder(edges)
+        vis_next = "nvosdbin"
+        if self.drawer is not None:
+            vis_next = "nvdetfadedrawer"
+        edges["tee_msg"] = [vis_next, "queue_msg"]
+        if self.drawer is not None:
+            edges["nvdetfadedrawer"] = "nvosdbin"
+        edges["queue_msg"] = "nvmsgconv"
+        edges["nvmsgconv"] = "nvmsgbroker"
         edges["nvosdbin"] = "nvvideoconvert"
-        edges["nvvideoconvert"] = "nvv4l2h264enc"
+        edges["nvvideoconvert"] = "nvdetlogger"
+        edges["nvdetlogger"] = "nvv4l2h264enc"
         edges["nvv4l2h264enc"] = "h264parse"
         edges["h264parse"] = "mp4mux"
         edges["mp4mux"] = "filesink"

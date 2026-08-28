@@ -14,6 +14,12 @@ typedef struct {
   gfloat confidence;
   gint class_id;
   guint64 object_id;
+  gchar label[64];
+  gfloat *mask;
+  guint mask_size;
+  guint mask_width;
+  guint mask_height;
+  gfloat mask_threshold;
 } NvDsBboxSnapshotBox;
 
 typedef struct {

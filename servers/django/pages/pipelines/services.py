@@ -879,6 +879,7 @@ class StartStopOrchestrator:
         config_dir = Path(settings.GENERATOR_CONFIG_ROOT) / row.name
         body = {
             "generator": TypeRegistry.generator_type(row.type),
+            "pipeline_name": row.name,
             "config_save_dir": str(config_dir),
             "interval": config.get("interval", 0),
             "pgie": {
@@ -911,7 +912,7 @@ class StartStopOrchestrator:
                 "interval": (config.get("logger") or {}).get("interval", 50),
             },
             "messager": {
-                "topic": settings.DEEPSTREAM_KAFKA_TOPIC,
+                "topic": f"{settings.PROJECT_NAME}_{row.name}",
                 "host": f"{settings.PROJECT_NAME}_kafka",
                 "port": settings.DEEPSTREAM_KAFKA_PORT,
             },

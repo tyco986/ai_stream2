@@ -3,12 +3,10 @@ entry: utils/yolo_pipeline/seg_image.py
 files:
 - utils/base_pipeline/base_image.py
 - utils/base_pipeline/utils/detection_attach.py
-- utils/base_pipeline/utils/times_attach.py
 - utils/base_pipeline/utils/validate.py
 - utils/base_pipeline/utils/call_probe.py
 - utils/tool/timer/__init__.py
 - utils/tool/timer/decorator.py
-- utils/tool/timer/frame_timer.py
 - utils/tool/parser/result.py
 - utils/tool/parser/det_parser.py
 - utils/tool/parser/seg_parser.py

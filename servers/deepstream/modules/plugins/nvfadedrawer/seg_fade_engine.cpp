@@ -14,9 +14,17 @@ bool SegFadeEngine::show_mask() const
 
 void SegFadeEngine::clear_mask(NvDsObjectMeta *obj) const
 {
+  g_free(obj->mask_params.data);
+  obj->mask_params.data = nullptr;
+  obj->mask_params.size = 0;
   obj->mask_params.width = 0;
   obj->mask_params.height = 0;
   obj->mask_params.threshold = 0.0f;
+}
+
+void SegFadeEngine::hide_tracker_mask(NvDsObjectMeta *obj) const
+{
+  clear_mask(obj);
 }
 
 void SegFadeEngine::decorate_object(
@@ -31,6 +39,11 @@ void SegFadeEngine::decorate_object(
   if (!show_mask_) {
     clear_mask(obj);
   }
+}
+
+void SegFadeEngineWithTracker::process_frame(NvDsBatchMeta *batch_meta, NvDsFrameMeta *frame_meta)
+{
+  process_tracker_frame(batch_meta, frame_meta);
 }
 
 }  // namespace nvfadedrawer

@@ -4,6 +4,7 @@
 # Reference frame: attachments/images/video1.png (1920x1080), main flow is vertical.
 
 generator: DetVisVideoGenerator
+pipeline_name: yolo11n_det_vis_video_with_tracker
 config_save_dir: /root/configs/generator/yolo11n_det_vis_video_with_tracker
 pgie:
   interval: 50
@@ -13,5 +14,12 @@ pgie:
       conf: 0.25
 tracker: {class_id: -1}
 analyzer: null
+logger:
+  interval: 50
+drawer:
+  interval: 50
+  fade_time: 1
+  show_label: true
+event_coder: null
 input: /root/attachments/videos/video1.mp4
 output: /root/outputs/deepstream/yolo11n_det_vis_video_with_tracker.mp4

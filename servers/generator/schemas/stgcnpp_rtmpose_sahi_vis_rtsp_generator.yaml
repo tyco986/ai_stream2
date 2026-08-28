@@ -1,0 +1,133 @@
+type: StgcnppRtmposeSahiVisRTSPGenerator
+params:
+  pipeline_name:
+    available: true
+    default: null
+  streams:
+    available: true
+    params: {}
+  pgie:
+    available: true
+    params:
+      interval:
+        available: true
+        min: 1
+        default: 50
+  sgie:
+    available: true
+    params:
+      interval:
+        available: true
+        min: 1
+        default: 50
+  stgcnpp:
+    available: true
+    params:
+      interval:
+        available: true
+        min: 1
+        default: 1
+  tracker:
+    available: true
+    params:
+      class_id:
+        available: true
+        default:
+        - -1
+  analyzer:
+    available: true
+    params:
+      streams:
+        available: true
+        default: []
+      template:
+        available: true
+        default: null
+      roi_filtering:
+        available: true
+        default:
+          class_id:
+          - -1
+      overcrowding:
+        available: true
+        default: null
+      line_crossing:
+        available: true
+        default: null
+      direction_detection:
+        available: true
+        default: null
+  logger:
+    available: true
+    params:
+      root:
+        available: true
+        default: /root/logs/deepstream
+      interval:
+        available: true
+        default: 0
+  drawer:
+    available: true
+    params:
+      interval:
+        available: true
+        default: 50
+      fade_time:
+        available: true
+        default: 1
+      show_label:
+        available: true
+        default: true
+      show_snap:
+        available: true
+        default: true
+      show_pose:
+        available: true
+        default: true
+      pose_threshold:
+        available: true
+        default: 0.0
+      mode:
+        available: true
+        default: coco17
+  event_coder:
+    available: false
+    params:
+      class_ids:
+        available: false
+        default:
+        - 0
+        - 1
+      event_names:
+        available: false
+        default:
+        - Fire
+        - Smoke
+      length:
+        available: false
+        default: 10
+      threshold:
+        available: false
+        default: 0.5
+      mode:
+        available: false
+        default: fold
+  sahi:
+    available: true
+    params:
+      nvsahipreprocess:
+        available: true
+        default:
+          slice_width: 960
+          slice_height: 540
+          overlap_width_ratio: 0.2
+          overlap_height_ratio: 0.2
+          enable_full_frame: true
+      nvsahipostprocess:
+        available: true
+        default:
+          match_threshold: 0.5
+  input:
+    available: false
+  output:
+    available: false

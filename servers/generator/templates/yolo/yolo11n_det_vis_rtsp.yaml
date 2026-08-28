@@ -1,6 +1,7 @@
 # bash servers/generator/scripts/3_generate.sh --config yolo11n_det_vis_rtsp
 
 generator: DetVisRTSPGenerator
+pipeline_name: yolo11n_det_vis_rtsp
 config_save_dir: /root/configs/generator/yolo11n_det_vis_rtsp
 pgie:
   interval: 50
@@ -11,6 +12,13 @@ pgie:
 tracker:
   class_id: 0
 analyzer: null
+logger:
+  interval: 50
+drawer:
+  interval: 50
+  fade_time: 1
+  show_label: true
+event_coder: null
 streams:
   video1:
     url: rtsp://ai_stream2_mediamtx:8554/video1

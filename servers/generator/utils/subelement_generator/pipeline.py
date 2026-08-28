@@ -3,11 +3,6 @@ from pathlib import Path
 
 import yaml
 
-KAFKA_PROTO_LIB = "/opt/nvidia/deepstream/deepstream/lib/libnvds_kafka_proto.so"
-KAFKA_CONN_STR = f"{os.environ.get('PROJECT_NAME', 'ai_stream2')}_kafka;9092"
-KAFKA_TOPIC = "deepstream-detections"
-TRACKER_LL_LIB = "/opt/nvidia/deepstream/deepstream/lib/libnvds_nvmultiobjecttracker.so"
-
 
 class PipelineGenerator:
     """Base class for building pyservicemaker pipeline YAML configs.
@@ -236,6 +231,28 @@ class PipelineGenerator:
             "two-phase-nmm": two_phase_nmm,
         }
 
+    def _add_nvrtmposepostprocess(
+        self,
+        infer_width: int = 192,
+        infer_height: int = 256,
+        padding: float = 1.25,
+        sgie_unique_id: int = 2,
+    ) -> dict:
+        """Build properties for ``nvrtmposepostprocess``.
+
+        Args:
+            infer_width: RTMPose crop width used to map tensor keypoints.
+            infer_height: RTMPose crop height used to map tensor keypoints.
+            padding: RTMPose bbox expand ratio.
+            sgie_unique_id: Pose SGIE unique-id whose ROI tensors to map.
+        """
+        return {
+            "infer-width": infer_width,
+            "infer-height": infer_height,
+            "padding": padding,
+            "sgie-unique-id": sgie_unique_id,
+        }
+
     def _add_nvsahipostprocess_pose(
         self,
         gie_ids: str = "1",
@@ -292,6 +309,14 @@ class PipelineGenerator:
             "operate-on-class-ids": operate_on_class_ids,
         }
 
+    def _add_nvbboxsnapshot(self) -> dict:
+        """Build properties for ``nvbboxsnapshot`` (copy PGIE boxes into frame user meta).
+
+        No GObject properties; used when ``nvtracker`` is enabled, immediately after
+        nvinfer (or SAHI postprocess) and before ``nvtracker``.
+        """
+        return {}
+
     def _add_nvdsanalytics(self, config_file: str, gpu_id: int = 0) -> dict:
         """Build properties for ``nvdsanalytics`` (ROI/line/direction analytics on tracks).
 
@@ -302,6 +327,213 @@ class PipelineGenerator:
         return {
             "config-file": config_file,
             "gpu-id": gpu_id,
+        }
+
+    def _add_nvdetlogger(self, root: str | None = None, interval: int = 0) -> dict:
+        """Build properties for ``nvdetlogger`` (write detection boxes as JSON lines).
+
+        Args:
+            root: Directory for ``probe_{pad}.log``. None uses
+                ``/root/logs/deepstream`` (not generator ``LOG_ROOT``).
+            interval: Log period in frames; ``0`` means every frame.
+        """
+        return {
+            "root": root or "/root/logs/deepstream",
+            "interval": interval,
+        }
+
+    def _add_nvdetfadedrawer(
+        self,
+        interval: int = 0,
+        fade_time: int = 0,
+        show_label: bool = False,
+    ) -> dict:
+        """Build properties for ``nvdetfadedrawer`` (in-place fade, no snapshot)."""
+        return {
+            "interval": interval,
+            "fade-time": fade_time,
+            "show-label": show_label,
+        }
+
+    def _add_nvdetfadedrawerwithtracker(
+        self,
+        interval: int = 0,
+        fade_time: int = 0,
+        show_label: bool = False,
+        show_snap: bool = True,
+    ) -> dict:
+        """Build properties for ``nvdetfadedrawerwithtracker``."""
+        return {
+            "interval": interval,
+            "fade-time": fade_time,
+            "show-label": show_label,
+            "show-snap": show_snap,
+        }
+
+    def _add_nvposefadedrawer(
+        self,
+        interval: int = 0,
+        fade_time: int = 0,
+        show_label: bool = False,
+        show_pose: bool = True,
+        pose_threshold: float = 0.0,
+        mode: str = "coco17",
+    ) -> dict:
+        """Build properties for ``nvposefadedrawer`` (in-place fade, no snapshot)."""
+        return {
+            "interval": interval,
+            "fade-time": fade_time,
+            "show-label": show_label,
+            "show-pose": show_pose,
+            "pose-threshold": pose_threshold,
+            "mode": mode,
+        }
+
+    def _add_nvposefadedrawerwithtracker(
+        self,
+        interval: int = 0,
+        fade_time: int = 0,
+        show_label: bool = False,
+        show_pose: bool = True,
+        pose_threshold: float = 0.0,
+        mode: str = "coco17",
+        show_snap: bool = True,
+    ) -> dict:
+        """Build properties for ``nvposefadedrawerwithtracker``."""
+        return {
+            "interval": interval,
+            "fade-time": fade_time,
+            "show-label": show_label,
+            "show-pose": show_pose,
+            "pose-threshold": pose_threshold,
+            "mode": mode,
+            "show-snap": show_snap,
+        }
+
+    def _add_nvstgcnppfadedrawerwithtracker(
+        self,
+        interval: int = 0,
+        fade_time: int = 0,
+        show_label: bool = False,
+        show_pose: bool = True,
+        pose_threshold: float = 0.0,
+        mode: str = "coco17",
+        show_snap: bool = True,
+        classifier_unique_id: int = 4,
+    ) -> dict:
+        """Build properties for ``nvstgcnppfadedrawerwithtracker``."""
+        properties = self._add_nvposefadedrawerwithtracker(
+            interval,
+            fade_time,
+            show_label,
+            show_pose,
+            pose_threshold,
+            mode,
+            show_snap,
+        )
+        properties["classifier-unique-id"] = classifier_unique_id
+        return properties
+
+    def _add_nvsegfadedrawer(
+        self,
+        interval: int = 0,
+        fade_time: int = 0,
+        show_label: bool = False,
+        show_mask: bool = True,
+    ) -> dict:
+        """Build properties for ``nvsegfadedrawer`` (in-place fade, no snapshot)."""
+        return {
+            "interval": interval,
+            "fade-time": fade_time,
+            "show-label": show_label,
+            "show-mask": show_mask,
+        }
+
+    def _add_nvsegfadedrawerwithtracker(
+        self,
+        interval: int = 0,
+        fade_time: int = 0,
+        show_label: bool = False,
+        show_mask: bool = True,
+        show_snap: bool = True,
+    ) -> dict:
+        """Build properties for ``nvsegfadedrawerwithtracker``."""
+        return {
+            "interval": interval,
+            "fade-time": fade_time,
+            "show-label": show_label,
+            "show-mask": show_mask,
+            "show-snap": show_snap,
+        }
+
+    def _add_nvpresencecoder(
+        self,
+        class_ids: list | str | None = None,
+        event_names: list | str | None = None,
+        length: int = 10,
+        threshold: float = 0.5,
+        mode: str = "fold",
+    ) -> dict:
+        """Build properties for ``nvpresencecoder`` (encode presence event codes).
+
+        Args:
+            class_ids: Class id list or semicolon-separated string (e.g. ``[0, 1]``).
+            event_names: Names aligned with ``class_ids`` (list or ``Fire;Smoke``).
+            length: Presence window length.
+            threshold: Presence ratio threshold in ``[0, 1]``.
+            mode: ``slide`` or ``fold``.
+        """
+        class_ids_value = class_ids if class_ids is not None else ""
+        event_names_value = event_names if event_names is not None else ""
+        if not isinstance(class_ids_value, str):
+            class_ids_value = ";".join(str(item) for item in class_ids_value)
+        if not isinstance(event_names_value, str):
+            event_names_value = ";".join(str(item) for item in event_names_value)
+        return {
+            "class-ids": class_ids_value,
+            "event-names": event_names_value,
+            "length": length,
+            "threshold": threshold,
+            "mode": mode,
+        }
+
+    def _add_nvrawcapturer(
+        self,
+        output_dir: str | None = None,
+        capture_codes: str = "1",
+    ) -> dict:
+        """Build properties for ``nvrawcapturer`` (dump raw RGB NVMM frames as PNG).
+
+        Args:
+            output_dir: Root for ``images/``. None uses ``CAPTURE_OUTPUT_DIR`` or
+                ``/root/outputs/deepstream/capture``.
+            capture_codes: Presence event code characters that trigger a dump.
+        """
+        return {
+            "output-dir": output_dir
+            or os.environ.get("CAPTURE_OUTPUT_DIR", "/root/outputs/deepstream/capture"),
+            "capture-codes": capture_codes,
+        }
+
+    def _add_nvviscapturer(
+        self,
+        output_dir: str | None = None,
+        capture_codes: str = "1",
+        label_task: str = "det",
+    ) -> dict:
+        """Build properties for ``nvviscapturer`` (dump vis RGB NVMM frames and labels).
+
+        Args:
+            output_dir: Root for ``vis/`` ``labels/`` ``labelme/``. None uses
+                ``CAPTURE_OUTPUT_DIR`` or ``/root/outputs/deepstream/capture``.
+            capture_codes: Presence event code characters that trigger a dump.
+            label_task: ``det`` or ``seg``; both write bbox labels this release.
+        """
+        return {
+            "output-dir": output_dir
+            or os.environ.get("CAPTURE_OUTPUT_DIR", "/root/outputs/deepstream/capture"),
+            "capture-codes": capture_codes,
+            "label-task": label_task,
         }
 
     def _add_tee(self) -> dict:
@@ -335,8 +567,8 @@ class PipelineGenerator:
 
         Args:
             config: Path to nvmsgconv config (schema, sensor IDs, payload fields).
-            payload_type: Serialization format: ``0`` = custom, ``1`` = DeepStream schema
-                (default Kafka/JSON payload).
+            payload_type: ``0`` full DeepStream JSON, ``1`` ``PAYLOAD_DEEPSTREAM_MINIMAL``,
+                ``2`` protobuf, ``256`` custom ``msg2p-lib``.
             msg2p_newapi: When True, use the newer message-to-payload API for object/edge
                 metadata conversion.
             frame_interval: Emit one message every N frames (``1`` = every frame).
@@ -414,7 +646,7 @@ class PipelineGenerator:
         return {"gpu-id": gpu_id}
 
     def _add_capsfilter(self, caps: str) -> dict:
-        """Build properties for ``capsfilter`` (force negotiated caps, e.g. RGB for appsink).
+        """Build properties for ``capsfilter`` (force negotiated caps, e.g. RGB for nvcapturer).
 
         Args:
             caps: GStreamer caps string (e.g. ``video/x-raw(memory:NVMM), format=RGB``).
@@ -486,31 +718,6 @@ class PipelineGenerator:
         """
         return {
             "sync": sync,
-            "async": async_,
-        }
-
-    def _add_appsink(
-        self,
-        emit_signals: bool = True,
-        sync: bool = False,
-        max_buffers: int = 1,
-        drop: bool = True,
-        async_: bool = False,
-    ) -> dict:
-        """Build properties for ``appsink`` (deliver buffers to application via Receiver).
-
-        Args:
-            emit_signals: When True, emit ``new-sample`` for BufferRetriever attachment.
-            sync: When True, synchronize to the pipeline clock.
-            max_buffers: Maximum queued buffers before dropping or blocking.
-            drop: When True, drop old buffers when the queue is full.
-            async_: When True, run the sink state change asynchronously.
-        """
-        return {
-            "emit-signals": emit_signals,
-            "sync": sync,
-            "max-buffers": max_buffers,
-            "drop": drop,
             "async": async_,
         }
 

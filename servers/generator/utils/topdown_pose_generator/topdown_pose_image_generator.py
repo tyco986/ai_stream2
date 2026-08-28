@@ -6,26 +6,14 @@ from .topdown_pose_mixin import TopdownPoseMixin
 TOPDOWN_POSE_IMAGE_TOPOLOGY_DOC = """
     Topology::
 
-        nvurisrcbin → nvstreammux → pgie → sgie0 → nvdsanalytics → nvosdbin
+        nvurisrcbin → nvstreammux → pgie → nvdspreprocess_rtmpose → sgie0
+            → nvrtmposepostprocess → nvdsanalytics → tee → nvposefadedrawer → nvosdbin
             → nvvideoconvert → nvjpegenc → filesink
 """
 
 
 class TopdownPoseImageGenerator(TopdownPoseMixin, BaseImageGenerator):
     GENERATOR = "TopdownPoseImageGenerator"
-    SINK_PATH_TEMPLATES = {
-        "filesink": [
-            "nvurisrcbin",
-            "nvstreammux",
-            "pgie",
-            "sgie0",
-            "nvdsanalytics",
-            "nvosdbin",
-            "nvvideoconvert",
-            "nvjpegenc",
-            "filesink",
-        ],
-    }
 
     f"""Generate topdown-pose image pipeline YAML.
 
@@ -34,18 +22,26 @@ class TopdownPoseImageGenerator(TopdownPoseMixin, BaseImageGenerator):
 
     def __init__(
         self,
+        pipeline_name: str,
         input: str | Path,
         output: str | Path,
         analyzer: dict | None,
         pgie: dict,
         sgie: dict,
+        logger: dict | None = None,
+        drawer: dict | None = None,
+        event_coder: dict | None = None,
     ) -> None:
         self.sgie = sgie
         super().__init__(
+            pipeline_name=pipeline_name,
             input=input,
             output=output,
             analyzer=analyzer,
             pgie=pgie,
+            logger=logger,
+            drawer=drawer,
+            event_coder=event_coder,
         )
 
     def add(self) -> None:
@@ -89,7 +85,16 @@ class TopdownPoseImageGenerator(TopdownPoseMixin, BaseImageGenerator):
                 gpu_id=self.pgie_generator.gpu_id,
             ),
         )
+        self.append_event_coder()
+        self.append_kafka_nodes()
         gpu_id = self.pgie_generator.gpu_id
+        if self.drawer is not None:
+            drawer = self.drawer
+            self._append_node(
+                self.nvpose_drawer_element(),
+                "nvposefadedrawer",
+                self.nvpose_drawer_properties(drawer),
+            )
         self._append_node(
             "nvosdbin",
             "nvosdbin",
@@ -99,6 +104,14 @@ class TopdownPoseImageGenerator(TopdownPoseMixin, BaseImageGenerator):
             "nvvideoconvert",
             "nvvideoconvert",
             self._add_nvvideoconvert(gpu_id=gpu_id),
+        )
+        self._append_node(
+            "nvdetlogger",
+            "nvdetlogger",
+            self._add_nvdetlogger(
+                root=f"/root/logs/deepstream/{self.pipeline_name}",
+                interval=int(self.logger.get("interval", 0)),
+            ),
         )
         self._append_node("nvjpegenc", "nvjpegenc", self._add_nvjpegenc())
         self._append_node(
@@ -111,11 +124,17 @@ class TopdownPoseImageGenerator(TopdownPoseMixin, BaseImageGenerator):
         edges = {
             "nvurisrcbin": "nvstreammux",
             "nvstreammux": "pgie",
-            "pgie": "sgie0",
-            "sgie0": "nvdsanalytics",
-            "nvdsanalytics": "nvosdbin",
-            "nvosdbin": "nvvideoconvert",
-            "nvvideoconvert": "nvjpegenc",
-            "nvjpegenc": "filesink",
         }
+        self.link_sgie_from(edges, "pgie")
+        edges[self.pose_gie_tail()] = "nvdsanalytics"
+        self.link_kafka_from_analytics(edges, self.vis_tee_next())
+        self.link_drawer_before_osd(edges)
+        edges.update({
+            "queue_msg": "nvmsgconv",
+            "nvmsgconv": "nvmsgbroker",
+            "nvosdbin": "nvvideoconvert",
+            "nvvideoconvert": "nvdetlogger",
+            "nvdetlogger": "nvjpegenc",
+            "nvjpegenc": "filesink",
+        })
         self.pipeline["deepstream"]["edges"] = edges

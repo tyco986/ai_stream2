@@ -1,45 +1,24 @@
-from ..subelement_generator.pipeline import TRACKER_LL_LIB
+from ..subelement_generator.kafka import KAFKA_CONN_STR, KAFKA_PROTO_LIB
+from ..subelement_generator.nvmsgconv import PAYLOAD_DEEPSTREAM_MINIMAL
+from ..subelement_generator.nvtracker import TRACKER_LL_LIB
 from .base_sahi_rtsp import BaseSahiRTSPGenerator
 
 SAHI_VIS_RTSP_TOPOLOGY_DOC = """
     Topology::
 
         nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
-              → nvtracker → nvdsanalytics → nvstreamdemux
-              → queue_demux{N} → nvvideoconvert{N} → nvosdbin{N}
-              → queue_enc{N} → nvv4l2h264enc{N} → h264parse{N} → rtspclientsink{N}
+              → nvbboxsnapshot → nvtracker → nvdsanalytics → tee_msg
+                ─┬→ nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → nvosdbin{N}
+                │     → queue_enc{N} → nvdetlogger{N} → nvv4l2h264enc{N} → h264parse{N} → rtspclientsink{N}
+                └→ queue_msg → nvmsgconv → nvmsgbroker
 
     Notes::
 
         ``mux`` batch size is the stream count; ``pgie`` batch size is the SAHI tile count.
-
-    Python (not in pipeline.yml)::
-
-        attach(nvdsanalytics, Probe)   # logger → drawer → messager
 """
 
 
 class BaseSahiVisRTSPGenerator(BaseSahiRTSPGenerator):
-    SINK_PATH_TEMPLATES = {
-        "rtspclientsink{index}": [
-            "nvurisrcbin{index}",
-            "nvstreammux",
-            "nvsahipreprocess",
-            "pgie",
-            "queue_sahi",
-            "nvsahipostprocess",
-            "nvtracker",
-            "nvdsanalytics",
-            "nvstreamdemux",
-            "queue_demux{index}",
-            "nvvideoconvert{index}",
-            "nvosdbin{index}",
-            "queue_enc{index}",
-            "nvv4l2h264enc{index}",
-            "h264parse{index}",
-            "rtspclientsink{index}",
-        ],
-    }
 
     f"""Generate YOLO SAHI RTSP pipeline with OSD preview sink.
 
@@ -99,6 +78,12 @@ class BaseSahiVisRTSPGenerator(BaseSahiRTSPGenerator):
             self.sahi_postprocess_properties(postprocess),
         )
         if self.enable_nvtracker:
+            if self.drawer is not None:
+                self._append_node(
+                    "nvbboxsnapshot",
+                    "nvbboxsnapshot",
+                    self._add_nvbboxsnapshot(),
+                )
             self._append_node(
                 "nvtracker",
                 "nvtracker",
@@ -119,6 +104,29 @@ class BaseSahiVisRTSPGenerator(BaseSahiRTSPGenerator):
                 gpu_id=self.pgie_generator.gpu_id,
             ),
         )
+        self.append_event_coder()
+        self._append_node("tee", "tee_msg", self._add_tee())
+        self._append_node("queue", "queue_msg", self._add_queue())
+        self._append_node(
+            "nvmsgconv",
+            "nvmsgconv",
+            self._add_nvmsgconv(
+                self.MSGCONV_CONFIG_NAME,
+                payload_type=PAYLOAD_DEEPSTREAM_MINIMAL,
+            ),
+        )
+        self._append_node(
+            "nvmsgbroker",
+            "nvmsgbroker",
+            self._add_nvmsgbroker(
+                KAFKA_PROTO_LIB,
+                KAFKA_CONN_STR,
+                self.kafka_topic,
+                self.KAFKA_CONFIG_NAME,
+                sync=False,
+                async_=False,
+            ),
+        )
         self._append_node("nvstreamdemux", "nvstreamdemux", self._add_nvstreamdemux())
         gpu_id = self.pgie_generator.gpu_id
         osd_kwargs = self.event_osd_kwargs(gpu_id)
@@ -130,12 +138,27 @@ class BaseSahiVisRTSPGenerator(BaseSahiRTSPGenerator):
                 f"nvvideoconvert{index}",
                 self._add_nvvideoconvert(gpu_id=gpu_id),
             )
+            if self.drawer is not None:
+                drawer = self.drawer
+                self._append_node(
+                    self.nvdet_drawer_element(),
+                    f"nvdetfadedrawer{index}",
+                    self.nvdet_drawer_properties(drawer),
+                )
             self._append_node(
                 "nvosdbin",
                 f"nvosdbin{index}",
                 self._add_nvosdbin(**osd_kwargs),
             )
             self._append_node("queue", f"queue_enc{index}", self._add_queue())
+            self._append_node(
+                "nvdetlogger",
+                f"nvdetlogger{index}",
+                self._add_nvdetlogger(
+                    root=f"/root/logs/deepstream/{self.pipeline_name}",
+                    interval=int(self.logger.get("interval", 0)),
+                ),
+            )
             self._append_node(
                 "nvv4l2h264enc",
                 f"nvv4l2h264enc{index}",
@@ -154,7 +177,6 @@ class BaseSahiVisRTSPGenerator(BaseSahiRTSPGenerator):
             )
 
     def link(self) -> None:
-        self.pad_links = {"nvstreamdemux": []}
         edges: dict = {}
         for index in range(len(self.streams)):
             edges[f"nvurisrcbin{index}"] = "nvstreammux"
@@ -164,16 +186,29 @@ class BaseSahiVisRTSPGenerator(BaseSahiRTSPGenerator):
         edges["queue_sahi"] = self.SAHI_POSTPROCESS
         inference_tail = self.SAHI_POSTPROCESS
         if self.enable_nvtracker:
-            edges[inference_tail] = "nvtracker"
+            if self.drawer is not None:
+                edges[inference_tail] = "nvbboxsnapshot"
+                edges["nvbboxsnapshot"] = "nvtracker"
+            else:
+                edges[inference_tail] = "nvtracker"
             inference_tail = "nvtracker"
         edges[inference_tail] = "nvdsanalytics"
-        edges["nvdsanalytics"] = "nvstreamdemux"
+        edges["nvdsanalytics"] = self.after_analytics()
+        self.link_event_coder(edges)
+        edges["tee_msg"] = ["nvstreamdemux", "queue_msg"]
+        edges["queue_msg"] = "nvmsgconv"
+        edges["nvmsgconv"] = "nvmsgbroker"
         for index in range(len(self.streams)):
-            self.pad_links["nvstreamdemux"].append(f"queue_demux{index}")
             edges[f"queue_demux{index}"] = f"nvvideoconvert{index}"
-            edges[f"nvvideoconvert{index}"] = f"nvosdbin{index}"
+            osd_prev = f"nvosdbin{index}"
+            if self.drawer is not None:
+                osd_prev = f"nvdetfadedrawer{index}"
+            edges[f"nvvideoconvert{index}"] = osd_prev
+            if self.drawer is not None:
+                edges[f"nvdetfadedrawer{index}"] = f"nvosdbin{index}"
             edges[f"nvosdbin{index}"] = f"queue_enc{index}"
-            edges[f"queue_enc{index}"] = f"nvv4l2h264enc{index}"
+            edges[f"queue_enc{index}"] = f"nvdetlogger{index}"
+            edges[f"nvdetlogger{index}"] = f"nvv4l2h264enc{index}"
             edges[f"nvv4l2h264enc{index}"] = f"h264parse{index}"
             edges[f"h264parse{index}"] = f"rtspclientsink{index}"
         self.pipeline["deepstream"]["edges"] = edges

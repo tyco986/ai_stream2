@@ -1,6 +1,9 @@
-from pathlib import Path
 from copy import deepcopy
+from pathlib import Path
+
 import yaml
+
+PAYLOAD_DEEPSTREAM_MINIMAL = 1
 
 
 nvmsgconv_default_config = {"sensor0": {

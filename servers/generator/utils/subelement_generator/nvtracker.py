@@ -1,6 +1,9 @@
-from pathlib import Path
 from copy import deepcopy
+from pathlib import Path
+
 import yaml
+
+TRACKER_LL_LIB = "/opt/nvidia/deepstream/deepstream/lib/libnvds_nvmultiobjecttracker.so"
 
 
 nvtracker_default_config = {

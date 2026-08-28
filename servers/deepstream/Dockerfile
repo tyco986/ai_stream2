@@ -17,7 +17,6 @@ ENV GST_PLUGIN_PATH=/opt/nvidia/deepstream/deepstream/lib/gst-plugins
 ENV DEEPSTREAM_LIBS_ROOT=/opt/ai_stream2/servers/deepstream/libs
 ENV NVDS_ENABLE_LATENCY_MEASUREMENT=1
 ENV NVDS_ENABLE_COMPONENT_LATENCY_MEASUREMENT=1
-ENV LATENCY_PROBE_SO=/opt/nvidia/deepstream/deepstream/service-maker/modules/liblatency_probe.so
 
 WORKDIR /app
 
@@ -31,15 +30,12 @@ RUN find /etc/apt -type f \( -name "*.list" -o -name "*.sources" \) -print0 \
       -e "s|https://security.ubuntu.com/ubuntu|https://mirrors.tuna.tsinghua.edu.cn/ubuntu|g" \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
+        cmake \
         librdkafka-dev \
+        libpng-dev \
+        libyaml-cpp-dev \
         patch \
-        ripgrep \
     && rm -rf /var/lib/apt/lists/*
-
-COPY servers/deepstream/requirements.txt /tmp/requirements.txt
-RUN pip install --break-system-packages \
-    /opt/nvidia/deepstream/deepstream/service-maker/python/pyservicemaker*.whl \
-    && pip install --break-system-packages -r /tmp/requirements.txt
 
 COPY servers/deepstream/patches /app/patches
 COPY attachments/deepstream-sahi /root/attachments/deepstream-sahi
@@ -70,57 +66,43 @@ mkdir -p "${DEEPSTREAM_LIBS_ROOT}"; \
 cp "${SEG_SRC}/libnvdsinfer_custom_impl_Yolo_seg.so" "${DEEPSTREAM_LIBS_ROOT}/"; \
 '
 
-COPY servers/deepstream/modules/latency_probe /tmp/latency_probe
-COPY servers/deepstream/modules/stgcnpp_preprocess /tmp/stgcnpp_preprocess
-COPY servers/deepstream/modules/stgcnpp_classifier_parse /tmp/stgcnpp_classifier_parse
-COPY servers/deepstream/modules/gie_custom_lib/nvdsinfer_yolo_pose /tmp/nvdsinfer_yolo_pose
-COPY servers/deepstream/modules/plugins/nvsahipostprocess_pose /tmp/nvsahipostprocess_pose
-COPY servers/deepstream/modules/plugins/nvlogger /tmp/nvlogger
-COPY servers/deepstream/modules/plugins/nvfadedrawer /tmp/nvfadedrawer
-RUN cmake -S /tmp/latency_probe -B /tmp/latency_probe/build \
-    && cmake --build /tmp/latency_probe/build -j"$(nproc)" \
-    && cp /tmp/latency_probe/build/liblatency_probe.so \
-        /opt/nvidia/deepstream/deepstream/service-maker/modules/ \
-    && rm -rf /tmp/latency_probe \
-    && cmake -S /tmp/stgcnpp_preprocess -B /tmp/stgcnpp_preprocess/build \
-    && cmake --build /tmp/stgcnpp_preprocess/build -j"$(nproc)" \
-    && mkdir -p "${DEEPSTREAM_LIBS_ROOT}" \
-    && cp /tmp/stgcnpp_preprocess/build/libnvds_stgcnpp_preprocess.so \
-        "${DEEPSTREAM_LIBS_ROOT}/" \
-    && test -f "${DEEPSTREAM_LIBS_ROOT}/libnvds_stgcnpp_preprocess.so" \
-    && rm -rf /tmp/stgcnpp_preprocess \
-    && cmake -S /tmp/stgcnpp_classifier_parse -B /tmp/stgcnpp_classifier_parse/build \
-    && cmake --build /tmp/stgcnpp_classifier_parse/build -j"$(nproc)" \
-    && cp /tmp/stgcnpp_classifier_parse/build/libnvds_stgcnpp_classifier_parse.so \
-        "${DEEPSTREAM_LIBS_ROOT}/" \
-    && test -f "${DEEPSTREAM_LIBS_ROOT}/libnvds_stgcnpp_classifier_parse.so" \
-    && rm -rf /tmp/stgcnpp_classifier_parse \
-    && cmake -S /tmp/nvdsinfer_yolo_pose -B /tmp/nvdsinfer_yolo_pose/build \
-    && cmake --build /tmp/nvdsinfer_yolo_pose/build -j"$(nproc)" \
-    && cp /tmp/nvdsinfer_yolo_pose/build/libnvds_infer_yolo_pose.so \
-        "${DEEPSTREAM_LIBS_ROOT}/" \
-    && test -f "${DEEPSTREAM_LIBS_ROOT}/libnvds_infer_yolo_pose.so" \
-    && rm -rf /tmp/nvdsinfer_yolo_pose \
-    && cmake -S /tmp/nvsahipostprocess_pose -B /tmp/nvsahipostprocess_pose/build \
-    && cmake --build /tmp/nvsahipostprocess_pose/build -j"$(nproc)" \
-    && cp /tmp/nvsahipostprocess_pose/build/libnvdsgst_sahipostprocess_pose.so \
-        "${GST_PLUGIN_PATH}/" \
-    && test -f "${GST_PLUGIN_PATH}/libnvdsgst_sahipostprocess_pose.so" \
-    && rm -rf /tmp/nvsahipostprocess_pose \
-    && cmake -S /tmp/nvlogger -B /tmp/nvlogger/build \
-    && cmake --build /tmp/nvlogger/build -j"$(nproc)" \
-    && cp /tmp/nvlogger/build/libnvdsgst_logger.so \
-        "${GST_PLUGIN_PATH}/" \
-    && test -f "${GST_PLUGIN_PATH}/libnvdsgst_logger.so" \
-    && rm -rf /tmp/nvlogger \
-    && cmake -S /tmp/nvfadedrawer -B /tmp/nvfadedrawer/build \
-    && cmake --build /tmp/nvfadedrawer/build -j"$(nproc)" \
-    && cp /tmp/nvfadedrawer/build/libnvdsgst_fadedrawer.so \
-        "${GST_PLUGIN_PATH}/" \
-    && test -f "${GST_PLUGIN_PATH}/libnvdsgst_fadedrawer.so" \
-    && rm -rf /tmp/nvfadedrawer
+COPY servers/deepstream/modules /tmp/modules
+RUN bash -ec '\
+set -euo pipefail; \
+export PATH="/usr/local/cuda-${CUDA_VER}/bin:${PATH}"; \
+stub="/usr/local/cuda-${CUDA_VER}/lib64/stubs"; \
+ln -sf "${stub}/libcuda.so" "${stub}/libcuda.so.1"; \
+export LIBRARY_PATH="${stub}${LIBRARY_PATH:+:${LIBRARY_PATH}}"; \
+mkdir -p "${DEEPSTREAM_LIBS_ROOT}" "${GST_PLUGIN_PATH}"; \
+mapfile -t cmake_lists < <(find /tmp/modules -name CMakeLists.txt | sort); \
+test "${#cmake_lists[@]}" -gt 0; \
+for cm in "${cmake_lists[@]}"; do \
+  src="$(dirname "$cm")"; \
+  cmake -S "$src" -B "$src/build"; \
+  cmake --build "$src/build" -j"$(nproc)"; \
+  shopt -s nullglob; \
+  for so in "$src/build"/*.so; do \
+    name="$(basename "$so")"; \
+    dest="${DEEPSTREAM_LIBS_ROOT}"; \
+    if [[ "$name" == libnvdsgst_* ]]; then dest="${GST_PLUGIN_PATH}"; fi; \
+    cp "$so" "${dest}/"; \
+    test -f "${dest}/${name}"; \
+  done; \
+  for bin in "$src/build"/*; do \
+    if [[ -f "$bin" && -x "$bin" && "$bin" != *.so ]]; then \
+      name="$(basename "$bin")"; \
+      cp "$bin" "/usr/local/bin/${name}"; \
+      test -x "/usr/local/bin/${name}"; \
+    fi; \
+  done; \
+done; \
+test -x /usr/local/bin/pipeline_runner; \
+test -x /usr/local/bin/deepstream_api; \
+test -f "${DEEPSTREAM_LIBS_ROOT}/libgsource_remove_guard.so"; \
+rm -rf /tmp/modules; \
+'
 
-ENV LD_PRELOAD=/opt/ai_stream2/servers/deepstream/libs/libnvdsinfer_custom_impl_Yolo_seg.so
+ENV LD_PRELOAD=/opt/ai_stream2/servers/deepstream/libs/libgsource_remove_guard.so:/opt/ai_stream2/servers/deepstream/libs/libnvdsinfer_custom_impl_Yolo_seg.so
 
 FROM base AS dev
 
@@ -129,14 +111,13 @@ set -euo pipefail; \
 mkdir -p "${DEEPSTREAM_LIBS_ROOT}"; \
 cd /opt/nvidia/deepstream/deepstream-9.0/sources/apps/sample_apps/deepstream-3d-action-recognition && make && make install; \
 cp /opt/nvidia/deepstream/deepstream-9.0/lib/libnvds_custom_sequence_preprocess.so "${DEEPSTREAM_LIBS_ROOT}/"; \
-ls -la "${DEEPSTREAM_LIBS_ROOT}/"; \
 '
 
 RUN mkdir -p /root/logs/deepstream \
     && rm -rf /root/.cache/gstreamer-1.0
 
 EXPOSE 8092
-CMD ["python3", "main.py"]
+CMD ["deepstream_api"]
 
 FROM dev AS prod
 
@@ -144,4 +125,4 @@ COPY servers/deepstream /app
 WORKDIR /app
 
 EXPOSE 8092
-CMD ["python3", "main.py"]
+CMD ["deepstream_api"]

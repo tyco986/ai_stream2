@@ -6,6 +6,8 @@ files:
 - utils/subelement_generator/pgie.py
 - utils/subelement_generator/utils/nvinfer_interval.py
 - utils/subelement_generator/pipeline.py
+- utils/subelement_generator/kafka.py
+- utils/subelement_generator/nvmsgconv.py
 - utils/subelement_generator/utils/default_gie/__init__.py
 - utils/subelement_generator/utils/default_gie/yolo_det.py
 - utils/subelement_generator/utils/default_gie/yolo_pose.py

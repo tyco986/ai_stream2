@@ -24,11 +24,6 @@ params:
       interval:
         available: true
         default: 0
-      times:
-        available: false
-        default:
-        - latency
-        - pgie
   messager:
     available: true
     params:

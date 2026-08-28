@@ -1,6 +1,7 @@
 # bash servers/generator/scripts/3_generate.sh --config topdown_pose_rtsp
 
 generator: TopdownPoseRTSPGenerator
+pipeline_name: topdown_pose_rtsp
 config_save_dir: /root/configs/generator/topdown_pose_rtsp
 pgie:
   interval: 50
@@ -14,6 +15,10 @@ sgie:
 tracker:
   class_id: 0
 analyzer: null
+logger:
+  interval: 50
+drawer: null
+event_coder: null
 streams:
   video1:
     url: rtsp://ai_stream2_mediamtx:8554/video1

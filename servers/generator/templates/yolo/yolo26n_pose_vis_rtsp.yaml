@@ -1,6 +1,7 @@
 # bash servers/generator/scripts/3_generate.sh --config yolo26n_pose_vis_rtsp
 
 generator: PoseVisRTSPGenerator
+pipeline_name: yolo26n_pose_vis_rtsp
 config_save_dir: /root/configs/generator/yolo26n_pose_vis_rtsp
 pgie:
   interval: 50
@@ -10,6 +11,16 @@ pgie:
       conf: 0.25
 tracker: null
 analyzer: null
+logger:
+  interval: 50
+drawer:
+  interval: 50
+  fade_time: 1
+  show_label: true
+  show_pose: true
+  pose_threshold: 0.0
+  mode: coco17
+event_coder: null
 streams:
   video1:
     url: rtsp://ai_stream2_mediamtx:8554/video1

@@ -20,6 +20,8 @@ class GeneratorService:
         payload = dict(config)
         config_save_dir = Path(payload.pop("config_save_dir"))
         generator_name = payload.pop("generator")
+        if "pipeline_name" not in payload:
+            payload["pipeline_name"] = config_save_dir.name
         if generator_name not in GeneratorManager.GENERATORS:
             raise AppError(f"unknown type {generator_name!r}")
         if config_save_dir.exists():

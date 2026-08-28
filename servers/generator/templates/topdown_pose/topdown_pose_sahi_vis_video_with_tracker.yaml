@@ -5,6 +5,7 @@
 # Reference frame: attachments/images/video1.png (1920x1080), main flow is vertical.
 
 generator: TopdownPoseSahiVisVideoGenerator
+pipeline_name: topdown_pose_sahi_vis_video_with_tracker
 config_save_dir: /root/configs/generator/topdown_pose_sahi_vis_video_with_tracker
 pgie:
   interval: 50
@@ -18,6 +19,16 @@ sgie:
 tracker:
   class_id: 0
 analyzer: null
+logger:
+  interval: 50
+drawer:
+  interval: 50
+  fade_time: 1
+  show_label: true
+  show_pose: true
+  pose_threshold: 0.0
+  mode: coco17
+event_coder: null
 input: /root/attachments/videos/video1.mp4
 output: /root/outputs/deepstream/topdown_pose_sahi_vis_video_with_tracker.mp4
 sahi:

@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+from ..subelement_generator.kafka import KAFKA_CONN_STR, KAFKA_PROTO_LIB
+from ..subelement_generator.nvmsgconv import PAYLOAD_DEEPSTREAM_MINIMAL
 from ..subelement_generator.nvsahipreprocess import NvsahipreprocessGenerator
 from .base_image import BaseImageGenerator
 from ..subelement_generator.utils.sahi import get_sahi_box, get_sahi_preview
@@ -9,7 +11,9 @@ SAHI_IMAGE_TOPOLOGY_DOC = """
     Topology::
 
         nvurisrcbin → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
-            → nvdsanalytics → nvosdbin → nvvideoconvert → nvjpegenc → filesink
+            → nvdsanalytics → tee_msg
+              ─┬→ nvosdbin → nvvideoconvert → nvdetlogger → nvjpegenc → filesink
+              └→ queue_msg → nvmsgconv → nvmsgbroker
 
     Notes::
 
@@ -20,43 +24,36 @@ SAHI_IMAGE_TOPOLOGY_DOC = """
 class BaseSahiImageGenerator(BaseImageGenerator):
     SAHI_PREPROCESS_CONFIG_NAME = "nvsahipreprocess.ini"
     SAHI_POSTPROCESS = "nvsahipostprocess"
-    SINK_PATH_TEMPLATES = {
-        "filesink": [
-            "nvurisrcbin",
-            "nvstreammux",
-            "nvsahipreprocess",
-            "pgie",
-            "queue_sahi",
-            "nvsahipostprocess",
-            "nvdsanalytics",
-            "nvosdbin",
-            "nvvideoconvert",
-            "nvjpegenc",
-            "filesink",
-        ],
-    }
 
     f"""Generate YOLO SAHI image pipeline YAML.
 
     Reads ``input`` image via DeepStream, runs SAHI inference with OSD, and writes the
-    annotated result to ``output``. Does not insert ``nvmsgconv`` / ``nvmsgbroker``.
+    annotated result to ``output``.
     {SAHI_IMAGE_TOPOLOGY_DOC}
     """
 
     def __init__(
         self,
+        pipeline_name: str,
         input: str | Path,
         output: str | Path,
         analyzer: dict | None,
         pgie: dict,
         sahi: dict,
+        logger: dict | None = None,
+        drawer: dict | None = None,
+        event_coder: dict | None = None,
     ) -> None:
         self.sahi = sahi
         super().__init__(
+            pipeline_name=pipeline_name,
             input=input,
             output=output,
             analyzer=analyzer,
             pgie=pgie,
+            logger=logger,
+            drawer=drawer,
+            event_coder=event_coder,
         )
 
     def init_input(self) -> None:
@@ -191,7 +188,37 @@ class BaseSahiImageGenerator(BaseImageGenerator):
                 gpu_id=self.pgie_generator.gpu_id,
             ),
         )
+        self.append_event_coder()
+        self._append_node("tee", "tee_msg", self._add_tee())
+        self._append_node("queue", "queue_msg", self._add_queue())
+        self._append_node(
+            "nvmsgconv",
+            "nvmsgconv",
+            self._add_nvmsgconv(
+                self.MSGCONV_CONFIG_NAME,
+                payload_type=PAYLOAD_DEEPSTREAM_MINIMAL,
+            ),
+        )
+        self._append_node(
+            "nvmsgbroker",
+            "nvmsgbroker",
+            self._add_nvmsgbroker(
+                KAFKA_PROTO_LIB,
+                KAFKA_CONN_STR,
+                self.kafka_topic,
+                self.KAFKA_CONFIG_NAME,
+                sync=False,
+                async_=False,
+            ),
+        )
         gpu_id = self.pgie_generator.gpu_id
+        if self.drawer is not None:
+            drawer = self.drawer
+            self._append_node(
+                self.nvdet_drawer_element(),
+                "nvdetfadedrawer",
+                self.nvdet_drawer_properties(drawer),
+            )
         self._append_node(
             "nvosdbin",
             "nvosdbin",
@@ -201,6 +228,14 @@ class BaseSahiImageGenerator(BaseImageGenerator):
             "nvvideoconvert",
             "nvvideoconvert",
             self._add_nvvideoconvert(gpu_id=gpu_id),
+        )
+        self._append_node(
+            "nvdetlogger",
+            "nvdetlogger",
+            self._add_nvdetlogger(
+                root=f"/root/logs/deepstream/{self.pipeline_name}",
+                interval=int(self.logger.get("interval", 0)),
+            ),
         )
         self._append_node("nvjpegenc", "nvjpegenc", self._add_nvjpegenc())
         self._append_node(
@@ -217,11 +252,21 @@ class BaseSahiImageGenerator(BaseImageGenerator):
             "pgie": "queue_sahi",
             "queue_sahi": self.SAHI_POSTPROCESS,
             self.SAHI_POSTPROCESS: "nvdsanalytics",
-            "nvdsanalytics": "nvosdbin",
-            "nvosdbin": "nvvideoconvert",
-            "nvvideoconvert": "nvjpegenc",
-            "nvjpegenc": "filesink",
         }
+        edges["nvdsanalytics"] = self.after_analytics()
+        self.link_event_coder(edges)
+        vis_next = "nvosdbin"
+        if self.drawer is not None:
+            vis_next = "nvdetfadedrawer"
+        edges["tee_msg"] = [vis_next, "queue_msg"]
+        if self.drawer is not None:
+            edges["nvdetfadedrawer"] = "nvosdbin"
+        edges["queue_msg"] = "nvmsgconv"
+        edges["nvmsgconv"] = "nvmsgbroker"
+        edges["nvosdbin"] = "nvvideoconvert"
+        edges["nvvideoconvert"] = "nvdetlogger"
+        edges["nvdetlogger"] = "nvjpegenc"
+        edges["nvjpegenc"] = "filesink"
         self.pipeline["deepstream"]["edges"] = edges
 
     def sahi_postprocess_properties(self, postprocess: dict) -> dict:

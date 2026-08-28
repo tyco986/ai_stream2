@@ -1,6 +1,7 @@
 # bash servers/generator/scripts/3_generate.sh --config yolo10x_smoke_fire_rtsp
 
 generator: DetRTSPPresenceGenerator
+pipeline_name: yolo10x_smoke_fire_rtsp
 config_save_dir: /root/configs/generator/yolo10x_smoke_fire_rtsp
 pgie:
   interval: 50
@@ -10,6 +11,15 @@ pgie:
       conf: 0.25
 tracker: null
 analyzer: null
+logger:
+  interval: 50
+drawer: null
+event_coder:
+  class_ids: [0, 1]
+  event_names: [Fire, Smoke]
+  length: 5
+  threshold: 0.5
+  mode: fold
 streams:
   video1:
     url: rtsp://ai_stream2_mediamtx:8554/video1

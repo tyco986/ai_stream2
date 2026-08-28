@@ -1,0 +1,34 @@
+# bash servers/generator/scripts/3_generate.sh --config stgcnpp_rtmpose_vis_video
+#
+# Artifacts: pipeline.yml, pgie.yml, sgie.yml, stgcnpp.yml, preprocess_stgcnpp.txt, ...
+
+generator: StgcnppRtmposeVisVideoGenerator
+pipeline_name: stgcnpp_rtmpose_vis_video
+config_save_dir: /root/configs/generator/stgcnpp_rtmpose_vis_video
+pgie:
+  interval: 50
+  model_dir: /root/models/trt/yolo26n
+  class_attrs:
+    0:
+      conf: 0.25
+sgie:
+  interval: 0
+  model_dir: /root/models/trt/rtmpose-s-coco-pruned
+stgcnpp:
+  interval: 50
+  model_dir: /root/models/trt/stgcnpp-ntu60
+tracker:
+  class_id: 0
+analyzer: null
+logger:
+  interval: 50
+drawer:
+  interval: 50
+  fade_time: 1
+  show_label: true
+  show_pose: true
+  pose_threshold: 0.0
+  mode: coco17
+event_coder: null
+input: /root/attachments/videos/video1.mp4
+output: /root/outputs/deepstream/stgcnpp_rtmpose_vis_video.mp4

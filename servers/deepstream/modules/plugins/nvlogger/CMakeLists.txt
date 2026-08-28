@@ -17,6 +17,7 @@ target_include_directories(nvdsgst_logger PRIVATE
     ${GSTREAMER_INCLUDE_DIRS}
 )
 target_compile_options(nvdsgst_logger PRIVATE -Wall -Werror ${GSTREAMER_CFLAGS_OTHER})
+target_compile_definitions(nvdsgst_logger PRIVATE PACKAGE="nvdsgst_logger")
 target_link_directories(nvdsgst_logger PRIVATE
     /opt/nvidia/deepstream/deepstream/lib
 )

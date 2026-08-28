@@ -42,4 +42,9 @@ class PoseFadeEngine : public DetFadeEngine {
   PoseMode pose_mode_ = PoseMode::Coco17;
 };
 
+class PoseFadeEngineWithTracker : public PoseFadeEngine {
+ public:
+  void process_frame(NvDsBatchMeta *batch_meta, NvDsFrameMeta *frame_meta) override;
+};
+
 }  // namespace nvfadedrawer

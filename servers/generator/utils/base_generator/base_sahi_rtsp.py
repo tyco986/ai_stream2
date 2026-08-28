@@ -1,7 +1,9 @@
 import json
 from pathlib import Path
 
-from ..subelement_generator.pipeline import TRACKER_LL_LIB
+from ..subelement_generator.kafka import KAFKA_CONN_STR, KAFKA_PROTO_LIB
+from ..subelement_generator.nvmsgconv import PAYLOAD_DEEPSTREAM_MINIMAL
+from ..subelement_generator.nvtracker import TRACKER_LL_LIB
 from ..subelement_generator.nvsahipreprocess import NvsahipreprocessGenerator
 from .base_rtsp import BaseRTSPGenerator
 from ..subelement_generator.utils.sahi import get_sahi_box, get_sahi_preview
@@ -10,38 +12,19 @@ SAHI_RTSP_TOPOLOGY_DOC = """
     Topology::
 
         nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
-              → nvtracker → nvdsanalytics → nvstreamdemux
-              → queue_demux{N} → nvvideoconvert{N} → fakesink{N}
+              → nvbboxsnapshot → nvtracker → nvdsanalytics → tee_msg
+                ─┬→ nvstreamdemux → queue_demux{N} → nvdetlogger{N} → fakesink{N}
+                └→ queue_msg → nvmsgconv → nvmsgbroker
 
     Notes::
 
         ``mux`` batch size is the stream count; ``pgie`` batch size is the SAHI tile count.
-
-    Python (not in pipeline.yml)::
-
-        attach(nvdsanalytics, Probe)   # logger → drawer → messager
 """
 
 
 class BaseSahiRTSPGenerator(BaseRTSPGenerator):
     SAHI_PREPROCESS_CONFIG_NAME = "nvsahipreprocess.ini"
     SAHI_POSTPROCESS = "nvsahipostprocess"
-    SINK_PATH_TEMPLATES = {
-        "fakesink{index}": [
-            "nvurisrcbin{index}",
-            "nvstreammux",
-            "nvsahipreprocess",
-            "pgie",
-            "queue_sahi",
-            "nvsahipostprocess",
-            "nvtracker",
-            "nvdsanalytics",
-            "nvstreamdemux",
-            "queue_demux{index}",
-            "nvvideoconvert{index}",
-            "fakesink{index}",
-        ],
-    }
 
     f"""Generate YOLO SAHI RTSP pipeline (headless, ends at fakesink).
 
@@ -51,18 +34,26 @@ class BaseSahiRTSPGenerator(BaseRTSPGenerator):
 
     def __init__(
         self,
+        pipeline_name: str,
         streams: dict[str, dict],
         analyzer: dict | None,
         pgie: dict,
         sahi: dict,
         tracker: dict | None = None,
+        logger: dict | None = None,
+        drawer: dict | None = None,
+        event_coder: dict | None = None,
     ) -> None:
         self.sahi = sahi
         super().__init__(
+            pipeline_name=pipeline_name,
             streams=streams,
             analyzer=analyzer,
             pgie=pgie,
             tracker=tracker,
+            logger=logger,
+            drawer=drawer,
+            event_coder=event_coder,
         )
 
     def init_streams(self) -> None:
@@ -187,6 +178,12 @@ class BaseSahiRTSPGenerator(BaseRTSPGenerator):
             self.sahi_postprocess_properties(postprocess),
         )
         if self.enable_nvtracker:
+            if self.drawer is not None:
+                self._append_node(
+                    "nvbboxsnapshot",
+                    "nvbboxsnapshot",
+                    self._add_nvbboxsnapshot(),
+                )
             self._append_node(
                 "nvtracker",
                 "nvtracker",
@@ -207,14 +204,39 @@ class BaseSahiRTSPGenerator(BaseRTSPGenerator):
                 gpu_id=self.pgie_generator.gpu_id,
             ),
         )
+        self.append_event_coder()
+        self._append_node("tee", "tee_msg", self._add_tee())
+        self._append_node("queue", "queue_msg", self._add_queue())
+        self._append_node(
+            "nvmsgconv",
+            "nvmsgconv",
+            self._add_nvmsgconv(
+                self.MSGCONV_CONFIG_NAME,
+                payload_type=PAYLOAD_DEEPSTREAM_MINIMAL,
+            ),
+        )
+        self._append_node(
+            "nvmsgbroker",
+            "nvmsgbroker",
+            self._add_nvmsgbroker(
+                KAFKA_PROTO_LIB,
+                KAFKA_CONN_STR,
+                self.kafka_topic,
+                self.KAFKA_CONFIG_NAME,
+                sync=False,
+                async_=False,
+            ),
+        )
         self._append_node("nvstreamdemux", "nvstreamdemux", self._add_nvstreamdemux())
-        gpu_id = self.pgie_generator.gpu_id
         for index in range(len(self.streams)):
             self._append_node("queue", f"queue_demux{index}", self._add_queue())
             self._append_node(
-                "nvvideoconvert",
-                f"nvvideoconvert{index}",
-                self._add_nvvideoconvert(gpu_id=gpu_id),
+                "nvdetlogger",
+                f"nvdetlogger{index}",
+                self._add_nvdetlogger(
+                    root=f"/root/logs/deepstream/{self.pipeline_name}",
+                    interval=int(self.logger.get("interval", 0)),
+                ),
             )
             self._append_node(
                 "fakesink",
@@ -223,7 +245,6 @@ class BaseSahiRTSPGenerator(BaseRTSPGenerator):
             )
 
     def link(self) -> None:
-        self.pad_links = {"nvstreamdemux": []}
         edges: dict = {}
         for index in range(len(self.streams)):
             edges[f"nvurisrcbin{index}"] = "nvstreammux"
@@ -233,14 +254,21 @@ class BaseSahiRTSPGenerator(BaseRTSPGenerator):
         edges["queue_sahi"] = self.SAHI_POSTPROCESS
         inference_tail = self.SAHI_POSTPROCESS
         if self.enable_nvtracker:
-            edges[inference_tail] = "nvtracker"
+            if self.drawer is not None:
+                edges[inference_tail] = "nvbboxsnapshot"
+                edges["nvbboxsnapshot"] = "nvtracker"
+            else:
+                edges[inference_tail] = "nvtracker"
             inference_tail = "nvtracker"
         edges[inference_tail] = "nvdsanalytics"
-        edges["nvdsanalytics"] = "nvstreamdemux"
+        edges["nvdsanalytics"] = self.after_analytics()
+        self.link_event_coder(edges)
+        edges["tee_msg"] = ["nvstreamdemux", "queue_msg"]
+        edges["queue_msg"] = "nvmsgconv"
+        edges["nvmsgconv"] = "nvmsgbroker"
         for index in range(len(self.streams)):
-            self.pad_links["nvstreamdemux"].append(f"queue_demux{index}")
-            edges[f"queue_demux{index}"] = f"nvvideoconvert{index}"
-            edges[f"nvvideoconvert{index}"] = f"fakesink{index}"
+            edges[f"queue_demux{index}"] = f"nvdetlogger{index}"
+            edges[f"nvdetlogger{index}"] = f"fakesink{index}"
         self.pipeline["deepstream"]["edges"] = edges
 
     def sahi_postprocess_properties(self, postprocess: dict) -> dict:

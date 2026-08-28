@@ -17,6 +17,6 @@ class BaseSahiPose:
             gie_ids=str(self.pgie_generator.config["property"]["gie-unique-id"]),
             class_agnostic=False,
             oks_threshold=postprocess.get("oks_threshold", 0.5),
-            vis_threshold=postprocess.get("vis_threshold", 0.0),
-            num_keypoints=postprocess.get("num_keypoints", 0),
+            vis_threshold=float(postprocess.get("vis_threshold", 0.0)),
+            num_keypoints=int(postprocess.get("num_keypoints", 0)),
         )

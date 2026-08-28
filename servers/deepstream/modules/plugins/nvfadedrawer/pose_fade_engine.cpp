@@ -204,4 +204,9 @@ void PoseFadeEngine::decorate_object(
   draw_pose(batch_meta, frame_meta, decode_keypoints(obj), fade_alpha);
 }
 
+void PoseFadeEngineWithTracker::process_frame(NvDsBatchMeta *batch_meta, NvDsFrameMeta *frame_meta)
+{
+  process_tracker_frame(batch_meta, frame_meta);
+}
+
 }  // namespace nvfadedrawer

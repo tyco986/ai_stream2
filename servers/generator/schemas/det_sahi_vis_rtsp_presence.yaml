@@ -1,5 +1,8 @@
 type: DetSahiVisRTSPPresenceGenerator
 params:
+  pipeline_name:
+    available: true
+    default: null
   streams:
     available: true
     params: {}
@@ -40,6 +43,52 @@ params:
       direction_detection:
         available: false
         default: null
+  logger:
+    available: true
+    params:
+      root:
+        available: true
+        default: /root/logs/deepstream
+      interval:
+        available: true
+        default: 0
+  drawer:
+    available: true
+    params:
+      interval:
+        available: true
+        default: 50
+      fade_time:
+        available: true
+        default: 1
+      show_label:
+        available: true
+        default: true
+      show_snap:
+        available: true
+        default: true
+  event_coder:
+    available: true
+    params:
+      class_ids:
+        available: true
+        default:
+        - 0
+        - 1
+      event_names:
+        available: true
+        default:
+        - Fire
+        - Smoke
+      length:
+        available: true
+        default: 10
+      threshold:
+        available: true
+        default: 0.5
+      mode:
+        available: true
+        default: fold
   sahi:
     available: true
     params:

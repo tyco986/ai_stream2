@@ -31,6 +31,8 @@ static void gst_nvdetlogger_set_property(GObject *, guint, const GValue *, GPara
 static void gst_nvdetlogger_get_property(GObject *, guint, GValue *, GParamSpec *);
 static void gst_nvdetlogger_finalize(GObject *);
 static GstFlowReturn gst_nvdetlogger_transform_ip(GstBaseTransform *, GstBuffer *);
+static double latency_for_frame(NvDsFrameLatencyInfo *info, guint count,
+                                NvDsFrameMeta *frame_meta);
 
 static void
 gst_nvdetlogger_class_init(GstNvDetLoggerClass *klass)
@@ -117,18 +119,39 @@ gst_nvdetlogger_get_property(GObject *object, guint prop_id, GValue *value,
   }
 }
 
+static double
+latency_for_frame(NvDsFrameLatencyInfo *info, guint count, NvDsFrameMeta *frame_meta)
+{
+  double latency_ms = -1.0;
+  if (info != nullptr && frame_meta != nullptr) {
+    for (guint index = 0; index < count; index++) {
+      if (info[index].source_id == frame_meta->source_id &&
+          static_cast<gint>(info[index].frame_num) == frame_meta->frame_num) {
+        latency_ms = info[index].latency;
+      }
+    }
+  }
+  return latency_ms;
+}
+
 static GstFlowReturn
 gst_nvdetlogger_transform_ip(GstBaseTransform *btrans, GstBuffer *inbuf)
 {
   GstNvDetLogger *self = GST_NVDETLOGGER(btrans);
   GstFlowReturn flow = GST_FLOW_OK;
   nvds_set_input_system_timestamp(inbuf, GST_ELEMENT_NAME(self));
+  guint latency_count = 0;
+  NvDsFrameLatencyInfo *latency_info = nullptr;
   NvDsBatchMeta *batch_meta = gst_buffer_get_nvds_batch_meta(inbuf);
   if (batch_meta) {
+    latency_info = static_cast<NvDsFrameLatencyInfo *>(
+        g_malloc0(sizeof(NvDsFrameLatencyInfo) * batch_meta->num_frames_in_batch));
+    latency_count = nvds_measure_buffer_latency(inbuf, latency_info);
     nvds_acquire_meta_lock(batch_meta);
     for (NvDsMetaList *item = batch_meta->frame_meta_list; item; item = item->next) {
       auto *frame_meta = static_cast<NvDsFrameMeta *>(item->data);
-      if (frame_meta && !engine_of(self)->process_frame(frame_meta)) {
+      double latency_ms = latency_for_frame(latency_info, latency_count, frame_meta);
+      if (frame_meta && !engine_of(self)->process_frame(frame_meta, latency_ms)) {
         GST_ELEMENT_ERROR(self, RESOURCE, WRITE, ("nvdetlogger write failed"), (NULL));
         flow = GST_FLOW_ERROR;
         break;
@@ -136,6 +159,7 @@ gst_nvdetlogger_transform_ip(GstBaseTransform *btrans, GstBuffer *inbuf)
     }
     nvds_release_meta_lock(batch_meta);
   }
+  g_free(latency_info);
   nvds_set_output_system_timestamp(inbuf, GST_ELEMENT_NAME(self));
   return flow;
 }

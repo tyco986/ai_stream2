@@ -4,7 +4,6 @@ class StgcnppPreprocessGenerator:
     )
     UNIQUE_ID = 3
     TARGET_UNIQUE_IDS = 4
-    POSE_GIE_ID = 2
 
     def __init__(
         self,
@@ -12,8 +11,6 @@ class StgcnppPreprocessGenerator:
         clip_len: int,
         num_joints: int,
         num_person: int,
-        infer_width: int,
-        infer_height: int,
         tensor_name: str,
         stream_count: int,
     ) -> None:
@@ -21,8 +18,6 @@ class StgcnppPreprocessGenerator:
         self.clip_len = clip_len
         self.num_joints = num_joints
         self.num_person = num_person
-        self.infer_width = infer_width
-        self.infer_height = infer_height
         self.tensor_name = tensor_name
         self.stream_count = stream_count
 
@@ -38,6 +33,7 @@ class StgcnppPreprocessGenerator:
         )
         text = (
             "# nvdspreprocess for PYSKL ST-GCN++: input (N, M, T, V, C)\n"
+            "# Place after nvrtmposepostprocess. Reads Kx3 keypoints from mask_params.\n"
             "\n"
             "[property]\n"
             "enable=1\n"
@@ -63,9 +59,6 @@ class StgcnppPreprocessGenerator:
             f"frames-sequence-length={self.clip_len}\n"
             f"num-joints={self.num_joints}\n"
             f"num-person={self.num_person}\n"
-            f"pose-gie-id={self.POSE_GIE_ID}\n"
-            f"infer-width={self.infer_width}\n"
-            f"infer-height={self.infer_height}\n"
             "\n"
             "[group-0]\n"
             f"src-ids={src_ids}\n"

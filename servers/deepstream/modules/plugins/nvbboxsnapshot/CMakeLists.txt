@@ -16,6 +16,7 @@ target_include_directories(nvdsgst_bboxsnapshot PRIVATE
     ${GSTREAMER_INCLUDE_DIRS}
 )
 target_compile_options(nvdsgst_bboxsnapshot PRIVATE -Wall -Werror ${GSTREAMER_CFLAGS_OTHER})
+target_compile_definitions(nvdsgst_bboxsnapshot PRIVATE PACKAGE="nvdsgst_bboxsnapshot")
 target_link_directories(nvdsgst_bboxsnapshot PRIVATE
     /opt/nvidia/deepstream/deepstream/lib
 )

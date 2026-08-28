@@ -36,15 +36,6 @@ params:
       interval:
         available: true
         default: 50
-      times:
-        available: false
-        default:
-        - latency
-        - nvsahipreprocess
-        - pgie
-        - nvsahipostprocess
-        - nvtracker
-        - sgie0
   messager:
     available: true
     params:

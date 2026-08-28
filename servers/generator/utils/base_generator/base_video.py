@@ -1,12 +1,18 @@
-import shutil
 from pathlib import Path
 
 import yaml
 
-from ..subelement_generator.pipeline import PipelineGenerator, TRACKER_LL_LIB
+from ..subelement_generator.kafka import (
+    KAFKA_CONN_STR,
+    KAFKA_PROTO_LIB,
+    PROJECT_NAME,
+    KafkaGenerator,
+)
 from ..subelement_generator.nvdsanalytics import NvdsanalyticsGenerator
-from ..subelement_generator.nvtracker import NvtrackerGenerator
+from ..subelement_generator.nvmsgconv import PAYLOAD_DEEPSTREAM_MINIMAL, NvmsgconvGenerator
+from ..subelement_generator.nvtracker import TRACKER_LL_LIB, NvtrackerGenerator
 from ..subelement_generator.pgie import PgieGenerator
+from ..subelement_generator.pipeline import PipelineGenerator
 from ..subelement_generator.utils.pgie_parser import PgieParser
 from ..subelement_generator.utils.nvdsanalytics_parser import NvdsanalyticsParser
 from ..subelement_generator.utils.nvtracker_parser import NvtrackerParser
@@ -17,49 +23,49 @@ VIDEO_STREAM_NAME = "video"
 VIDEO_TOPOLOGY_DOC = """
     Topology::
 
-        nvurisrcbin → nvstreammux → pgie → nvtracker → nvdsanalytics → nvvideoconvert
-            → fakesink
+        nvurisrcbin → nvstreammux → pgie → nvbboxsnapshot → nvtracker → nvdsanalytics → tee_msg
+            ─┬→ nvdetlogger → fakesink
+            └→ queue_msg → nvmsgconv → nvmsgbroker
 """
 
 
 class BaseVideoGenerator(PipelineGenerator):
     PIPELINE_CONFIG_NAME = "pipeline.yml"
     PGIE_CONFIG_NAME = "pgie.yml"
-    PGIE_META_NAME = "pgie_meta.json"
     TRACKER_CONFIG_NAME = "nvtracker.yml"
     ANALYTICS_CONFIG_NAME = "nvdsanalytics.yml"
-    PARAMS_NAME = "params.yml"
-    SINK_PATH_CONFIG_NAME = "sink_path.yml"
-    SINK_PATH_TEMPLATES = {
-        "fakesink": [
-            "nvurisrcbin",
-            "nvstreammux",
-            "pgie",
-            "nvtracker",
-            "nvdsanalytics",
-            "nvvideoconvert",
-            "fakesink",
-        ],
-    }
+    MSGCONV_CONFIG_NAME = "nvmsgconv.yml"
+    KAFKA_CONFIG_NAME = "kafka.txt"
+    PARAMS_CONFIG_NAME = "params.yml"
 
     f"""Generate YOLO video pipeline YAML (headless, ends at fakesink).
 
     Reads ``input`` video via DeepStream and runs inference without OSD encode.
-    Does not insert ``nvmsgconv`` / ``nvmsgbroker``.
     {VIDEO_TOPOLOGY_DOC}
     """
 
     def __init__(
         self,
+        pipeline_name: str,
         input: str | Path,
         analyzer: dict | None,
         pgie: dict,
         tracker: dict | None = None,
+        logger: dict | None = None,
+        drawer: dict | None = None,
+        event_coder: dict | None = None,
     ) -> None:
+        self.pipeline_name = pipeline_name
         self.input = Path(input).expanduser().resolve()
         self.analyzer = analyzer
         self.tracker = tracker
         self.pgie = pgie
+        self.logger = {"interval": 0}
+        if logger is not None:
+            self.logger.update(logger)
+        self.logger["root"] = f"/root/logs/deepstream/{pipeline_name}"
+        self.drawer = drawer
+        self.event_coder = event_coder
 
         super().__init__()
 
@@ -67,6 +73,8 @@ class BaseVideoGenerator(PipelineGenerator):
         self.init_pgie()
         self.init_nvdsanalytics()
         self.init_nvtracker()
+        self.init_nvmsgconv()
+        self.init_kafka()
         self.init_params()
         self.init_pipeline()
 
@@ -79,11 +87,15 @@ class BaseVideoGenerator(PipelineGenerator):
 
     def init_params(self) -> None:
         self.params_yml = {}
+        self.params_yml["pipeline_name"] = self.pipeline_name
         self.params_yml["generator"] = self.GENERATOR
         self.params_yml["input"] = str(self.input)
         self.params_yml["pgie"] = self.pgie
         self.params_yml["analyzer"] = self.analyzer
         self.params_yml["tracker"] = self.tracker
+        self.params_yml["logger"] = self.logger
+        self.params_yml["drawer"] = self.drawer
+        self.params_yml["event_coder"] = self.event_coder
 
     def init_pipeline(self) -> None:
         self.add()
@@ -143,6 +155,18 @@ class BaseVideoGenerator(PipelineGenerator):
             self.tracker_height = parser.align_tracker_dimension(self.height)
             self.operate_on_class_ids = parser.format_operate_on_class_ids(self.tracker)
 
+    def kafka_streams(self) -> list[str]:
+        return [VIDEO_STREAM_NAME]
+
+    def init_nvmsgconv(self) -> None:
+        self.nvmsgconv_generator = NvmsgconvGenerator(self.kafka_streams())
+        self.nvmsgconv_yml = self.nvmsgconv_generator.config
+
+    def init_kafka(self) -> None:
+        self.kafka_generator = KafkaGenerator()
+        self.kafka_yml = self.kafka_generator.config
+        self.kafka_topic = f"{PROJECT_NAME}_{self.pipeline_name}"
+
     def apply_save_paths(self, config_save_dir: Path) -> None:
         for node in self.pipeline_yml["deepstream"]["nodes"]:
             name = node["name"]
@@ -159,31 +183,10 @@ class BaseVideoGenerator(PipelineGenerator):
                 properties["config-file"] = str(
                     config_save_dir / self.ANALYTICS_CONFIG_NAME
                 )
-
-    def build_sink_paths(self) -> dict[str, list[str]]:
-        templates = self.SINK_PATH_TEMPLATES
-        indexed = any("{index}" in key for key in templates)
-        sink_paths = {}
-        if indexed:
-            for index in range(len(self.streams)):
-                for key_template, path_template in templates.items():
-                    sink_paths[key_template.format(index=index)] = [
-                        part.format(index=index) for part in path_template
-                    ]
-        else:
-            sink_paths = {key: list(path) for key, path in templates.items()}
-        return sink_paths
-
-    def write_sink_path(self, config_save_dir: Path | str) -> None:
-        path = Path(config_save_dir) / self.SINK_PATH_CONFIG_NAME
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("w", encoding="utf-8") as handle:
-            yaml.safe_dump(
-                self.build_sink_paths(),
-                handle,
-                sort_keys=False,
-                default_flow_style=False,
-            )
+            if name == "nvmsgconv":
+                properties["config"] = str(config_save_dir / self.MSGCONV_CONFIG_NAME)
+            if name == "nvmsgbroker":
+                properties["config"] = str(config_save_dir / self.KAFKA_CONFIG_NAME)
 
     def write(self, config_save_dir: str | Path) -> None:
         config_save_dir = Path(config_save_dir)
@@ -191,12 +194,7 @@ class BaseVideoGenerator(PipelineGenerator):
         pgie_save_path = config_save_dir / self.PGIE_CONFIG_NAME
         nvtracker_save_path = config_save_dir / self.TRACKER_CONFIG_NAME
         nvdsanalytics_save_path = config_save_dir / self.ANALYTICS_CONFIG_NAME
-        params_save_path = config_save_dir / self.PARAMS_NAME
         self.apply_save_paths(config_save_dir)
-        shutil.copy2(
-            self.pgie_config_parser.meta_path,
-            config_save_dir / self.PGIE_META_NAME,
-        )
         with open(pgie_save_path, "w", encoding="utf-8") as handle:
             yaml.safe_dump(self.pgie_yml, handle, sort_keys=False, default_flow_style=False)
         if self.enable_nvtracker:
@@ -217,11 +215,17 @@ class BaseVideoGenerator(PipelineGenerator):
             yaml.safe_dump(
                 self.pipeline_yml, handle, sort_keys=False, default_flow_style=False
             )
-        self.write_sink_path(config_save_dir)
-        params = dict(self.params_yml)
-        params["config_save_dir"] = str(config_save_dir)
-        with open(params_save_path, "w", encoding="utf-8") as handle:
-            yaml.safe_dump(params, handle, sort_keys=False, default_flow_style=False)
+        with open(config_save_dir / self.MSGCONV_CONFIG_NAME, "w", encoding="utf-8") as handle:
+            yaml.safe_dump(
+                self.nvmsgconv_yml, handle, sort_keys=False, default_flow_style=False
+            )
+        (config_save_dir / self.KAFKA_CONFIG_NAME).write_text(
+            self.kafka_yml, encoding="utf-8"
+        )
+        with open(config_save_dir / self.PARAMS_CONFIG_NAME, "w", encoding="utf-8") as handle:
+            yaml.safe_dump(
+                self.params_yml, handle, sort_keys=False, default_flow_style=False
+            )
 
     def osd_kwargs(self, gpu_id: int) -> dict:
         return {
@@ -229,6 +233,103 @@ class BaseVideoGenerator(PipelineGenerator):
             "display_bbox": True,
             "display_text": True,
         }
+
+    def nvdet_drawer_element(self) -> str:
+        element = "nvdetfadedrawer"
+        if self.enable_nvtracker:
+            element = "nvdetfadedrawerwithtracker"
+        return element
+
+    def nvpose_drawer_element(self) -> str:
+        element = "nvposefadedrawer"
+        if self.enable_nvtracker:
+            element = "nvposefadedrawerwithtracker"
+        return element
+
+    def nvseg_drawer_element(self) -> str:
+        element = "nvsegfadedrawer"
+        if self.enable_nvtracker:
+            element = "nvsegfadedrawerwithtracker"
+        return element
+
+    def nvdet_drawer_properties(self, drawer: dict) -> dict:
+        interval = int(drawer.get("interval", 0))
+        fade_time = int(drawer.get("fade_time", 0))
+        show_label = bool(drawer.get("show_label", False))
+        properties = self._add_nvdetfadedrawer(interval, fade_time, show_label)
+        if self.enable_nvtracker:
+            properties = self._add_nvdetfadedrawerwithtracker(
+                interval,
+                fade_time,
+                show_label,
+                show_snap=bool(drawer.get("show_snap", True)),
+            )
+        return properties
+
+    def nvpose_drawer_properties(self, drawer: dict) -> dict:
+        interval = int(drawer.get("interval", 0))
+        fade_time = int(drawer.get("fade_time", 0))
+        show_label = bool(drawer.get("show_label", False))
+        show_pose = bool(drawer.get("show_pose", True))
+        pose_threshold = float(drawer.get("pose_threshold", 0.0))
+        mode = drawer.get("mode", "coco17")
+        properties = self._add_nvposefadedrawer(
+            interval, fade_time, show_label, show_pose, pose_threshold, mode
+        )
+        if self.enable_nvtracker:
+            properties = self._add_nvposefadedrawerwithtracker(
+                interval,
+                fade_time,
+                show_label,
+                show_pose,
+                pose_threshold,
+                mode,
+                show_snap=bool(drawer.get("show_snap", True)),
+            )
+        return properties
+
+    def nvseg_drawer_properties(self, drawer: dict) -> dict:
+        interval = int(drawer.get("interval", 0))
+        fade_time = int(drawer.get("fade_time", 0))
+        show_label = bool(drawer.get("show_label", False))
+        show_mask = bool(drawer.get("show_mask", True))
+        properties = self._add_nvsegfadedrawer(
+            interval, fade_time, show_label, show_mask
+        )
+        if self.enable_nvtracker:
+            properties = self._add_nvsegfadedrawerwithtracker(
+                interval,
+                fade_time,
+                show_label,
+                show_mask,
+                show_snap=bool(drawer.get("show_snap", True)),
+            )
+        return properties
+
+    def append_event_coder(self, name: str = "nvpresencecoder") -> None:
+        if self.event_coder is not None:
+            coder = self.event_coder
+            self._append_node(
+                "nvpresencecoder",
+                name,
+                self._add_nvpresencecoder(
+                    class_ids=coder.get("class_ids", []),
+                    event_names=coder.get("event_names", []),
+                    length=int(coder.get("length", 10)),
+                    threshold=float(coder.get("threshold", 0.5)),
+                    mode=coder.get("mode", "fold"),
+                ),
+            )
+
+    def after_analytics(self, tee_name: str = "tee_msg") -> str:
+        next_name = tee_name
+        if self.event_coder is not None:
+            next_name = "nvpresencecoder"
+        return next_name
+
+    def link_event_coder(self, edges: dict, tee_name: str = "tee_msg") -> None:
+        if self.event_coder is not None:
+            edges["nvpresencecoder"] = tee_name
 
     def add(self) -> None:
         self._append_node(
@@ -262,6 +363,12 @@ class BaseVideoGenerator(PipelineGenerator):
             ),
         )
         if self.enable_nvtracker:
+            if self.drawer is not None:
+                self._append_node(
+                    "nvbboxsnapshot",
+                    "nvbboxsnapshot",
+                    self._add_nvbboxsnapshot(),
+                )
             self._append_node(
                 "nvtracker",
                 "nvtracker",
@@ -282,11 +389,36 @@ class BaseVideoGenerator(PipelineGenerator):
                 gpu_id=self.pgie_generator.gpu_id,
             ),
         )
-        gpu_id = self.pgie_generator.gpu_id
+        self.append_event_coder()
+        self._append_node("tee", "tee_msg", self._add_tee())
+        self._append_node("queue", "queue_msg", self._add_queue())
         self._append_node(
-            "nvvideoconvert",
-            "nvvideoconvert",
-            self._add_nvvideoconvert(gpu_id=gpu_id),
+            "nvmsgconv",
+            "nvmsgconv",
+            self._add_nvmsgconv(
+                self.MSGCONV_CONFIG_NAME,
+                payload_type=PAYLOAD_DEEPSTREAM_MINIMAL,
+            ),
+        )
+        self._append_node(
+            "nvmsgbroker",
+            "nvmsgbroker",
+            self._add_nvmsgbroker(
+                KAFKA_PROTO_LIB,
+                KAFKA_CONN_STR,
+                self.kafka_topic,
+                self.KAFKA_CONFIG_NAME,
+                sync=False,
+                async_=False,
+            ),
+        )
+        self._append_node(
+            "nvdetlogger",
+            "nvdetlogger",
+            self._add_nvdetlogger(
+                root=f"/root/logs/deepstream/{self.pipeline_name}",
+                interval=int(self.logger.get("interval", 0)),
+            ),
         )
         self._append_node(
             "fakesink",
@@ -301,11 +433,19 @@ class BaseVideoGenerator(PipelineGenerator):
         }
         inference_tail = "pgie"
         if self.enable_nvtracker:
-            edges[inference_tail] = "nvtracker"
+            if self.drawer is not None:
+                edges[inference_tail] = "nvbboxsnapshot"
+                edges["nvbboxsnapshot"] = "nvtracker"
+            else:
+                edges[inference_tail] = "nvtracker"
             inference_tail = "nvtracker"
         edges[inference_tail] = "nvdsanalytics"
-        edges["nvdsanalytics"] = "nvvideoconvert"
-        edges["nvvideoconvert"] = "fakesink"
+        edges["nvdsanalytics"] = self.after_analytics()
+        self.link_event_coder(edges)
+        edges["tee_msg"] = ["nvdetlogger", "queue_msg"]
+        edges["queue_msg"] = "nvmsgconv"
+        edges["nvmsgconv"] = "nvmsgbroker"
+        edges["nvdetlogger"] = "fakesink"
         self.pipeline["deepstream"]["edges"] = edges
 
     @staticmethod

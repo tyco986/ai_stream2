@@ -1,0 +1,24 @@
+# bash servers/generator/scripts/3_generate.sh --config stgcnpp_yolo_pose_video
+#
+# Artifacts: pipeline.yml, pgie.yml, sgie.yml, stgcnpp.yml, preprocess_stgcnpp.txt, ...
+
+generator: StgcnppYoloPoseVideoGenerator
+pipeline_name: stgcnpp_yolo_pose_video
+config_save_dir: /root/configs/generator/stgcnpp_yolo_pose_video
+pgie:
+  interval: 0
+  model_dir: /root/models/trt/yolo26n-pose
+  class_attrs:
+    all:
+      conf: 0.25
+stgcnpp:
+  interval: 50
+  model_dir: /root/models/trt/stgcnpp-ntu60
+tracker:
+  class_id: 0
+analyzer: null
+logger:
+  interval: 50
+drawer: null
+event_coder: null
+input: /root/attachments/videos/video1.mp4

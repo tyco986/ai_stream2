@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Run from project root. Prod image (code baked in; no /app bind mount).
+# Starts the image-built deepstream_api from modules/api.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
@@ -19,22 +20,26 @@ docker run \
   --gpus all \
   -p 8092:8092 \
   -e PROJECT_NAME="${PROJECT_NAME}" \
+  -e HOST=0.0.0.0 \
+  -e PORT=8092 \
+  -e SCHEMA_DIR=/app/schemas \
+  -e PIPELINE_RUNNER=/usr/local/bin/pipeline_runner \
   -e KAFKA_TOPIC=deepstream-detections \
   -e KAFKA_EVENT_TOPIC=deepstream-events \
   -e KAFKA_COMMAND_TOPIC=deepstream-commands \
   -e DS_PREVIEW_RTP_HOST="${PROJECT_NAME}_mediamtx" \
   -e NVDS_ENABLE_LATENCY_MEASUREMENT=1 \
   -e NVDS_ENABLE_COMPONENT_LATENCY_MEASUREMENT=1 \
-  -e LATENCY_PROBE_SO=/opt/nvidia/deepstream/deepstream/service-maker/modules/liblatency_probe.so \
-  -e LD_PRELOAD=/opt/ai_stream2/servers/deepstream/libs/libnvdsinfer_custom_impl_Yolo_seg.so \
+  -e LD_PRELOAD=/opt/ai_stream2/servers/deepstream/libs/libgsource_remove_guard.so:/opt/ai_stream2/servers/deepstream/libs/libnvdsinfer_custom_impl_Yolo_seg.so \
   -v /etc/localtime:/etc/localtime:ro \
   -v "${ROOT}/models:/root/models" \
   -v "${ROOT}/configs:/root/configs" \
   -v "${ROOT}/attachments:/root/attachments" \
   -v "${ROOT}/outputs:/root/outputs" \
   -v "${ROOT}/logs:/root/logs" \
-  "${IMAGE}"
+  "${IMAGE}" \
+  deepstream_api
 
 echo "DeepStream API: http://127.0.0.1:8092/${PROJECT_NAME}/deepstream/start_pipeline"
-echo "Swagger:        http://127.0.0.1:8092/docs"
-echo "Mode:           prod image=${IMAGE}"
+echo "Health:         http://127.0.0.1:8092/${PROJECT_NAME}/deepstream/health"
+echo "Mode:           prod image=${IMAGE} (modules/api)"

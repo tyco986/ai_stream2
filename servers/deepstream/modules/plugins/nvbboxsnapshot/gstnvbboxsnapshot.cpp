@@ -23,11 +23,43 @@ G_DEFINE_TYPE(GstNvBboxSnapshot, gst_nvbboxsnapshot, GST_TYPE_BASE_TRANSFORM);
 
 static GstFlowReturn gst_nvbboxsnapshot_transform_ip(GstBaseTransform *, GstBuffer *);
 
+static void free_box_masks(NvDsBboxSnapshotBox *boxes, guint num_boxes)
+{
+  if (boxes != nullptr) {
+    for (guint i = 0; i < num_boxes; i++) {
+      g_free(boxes[i].mask);
+      boxes[i].mask = nullptr;
+    }
+  }
+}
+
+static void copy_box_mask(NvDsBboxSnapshotBox *dst, const NvDsBboxSnapshotBox *src)
+{
+  dst->mask = nullptr;
+  if (src->mask != nullptr && src->mask_size > 0) {
+    dst->mask = static_cast<gfloat *>(g_malloc(src->mask_size));
+    std::memcpy(dst->mask, src->mask, src->mask_size);
+  }
+}
+
+static void free_snapshot(NvDsBboxSnapshotMeta *meta)
+{
+  if (meta != nullptr) {
+    free_box_masks(meta->boxes, meta->num_boxes);
+    g_free(meta->boxes);
+    g_free(meta);
+  }
+}
+
 extern "C" gpointer nvds_bbox_snapshot_meta_copy(gpointer data, gpointer user_data)
 {
   (void)user_data;
-  NvDsBboxSnapshotMeta *src = static_cast<NvDsBboxSnapshotMeta *>(data);
   NvDsBboxSnapshotMeta *dst = nullptr;
+  auto *user_meta = static_cast<NvDsUserMeta *>(data);
+  NvDsBboxSnapshotMeta *src = nullptr;
+  if (user_meta != nullptr) {
+    src = static_cast<NvDsBboxSnapshotMeta *>(user_meta->user_meta_data);
+  }
   if (src != nullptr) {
     dst = static_cast<NvDsBboxSnapshotMeta *>(g_malloc0(sizeof(NvDsBboxSnapshotMeta)));
     dst->num_boxes = src->num_boxes;
@@ -35,6 +67,9 @@ extern "C" gpointer nvds_bbox_snapshot_meta_copy(gpointer data, gpointer user_da
       gsize bytes = static_cast<gsize>(src->num_boxes) * sizeof(NvDsBboxSnapshotBox);
       dst->boxes = static_cast<NvDsBboxSnapshotBox *>(g_malloc(bytes));
       std::memcpy(dst->boxes, src->boxes, bytes);
+      for (guint i = 0; i < src->num_boxes; i++) {
+        copy_box_mask(&dst->boxes[i], &src->boxes[i]);
+      }
     }
   }
   return dst;
@@ -43,10 +78,10 @@ extern "C" gpointer nvds_bbox_snapshot_meta_copy(gpointer data, gpointer user_da
 extern "C" void nvds_bbox_snapshot_meta_release(gpointer data, gpointer user_data)
 {
   (void)user_data;
-  NvDsBboxSnapshotMeta *meta = static_cast<NvDsBboxSnapshotMeta *>(data);
-  if (meta != nullptr) {
-    g_free(meta->boxes);
-    g_free(meta);
+  auto *user_meta = static_cast<NvDsUserMeta *>(data);
+  if (user_meta != nullptr) {
+    free_snapshot(static_cast<NvDsBboxSnapshotMeta *>(user_meta->user_meta_data));
+    user_meta->user_meta_data = nullptr;
   }
 }
 
@@ -75,6 +110,20 @@ static void fill_boxes(NvDsFrameMeta *frame_meta, NvDsBboxSnapshotBox *boxes)
       box->confidence = object_meta->confidence;
       box->class_id = object_meta->class_id;
       box->object_id = object_meta->object_id;
+      g_strlcpy(box->label, object_meta->obj_label, sizeof(box->label));
+      box->mask = nullptr;
+      box->mask_size = 0;
+      box->mask_width = 0;
+      box->mask_height = 0;
+      box->mask_threshold = 0.0f;
+      if (object_meta->mask_params.data != nullptr && object_meta->mask_params.size > 0) {
+        box->mask_size = object_meta->mask_params.size;
+        box->mask_width = object_meta->mask_params.width;
+        box->mask_height = object_meta->mask_params.height;
+        box->mask_threshold = object_meta->mask_params.threshold;
+        box->mask = static_cast<gfloat *>(g_malloc(object_meta->mask_params.size));
+        std::memcpy(box->mask, object_meta->mask_params.data, object_meta->mask_params.size);
+      }
       index += 1;
     }
   }
@@ -101,7 +150,7 @@ static void attach_snapshot(NvDsBatchMeta *batch_meta, NvDsFrameMeta *frame_meta
   snapshot->num_boxes = num_boxes;
   if (num_boxes > 0) {
     snapshot->boxes = static_cast<NvDsBboxSnapshotBox *>(
-        g_malloc(static_cast<gsize>(num_boxes) * sizeof(NvDsBboxSnapshotBox)));
+        g_malloc0(static_cast<gsize>(num_boxes) * sizeof(NvDsBboxSnapshotBox)));
     fill_boxes(frame_meta, snapshot->boxes);
   }
   strip_snapshot_meta(frame_meta);
@@ -113,7 +162,7 @@ static void attach_snapshot(NvDsBatchMeta *batch_meta, NvDsFrameMeta *frame_meta
     user_meta->base_meta.release_func = nvds_bbox_snapshot_meta_release;
     nvds_add_user_meta_to_frame(frame_meta, user_meta);
   } else {
-    nvds_bbox_snapshot_meta_release(snapshot, nullptr);
+    free_snapshot(snapshot);
   }
 }
 

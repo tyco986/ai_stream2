@@ -4,6 +4,7 @@
 # runtime batch size = SAHI tile count; mux batch size = 1.
 
 generator: SegSahiVisVideoGenerator
+pipeline_name: yolo26n_seg_sahi_vis_video_no_interval
 config_save_dir: /root/configs/generator/yolo26n_seg_sahi_vis_video_no_interval
 pgie:
   interval: 1
@@ -13,6 +14,14 @@ pgie:
       conf: 0.25
 tracker: null
 analyzer: null
+logger:
+  interval: 1
+drawer:
+  interval: 1
+  fade_time: 1
+  show_label: true
+  show_mask: true
+event_coder: null
 input: /root/attachments/videos/video1.mp4
 output: /root/outputs/deepstream/yolo26n_seg_sahi_vis_video_no_interval.mp4
 sahi:

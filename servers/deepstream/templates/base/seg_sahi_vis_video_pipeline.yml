@@ -1,5 +1,0 @@
-# Prerequisite: servers/generator/scripts/3_generate.sh --config yolo11n_seg_sahi_vis_video
-
-type: BaseVideoPipeline
-name: yolo11n-seg-sahi-vis-video
-config_dir: /root/configs/generator/yolo11n_seg_sahi_vis_video

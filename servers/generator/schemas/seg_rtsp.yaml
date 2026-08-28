@@ -1,5 +1,8 @@
 type: SegRTSPGenerator
 params:
+  pipeline_name:
+    available: true
+    default: null
   streams:
     available: true
     params: {}
@@ -40,6 +43,52 @@ params:
       direction_detection:
         available: true
         default: null
+  logger:
+    available: true
+    params:
+      root:
+        available: true
+        default: /root/logs/deepstream
+      interval:
+        available: true
+        default: 0
+  drawer:
+    available: false
+    params:
+      interval:
+        available: false
+        default: 50
+      fade_time:
+        available: false
+        default: 1
+      show_label:
+        available: false
+        default: true
+      show_mask:
+        available: false
+        default: true
+  event_coder:
+    available: false
+    params:
+      class_ids:
+        available: false
+        default:
+        - 0
+        - 1
+      event_names:
+        available: false
+        default:
+        - Fire
+        - Smoke
+      length:
+        available: false
+        default: 10
+      threshold:
+        available: false
+        default: 0.5
+      mode:
+        available: false
+        default: fold
   sahi:
     available: false
   input:

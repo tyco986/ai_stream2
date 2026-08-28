@@ -3,6 +3,7 @@
 # Artifacts: pipeline.yml, pgie.yml, params.yml, ... under config_save_dir.
 
 generator: PoseImageGenerator
+pipeline_name: yolo26n_pose_image
 config_save_dir: /root/configs/generator/yolo26n_pose_image
 pgie:
   interval: 50
@@ -11,5 +12,15 @@ pgie:
     all:
       conf: 0.25
 analyzer: null
+logger:
+  interval: 50
+drawer:
+  interval: 50
+  fade_time: 1
+  show_label: true
+  show_pose: true
+  pose_threshold: 0.0
+  mode: coco17
+event_coder: null
 input: /root/attachments/images/video1.png
 output: /root/outputs/deepstream/yolo26n_pose_image.jpg

@@ -1,31 +1,19 @@
 from pathlib import Path
 
 from ..base_generator.base_video import BaseVideoGenerator
-from ..subelement_generator.pipeline import TRACKER_LL_LIB
+from ..subelement_generator.nvtracker import TRACKER_LL_LIB
 from .topdown_pose_mixin import TopdownPoseMixin
 
 TOPDOWN_POSE_VIDEO_TOPOLOGY_DOC = """
     Topology::
 
-        nvurisrcbin → nvstreammux → pgie → nvtracker → sgie0 → nvdsanalytics
+        nvurisrcbin → nvstreammux → pgie → nvbboxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0 → nvdsanalytics
             → nvvideoconvert → fakesink
 """
 
 
 class TopdownPoseVideoGenerator(TopdownPoseMixin, BaseVideoGenerator):
     GENERATOR = "TopdownPoseVideoGenerator"
-    SINK_PATH_TEMPLATES = {
-        "fakesink": [
-            "nvurisrcbin",
-            "nvstreammux",
-            "pgie",
-            "nvtracker",
-            "sgie0",
-            "nvdsanalytics",
-            "nvvideoconvert",
-            "fakesink",
-        ],
-    }
 
     f"""Generate topdown-pose video pipeline YAML (headless, ends at fakesink).
 
@@ -34,18 +22,26 @@ class TopdownPoseVideoGenerator(TopdownPoseMixin, BaseVideoGenerator):
 
     def __init__(
         self,
+        pipeline_name: str,
         input: str | Path,
         analyzer: dict | None,
         pgie: dict,
         sgie: dict,
         tracker: dict | None = None,
+        logger: dict | None = None,
+        drawer: dict | None = None,
+        event_coder: dict | None = None,
     ) -> None:
         self.sgie = sgie
         super().__init__(
+            pipeline_name=pipeline_name,
             input=input,
             analyzer=analyzer,
             pgie=pgie,
             tracker=tracker,
+            logger=logger,
+            drawer=drawer,
+            event_coder=event_coder,
         )
 
     def add(self) -> None:
@@ -80,6 +76,12 @@ class TopdownPoseVideoGenerator(TopdownPoseMixin, BaseVideoGenerator):
             ),
         )
         if self.enable_nvtracker:
+            if self.drawer is not None:
+                self._append_node(
+                    "nvbboxsnapshot",
+                    "nvbboxsnapshot",
+                    self._add_nvbboxsnapshot(),
+                )
             self._append_node(
                 "nvtracker",
                 "nvtracker",
@@ -101,11 +103,15 @@ class TopdownPoseVideoGenerator(TopdownPoseMixin, BaseVideoGenerator):
                 gpu_id=self.pgie_generator.gpu_id,
             ),
         )
-        gpu_id = self.pgie_generator.gpu_id
+        self.append_event_coder()
+        self.append_kafka_nodes()
         self._append_node(
-            "nvvideoconvert",
-            "nvvideoconvert",
-            self._add_nvvideoconvert(gpu_id=gpu_id),
+            "nvdetlogger",
+            "nvdetlogger",
+            self._add_nvdetlogger(
+                root=f"/root/logs/deepstream/{self.pipeline_name}",
+                interval=int(self.logger.get("interval", 0)),
+            ),
         )
         self._append_node(
             "fakesink",
@@ -120,10 +126,14 @@ class TopdownPoseVideoGenerator(TopdownPoseMixin, BaseVideoGenerator):
         }
         inference_tail = "pgie"
         if self.enable_nvtracker:
-            edges[inference_tail] = "nvtracker"
+            if self.drawer is not None:
+                edges[inference_tail] = "nvbboxsnapshot"
+                edges["nvbboxsnapshot"] = "nvtracker"
+            else:
+                edges[inference_tail] = "nvtracker"
             inference_tail = "nvtracker"
-        edges[inference_tail] = "sgie0"
-        edges["sgie0"] = "nvdsanalytics"
-        edges["nvdsanalytics"] = "nvvideoconvert"
-        edges["nvvideoconvert"] = "fakesink"
+        self.link_sgie_from(edges, inference_tail)
+        edges[self.pose_gie_tail()] = "nvdsanalytics"
+        self.link_kafka_from_analytics(edges, "nvdetlogger")
+        edges["nvdetlogger"] = "fakesink"
         self.pipeline["deepstream"]["edges"] = edges

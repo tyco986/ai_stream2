@@ -7,5 +7,5 @@ YOLO-Pose 解析与 SAHI OKS-NMS 不走 patch：见 `modules/gie_custom_lib/nvds
 | 补丁 | 作用 |
 |------|------|
 | `gstnvinfer-interval-tensor-input.patch` | `interval` 在 `process_full_frame`（PGIE）里生效，但 `process_objects`（SGIE `process-mode: 2`）和 `process_tensor_input`（SAHI）都不读它。补丁让这两条路径同样按 `interval_counter % (interval + 1)` 跳帧，空 object list 时直接 `GST_FLOW_OK`。 |
-| `gstnvsahipostprocess-latency-timestamp.patch` | 给 `nvsahipostprocess` 打 `nvds_set_{input,output}_system_timestamp`，使组件 latency 可被 `latency_probe` 采集为 `sahi_postprocess`。解压 deepstream-sahi 后、`install.sh` 前以 `-p1` 应用。 |
+| `gstnvsahipostprocess-latency-timestamp.patch` | 给 `nvsahipostprocess` 打 `nvds_set_{input,output}_system_timestamp`，写入 DS CompLatency。解压 deepstream-sahi 后、`install.sh` 前以 `-p1` 应用。 |
 | `nvdsinfer-yolo-zero-rotation-angle.patch` | `NvDsInferYoloE2E` / `NvDsInferYoloNMS` 栈上 `NvDsInferObjectDetectionInfo` 未写 `rotation_angle`，nvinfer 把垃圾弧度转成 OSD 角度导致框歪。补丁零初始化结构体并显式置 `rotation_angle = 0`。解压 deepstream-sahi 后、`install.sh` 前以 `-p1` 应用。 |

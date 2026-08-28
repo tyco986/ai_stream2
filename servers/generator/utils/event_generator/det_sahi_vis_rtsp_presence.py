@@ -10,9 +10,9 @@ from ..subelement_generator.utils.default_gie import YoloDet
 class DetSahiVisRTSPPresenceGenerator(BaseEventSahiVisRTSPGenerator):
     GENERATOR = "DetSahiVisRTSPPresenceGenerator"
 
-    f"""Generate YOLO SAHI detection RTSP pipeline for event alert + appsink capture.
+    f"""Generate YOLO SAHI detection RTSP pipeline for event alert + nvcapturer dump.
 
-    Per-stream branches tee raw/vis appsinks and continue encode to ``rtspclientsink``.
+    Per-stream branches tee raw/vis capturers and continue encode to ``rtspclientsink``.
     {SAHI_VIS_RTSP_EVENT_TOPOLOGY_DOC}
     """
 

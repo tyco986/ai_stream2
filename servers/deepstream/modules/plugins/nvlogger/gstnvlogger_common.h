@@ -17,4 +17,4 @@
 
 #define NVLOGGER_LOG_HEADER \
   "# object item: [x1, y1, x2, y2, conf, cls, label, id]\n" \
-  "# line: {pad, source, frame, object}\n"
+  "# line: {pad, source, frame, latency, num, object}\n"

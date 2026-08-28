@@ -1,87 +1,31 @@
-from ..subelement_generator.pipeline import TRACKER_LL_LIB
+from ..subelement_generator.kafka import KAFKA_CONN_STR, KAFKA_PROTO_LIB
+from ..subelement_generator.nvmsgconv import PAYLOAD_DEEPSTREAM_MINIMAL
+from ..subelement_generator.nvtracker import TRACKER_LL_LIB
 from .base_vis_video import BaseVisVideoGenerator
 
 VIS_VIDEO_EVENT_TOPOLOGY_DOC = """
     Topology::
 
-        nvurisrcbin → nvstreammux → pgie → nvtracker → nvdsanalytics → nvvideoconvert → tee_raw
-              ─┬→ queue_raw → nvvideoconvert_raw → capsfilter_raw → appsink_raw0
+        nvurisrcbin → nvstreammux → pgie → nvbboxsnapshot → nvtracker → nvdsanalytics → tee_msg
+          ─┬→ nvvideoconvert → tee_raw
+              ─┬→ queue_raw → nvvideoconvert_raw → capsfilter_raw → nvrawcapturer0 → fakesink_raw0
               └→ queue_osd → nvvideoconvert_osd → capsfilter_osd(RGBA) → nvosdbin → tee_vis
-                    ─┬→ queue_vis → nvvideoconvert_vis → capsfilter_vis → appsink_vis0
-                    └→ queue_enc → nvv4l2h264enc → h264parse → mp4mux → filesink
+                    ─┬→ queue_vis → nvvideoconvert_vis → capsfilter_vis → nvviscapturer0 → fakesink_vis0
+                    └→ queue_enc → nvdetlogger → nvv4l2h264enc → h264parse → mp4mux → filesink
 
     Notes::
 
         ``nvvideoconvert_raw`` / ``nvvideoconvert_osd`` after ``tee_raw`` force independent NVMM
         buffers so ``nvosd`` in-place drawing cannot leak into the raw capture branch.
-        Capture branches force ``format=RGB`` (BufferRetriever extract requirement).
+        Capture branches force ``format=RGB`` (``nvrawcapturer`` / ``nvviscapturer`` NVMM caps).
 
-    Python (not in pipeline.yml)::
-
-        attach(nvdsanalytics, Probe)   # logger → debouncer → drawer → messager
-        attach(appsink_raw0, Receiver)   # encode PNG when event alert matches
-        attach(appsink_vis0, Receiver)   # encode JPEG when event alert matches
 """
 
 
 class BaseEventVisVideoGenerator(BaseVisVideoGenerator):
-    SINK_PATH_TEMPLATES = {
-        "appsink_raw0": [
-            "nvurisrcbin",
-            "nvstreammux",
-            "pgie",
-            "nvtracker",
-            "nvdsanalytics",
-            "nvvideoconvert",
-            "tee_raw",
-            "queue_raw",
-            "nvvideoconvert_raw",
-            "capsfilter_raw",
-            "appsink_raw0",
-        ],
-        "appsink_vis0": [
-            "nvurisrcbin",
-            "nvstreammux",
-            "pgie",
-            "nvtracker",
-            "nvdsanalytics",
-            "nvvideoconvert",
-            "tee_raw",
-            "queue_osd",
-            "nvvideoconvert_osd",
-            "capsfilter_osd",
-            "nvosdbin",
-            "tee_vis",
-            "queue_vis",
-            "nvvideoconvert_vis",
-            "capsfilter_vis",
-            "appsink_vis0",
-        ],
-        "filesink": [
-            "nvurisrcbin",
-            "nvstreammux",
-            "pgie",
-            "nvtracker",
-            "nvdsanalytics",
-            "nvvideoconvert",
-            "tee_raw",
-            "queue_osd",
-            "nvvideoconvert_osd",
-            "capsfilter_osd",
-            "nvosdbin",
-            "tee_vis",
-            "queue_enc",
-            "nvv4l2h264enc",
-            "h264parse",
-            "mp4mux",
-            "filesink",
-        ],
-    }
+    f"""Generate YOLO video pipeline for event alert + nvcapturer dump.
 
-    f"""Generate YOLO video pipeline for event alert + appsink capture.
-
-    Reads ``input`` video via DeepStream, runs inference with event probe-side
-    capture branches, and writes the annotated result to ``output``.
+    Reads ``input`` video via DeepStream, runs inference with nvcapturer dump branches, and writes the annotated result to ``output``.
     {VIS_VIDEO_EVENT_TOPOLOGY_DOC}
     """
 
@@ -117,6 +61,12 @@ class BaseEventVisVideoGenerator(BaseVisVideoGenerator):
             ),
         )
         if self.enable_nvtracker:
+            if self.drawer is not None:
+                self._append_node(
+                    "nvbboxsnapshot",
+                    "nvbboxsnapshot",
+                    self._add_nvbboxsnapshot(),
+                )
             self._append_node(
                 "nvtracker",
                 "nvtracker",
@@ -135,6 +85,29 @@ class BaseEventVisVideoGenerator(BaseVisVideoGenerator):
             self._add_nvdsanalytics(
                 self.ANALYTICS_CONFIG_NAME,
                 gpu_id=self.pgie_generator.gpu_id,
+            ),
+        )
+        self.append_event_coder()
+        self._append_node("tee", "tee_msg", self._add_tee())
+        self._append_node("queue", "queue_msg", self._add_queue())
+        self._append_node(
+            "nvmsgconv",
+            "nvmsgconv",
+            self._add_nvmsgconv(
+                self.MSGCONV_CONFIG_NAME,
+                payload_type=PAYLOAD_DEEPSTREAM_MINIMAL,
+            ),
+        )
+        self._append_node(
+            "nvmsgbroker",
+            "nvmsgbroker",
+            self._add_nvmsgbroker(
+                KAFKA_PROTO_LIB,
+                KAFKA_CONN_STR,
+                self.kafka_topic,
+                self.KAFKA_CONFIG_NAME,
+                sync=False,
+                async_=False,
             ),
         )
         gpu_id = self.pgie_generator.gpu_id
@@ -156,7 +129,18 @@ class BaseEventVisVideoGenerator(BaseVisVideoGenerator):
             "capsfilter_raw",
             self._add_capsfilter("video/x-raw(memory:NVMM), format=RGB"),
         )
-        self._append_node("appsink", "appsink_raw0", self._add_appsink())
+        self._append_node(
+            "nvrawcapturer",
+            "nvrawcapturer0",
+            self._add_nvrawcapturer(
+                output_dir=f"/root/outputs/deepstream/{self.pipeline_name}",
+            ),
+        )
+        self._append_node(
+            "fakesink",
+            "fakesink_raw0",
+            self._add_fakesink(sync=False, async_=False),
+        )
         self._append_node("queue", "queue_osd", self._add_queue())
         self._append_node(
             "nvvideoconvert",
@@ -168,6 +152,13 @@ class BaseEventVisVideoGenerator(BaseVisVideoGenerator):
             "capsfilter_osd",
             self._add_capsfilter("video/x-raw(memory:NVMM), format=RGBA"),
         )
+        if self.drawer is not None:
+            drawer = self.drawer
+            self._append_node(
+                self.nvdet_drawer_element(),
+                "nvdetfadedrawer",
+                self.nvdet_drawer_properties(drawer),
+            )
         self._append_node("nvosdbin", "nvosdbin", self._add_nvosdbin(**osd_kwargs))
         self._append_node("tee", "tee_vis", self._add_tee())
         self._append_node("queue", "queue_vis", self._add_queue())
@@ -182,7 +173,26 @@ class BaseEventVisVideoGenerator(BaseVisVideoGenerator):
             self._add_capsfilter("video/x-raw(memory:NVMM), format=RGB"),
         )
         self._append_node("queue", "queue_enc", self._add_queue())
-        self._append_node("appsink", "appsink_vis0", self._add_appsink())
+        self._append_node(
+            "nvdetlogger",
+            "nvdetlogger",
+            self._add_nvdetlogger(
+                root=f"/root/logs/deepstream/{self.pipeline_name}",
+                interval=int(self.logger.get("interval", 0)),
+            ),
+        )
+        self._append_node(
+            "nvviscapturer",
+            "nvviscapturer0",
+            self._add_nvviscapturer(
+                output_dir=f"/root/outputs/deepstream/{self.pipeline_name}",
+            ),
+        )
+        self._append_node(
+            "fakesink",
+            "fakesink_vis0",
+            self._add_fakesink(sync=False, async_=False),
+        )
         self._append_node(
             "nvv4l2h264enc",
             "nvv4l2h264enc",
@@ -208,24 +218,40 @@ class BaseEventVisVideoGenerator(BaseVisVideoGenerator):
         }
         inference_tail = "pgie"
         if self.enable_nvtracker:
-            edges[inference_tail] = "nvtracker"
+            if self.drawer is not None:
+                edges[inference_tail] = "nvbboxsnapshot"
+                edges["nvbboxsnapshot"] = "nvtracker"
+            else:
+                edges[inference_tail] = "nvtracker"
             inference_tail = "nvtracker"
         edges[inference_tail] = "nvdsanalytics"
-        edges["nvdsanalytics"] = "nvvideoconvert"
+        edges["nvdsanalytics"] = self.after_analytics()
+        self.link_event_coder(edges)
+        edges["tee_msg"] = ["nvvideoconvert", "queue_msg"]
+        edges["queue_msg"] = "nvmsgconv"
+        edges["nvmsgconv"] = "nvmsgbroker"
         edges["nvvideoconvert"] = "tee_raw"
         edges["tee_raw"] = ["queue_raw", "queue_osd"]
         edges["queue_raw"] = "nvvideoconvert_raw"
         edges["nvvideoconvert_raw"] = "capsfilter_raw"
-        edges["capsfilter_raw"] = "appsink_raw0"
+        edges["capsfilter_raw"] = "nvrawcapturer0"
+        edges["nvrawcapturer0"] = "fakesink_raw0"
         edges["queue_osd"] = "nvvideoconvert_osd"
         edges["nvvideoconvert_osd"] = "capsfilter_osd"
-        edges["capsfilter_osd"] = "nvosdbin"
+        osd_prev = "nvosdbin"
+        if self.drawer is not None:
+            osd_prev = "nvdetfadedrawer"
+        edges["capsfilter_osd"] = osd_prev
+        if self.drawer is not None:
+            edges["nvdetfadedrawer"] = "nvosdbin"
         edges["nvosdbin"] = "tee_vis"
         edges["tee_vis"] = ["queue_vis", "queue_enc"]
         edges["queue_vis"] = "nvvideoconvert_vis"
         edges["nvvideoconvert_vis"] = "capsfilter_vis"
-        edges["capsfilter_vis"] = "appsink_vis0"
-        edges["queue_enc"] = "nvv4l2h264enc"
+        edges["capsfilter_vis"] = "nvviscapturer0"
+        edges["nvviscapturer0"] = "fakesink_vis0"
+        edges["queue_enc"] = "nvdetlogger"
+        edges["nvdetlogger"] = "nvv4l2h264enc"
         edges["nvv4l2h264enc"] = "h264parse"
         edges["h264parse"] = "mp4mux"
         edges["mp4mux"] = "filesink"

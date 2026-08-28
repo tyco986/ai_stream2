@@ -5,6 +5,7 @@
 namespace nvfadedrawer {
 
 constexpr float kColorGreen[] = {0.0f, 1.0f, 0.0f, 1.0f};
+constexpr float kColorPurple[] = {0.62f, 0.13f, 0.94f, 1.0f};
 constexpr float kColorRed[] = {1.0f, 0.0f, 0.0f, 1.0f};
 constexpr float kColorYellow[] = {1.0f, 1.0f, 0.0f, 1.0f};
 constexpr float kColorOrange[] = {1.0f, 0.5f, 0.0f, 1.0f};
@@ -18,7 +19,6 @@ constexpr int kLabelYOffset = 14;
 constexpr char kFontName[] = "Serif";
 constexpr char kLabelSep = '|';
 
-constexpr int kEventCodeLen = 8;
 constexpr int kMaxDisplayElements = 16;
 
 constexpr int kKptRadius = 2;

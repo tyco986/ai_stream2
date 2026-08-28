@@ -15,11 +15,17 @@ class SegFadeEngine : public DetFadeEngine {
       NvDsFrameMeta *frame_meta,
       NvDsObjectMeta *obj,
       float fade_alpha) override;
+  void hide_tracker_mask(NvDsObjectMeta *obj) const override;
 
  private:
   void clear_mask(NvDsObjectMeta *obj) const;
 
   bool show_mask_ = true;
+};
+
+class SegFadeEngineWithTracker : public SegFadeEngine {
+ public:
+  void process_frame(NvDsBatchMeta *batch_meta, NvDsFrameMeta *frame_meta) override;
 };
 
 }  // namespace nvfadedrawer

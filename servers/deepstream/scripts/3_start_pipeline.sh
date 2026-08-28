@@ -7,6 +7,7 @@ ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 source "${ROOT}/scripts/load_project_env.sh"
 API_URL="http://127.0.0.1:8092"
 ENDPOINT="${API_URL}/${PROJECT_NAME}/deepstream/start_pipeline"
+HEALTH_ENDPOINT="${API_URL}/${PROJECT_NAME}/deepstream/health"
 TEMPLATES_DIR="${ROOT}/servers/deepstream/templates"
 
 usage() {
@@ -19,6 +20,7 @@ Options:
   --config PATH   Pipeline template (e.g. yolo26n_det_image_pipeline or servers/deepstream/templates/...)
 
 Prerequisites: 1_build_dev_image.sh or 1_build_prod_image.sh, 2_run_dev_container.sh or 2_run_prod_container.sh
+  (container runs deepstream_api from modules/api)
 Stop: docker stop ai_stream2_deepstream
 EOF
 }
@@ -68,6 +70,9 @@ resolve_config_path() {
 
 CONFIG_PATH="$(resolve_config_path "$CONFIG")"
 [[ -n "$CONFIG_PATH" ]] || { echo "config not found: $CONFIG" >&2; exit 1; }
+
+curl -sS --connect-timeout 2 "${HEALTH_ENDPOINT}" >/dev/null \
+  || { echo "deepstream_api not ready: ${HEALTH_ENDPOINT}" >&2; exit 1; }
 
 RESPONSE_BODY="$(mktemp)"
 trap 'rm -f "${RESPONSE_BODY}"' EXIT

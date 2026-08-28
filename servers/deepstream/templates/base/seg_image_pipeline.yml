@@ -1,5 +1,0 @@
-# Prerequisite: servers/generator/scripts/3_generate.sh --config yolo11n_seg_image
-
-type: BaseImagePipeline
-name: yolo11n-seg-image
-config_dir: /root/configs/generator/yolo11n_seg_image

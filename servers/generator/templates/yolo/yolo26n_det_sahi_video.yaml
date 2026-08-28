@@ -4,6 +4,7 @@
 # runtime batch size = SAHI tile count; mux batch size = 1.
 
 generator: DetSahiVideoGenerator
+pipeline_name: yolo26n_det_sahi_video
 config_save_dir: /root/configs/generator/yolo26n_det_sahi_video
 pgie:
   interval: 50
@@ -13,6 +14,10 @@ pgie:
       conf: 0.25
 tracker: null
 analyzer: null
+logger:
+  interval: 50
+drawer: null
+event_coder: null
 input: /root/attachments/videos/video1.mp4
 sahi:
   nvsahipreprocess:

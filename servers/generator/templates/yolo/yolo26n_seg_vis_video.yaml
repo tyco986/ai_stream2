@@ -3,6 +3,7 @@
 # Artifacts: pipeline.yml, pgie.yml, params.yml, ... under config_save_dir.
 
 generator: SegVisVideoGenerator
+pipeline_name: yolo26n_seg_vis_video
 config_save_dir: /root/configs/generator/yolo26n_seg_vis_video
 pgie:
   interval: 50
@@ -12,5 +13,13 @@ pgie:
       conf: 0.25
 tracker: null
 analyzer: null
+logger:
+  interval: 50
+drawer:
+  interval: 50
+  fade_time: 1
+  show_label: true
+  show_mask: true
+event_coder: null
 input: /root/attachments/videos/video1.mp4
 output: /root/outputs/deepstream/yolo26n_seg_vis_video.mp4

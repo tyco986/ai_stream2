@@ -9,6 +9,7 @@ source "${ROOT}/scripts/load_project_env.sh"
 API_URL="http://127.0.0.1:8092"
 START_ENDPOINT="${API_URL}/${PROJECT_NAME}/deepstream/start_pipeline"
 STATUS_ENDPOINT="${API_URL}/${PROJECT_NAME}/deepstream/pipeline/status"
+HEALTH_ENDPOINT="${API_URL}/${PROJECT_NAME}/deepstream/health"
 TEMPLATES_DIR="${ROOT}/servers/deepstream/templates"
 WAIT_TIMEOUT_SEC="${WAIT_TIMEOUT_SEC:-180}"
 POLL_INTERVAL_SEC="${POLL_INTERVAL_SEC:-1}"
@@ -65,8 +66,8 @@ wait_until_api_ready() {
   local deadline=$((SECONDS + WAIT_TIMEOUT_SEC))
   while (( SECONDS < deadline )); do
     local body=""
-    if body="$(curl -sS --connect-timeout 2 "${STATUS_ENDPOINT}" 2>/dev/null)"; then
-      if echo "${body}" | grep -q 'pipeline_running'; then
+    if body="$(curl -sS --connect-timeout 2 "${HEALTH_ENDPOINT}" 2>/dev/null)"; then
+      if echo "${body}" | grep -q '"success"[[:space:]]*:[[:space:]]*true'; then
         return 0
       fi
     fi

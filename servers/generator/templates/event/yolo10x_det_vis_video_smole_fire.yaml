@@ -3,6 +3,7 @@
 # Artifacts: pipeline.yml, pgie.yml, params.yml, ... under config_save_dir.
 
 generator: DetVisVideoPresenceGenerator
+pipeline_name: yolo10x_smoke_fire_vis_video
 config_save_dir: /root/configs/generator/yolo10x_smoke_fire_vis_video
 pgie:
   interval: 50
@@ -12,5 +13,17 @@ pgie:
       conf: 0.25
 tracker: null
 analyzer: null
+logger:
+  interval: 50
+drawer:
+  interval: 50
+  fade_time: 1
+  show_label: true
+event_coder:
+  class_ids: [0, 1]
+  event_names: [Fire, Smoke]
+  length: 5
+  threshold: 0.5
+  mode: fold
 input: /root/attachments/videos/video2.mp4
 output: /root/outputs/deepstream/yolo10x_smoke_fire_vis_video.mp4

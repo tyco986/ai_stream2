@@ -1,9 +1,15 @@
-from pathlib import Path
+import os
 from copy import deepcopy
+from pathlib import Path
+
 default_kafka_config = (
     "[message-broker]\n"
     '#producer-proto-cfg = "queue.buffering.max.messages=200000;message.send.max.retries=3"\n'
 )
+
+PROJECT_NAME = os.environ.get("PROJECT_NAME", "ai_stream2")
+KAFKA_PROTO_LIB = "/opt/nvidia/deepstream/deepstream/lib/libnvds_kafka_proto.so"
+KAFKA_CONN_STR = f"{PROJECT_NAME}_kafka;9092"
 
 
 class KafkaGenerator:

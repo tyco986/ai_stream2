@@ -1,6 +1,7 @@
 # bash servers/generator/scripts/3_generate.sh --config topdown_pose_sahi_vis_rtsp
 
 generator: TopdownPoseSahiVisRTSPGenerator
+pipeline_name: topdown_pose_sahi_vis_rtsp
 config_save_dir: /root/configs/generator/topdown_pose_sahi_vis_rtsp
 pgie:
   interval: 50
@@ -13,6 +14,16 @@ sgie:
   model_dir: /root/models/trt/rtmpose-s-coco-pruned
 tracker: null
 analyzer: null
+logger:
+  interval: 50
+drawer:
+  interval: 50
+  fade_time: 1
+  show_label: true
+  show_pose: true
+  pose_threshold: 0.0
+  mode: coco17
+event_coder: null
 streams:
   video1:
     url: rtsp://ai_stream2_mediamtx:8554/video1

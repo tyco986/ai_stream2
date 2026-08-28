@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdio>
 #include <iomanip>
+#include <map>
 #include <sstream>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -142,47 +143,66 @@ std::string DetLogEngine::escape_label(const char *label) const {
   return out;
 }
 
-std::string DetLogEngine::build_line(NvDsFrameMeta *frame_meta) const {
+std::string DetLogEngine::build_line(NvDsFrameMeta *frame_meta, double latency_ms) const {
   std::ostringstream json;
   json << "{\"pad\":" << static_cast<int>(frame_meta->pad_index)
        << ",\"source\":" << static_cast<int>(frame_meta->source_id)
        << ",\"frame\":" << static_cast<int>(frame_meta->frame_num)
-       << ",\"object\":[";
+       << ",\"latency\":";
+  if (latency_ms >= 0.0) {
+    json << std::fixed << std::setprecision(2) << latency_ms;
+  } else {
+    json << "null";
+  }
+  json << ",\"num\":{\"all\":";
+  std::map<int, int> class_counts;
+  int all = 0;
+  for (NvDsMetaList *item = frame_meta->obj_meta_list; item != nullptr; item = item->next) {
+    auto *object_meta = static_cast<NvDsObjectMeta *>(item->data);
+    if (object_meta != nullptr) {
+      class_counts[object_meta->class_id] += 1;
+      all += 1;
+    }
+  }
+  json << all;
+  for (const auto &entry : class_counts) {
+    json << ",\"" << entry.first << "\":" << entry.second;
+  }
+  json << "},\"object\":[";
   bool first = true;
   for (NvDsMetaList *item = frame_meta->obj_meta_list; item != nullptr; item = item->next) {
     auto *object_meta = static_cast<NvDsObjectMeta *>(item->data);
-    if (object_meta == nullptr) {
-      continue;
+    if (object_meta != nullptr) {
+      if (!first) {
+        json << ",";
+      }
+      first = false;
+      float left = object_meta->rect_params.left;
+      float top = object_meta->rect_params.top;
+      int x1 = round_coord(left);
+      int y1 = round_coord(top);
+      int x2 = round_coord(left + object_meta->rect_params.width);
+      int y2 = round_coord(top + object_meta->rect_params.height);
+      double conf = std::round(static_cast<double>(object_meta->confidence) * 100.0) / 100.0;
+      int32_t object_id = -1;
+      if (object_meta->object_id != kUntrackedObjectId) {
+        object_id = static_cast<int32_t>(object_meta->object_id);
+      }
+      json << "[" << x1 << "," << y1 << "," << x2 << "," << y2 << ","
+           << std::fixed << std::setprecision(2) << conf << ","
+           << object_meta->class_id << ",\"" << escape_label(object_meta->obj_label)
+           << "\"," << object_id << "]";
     }
-    if (!first) {
-      json << ",";
-    }
-    first = false;
-    float left = object_meta->rect_params.left;
-    float top = object_meta->rect_params.top;
-    int x1 = round_coord(left);
-    int y1 = round_coord(top);
-    int x2 = round_coord(left + object_meta->rect_params.width);
-    int y2 = round_coord(top + object_meta->rect_params.height);
-    double conf = std::round(static_cast<double>(object_meta->confidence) * 100.0) / 100.0;
-    int32_t object_id = -1;
-    if (object_meta->object_id != kUntrackedObjectId) {
-      object_id = static_cast<int32_t>(object_meta->object_id);
-    }
-    json << "[" << x1 << "," << y1 << "," << x2 << "," << y2 << ","
-         << std::fixed << std::setprecision(2) << conf << ","
-         << object_meta->class_id << ",\"" << escape_label(object_meta->obj_label)
-         << "\"," << object_id << "]";
   }
   json << "]}";
   return json.str();
 }
 
-bool DetLogEngine::process_frame(NvDsFrameMeta *frame_meta) {
+bool DetLogEngine::process_frame(NvDsFrameMeta *frame_meta, double latency_ms) {
   bool ok = true;
   int pad = static_cast<int>(frame_meta->pad_index);
   if (should_log(pad)) {
-    ok = write_line(pad, build_line(frame_meta));
+    ok = write_line(pad, build_line(frame_meta, latency_ms));
   }
   return ok;
 }

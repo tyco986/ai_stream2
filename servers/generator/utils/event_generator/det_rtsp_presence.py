@@ -10,9 +10,9 @@ from ..subelement_generator.utils.default_gie import YoloDet
 class DetRTSPPresenceGenerator(BaseEventRTSPGenerator):
     GENERATOR = "DetRTSPPresenceGenerator"
 
-    f"""Generate YOLO detection RTSP pipeline for event alert + appsink capture.
+    f"""Generate YOLO detection RTSP pipeline for event alert + nvcapturer dump.
 
-    No RTSP preview sink: capture ends at appsinks only.
+    No RTSP preview sink: capture ends at capturer + fakesink.
     {RTSP_EVENT_TOPOLOGY_DOC}
     """
 
