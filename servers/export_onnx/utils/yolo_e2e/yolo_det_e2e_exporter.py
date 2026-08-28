@@ -32,10 +32,9 @@ class YoloDetE2EExporter:
             "max_det": max_det,
             "conf": conf,
         }
+        export_kwargs["batch"] = batch
         if dynamic:
             export_kwargs["dynamic"] = True
-        else:
-            export_kwargs["batch"] = batch
 
         model.export(**export_kwargs)
 

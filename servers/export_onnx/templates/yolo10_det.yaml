@@ -2,8 +2,8 @@
 type: YOLO10-DET
 size: 640
 opset: 18
-batch: 1
-dynamic: false
+batch: 18
+dynamic: true
 simplify: false
 max_det: 30
 conf: 0.25

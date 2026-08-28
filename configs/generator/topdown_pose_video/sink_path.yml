@@ -1,9 +1,0 @@
-fakesink:
-- nvurisrcbin
-- nvstreammux
-- pgie
-- nvtracker
-- sgie0
-- nvdsanalytics
-- nvvideoconvert
-- fakesink

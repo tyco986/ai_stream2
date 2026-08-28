@@ -12,8 +12,6 @@ def write_labels(names, labels_path: Path) -> None:
 
 
 def validate_export_args(weights: Path, dynamic: bool, batch: int) -> None:
-    if dynamic and batch > 1:
-        raise ValueError("dynamic batch and static batch > 1 are incompatible")
     if not weights.is_file():
         raise ValueError(f"invalid weights file: {weights}")
 
@@ -162,8 +160,6 @@ def write_labels(names, labels_path: Path) -> None:
 
 
 def validate_export_args(weights: Path, dynamic: bool, batch: int) -> None:
-    if dynamic and batch > 1:
-        raise ValueError("dynamic batch and static batch > 1 are incompatible")
     if not weights.is_file():
         raise ValueError(f"invalid weights file: {weights}")
 

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class AppError(Exception):
@@ -34,9 +34,3 @@ class OnnxExportConfig(BaseModel):
     max_det: int = 30
     conf: float = Field(default=0.25, gt=0, le=1)
     iou: float = Field(default=0.45, gt=0, le=1)
-
-    @model_validator(mode="after")
-    def check_batch_mode(self) -> "OnnxExportConfig":
-        if self.dynamic and self.batch is not None and self.batch > 1:
-            raise ValueError("dynamic batch and static batch > 1 are incompatible")
-        return self
