@@ -1,6 +1,0 @@
-type: BaseImagePipeline
-entry: utils/base_pipeline/base_image.py
-files:
-- utils/base_pipeline/base_image.py
-- utils/base_pipeline/utils/detection_attach.py
-- utils/base_pipeline/utils/call_probe.py

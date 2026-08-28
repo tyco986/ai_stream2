@@ -1,6 +1,0 @@
-type: BaseRTSPPipeline
-entry: utils/base_pipeline/base_rtsp.py
-files:
-- utils/base_pipeline/base_rtsp.py
-- utils/base_pipeline/utils/detection_attach.py
-- utils/base_pipeline/utils/call_probe.py

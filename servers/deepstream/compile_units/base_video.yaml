@@ -1,6 +1,0 @@
-type: BaseVideoPipeline
-entry: utils/base_pipeline/base_video.py
-files:
-- utils/base_pipeline/base_video.py
-- utils/base_pipeline/utils/detection_attach.py
-- utils/base_pipeline/utils/call_probe.py
