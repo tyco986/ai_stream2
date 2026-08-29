@@ -24,6 +24,7 @@ target_include_directories(nvdsgst_fadedrawer PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/../nvbboxsnapshot
     ${CMAKE_CURRENT_SOURCE_DIR}/../nveventcoder
+    ${CMAKE_CURRENT_SOURCE_DIR}/../nvstgcnppactionlabel
     /opt/nvidia/deepstream/deepstream/sources/includes
     ${GSTREAMER_INCLUDE_DIRS}
 )

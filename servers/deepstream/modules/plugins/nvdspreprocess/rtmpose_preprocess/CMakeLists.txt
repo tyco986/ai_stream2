@@ -11,7 +11,10 @@ else()
 endif()
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-add_library(nvds_rtmpose_preprocess SHARED nvdspreprocess_lib.cpp rgba_to_nchw.cu)
+add_library(nvds_rtmpose_preprocess SHARED
+    nvdspreprocess_lib.cpp
+    nvds_rtmpose_crop_meta.cpp
+    rgba_to_nchw.cu)
 target_compile_features(nvds_rtmpose_preprocess PRIVATE cxx_std_17)
 set_target_properties(nvds_rtmpose_preprocess PROPERTIES CUDA_ARCHITECTURES "75;80;86;89;90")
 target_link_options(nvds_rtmpose_preprocess PRIVATE -Wl,-no-undefined)

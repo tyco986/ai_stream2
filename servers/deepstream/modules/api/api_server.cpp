@@ -9,7 +9,6 @@
 
 #include "api_error.hpp"
 #include "json.hpp"
-#include "yaml-cpp/yaml.h"
 
 FileLogger::FileLogger(std::string path)
     : path_(std::move(path)), file_(nullptr), mutex_() {
@@ -60,14 +59,6 @@ void ApiServer::bindRoutes() {
               [this](const httplib::Request& req, httplib::Response& res) {
                 handleStatus(req, res);
               });
-  server_.Get(prefix_ + "/types",
-              [this](const httplib::Request& req, httplib::Response& res) {
-                handleTypes(req, res);
-              });
-  server_.Post(prefix_ + "/schema",
-               [this](const httplib::Request& req, httplib::Response& res) {
-                 handleSchema(req, res);
-               });
   server_.Post(prefix_ + "/start_pipeline",
                [this](const httplib::Request& req, httplib::Response& res) {
                  handleStart(req, res);
@@ -118,32 +109,13 @@ void ApiServer::handleStatus(const httplib::Request&, httplib::Response& res) {
   });
 }
 
-void ApiServer::handleTypes(const httplib::Request&, httplib::Response& res) {
-  finish(res, [this] {
-    return YamlJson::dump(service_.types());
-  });
-}
-
-void ApiServer::handleSchema(const httplib::Request& req, httplib::Response& res) {
-  finish(res, [this, &req] {
-    const YAML::Node body = YAML::Load(req.body);
-    std::string pipeline_type;
-    if (body && body["pipeline_type"]) {
-      pipeline_type = body["pipeline_type"].as<std::string>();
-    } else {
-      throw ApiError("pipeline_type is required", 400);
-    }
-    return YamlJson::dump(service_.schema(pipeline_type));
-  });
-}
-
 void ApiServer::handleStart(const httplib::Request& req, httplib::Response& res) {
   finish(res, [this, &req] {
     if (!req.has_file("input")) {
       throw ApiError("missing file field input", 400);
     }
     const httplib::MultipartFormData file = req.get_file_value("input");
-    return YamlJson::dump(service_.start(file.filename, file.content));
+    return YamlJson::dump(service_.start(file.content));
   });
 }
 

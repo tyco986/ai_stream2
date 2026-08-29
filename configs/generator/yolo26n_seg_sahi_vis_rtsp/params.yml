@@ -1,0 +1,37 @@
+pipeline_name: yolo26n_seg_sahi_vis_rtsp
+streams:
+  video1:
+    url: rtsp://ai_stream2_mediamtx:8554/video1
+    width: 1920
+    height: 1080
+    fps: 25
+  video2:
+    url: rtsp://ai_stream2_mediamtx:8554/video2
+    width: 1920
+    height: 1080
+    fps: 25
+generator: SegSahiVisRTSPGenerator
+pgie:
+  model_dir: /root/models/trt/yolo26n-seg
+  class_attrs:
+    all:
+      conf: 0.25
+  interval: 50
+analyzer: null
+tracker: null
+logger:
+  interval: 50
+  root: /root/logs/deepstream/yolo26n_seg_sahi_vis_rtsp
+drawer:
+  interval: 50
+  fade_time: 1
+  show_label: true
+  show_mask: true
+sahi:
+  nvsahipreprocess:
+    slice_width: 640
+    slice_height: 640
+    overlap_width_ratio: 0.2
+    overlap_height_ratio: 0.2
+  nvsahipostprocess:
+    match_threshold: 0.5

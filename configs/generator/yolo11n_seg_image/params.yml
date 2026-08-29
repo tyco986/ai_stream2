@@ -1,0 +1,19 @@
+pipeline_name: yolo11n_seg_image
+generator: SegImageGenerator
+input: /root/attachments/images/video1.png
+output: /root/outputs/deepstream/yolo11n_seg_image.jpg
+pgie:
+  model_dir: /root/models/trt/yolo11n-seg
+  class_attrs:
+    all:
+      conf: 0.25
+  interval: 50
+analyzer: null
+logger:
+  interval: 50
+  root: /root/logs/deepstream/yolo11n_seg_image
+drawer:
+  interval: 50
+  fade_time: 1
+  show_label: true
+  show_mask: true

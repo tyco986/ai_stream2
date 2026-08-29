@@ -235,10 +235,11 @@ void DetFadeEngine::fill_action_label(
     std::snprintf(
         line,
         sizeof(line),
-        "%s%c%.2f%.2f%c%lld",
+        "%s%c%.2f%c%.2f%c%lld",
         name,
         kLabelSep,
         action_conf,
+        kLabelSep,
         person_conf,
         kLabelSep,
         static_cast<long long>(track_id));

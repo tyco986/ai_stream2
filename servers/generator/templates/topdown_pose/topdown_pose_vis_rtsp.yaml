@@ -24,7 +24,6 @@ drawer:
   show_pose: true
   pose_threshold: 0.0
   mode: coco17
-event_coder: null
 streams:
   video1:
     url: rtsp://ai_stream2_mediamtx:8554/video1

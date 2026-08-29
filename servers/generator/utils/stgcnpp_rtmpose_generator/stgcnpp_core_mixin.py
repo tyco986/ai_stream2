@@ -71,11 +71,21 @@ class StgcnppCoreMixin:
                 input_tensor_meta=True,
             ),
         )
+        self._append_node(
+            "nvstgcnppactionlabel",
+            "nvstgcnppactionlabel",
+            self._add_nvstgcnppactionlabel(
+                classifier_unique_id=int(
+                    self.stgcnpp_generator.config["property"]["gie-unique-id"]
+                ),
+            ),
+        )
 
     def link_stgcnpp(self, edges: dict, src: str) -> None:
         edges[src] = "nvdspreprocess"
         edges["nvdspreprocess"] = "sgie1"
-        edges["sgie1"] = "nvdsanalytics"
+        edges["sgie1"] = "nvstgcnppactionlabel"
+        edges["nvstgcnppactionlabel"] = "nvdsanalytics"
 
     def nvpose_drawer_element(self) -> str:
         return "nvstgcnppfadedrawerwithtracker"
@@ -89,9 +99,6 @@ class StgcnppCoreMixin:
             pose_threshold=float(drawer.get("pose_threshold", 0.0)),
             mode=drawer.get("mode", "coco17"),
             show_snap=bool(drawer.get("show_snap", True)),
-            classifier_unique_id=int(
-                self.stgcnpp_generator.config["property"]["gie-unique-id"]
-            ),
         )
 
     def apply_save_paths(self, config_save_dir: Path) -> None:

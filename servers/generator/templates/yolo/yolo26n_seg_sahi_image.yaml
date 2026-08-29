@@ -20,7 +20,6 @@ drawer:
   fade_time: 1
   show_label: true
   show_mask: true
-event_coder: null
 input: /root/attachments/images/video1.png
 output: /root/outputs/deepstream/yolo26n_seg_sahi_image.jpg
 sahi:

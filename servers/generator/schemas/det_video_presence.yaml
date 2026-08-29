@@ -1,0 +1,105 @@
+type: DetVideoPresenceGenerator
+params:
+  pipeline_name:
+    available: true
+    default: null
+  streams:
+    available: false
+    params: {}
+  pgie:
+    available: true
+    params:
+      interval:
+        available: true
+        min: 1
+        default: 1
+  tracker:
+    available: false
+    params:
+      class_id:
+        available: false
+        default:
+        - -1
+  analyzer:
+    available: false
+    params:
+      streams:
+        available: false
+        default: []
+      template:
+        available: false
+        default: null
+      roi_filtering:
+        available: false
+        default:
+          class_id:
+          - -1
+      overcrowding:
+        available: false
+        default: null
+      line_crossing:
+        available: false
+        default: null
+      direction_detection:
+        available: false
+        default: null
+  logger:
+    available: true
+    params:
+      root:
+        available: true
+        default: /root/logs/deepstream
+      interval:
+        available: true
+        default: 0
+  drawer:
+    available: true
+    params:
+      interval:
+        available: true
+        default: 50
+      fade_time:
+        available: true
+        default: 1
+      show_label:
+        available: true
+        default: true
+      show_snap:
+        available: true
+        default: true
+  event_coder:
+    available: true
+    params:
+      class_ids:
+        available: true
+        default:
+        - 0
+        - 1
+      event_names:
+        available: true
+        default:
+        - Fire
+        - Smoke
+      length:
+        available: true
+        default: 10
+      threshold:
+        available: true
+        default: 0.5
+      mode:
+        available: true
+        default: fold
+  capturer:
+    available: true
+    params:
+      capture_codes:
+        available: true
+        default: "1"
+  sahi:
+    available: false
+  input:
+    available: true
+    default: null
+  output:
+    available: false
+    default: null

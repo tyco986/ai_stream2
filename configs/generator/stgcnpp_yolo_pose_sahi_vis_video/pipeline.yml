@@ -1,0 +1,178 @@
+deepstream:
+  nodes:
+  - type: nvurisrcbin
+    name: nvurisrcbin
+    properties:
+      uri: file:///root/attachments/videos/video1.mp4
+      disable-audio: true
+      select-rtp-protocol: 4
+  - type: nvstreammux
+    name: nvstreammux
+    properties:
+      batch-size: 1
+      width: 1920
+      height: 1080
+      enable-padding: false
+      batched-push-timeout: 40000
+      gpu-id: 0
+      live-source: false
+  - type: nvsahipreprocess
+    name: nvsahipreprocess
+    properties:
+      config-file: /root/configs/generator/stgcnpp_yolo_pose_sahi_vis_video/nvsahipreprocess.ini
+      slice-width: 640
+      slice-height: 640
+      overlap-width-ratio: 0.2
+      overlap-height-ratio: 0.2
+      enable-full-frame: true
+      gpu-id: 0
+      unique-id: 15
+      target-unique-ids: '1'
+  - type: nvinfer
+    name: pgie
+    properties:
+      config-file-path: /root/configs/generator/stgcnpp_yolo_pose_sahi_vis_video/pgie.yml
+      batch-size: 9
+      gpu-id: 0
+      input-tensor-meta: true
+      clip-object-outside-roi: false
+  - type: queue
+    name: queue_sahi
+    properties:
+      leaky: 2
+      max-size-buffers: 4
+  - type: nvsahipostprocess_pose
+    name: nvsahipostprocess_pose
+    properties:
+      gie-ids: '1'
+      class-agnostic: false
+      oks-threshold: 0.5
+      vis-threshold: 0.0
+      num-keypoints: 0
+  - type: nvbboxsnapshot
+    name: nvbboxsnapshot
+    properties: {}
+  - type: nvtracker
+    name: nvtracker
+    properties:
+      ll-lib-file: /opt/nvidia/deepstream/deepstream/lib/libnvds_nvmultiobjecttracker.so
+      ll-config-file: /root/configs/generator/stgcnpp_yolo_pose_sahi_vis_video/nvtracker.yml
+      tracker-width: 1920
+      tracker-height: 1056
+      gpu-id: 0
+      operate-on-class-ids: '0'
+  - type: nvdspreprocess
+    name: nvdspreprocess
+    properties:
+      config-file: /root/configs/generator/stgcnpp_yolo_pose_sahi_vis_video/preprocess_stgcnpp.txt
+  - type: nvinfer
+    name: sgie1
+    properties:
+      config-file-path: /root/configs/generator/stgcnpp_yolo_pose_sahi_vis_video/sgie1.yml
+      batch-size: 64
+      gpu-id: 0
+      input-tensor-meta: true
+      clip-object-outside-roi: false
+  - type: nvstgcnppactionlabel
+    name: nvstgcnppactionlabel
+    properties:
+      classifier-unique-id: 4
+  - type: nvdsanalytics
+    name: nvdsanalytics
+    properties:
+      config-file: /root/configs/generator/stgcnpp_yolo_pose_sahi_vis_video/nvdsanalytics.yml
+      gpu-id: 0
+  - type: tee
+    name: tee_msg
+    properties: {}
+  - type: queue
+    name: queue_msg
+    properties:
+      leaky: 2
+      max-size-buffers: 4
+  - type: nvmsgconv
+    name: nvmsgconv
+    properties:
+      config: /root/configs/generator/stgcnpp_yolo_pose_sahi_vis_video/nvmsgconv.yml
+      payload-type: 1
+      msg2p-newapi: true
+      frame-interval: 1
+  - type: nvmsgbroker
+    name: nvmsgbroker
+    properties:
+      proto-lib: /opt/nvidia/deepstream/deepstream/lib/libnvds_kafka_proto.so
+      conn-str: ai_stream2_kafka;9092
+      topic: ai_stream2_stgcnpp_yolo_pose_sahi_vis_video
+      config: /root/configs/generator/stgcnpp_yolo_pose_sahi_vis_video/kafka.txt
+      sync: false
+      async: false
+  - type: nvstgcnppfadedrawerwithtracker
+    name: nvposefadedrawer
+    properties:
+      interval: 50
+      fade-time: 1
+      show-label: true
+      show-pose: true
+      pose-threshold: 0.0
+      mode: coco17
+      show-snap: true
+  - type: nvosdbin
+    name: nvosdbin
+    properties:
+      gpu-id: 0
+      display-bbox: true
+      display-text: true
+      display-mask: false
+  - type: nvvideoconvert
+    name: nvvideoconvert
+    properties:
+      gpu-id: 0
+  - type: nvstgcnpplogger
+    name: nvstgcnpplogger
+    properties:
+      root: /root/logs/deepstream/stgcnpp_yolo_pose_sahi_vis_video
+      interval: 1
+  - type: nvv4l2h264enc
+    name: nvv4l2h264enc
+    properties:
+      bitrate: 4000000
+      iframeinterval: 25
+      preset-id: 1
+      gpu-id: 0
+  - type: h264parse
+    name: h264parse
+    properties: {}
+  - type: mp4mux
+    name: mp4mux
+    properties: {}
+  - type: filesink
+    name: filesink
+    properties:
+      location: /root/outputs/deepstream/stgcnpp_yolo_pose_sahi_vis_video.mp4
+      sync: false
+      async: false
+  edges:
+    nvurisrcbin: nvstreammux
+    nvstreammux: nvsahipreprocess
+    nvsahipreprocess: pgie
+    pgie: queue_sahi
+    queue_sahi: nvsahipostprocess_pose
+    nvsahipostprocess_pose: nvbboxsnapshot
+    nvbboxsnapshot: nvtracker
+    nvtracker: nvdspreprocess
+    nvdspreprocess: sgie1
+    sgie1: nvstgcnppactionlabel
+    nvstgcnppactionlabel: nvdsanalytics
+    nvdsanalytics: tee_msg
+    tee_msg:
+    - nvposefadedrawer
+    - queue_msg
+    queue_msg: nvmsgconv
+    nvmsgconv: nvmsgbroker
+    nvposefadedrawer: nvosdbin
+    nvosdbin: nvvideoconvert
+    nvvideoconvert: nvstgcnpplogger
+    nvstgcnpplogger: nvv4l2h264enc
+    nvv4l2h264enc: h264parse
+    h264parse: mp4mux
+    mp4mux: filesink

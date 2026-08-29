@@ -1,5 +1,0 @@
-# Prerequisite: servers/generator/scripts/3_generate.sh --config stgcnpp_rtsp
-
-type: StgcnppRTSPPipeline
-name: stgcnpp-rtsp
-config_dir: /root/configs/generator/stgcnpp_rtsp

@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 import yaml
@@ -231,26 +230,20 @@ class PipelineGenerator:
             "two-phase-nmm": two_phase_nmm,
         }
 
-    def _add_nvrtmposepostprocess(
-        self,
-        infer_width: int = 192,
-        infer_height: int = 256,
-        padding: float = 1.25,
-        sgie_unique_id: int = 2,
-    ) -> dict:
+    def _add_nvrtmposepostprocess(self, sgie_unique_id: int = 2) -> dict:
         """Build properties for ``nvrtmposepostprocess``.
 
         Args:
-            infer_width: RTMPose crop width used to map tensor keypoints.
-            infer_height: RTMPose crop height used to map tensor keypoints.
-            padding: RTMPose bbox expand ratio.
             sgie_unique_id: Pose SGIE unique-id whose ROI tensors to map.
         """
         return {
-            "infer-width": infer_width,
-            "infer-height": infer_height,
-            "padding": padding,
             "sgie-unique-id": sgie_unique_id,
+        }
+
+    def _add_nvstgcnppactionlabel(self, classifier_unique_id: int = 4) -> dict:
+        """Build properties for ``nvstgcnppactionlabel``."""
+        return {
+            "classifier-unique-id": classifier_unique_id,
         }
 
     def _add_nvsahipostprocess_pose(
@@ -342,6 +335,14 @@ class PipelineGenerator:
             "interval": interval,
         }
 
+    def _add_nvpresencelogger(self, root: str | None = None, interval: int = 0) -> dict:
+        """Build properties for ``nvpresencelogger`` (boxes plus presence eventcode)."""
+        return self._add_nvdetlogger(root=root, interval=interval)
+
+    def _add_nvstgcnpplogger(self, root: str | None = None, interval: int = 0) -> dict:
+        """Build properties for ``nvstgcnpplogger`` (detection plus ST-GCN++ action fields)."""
+        return self._add_nvdetlogger(root=root, interval=interval)
+
     def _add_nvdetfadedrawer(
         self,
         interval: int = 0,
@@ -419,10 +420,9 @@ class PipelineGenerator:
         pose_threshold: float = 0.0,
         mode: str = "coco17",
         show_snap: bool = True,
-        classifier_unique_id: int = 4,
     ) -> dict:
         """Build properties for ``nvstgcnppfadedrawerwithtracker``."""
-        properties = self._add_nvposefadedrawerwithtracker(
+        return self._add_nvposefadedrawerwithtracker(
             interval,
             fade_time,
             show_label,
@@ -431,8 +431,6 @@ class PipelineGenerator:
             mode,
             show_snap,
         )
-        properties["classifier-unique-id"] = classifier_unique_id
-        return properties
 
     def _add_nvsegfadedrawer(
         self,
@@ -499,39 +497,35 @@ class PipelineGenerator:
 
     def _add_nvrawcapturer(
         self,
-        output_dir: str | None = None,
+        output_dir: str,
         capture_codes: str = "1",
     ) -> dict:
         """Build properties for ``nvrawcapturer`` (dump raw RGB NVMM frames as PNG).
 
         Args:
-            output_dir: Root for ``images/``. None uses ``CAPTURE_OUTPUT_DIR`` or
-                ``/root/outputs/deepstream/capture``.
+            output_dir: Root for ``images/``.
             capture_codes: Presence event code characters that trigger a dump.
         """
         return {
-            "output-dir": output_dir
-            or os.environ.get("CAPTURE_OUTPUT_DIR", "/root/outputs/deepstream/capture"),
+            "output-dir": output_dir,
             "capture-codes": capture_codes,
         }
 
     def _add_nvviscapturer(
         self,
-        output_dir: str | None = None,
+        output_dir: str,
         capture_codes: str = "1",
         label_task: str = "det",
     ) -> dict:
         """Build properties for ``nvviscapturer`` (dump vis RGB NVMM frames and labels).
 
         Args:
-            output_dir: Root for ``vis/`` ``labels/`` ``labelme/``. None uses
-                ``CAPTURE_OUTPUT_DIR`` or ``/root/outputs/deepstream/capture``.
+            output_dir: Root for ``vis/`` ``labels/`` ``labelme/``.
             capture_codes: Presence event code characters that trigger a dump.
             label_task: ``det`` or ``seg``; both write bbox labels this release.
         """
         return {
-            "output-dir": output_dir
-            or os.environ.get("CAPTURE_OUTPUT_DIR", "/root/outputs/deepstream/capture"),
+            "output-dir": output_dir,
             "capture-codes": capture_codes,
             "label-task": label_task,
         }

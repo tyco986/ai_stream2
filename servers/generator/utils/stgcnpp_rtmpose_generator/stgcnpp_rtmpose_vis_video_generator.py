@@ -33,7 +33,6 @@ class StgcnppRtmposeVisVideoGenerator(StgcnppRtmposeMixin, BaseVisVideoGenerator
         tracker: dict | None = None,
         logger: dict | None = None,
         drawer: dict | None = None,
-        event_coder: dict | None = None,
     ) -> None:
         self.sgie = sgie
         self.stgcnpp = stgcnpp
@@ -46,7 +45,6 @@ class StgcnppRtmposeVisVideoGenerator(StgcnppRtmposeMixin, BaseVisVideoGenerator
             tracker=tracker,
             logger=logger,
             drawer=drawer,
-            event_coder=event_coder,
         )
 
     def add(self) -> None:
@@ -109,7 +107,6 @@ class StgcnppRtmposeVisVideoGenerator(StgcnppRtmposeMixin, BaseVisVideoGenerator
                 gpu_id=self.pgie_generator.gpu_id,
             ),
         )
-        self.append_event_coder()
         self.append_kafka_nodes()
         gpu_id = self.pgie_generator.gpu_id
         if self.drawer is not None:
@@ -130,9 +127,9 @@ class StgcnppRtmposeVisVideoGenerator(StgcnppRtmposeMixin, BaseVisVideoGenerator
             self._add_nvvideoconvert(gpu_id=gpu_id),
         )
         self._append_node(
-            "nvdetlogger",
-            "nvdetlogger",
-            self._add_nvdetlogger(
+            "nvstgcnpplogger",
+            "nvstgcnpplogger",
+            self._add_nvstgcnpplogger(
                 root=f"/root/logs/deepstream/{self.pipeline_name}",
                 interval=int(self.logger.get("interval", 0)),
             ),
@@ -173,8 +170,8 @@ class StgcnppRtmposeVisVideoGenerator(StgcnppRtmposeMixin, BaseVisVideoGenerator
         self.link_kafka_from_analytics(edges, self.vis_tee_next())
         self.link_drawer_before_osd(edges)
         edges["nvosdbin"] = "nvvideoconvert"
-        edges["nvvideoconvert"] = "nvdetlogger"
-        edges["nvdetlogger"] = "nvv4l2h264enc"
+        edges["nvvideoconvert"] = "nvstgcnpplogger"
+        edges["nvstgcnpplogger"] = "nvv4l2h264enc"
         edges["nvv4l2h264enc"] = "h264parse"
         edges["h264parse"] = "mp4mux"
         edges["mp4mux"] = "filesink"

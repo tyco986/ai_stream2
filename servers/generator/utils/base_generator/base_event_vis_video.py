@@ -1,7 +1,9 @@
+from pathlib import Path
+
 from ..subelement_generator.kafka import KAFKA_CONN_STR, KAFKA_PROTO_LIB
 from ..subelement_generator.nvmsgconv import PAYLOAD_DEEPSTREAM_MINIMAL
 from ..subelement_generator.nvtracker import TRACKER_LL_LIB
-from .base_vis_video import BaseVisVideoGenerator
+from .base_event_video import BaseEventVideoGenerator
 
 VIS_VIDEO_EVENT_TOPOLOGY_DOC = """
     Topology::
@@ -11,7 +13,7 @@ VIS_VIDEO_EVENT_TOPOLOGY_DOC = """
               ─┬→ queue_raw → nvvideoconvert_raw → capsfilter_raw → nvrawcapturer0 → fakesink_raw0
               └→ queue_osd → nvvideoconvert_osd → capsfilter_osd(RGBA) → nvosdbin → tee_vis
                     ─┬→ queue_vis → nvvideoconvert_vis → capsfilter_vis → nvviscapturer0 → fakesink_vis0
-                    └→ queue_enc → nvdetlogger → nvv4l2h264enc → h264parse → mp4mux → filesink
+                    └→ queue_enc → nvpresencelogger → nvv4l2h264enc → h264parse → mp4mux → filesink
 
     Notes::
 
@@ -22,12 +24,47 @@ VIS_VIDEO_EVENT_TOPOLOGY_DOC = """
 """
 
 
-class BaseEventVisVideoGenerator(BaseVisVideoGenerator):
+class BaseEventVisVideoGenerator(BaseEventVideoGenerator):
+
     f"""Generate YOLO video pipeline for event alert + nvcapturer dump.
 
     Reads ``input`` video via DeepStream, runs inference with nvcapturer dump branches, and writes the annotated result to ``output``.
     {VIS_VIDEO_EVENT_TOPOLOGY_DOC}
     """
+
+    def __init__(
+        self,
+        pipeline_name: str,
+        input: str | Path,
+        output: str | Path,
+        analyzer: dict | None,
+        pgie: dict,
+        event_coder: dict,
+        tracker: dict | None = None,
+        logger: dict | None = None,
+        drawer: dict | None = None,
+        capturer: dict | None = None,
+    ) -> None:
+        self.output = Path(output).expanduser().resolve()
+        super().__init__(
+            pipeline_name=pipeline_name,
+            input=input,
+            analyzer=analyzer,
+            pgie=pgie,
+            tracker=tracker,
+            logger=logger,
+            drawer=drawer,
+            event_coder=event_coder,
+            capturer=capturer,
+        )
+
+    def init_input(self) -> None:
+        super().init_input()
+        self.output.parent.mkdir(parents=True, exist_ok=True)
+
+    def init_params(self) -> None:
+        super().init_params()
+        self.params_yml["output"] = str(self.output)
 
     def add(self) -> None:
         self._append_node(
@@ -133,7 +170,8 @@ class BaseEventVisVideoGenerator(BaseVisVideoGenerator):
             "nvrawcapturer",
             "nvrawcapturer0",
             self._add_nvrawcapturer(
-                output_dir=f"/root/outputs/deepstream/{self.pipeline_name}",
+                output_dir=self.capture_output_dir(),
+                capture_codes=self.capturer_codes(),
             ),
         )
         self._append_node(
@@ -174,9 +212,9 @@ class BaseEventVisVideoGenerator(BaseVisVideoGenerator):
         )
         self._append_node("queue", "queue_enc", self._add_queue())
         self._append_node(
-            "nvdetlogger",
-            "nvdetlogger",
-            self._add_nvdetlogger(
+            "nvpresencelogger",
+            "nvpresencelogger",
+            self._add_nvpresencelogger(
                 root=f"/root/logs/deepstream/{self.pipeline_name}",
                 interval=int(self.logger.get("interval", 0)),
             ),
@@ -185,7 +223,8 @@ class BaseEventVisVideoGenerator(BaseVisVideoGenerator):
             "nvviscapturer",
             "nvviscapturer0",
             self._add_nvviscapturer(
-                output_dir=f"/root/outputs/deepstream/{self.pipeline_name}",
+                output_dir=self.capture_output_dir(),
+                capture_codes=self.capturer_codes(),
             ),
         )
         self._append_node(
@@ -250,8 +289,8 @@ class BaseEventVisVideoGenerator(BaseVisVideoGenerator):
         edges["nvvideoconvert_vis"] = "capsfilter_vis"
         edges["capsfilter_vis"] = "nvviscapturer0"
         edges["nvviscapturer0"] = "fakesink_vis0"
-        edges["queue_enc"] = "nvdetlogger"
-        edges["nvdetlogger"] = "nvv4l2h264enc"
+        edges["queue_enc"] = "nvpresencelogger"
+        edges["nvpresencelogger"] = "nvv4l2h264enc"
         edges["nvv4l2h264enc"] = "h264parse"
         edges["h264parse"] = "mp4mux"
         edges["mp4mux"] = "filesink"

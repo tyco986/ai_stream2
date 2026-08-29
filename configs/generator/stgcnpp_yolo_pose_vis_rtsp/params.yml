@@ -1,0 +1,35 @@
+pipeline_name: stgcnpp_yolo_pose_vis_rtsp
+streams:
+  video1:
+    url: rtsp://ai_stream2_mediamtx:8554/video1
+    width: 1920
+    height: 1080
+    fps: 25
+  video2:
+    url: rtsp://ai_stream2_mediamtx:8554/video2
+    width: 1920
+    height: 1080
+    fps: 25
+generator: StgcnppYoloPoseVisRTSPGenerator
+pgie:
+  model_dir: /root/models/trt/yolo26n-pose
+  class_attrs:
+    all:
+      conf: 0.4
+  interval: 1
+analyzer: null
+tracker:
+  class_id: 0
+logger:
+  interval: 1
+  root: /root/logs/deepstream/stgcnpp_yolo_pose_vis_rtsp
+drawer:
+  interval: 50
+  fade_time: 1
+  show_label: true
+  show_pose: true
+  pose_threshold: 0.0
+  mode: coco17
+stgcnpp:
+  model_dir: /root/models/trt/stgcnpp-ntu60
+  interval: 1

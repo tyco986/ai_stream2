@@ -125,7 +125,6 @@ DEEPSTREAM_HEALTH_POLL_INTERVAL = float(
     os.environ.get("DEEPSTREAM_HEALTH_POLL_INTERVAL", "1")
 )
 GENERATOR_CONFIG_ROOT = Path("/root/configs/generator")
-DEEPSTREAM_CONFIG_ROOT = Path("/root/configs/deepstream")
 DEEPSTREAM_LOG_ROOT = Path("/root/logs/deepstream")
 DEEPSTREAM_KAFKA_TOPIC = "deepstream-detections"
 DEEPSTREAM_KAFKA_PORT = 9092

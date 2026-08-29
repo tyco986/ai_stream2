@@ -1,0 +1,11 @@
+---
+description: 项目容器化，命令与测试只在容器内执行
+alwaysApply: true
+---
+
+# 容器化
+
+- 依赖安装、迁移、跑服务、调试、测试一律在 Docker 容器内执行。
+- 禁止宿主机直接 `pip` / `python` / `pytest` / `manage.py` / 连业务库。
+- 入口：`servers/*/scripts/`，或 `docker exec` 进对应容器。
+- 宿主机只改源码、调 scripts、跑 `docker` / `docker compose`。

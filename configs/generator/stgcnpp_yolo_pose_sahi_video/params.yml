@@ -1,0 +1,27 @@
+pipeline_name: stgcnpp_yolo_pose_sahi_video
+generator: StgcnppYoloPoseSahiVideoGenerator
+input: /root/attachments/videos/video1.mp4
+pgie:
+  model_dir: /root/models/trt/yolo26n-pose
+  class_attrs:
+    all:
+      conf: 0.25
+  interval: 1
+analyzer: null
+tracker:
+  class_id: 0
+logger:
+  interval: 1
+  root: /root/logs/deepstream/stgcnpp_yolo_pose_sahi_video
+drawer: null
+sahi:
+  nvsahipreprocess:
+    slice_width: 640
+    slice_height: 640
+    overlap_width_ratio: 0.2
+    overlap_height_ratio: 0.2
+  nvsahipostprocess_pose:
+    oks_threshold: 0.5
+stgcnpp:
+  model_dir: /root/models/trt/stgcnpp-ntu60
+  interval: 1

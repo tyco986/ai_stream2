@@ -25,5 +25,7 @@ event_coder:
   length: 5
   threshold: 0.5
   mode: fold
+capturer:
+  capture_codes: "1"
 input: /root/attachments/videos/video2.mp4
 output: /root/outputs/deepstream/yolo10x_smoke_fire_vis_video.mp4

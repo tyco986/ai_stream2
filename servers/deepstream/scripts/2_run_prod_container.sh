@@ -18,11 +18,11 @@ docker run \
   --name "${PROJECT_NAME}_deepstream" \
   --network "${PROJECT_NAME}_default" \
   --gpus all \
+  --ulimit core=0 \
   -p 8092:8092 \
   -e PROJECT_NAME="${PROJECT_NAME}" \
   -e HOST=0.0.0.0 \
   -e PORT=8092 \
-  -e SCHEMA_DIR=/app/schemas \
   -e PIPELINE_RUNNER=/usr/local/bin/pipeline_runner \
   -e KAFKA_TOPIC=deepstream-detections \
   -e KAFKA_EVENT_TOPIC=deepstream-events \

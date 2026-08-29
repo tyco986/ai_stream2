@@ -37,7 +37,6 @@ class StgcnppRtmposeSahiVideoGenerator(StgcnppRtmposeMixin, BaseSahiVideoGenerat
         tracker: dict | None = None,
         logger: dict | None = None,
         drawer: dict | None = None,
-        event_coder: dict | None = None,
     ) -> None:
         self.sgie = sgie
         self.stgcnpp = stgcnpp
@@ -50,7 +49,6 @@ class StgcnppRtmposeSahiVideoGenerator(StgcnppRtmposeMixin, BaseSahiVideoGenerat
             tracker=tracker,
             logger=logger,
             drawer=drawer,
-            event_coder=event_coder,
         )
 
     def add(self) -> None:
@@ -142,12 +140,11 @@ class StgcnppRtmposeSahiVideoGenerator(StgcnppRtmposeMixin, BaseSahiVideoGenerat
                 gpu_id=self.pgie_generator.gpu_id,
             ),
         )
-        self.append_event_coder()
         self.append_kafka_nodes()
         self._append_node(
-            "nvdetlogger",
-            "nvdetlogger",
-            self._add_nvdetlogger(
+            "nvstgcnpplogger",
+            "nvstgcnpplogger",
+            self._add_nvstgcnpplogger(
                 root=f"/root/logs/deepstream/{self.pipeline_name}",
                 interval=int(self.logger.get("interval", 0)),
             ),
@@ -176,6 +173,6 @@ class StgcnppRtmposeSahiVideoGenerator(StgcnppRtmposeMixin, BaseSahiVideoGenerat
             inference_tail = "nvtracker"
         self.link_sgie_from(edges, inference_tail)
         self.link_stgcnpp(edges, "nvrtmposepostprocess")
-        self.link_kafka_from_analytics(edges, "nvdetlogger")
-        edges["nvdetlogger"] = "fakesink"
+        self.link_kafka_from_analytics(edges, "nvstgcnpplogger")
+        edges["nvstgcnpplogger"] = "fakesink"
         self.pipeline["deepstream"]["edges"] = edges

@@ -2,6 +2,17 @@
 
 #include <algorithm>
 
+struct CropGeom {
+  int src_left = 0;
+  int src_top = 0;
+  int src_width = 2;
+  int src_height = 2;
+  int dest_width = 0;
+  int dest_height = 0;
+  int offset_left = 0;
+  int offset_top = 0;
+};
+
 class RectExpand {
  public:
   RectExpand(int infer_width, int infer_height, float padding)
@@ -88,6 +99,55 @@ class RectExpand {
     *dest_height = box_height;
     *offset_left = (infer_width - box_width) / 2;
     *offset_top = (infer_height - box_height) / 2;
+  }
+
+  CropGeom compute_crop(
+      float left,
+      float top,
+      float width,
+      float height,
+      int frame_width,
+      int frame_height) const
+  {
+    CropGeom geom;
+    float expanded_left = 0.0f;
+    float expanded_top = 0.0f;
+    float expanded_width = 0.0f;
+    float expanded_height = 0.0f;
+    expand(
+        left,
+        top,
+        width,
+        height,
+        frame_width,
+        frame_height,
+        &expanded_left,
+        &expanded_top,
+        &expanded_width,
+        &expanded_height);
+    even_src(
+        expanded_left,
+        expanded_top,
+        expanded_width,
+        expanded_height,
+        &geom.src_left,
+        &geom.src_top,
+        &geom.src_width,
+        &geom.src_height);
+    if (geom.src_left + geom.src_width > frame_width) {
+      geom.src_width = std::max(2, round_down_2(frame_width - geom.src_left));
+    }
+    if (geom.src_top + geom.src_height > frame_height) {
+      geom.src_height = std::max(2, round_down_2(frame_height - geom.src_top));
+    }
+    letterbox(
+        geom.src_width,
+        geom.src_height,
+        &geom.dest_width,
+        &geom.dest_height,
+        &geom.offset_left,
+        &geom.offset_top);
+    return geom;
   }
 
   int infer_width;

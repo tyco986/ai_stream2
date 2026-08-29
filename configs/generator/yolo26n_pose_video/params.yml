@@ -1,0 +1,15 @@
+pipeline_name: yolo26n_pose_video
+generator: PoseVideoGenerator
+input: /root/attachments/videos/video1.mp4
+pgie:
+  model_dir: /root/models/trt/yolo26n-pose
+  class_attrs:
+    all:
+      conf: 0.25
+  interval: 50
+analyzer: null
+tracker: null
+logger:
+  interval: 50
+  root: /root/logs/deepstream/yolo26n_pose_video
+drawer: null

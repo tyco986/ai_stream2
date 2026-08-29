@@ -8,8 +8,6 @@ AppConfig::AppConfig()
       host(envValue("HOST", "0.0.0.0")),
       port(envInt("PORT", 8092)),
       log_root(envValue("LOG_ROOT", "/root/logs/deepstream")),
-      config_save_dir(envValue("CONFIG_SAVE_DIR", "/root/configs/deepstream")),
-      schema_dir(envValue("SCHEMA_DIR", "/app/schemas")),
       pipeline_runner(envValue("PIPELINE_RUNNER", "/usr/local/bin/pipeline_runner")) {}
 
 std::string AppConfig::envValue(const char* key, const char* fallback) {

@@ -8,16 +8,15 @@ source "${ROOT}/scripts/load_project_env.sh"
 API_URL="http://127.0.0.1:8092"
 ENDPOINT="${API_URL}/${PROJECT_NAME}/deepstream/start_pipeline"
 HEALTH_ENDPOINT="${API_URL}/${PROJECT_NAME}/deepstream/health"
-TEMPLATES_DIR="${ROOT}/servers/deepstream/templates"
 
 usage() {
   cat <<EOF
 usage: $0 --config PATH
 
-Build and start a DeepStream pipeline via API from a template YAML.
+Build and start a DeepStream pipeline via API from a YAML with type and config_dir.
 
 Options:
-  --config PATH   Pipeline template (e.g. yolo26n_det_image_pipeline or servers/deepstream/templates/...)
+  --config PATH   Start YAML (must exist; API reads type and config_dir)
 
 Prerequisites: 1_build_dev_image.sh or 1_build_prod_image.sh, 2_run_dev_container.sh or 2_run_prod_container.sh
   (container runs deepstream_api from modules/api)
@@ -46,30 +45,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ -n "$CONFIG" ]] || { echo "--config is required" >&2; usage; exit 1; }
-
-resolve_config_path() {
-  local path="$1"
-  local candidate
-  if [[ -f "$path" ]]; then
-    realpath "$path"
-    return
-  fi
-  for candidate in \
-    "${TEMPLATES_DIR}/${path}.yml" \
-    "${TEMPLATES_DIR}/${path}" \
-    "${TEMPLATES_DIR}"/*/"${path}.yml" \
-    "${TEMPLATES_DIR}"/*/"${path}"
-  do
-    if [[ -f "$candidate" ]]; then
-      realpath "$candidate"
-      return
-    fi
-  done
-  echo ""
-}
-
-CONFIG_PATH="$(resolve_config_path "$CONFIG")"
-[[ -n "$CONFIG_PATH" ]] || { echo "config not found: $CONFIG" >&2; exit 1; }
+[[ -f "$CONFIG" ]] || { echo "config not found: $CONFIG" >&2; exit 1; }
+CONFIG_PATH="$(realpath "$CONFIG")"
 
 curl -sS --connect-timeout 2 "${HEALTH_ENDPOINT}" >/dev/null \
   || { echo "deepstream_api not ready: ${HEALTH_ENDPOINT}" >&2; exit 1; }

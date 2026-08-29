@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run from project root. Start every non-base *video* pipeline template sequentially.
+# Run from project root. Start every video config under configs/generator sequentially.
 # Waits until each pipeline finishes, then starts the next without restarting the container.
 set -euo pipefail
 
@@ -9,7 +9,9 @@ source "${ROOT}/scripts/load_project_env.sh"
 API_URL="http://127.0.0.1:8092"
 START_ENDPOINT="${API_URL}/${PROJECT_NAME}/deepstream/start_pipeline"
 STATUS_ENDPOINT="${API_URL}/${PROJECT_NAME}/deepstream/pipeline/status"
-TEMPLATES_DIR="${ROOT}/servers/deepstream/templates"
+HEALTH_ENDPOINT="${API_URL}/${PROJECT_NAME}/deepstream/health"
+CONFIGS_DIR="${ROOT}/configs/generator"
+CONTAINER_CONFIGS_DIR="/root/configs/generator"
 WAIT_TIMEOUT_SEC="${WAIT_TIMEOUT_SEC:-600}"
 POLL_INTERVAL_SEC="${POLL_INTERVAL_SEC:-2}"
 
@@ -17,8 +19,9 @@ usage() {
   cat <<EOF
 usage: $0
 
-Start every video pipeline YAML under servers/deepstream/templates except base/,
-one after another (wait until each finishes). The same deepstream process is reused.
+Start every video pipeline under configs/generator (dirs whose name contains
+_video, with pipeline.yml and params.yml), one after another. The same
+deepstream process is reused.
 
 Environment:
   WAIT_TIMEOUT_SEC       Max seconds to wait per pipeline (default 600)
@@ -56,37 +59,66 @@ wait_until_idle() {
   return 1
 }
 
+pipeline_type_from_params() {
+  local params_path="$1"
+  local generator
+  generator="$(sed -n 's/^generator:[[:space:]]*//p' "${params_path}" | head -n 1 | tr -d '\r')"
+  [[ -n "${generator}" ]] || return 1
+  printf '%s\n' "${generator%Generator}Pipeline"
+}
+
+curl -sS --connect-timeout 2 "${HEALTH_ENDPOINT}" >/dev/null \
+  || { echo "deepstream_api not ready: ${HEALTH_ENDPOINT}" >&2; exit 1; }
+
 mapfile -t CONFIGS < <(
-  find "${TEMPLATES_DIR}" -type f -name '*_video_pipeline*.yml' ! -path '*/base/*' | sort
+  find "${CONFIGS_DIR}" -mindepth 1 -maxdepth 1 -type d -name '*_video*' \
+    | sort
 )
-[[ ${#CONFIGS[@]} -gt 0 ]] || { echo "no video pipeline templates found" >&2; exit 1; }
+[[ ${#CONFIGS[@]} -gt 0 ]] || { echo "no video pipeline configs found" >&2; exit 1; }
 
 failed=0
 ok=0
+skipped=0
 for config_path in "${CONFIGS[@]}"; do
-  rel="${config_path#"${TEMPLATES_DIR}/"}"
-  echo "==> ${rel}"
-  wait_until_idle
+  name="$(basename "${config_path}")"
+  params_path="${config_path}/params.yml"
+  pipeline_path="${config_path}/pipeline.yml"
+  if [[ ! -f "${params_path}" || ! -f "${pipeline_path}" ]]; then
+    echo "SKIP missing pipeline.yml or params.yml: ${name}" >&2
+    skipped=$((skipped + 1))
+    continue
+  fi
+  pipeline_type="$(pipeline_type_from_params "${params_path}")" \
+    || { echo "SKIP params.yml missing generator: ${name}" >&2; skipped=$((skipped + 1)); continue; }
+  echo "==> ${name}"
+  if ! wait_until_idle; then
+    echo "FAILED idle before start: ${name}" >&2
+    failed=$((failed + 1))
+    continue
+  fi
+  start_yaml="$(mktemp)"
   response_body="$(mktemp)"
+  printf 'type: %s\nconfig_dir: %s/%s\n' \
+    "${pipeline_type}" "${CONTAINER_CONFIGS_DIR}" "${name}" > "${start_yaml}"
   http_code="$(curl -sS -w "%{http_code}" -o "${response_body}" \
     -X POST "${START_ENDPOINT}" \
-    -F "input=@${config_path}")"
+    -F "input=@${start_yaml}")"
   cat "${response_body}"
   echo
-  rm -f "${response_body}"
+  rm -f "${start_yaml}" "${response_body}"
   if [[ "${http_code}" != "200" ]]; then
-    echo "FAILED start: ${rel} (http ${http_code})" >&2
+    echo "FAILED start: ${name} (http ${http_code})" >&2
     failed=$((failed + 1))
     continue
   fi
   if wait_until_idle; then
     ok=$((ok + 1))
   else
-    echo "FAILED wait: ${rel}" >&2
+    echo "FAILED wait: ${name}" >&2
     failed=$((failed + 1))
   fi
 done
 
 echo
-echo "done: ok=${ok} failed=${failed} total=${#CONFIGS[@]}"
+echo "done: ok=${ok} failed=${failed} skipped=${skipped} total=${#CONFIGS[@]}"
 [[ "${failed}" -eq 0 ]]

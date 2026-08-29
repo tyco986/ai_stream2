@@ -2,5 +2,5 @@
 type: YOLO11-DET
 batch_size: 18
 gpu_id: 0
-precision: int8
+precision: fp16
 opt_level: 3

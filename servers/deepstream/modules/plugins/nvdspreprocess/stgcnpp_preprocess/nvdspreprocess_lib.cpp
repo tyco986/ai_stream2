@@ -6,7 +6,6 @@
 #include <deque>
 #include <map>
 #include <mutex>
-#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -14,8 +13,7 @@
 
 #include <cuda_runtime_api.h>
 
-#include "gstnvdsinfer.h"
-#include "nvdsinfer.h"
+#include "nvds_stgcnpp_ready_meta.h"
 #include "nvdsmeta.h"
 
 namespace {
@@ -26,10 +24,6 @@ constexpr int kDefaultClipLen = 100;
 constexpr int kDefaultNumJoints = 17;
 constexpr int kDefaultNumPerson = 2;
 constexpr int kDefaultChannels = 3;
-constexpr int kDefaultPoseGieId = 2;
-constexpr int kDefaultInferWidth = 192;
-constexpr int kDefaultInferHeight = 256;
-constexpr char kKeypointsLayer[] = "keypoints";
 
 int parse_int(
     const std::unordered_map<std::string, std::string> &configs,
@@ -42,16 +36,6 @@ int parse_int(
         value = atoi(it->second.c_str());
     }
     return value;
-}
-
-int round_up_2(int value)
-{
-    return (value + 1) & ~1;
-}
-
-int round_down_2(int value)
-{
-    return value & ~1;
 }
 
 struct TrackKey {
@@ -89,10 +73,7 @@ public:
     StgcnppPreprocess(
         int clip_len,
         int num_joints,
-        int num_person,
-        int pose_gie_id,
-        int infer_width,
-        int infer_height);
+        int num_person);
 
     NvDsPreProcessStatus prepare(
         NvDsPreProcessBatch *batch,
@@ -103,10 +84,9 @@ public:
     NvDsObjectMeta *unit_object_meta(const NvDsPreProcessUnit &unit);
     NvDsFrameMeta *unit_frame_meta(const NvDsPreProcessUnit &unit);
     TrackKey unit_key(const NvDsPreProcessUnit &unit);
-    const float *keypoints_from_tensor(NvDsInferTensorMeta *tensor_meta);
-    const float *keypoints_from_object(NvDsObjectMeta *object_meta);
-    void map_crop_to_frame(
-        const float *crop_xy_score,
+    const float *keypoints_from_mask(NvDsObjectMeta *object_meta);
+    void map_mask_to_frame(
+        const float *mask_xy_score,
         NvDsObjectMeta *object_meta,
         float *frame_xy_score);
     std::pair<int, int> frame_hw(NvDsFrameMeta *frame_meta);
@@ -115,22 +95,25 @@ public:
     void drop_dead_tracks(gint source_id, const std::unordered_set<guint64> &current_ids);
     void append_pose(const TrackKey &key, const float *frame_xy_score);
     bool track_ready(const TrackKey &key);
+    int track_clip_length(const TrackKey &key);
+    void write_object_ready(
+        NvDsBatchMeta *batch_meta,
+        NvDsObjectMeta *object_meta,
+        gboolean ready,
+        gint length);
+    void write_frame_ready(NvDsFrameMeta *frame_meta);
     void write_clip(float *dst, const std::deque<std::vector<float>> &clip);
 
 private:
     int clip_len;
     int num_joints;
     int num_person;
-    int pose_gie_id;
-    int infer_width;
-    int infer_height;
     int channels;
     int frame_floats;
     int person_floats;
     int sample_floats;
     std::mutex mutex;
     std::unordered_map<TrackKey, std::deque<std::vector<float>>, TrackKeyHash> poses;
-    std::vector<float> device_scratch;
 };
 
 struct CustomCtx {
@@ -139,17 +122,8 @@ struct CustomCtx {
     CustomCtx(
         int clip_len,
         int num_joints,
-        int num_person,
-        int pose_gie_id,
-        int infer_width,
-        int infer_height)
-        : preprocess(
-              clip_len,
-              num_joints,
-              num_person,
-              pose_gie_id,
-              infer_width,
-              infer_height)
+        int num_person)
+        : preprocess(clip_len, num_joints, num_person)
     {
     }
 };
@@ -157,17 +131,11 @@ struct CustomCtx {
 StgcnppPreprocess::StgcnppPreprocess(
     int clip_len,
     int num_joints,
-    int num_person,
-    int pose_gie_id,
-    int infer_width,
-    int infer_height)
+    int num_person)
 {
     this->clip_len = clip_len;
     this->num_joints = num_joints;
     this->num_person = num_person;
-    this->pose_gie_id = pose_gie_id;
-    this->infer_width = infer_width;
-    this->infer_height = infer_height;
     this->channels = kDefaultChannels;
     this->frame_floats = this->num_joints * this->channels;
     this->person_floats = this->clip_len * this->frame_floats;
@@ -206,84 +174,32 @@ TrackKey StgcnppPreprocess::unit_key(const NvDsPreProcessUnit &unit)
     return key;
 }
 
-const float *StgcnppPreprocess::keypoints_from_tensor(NvDsInferTensorMeta *tensor_meta)
+const float *StgcnppPreprocess::keypoints_from_mask(NvDsObjectMeta *object_meta)
 {
     const float *data = nullptr;
-    if (tensor_meta != nullptr && static_cast<int>(tensor_meta->unique_id) == pose_gie_id) {
-        for (guint i = 0; i < tensor_meta->num_output_layers; ++i) {
-            const NvDsInferLayerInfo &layer = tensor_meta->output_layers_info[i];
-            if (layer.layerName == nullptr || strcmp(layer.layerName, kKeypointsLayer) != 0) {
-                continue;
-            }
-            int elements = static_cast<int>(layer.inferDims.numElements);
-            if (elements < frame_floats) {
-                continue;
-            }
-            data = static_cast<const float *>(tensor_meta->out_buf_ptrs_host[i]);
-            if (data == nullptr && tensor_meta->out_buf_ptrs_dev[i] != nullptr) {
-                device_scratch.resize(static_cast<size_t>(elements));
-                cudaMemcpy(
-                    device_scratch.data(),
-                    tensor_meta->out_buf_ptrs_dev[i],
-                    static_cast<size_t>(elements) * sizeof(float),
-                    cudaMemcpyDeviceToHost);
-                data = device_scratch.data();
-            }
-        }
+    if (object_meta->mask_params.data != nullptr &&
+        object_meta->mask_params.width == 3 &&
+        object_meta->mask_params.height >= static_cast<guint>(num_joints) &&
+        object_meta->rect_params.width > 0.0f &&
+        object_meta->rect_params.height > 0.0f) {
+        data = object_meta->mask_params.data;
     }
     return data;
 }
 
-const float *StgcnppPreprocess::keypoints_from_object(NvDsObjectMeta *object_meta)
-{
-    const float *data = nullptr;
-    for (NvDsMetaList *user = object_meta->obj_user_meta_list; user != nullptr; user = user->next) {
-        NvDsUserMeta *user_meta = static_cast<NvDsUserMeta *>(user->data);
-        if (user_meta->base_meta.meta_type != NVDSINFER_TENSOR_OUTPUT_META) {
-            continue;
-        }
-        auto *tensor_meta = static_cast<NvDsInferTensorMeta *>(user_meta->user_meta_data);
-        data = keypoints_from_tensor(tensor_meta);
-        if (data != nullptr) {
-            break;
-        }
-    }
-    return data;
-}
-
-void StgcnppPreprocess::map_crop_to_frame(
-    const float *crop_xy_score,
+void StgcnppPreprocess::map_mask_to_frame(
+    const float *mask_xy_score,
     NvDsObjectMeta *object_meta,
     float *frame_xy_score)
 {
-    int src_left = round_up_2(static_cast<int>(object_meta->rect_params.left));
-    int src_top = round_up_2(static_cast<int>(object_meta->rect_params.top));
-    int src_width = round_down_2(static_cast<int>(object_meta->rect_params.width));
-    int src_height = round_down_2(static_cast<int>(object_meta->rect_params.height));
-    if (src_width < 2) {
-        src_width = 2;
-    }
-    if (src_height < 2) {
-        src_height = 2;
-    }
-    float fit_height = infer_width * src_height / static_cast<float>(src_width);
-    int dest_width = infer_width;
-    int dest_height = static_cast<int>(fit_height);
-    if (fit_height > infer_height) {
-        dest_width = static_cast<int>(infer_height * src_width / static_cast<float>(src_height));
-        dest_height = infer_height;
-    }
-    int offset_left = (infer_width - dest_width) / 2;
-    int offset_top = (infer_height - dest_height) / 2;
-    float ratio_x = dest_width / static_cast<float>(src_width);
-    float ratio_y = dest_height / static_cast<float>(src_height);
+    float left = object_meta->rect_params.left;
+    float top = object_meta->rect_params.top;
+    float box_w = object_meta->rect_params.width;
+    float box_h = object_meta->rect_params.height;
     for (int joint = 0; joint < num_joints; ++joint) {
-        float x = crop_xy_score[joint * 3 + 0];
-        float y = crop_xy_score[joint * 3 + 1];
-        float score = crop_xy_score[joint * 3 + 2];
-        frame_xy_score[joint * 3 + 0] = src_left + (x - offset_left) / ratio_x;
-        frame_xy_score[joint * 3 + 1] = src_top + (y - offset_top) / ratio_y;
-        frame_xy_score[joint * 3 + 2] = score;
+        frame_xy_score[joint * 3 + 0] = left + mask_xy_score[joint * 3 + 0] * box_w;
+        frame_xy_score[joint * 3 + 1] = top + mask_xy_score[joint * 3 + 1] * box_h;
+        frame_xy_score[joint * 3 + 2] = mask_xy_score[joint * 3 + 2];
     }
 }
 
@@ -351,14 +267,68 @@ void StgcnppPreprocess::append_pose(const TrackKey &key, const float *frame_xy_s
     }
 }
 
+int StgcnppPreprocess::track_clip_length(const TrackKey &key)
+{
+    int length = 0;
+    auto it = poses.find(key);
+    if (it != poses.end()) {
+        length = static_cast<int>(it->second.size());
+    }
+    return length;
+}
+
 bool StgcnppPreprocess::track_ready(const TrackKey &key)
 {
-    bool ready = false;
-    auto it = poses.find(key);
-    if (it != poses.end() && static_cast<int>(it->second.size()) == clip_len) {
-        ready = true;
+    return track_clip_length(key) == clip_len;
+}
+
+void StgcnppPreprocess::write_object_ready(
+    NvDsBatchMeta *batch_meta,
+    NvDsObjectMeta *object_meta,
+    gboolean ready,
+    gint length)
+{
+    NvDsStgcnppReadyMeta *existing = nvds_stgcnpp_ready_meta_from_obj(object_meta);
+    NvDsStgcnppReadyMeta *meta = existing;
+    if (meta == nullptr) {
+        NvDsUserMeta *user_meta = nvds_acquire_user_meta_from_pool(batch_meta);
+        if (user_meta != nullptr) {
+            meta = static_cast<NvDsStgcnppReadyMeta *>(g_malloc0(sizeof(NvDsStgcnppReadyMeta)));
+            user_meta->user_meta_data = meta;
+            user_meta->base_meta.meta_type = NVDS_STGCNPP_READY_USER_META;
+            user_meta->base_meta.copy_func = nvds_stgcnpp_ready_meta_copy;
+            user_meta->base_meta.release_func = nvds_stgcnpp_ready_meta_release;
+            nvds_add_user_meta_to_obj(object_meta, user_meta);
+        }
     }
-    return ready;
+    if (meta != nullptr) {
+        meta->ready = ready;
+        meta->length = length;
+    }
+}
+
+void StgcnppPreprocess::write_frame_ready(NvDsFrameMeta *frame_meta)
+{
+    NvDsBatchMeta *batch_meta = nullptr;
+    if (frame_meta != nullptr) {
+        batch_meta = frame_meta->base_meta.batch_meta;
+    }
+    if (frame_meta != nullptr && batch_meta != nullptr) {
+        for (NvDsMetaList *item = frame_meta->obj_meta_list; item != nullptr; item = item->next) {
+            auto *object_meta = static_cast<NvDsObjectMeta *>(item->data);
+            if (object_meta == nullptr) {
+                continue;
+            }
+            TrackKey key;
+            key.source_id = frame_meta->source_id;
+            key.object_id = object_meta->object_id;
+            gint length = 0;
+            if (object_meta->object_id != UNTRACKED_OBJECT_ID) {
+                length = track_clip_length(key);
+            }
+            write_object_ready(batch_meta, object_meta, length == clip_len, length);
+        }
+    }
 }
 
 void StgcnppPreprocess::write_clip(float *dst, const std::deque<std::vector<float>> &clip)
@@ -412,15 +382,16 @@ NvDsPreProcessStatus StgcnppPreprocess::prepare(
             if (object_meta == nullptr || key.object_id == UNTRACKED_OBJECT_ID) {
                 continue;
             }
-            const float *crop = keypoints_from_object(object_meta);
-            if (crop == nullptr || hw.first <= 0 || hw.second <= 0) {
+            const float *mask = keypoints_from_mask(object_meta);
+            if (mask == nullptr || hw.first <= 0 || hw.second <= 0) {
                 continue;
             }
             std::vector<float> frame_xy_score(static_cast<size_t>(frame_floats), 0.0f);
-            map_crop_to_frame(crop, object_meta, frame_xy_score.data());
+            map_mask_to_frame(mask, object_meta, frame_xy_score.data());
             prenormalize_2d(frame_xy_score.data(), hw.first, hw.second);
             append_pose(key, frame_xy_score.data());
         }
+        write_frame_ready(group.frame_meta);
     }
 
     std::vector<NvDsPreProcessUnit> ready_units;
@@ -500,16 +471,7 @@ extern "C" CustomCtx *initLib(CustomInitParams initparams)
     if (num_person < 1) {
         num_person = kDefaultNumPerson;
     }
-    int pose_gie_id = parse_int(initparams.user_configs, "pose-gie-id", kDefaultPoseGieId);
-    int infer_width = parse_int(initparams.user_configs, "infer-width", kDefaultInferWidth);
-    int infer_height = parse_int(initparams.user_configs, "infer-height", kDefaultInferHeight);
-    CustomCtx *ctx = new CustomCtx(
-        clip_len,
-        num_joints,
-        num_person,
-        pose_gie_id,
-        infer_width,
-        infer_height);
+    CustomCtx *ctx = new CustomCtx(clip_len, num_joints, num_person);
     return ctx;
 }
 

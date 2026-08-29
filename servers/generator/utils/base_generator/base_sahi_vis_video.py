@@ -39,7 +39,6 @@ class BaseSahiVisVideoGenerator(BaseSahiVideoGenerator):
         tracker: dict | None = None,
         logger: dict | None = None,
         drawer: dict | None = None,
-        event_coder: dict | None = None,
     ) -> None:
         self.output = Path(output).expanduser().resolve()
         super().__init__(
@@ -51,7 +50,6 @@ class BaseSahiVisVideoGenerator(BaseSahiVideoGenerator):
             tracker=tracker,
             logger=logger,
             drawer=drawer,
-            event_coder=event_coder,
         )
 
     def init_input(self) -> None:
@@ -142,7 +140,6 @@ class BaseSahiVisVideoGenerator(BaseSahiVideoGenerator):
                 gpu_id=self.pgie_generator.gpu_id,
             ),
         )
-        self.append_event_coder()
         self._append_node("tee", "tee_msg", self._add_tee())
         self._append_node("queue", "queue_msg", self._add_queue())
         self._append_node(
@@ -226,8 +223,7 @@ class BaseSahiVisVideoGenerator(BaseSahiVideoGenerator):
                 edges[inference_tail] = "nvtracker"
             inference_tail = "nvtracker"
         edges[inference_tail] = "nvdsanalytics"
-        edges["nvdsanalytics"] = self.after_analytics()
-        self.link_event_coder(edges)
+        edges["nvdsanalytics"] = "tee_msg"
         vis_next = "nvosdbin"
         if self.drawer is not None:
             vis_next = "nvdetfadedrawer"

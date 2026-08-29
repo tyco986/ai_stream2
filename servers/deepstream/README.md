@@ -42,20 +42,17 @@ Swagger：`http://127.0.0.1:8092/docs`
 | `models/` | `/root/models` | TensorRT 模型 |
 | `logs/` | `/root/logs` | 服务日志 |
 
-`schemas/*.yaml`：各 pipeline 的 probe 参数 schema（`available` / `default`）。  
-`compile_units/*.yaml`：各 pipeline 逻辑源文件闭包（供后期 prod Nuitka / editable 编译）。
-
 ## 接口
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/ai_stream2/deepstream/types` | 列出已注册 pipeline 类型 |
-| POST | `/ai_stream2/deepstream/schema` | 按类型返回 probe 参数 schema |
+| GET | `/ai_stream2/deepstream/health` | 健康检查 |
+| GET | `/ai_stream2/deepstream/pipeline/status` | 当前 pipeline 运行态 |
 | POST | `/ai_stream2/deepstream/start_pipeline` | build 并后台启动 pipeline |
 
 ### start_pipeline
 
-见 `servers/deepstream/templates/`（含 `yolo/`、`base/` 等子目录下的 `*.yml`：`type` / `name` / `config_dir` / `logger` / `messager` / `drawer`）。
+上传 YAML：必填 `type`、`config_dir`（目录内须有 generator 产出的 `pipeline.yml` 与 `params.yml`）。
 
 ### 响应
 
@@ -68,7 +65,7 @@ Swagger：`http://127.0.0.1:8092/docs`
 ## 典型流程
 
 ```bash
-./servers/deepstream/scripts/3_start_pipeline.sh --config smoke_fire_pipeline
+./servers/deepstream/scripts/3_start_pipeline.sh --config path/to/start.yml
 docker stop ai_stream2_deepstream
 ```
 

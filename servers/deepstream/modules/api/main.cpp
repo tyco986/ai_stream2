@@ -6,8 +6,7 @@
 
 int main() {
   AppConfig config;
-  PipelineService service(config.schema_dir, config.config_save_dir,
-                          config.pipeline_runner);
+  PipelineService service(config.pipeline_runner);
   ApiServer server(std::move(config), service);
   int status = 0;
   if (!server.listen()) {

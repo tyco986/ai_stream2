@@ -18,7 +18,6 @@ drawer:
   interval: 50
   fade_time: 1
   show_label: true
-event_coder: null
 streams:
   video1:
     url: rtsp://ai_stream2_mediamtx:8554/video1

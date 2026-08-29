@@ -36,7 +36,8 @@ CONFIG="$(realpath "${CONFIG}")"
 
 NAME="$(basename "${INPUT}")"
 ZIP="/tmp/${NAME}.zip"
-python3 -c "import pathlib,shutil,sys; p=pathlib.Path(sys.argv[1]); p.unlink(missing_ok=True); shutil.make_archive(str(p.with_suffix('')), 'zip', sys.argv[2])" "${ZIP}" "${INPUT}"
+rm -f "${ZIP}"
+(cd "${INPUT}" && zip -qr "${ZIP}" .)
 
 curl -sS -X POST "http://127.0.0.1:9000/${PROJECT_NAME}/export_trt/export" \
   -F "input=@${ZIP}" \

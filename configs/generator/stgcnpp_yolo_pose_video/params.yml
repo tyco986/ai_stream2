@@ -1,0 +1,19 @@
+pipeline_name: stgcnpp_yolo_pose_video
+generator: StgcnppYoloPoseVideoGenerator
+input: /root/attachments/videos/video1.mp4
+pgie:
+  model_dir: /root/models/trt/yolo26n-pose
+  class_attrs:
+    all:
+      conf: 0.25
+  interval: 1
+analyzer: null
+tracker:
+  class_id: 0
+logger:
+  interval: 1
+  root: /root/logs/deepstream/stgcnpp_yolo_pose_video
+drawer: null
+stgcnpp:
+  model_dir: /root/models/trt/stgcnpp-ntu60
+  interval: 1

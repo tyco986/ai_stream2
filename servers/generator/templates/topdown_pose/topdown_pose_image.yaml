@@ -24,6 +24,5 @@ drawer:
   show_pose: true
   pose_threshold: 0.0
   mode: coco17
-event_coder: null
 input: /root/attachments/images/video1.png
 output: /root/outputs/deepstream/topdown_pose_image.jpg

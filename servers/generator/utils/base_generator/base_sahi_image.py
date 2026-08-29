@@ -42,7 +42,6 @@ class BaseSahiImageGenerator(BaseImageGenerator):
         sahi: dict,
         logger: dict | None = None,
         drawer: dict | None = None,
-        event_coder: dict | None = None,
     ) -> None:
         self.sahi = sahi
         super().__init__(
@@ -53,7 +52,6 @@ class BaseSahiImageGenerator(BaseImageGenerator):
             pgie=pgie,
             logger=logger,
             drawer=drawer,
-            event_coder=event_coder,
         )
 
     def init_input(self) -> None:
@@ -188,7 +186,6 @@ class BaseSahiImageGenerator(BaseImageGenerator):
                 gpu_id=self.pgie_generator.gpu_id,
             ),
         )
-        self.append_event_coder()
         self._append_node("tee", "tee_msg", self._add_tee())
         self._append_node("queue", "queue_msg", self._add_queue())
         self._append_node(
@@ -253,8 +250,7 @@ class BaseSahiImageGenerator(BaseImageGenerator):
             "queue_sahi": self.SAHI_POSTPROCESS,
             self.SAHI_POSTPROCESS: "nvdsanalytics",
         }
-        edges["nvdsanalytics"] = self.after_analytics()
-        self.link_event_coder(edges)
+        edges["nvdsanalytics"] = "tee_msg"
         vis_next = "nvosdbin"
         if self.drawer is not None:
             vis_next = "nvdetfadedrawer"

@@ -41,9 +41,6 @@ class DeepStreamContainerService:
     def generator_config_dir(self, pipeline_name):
         return Path(settings.GENERATOR_CONFIG_ROOT) / pipeline_name
 
-    def deepstream_config_path(self, pipeline_name):
-        return Path(settings.DEEPSTREAM_CONFIG_ROOT) / f"{pipeline_name}.yaml"
-
     def uses_dev_image(self):
         image = (settings.DEEPSTREAM_IMAGE or "").strip()
         return image.endswith("_dev") or settings.DEBUG

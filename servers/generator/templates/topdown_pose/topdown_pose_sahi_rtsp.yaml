@@ -17,7 +17,6 @@ analyzer: null
 logger:
   interval: 50
 drawer: null
-event_coder: null
 streams:
   video1:
     url: rtsp://ai_stream2_mediamtx:8554/video1

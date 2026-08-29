@@ -13,7 +13,6 @@ enum {
   PROP_0,
   PROP_OUTPUT_DIR,
   PROP_CAPTURE_CODES,
-  PROP_INTERVAL,
 };
 
 static GstStaticPadTemplate sink_tmpl = GST_STATIC_PAD_TEMPLATE(
@@ -54,12 +53,8 @@ gst_nvrawcapturer_class_init(GstNvRawCapturerClass *klass)
   g_object_class_install_property(
       go, PROP_CAPTURE_CODES,
       g_param_spec_string("capture-codes", "Capture codes",
-                          "Event code characters that trigger dump, e.g. 1",
+                          "Event code characters that trigger dump, e.g. 1 or 12",
                           NVCAPTURER_DEFAULT_CAPTURE_CODES, RW));
-  g_object_class_install_property(
-      go, PROP_INTERVAL,
-      g_param_spec_int("interval", "Interval",
-                       "Inference period; 0 means every frame", 0, G_MAXINT, 0, RW));
 #undef RW
 
   gst_element_class_add_pad_template(ge, gst_static_pad_template_get(&src_tmpl));
@@ -100,9 +95,6 @@ gst_nvrawcapturer_set_property(GObject *object, guint prop_id, const GValue *val
     case PROP_CAPTURE_CODES:
       engine->set_capture_codes(g_value_get_string(value));
       break;
-    case PROP_INTERVAL:
-      engine->set_interval(g_value_get_int(value));
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);
       break;
@@ -120,9 +112,6 @@ gst_nvrawcapturer_get_property(GObject *object, guint prop_id, GValue *value,
       break;
     case PROP_CAPTURE_CODES:
       g_value_set_string(value, engine->capture_codes().c_str());
-      break;
-    case PROP_INTERVAL:
-      g_value_set_int(value, engine->interval());
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);

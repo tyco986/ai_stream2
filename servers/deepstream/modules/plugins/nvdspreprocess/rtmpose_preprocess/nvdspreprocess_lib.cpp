@@ -5,8 +5,12 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
+#include "nvds_rtmpose_crop_meta.h"
+#include "gstnvdsmeta.h"
+#include "nvdsmeta.h"
 #include "rect_expand.hpp"
 #include "rgba_to_nchw.h"
 
@@ -94,7 +98,9 @@ class RtmposePreprocess {
       float scale,
       float offset_r,
       float offset_g,
-      float offset_b)
+      float offset_b,
+      RectExpand expand)
+      : expand(expand)
   {
     this->width = width;
     this->height = height;
@@ -121,6 +127,7 @@ class RtmposePreprocess {
     tensorParam.params.buffer_size =
         static_cast<guint64>(count) * static_cast<guint64>(sample_floats) * sizeof(float);
     for (int i = 0; i < count; ++i) {
+      attach_crop_meta(batch->units[i]);
       NvBufSurfaceParams *converted = batch->units[i].roi_meta.converted_buffer;
       unsigned char *src = nullptr;
       int pitch = width * 4;
@@ -151,6 +158,97 @@ class RtmposePreprocess {
   }
 
  private:
+  NvDsObjectMeta *unit_object_meta(const NvDsPreProcessUnit &unit)
+  {
+    NvDsObjectMeta *object_meta = unit.obj_meta;
+    if (object_meta == nullptr) {
+      object_meta = unit.roi_meta.object_meta;
+    }
+    return object_meta;
+  }
+
+  NvDsFrameMeta *unit_frame_meta(const NvDsPreProcessUnit &unit)
+  {
+    NvDsFrameMeta *frame_meta = unit.frame_meta;
+    if (frame_meta == nullptr) {
+      frame_meta = unit.roi_meta.frame_meta;
+    }
+    return frame_meta;
+  }
+
+  std::pair<int, int> frame_hw(NvDsFrameMeta *frame_meta)
+  {
+    int width = 0;
+    int height = 0;
+    if (frame_meta != nullptr) {
+      width = static_cast<int>(frame_meta->pipeline_width);
+      height = static_cast<int>(frame_meta->pipeline_height);
+      if (width <= 0) {
+        width = static_cast<int>(frame_meta->source_frame_width);
+      }
+      if (height <= 0) {
+        height = static_cast<int>(frame_meta->source_frame_height);
+      }
+    }
+    return {width, height};
+  }
+
+  void attach_crop_meta(const NvDsPreProcessUnit &unit)
+  {
+    NvDsObjectMeta *object_meta = unit_object_meta(unit);
+    NvDsFrameMeta *frame_meta = unit_frame_meta(unit);
+    std::pair<int, int> hw = frame_hw(frame_meta);
+    NvDsBatchMeta *batch_meta = nullptr;
+    if (frame_meta != nullptr) {
+      batch_meta = frame_meta->base_meta.batch_meta;
+    }
+    if (object_meta != nullptr && batch_meta != nullptr && hw.first > 0 && hw.second > 0) {
+      CropGeom geom = expand.compute_crop(
+          object_meta->rect_params.left,
+          object_meta->rect_params.top,
+          object_meta->rect_params.width,
+          object_meta->rect_params.height,
+          hw.first,
+          hw.second);
+      auto *crop = static_cast<NvDsRtmposeCropMeta *>(g_malloc0(sizeof(NvDsRtmposeCropMeta)));
+      crop->src_left = geom.src_left;
+      crop->src_top = geom.src_top;
+      crop->src_width = geom.src_width;
+      crop->src_height = geom.src_height;
+      crop->dest_width = geom.dest_width;
+      crop->dest_height = geom.dest_height;
+      crop->offset_left = geom.offset_left;
+      crop->offset_top = geom.offset_top;
+      crop->infer_width = expand.infer_width;
+      crop->infer_height = expand.infer_height;
+      NvDsUserMeta *existing = nullptr;
+      for (NvDsMetaList *item = object_meta->obj_user_meta_list; item != nullptr;
+           item = item->next) {
+        auto *user_meta = static_cast<NvDsUserMeta *>(item->data);
+        if (user_meta != nullptr &&
+            user_meta->base_meta.meta_type == NVDS_RTMPOSE_CROP_USER_META) {
+          existing = user_meta;
+        }
+      }
+      if (existing != nullptr) {
+        g_free(existing->user_meta_data);
+        existing->user_meta_data = crop;
+      } else {
+        NvDsUserMeta *user_meta = nvds_acquire_user_meta_from_pool(batch_meta);
+        if (user_meta != nullptr) {
+          user_meta->user_meta_data = crop;
+          user_meta->base_meta.meta_type = NVDS_RTMPOSE_CROP_USER_META;
+          user_meta->base_meta.copy_func = nvds_rtmpose_crop_meta_copy;
+          user_meta->base_meta.release_func = nvds_rtmpose_crop_meta_release;
+          nvds_add_user_meta_to_obj(object_meta, user_meta);
+        } else {
+          g_free(crop);
+        }
+      }
+    }
+  }
+
+  RectExpand expand;
   int width;
   int height;
   int channels;
@@ -171,8 +269,9 @@ struct CustomCtx {
       float scale,
       float offset_r,
       float offset_g,
-      float offset_b)
-      : preprocess(width, height, channels, scale, offset_r, offset_g, offset_b)
+      float offset_b,
+      RectExpand expand)
+      : preprocess(width, height, channels, scale, offset_r, offset_g, offset_b, expand)
   {
   }
 };
@@ -209,45 +308,21 @@ class RtmposeCropper {
       int frame_width = static_cast<int>(in_surf->surfaceList[i].width);
       int frame_height = static_cast<int>(in_surf->surfaceList[i].height);
       NvBufSurfTransformRect src = params.transform_params.src_rect[i];
-      float left = 0.0f;
-      float top = 0.0f;
-      float width = 0.0f;
-      float height = 0.0f;
-      expand.expand(
+      CropGeom geom = expand.compute_crop(
           static_cast<float>(src.left),
           static_cast<float>(src.top),
           static_cast<float>(src.width),
           static_cast<float>(src.height),
           frame_width,
-          frame_height,
-          &left,
-          &top,
-          &width,
-          &height);
-      int src_left = 0;
-      int src_top = 0;
-      int src_width = 0;
-      int src_height = 0;
-      expand.even_src(left, top, width, height, &src_left, &src_top, &src_width, &src_height);
-      if (src_left + src_width > frame_width) {
-        src_width = std::max(2, round_down_2(frame_width - src_left));
-      }
-      if (src_top + src_height > frame_height) {
-        src_height = std::max(2, round_down_2(frame_height - src_top));
-      }
-      int dest_width = 0;
-      int dest_height = 0;
-      int offset_left = 0;
-      int offset_top = 0;
-      expand.letterbox(src_width, src_height, &dest_width, &dest_height, &offset_left, &offset_top);
-      params.transform_params.src_rect[i].left = static_cast<uint32_t>(src_left);
-      params.transform_params.src_rect[i].top = static_cast<uint32_t>(src_top);
-      params.transform_params.src_rect[i].width = static_cast<uint32_t>(src_width);
-      params.transform_params.src_rect[i].height = static_cast<uint32_t>(src_height);
-      params.transform_params.dst_rect[i].left = static_cast<uint32_t>(offset_left);
-      params.transform_params.dst_rect[i].top = static_cast<uint32_t>(offset_top);
-      params.transform_params.dst_rect[i].width = static_cast<uint32_t>(dest_width);
-      params.transform_params.dst_rect[i].height = static_cast<uint32_t>(dest_height);
+          frame_height);
+      params.transform_params.src_rect[i].left = static_cast<uint32_t>(geom.src_left);
+      params.transform_params.src_rect[i].top = static_cast<uint32_t>(geom.src_top);
+      params.transform_params.src_rect[i].width = static_cast<uint32_t>(geom.src_width);
+      params.transform_params.src_rect[i].height = static_cast<uint32_t>(geom.src_height);
+      params.transform_params.dst_rect[i].left = static_cast<uint32_t>(geom.offset_left);
+      params.transform_params.dst_rect[i].top = static_cast<uint32_t>(geom.offset_top);
+      params.transform_params.dst_rect[i].width = static_cast<uint32_t>(geom.dest_width);
+      params.transform_params.dst_rect[i].height = static_cast<uint32_t>(geom.dest_height);
     }
     NvBufSurfTransform_Error err =
         NvBufSurfTransform(in_surf, out_surf, &params.transform_params);
@@ -260,11 +335,6 @@ class RtmposeCropper {
 
  private:
   RectExpand expand;
-
-  int round_down_2(int value) const
-  {
-    return value & ~1;
-  }
 };
 
 extern "C" NvDsPreProcessStatus CustomTransformation(
@@ -318,7 +388,9 @@ extern "C" CustomCtx *initLib(CustomInitParams initparams)
   float offset_b = kDefaultOffsetB;
   parse_offsets(initparams.user_configs, &offset_r, &offset_g, &offset_b);
   RtmposeTransformConfig::user_configs = initparams.user_configs;
-  CustomCtx *ctx = new CustomCtx(width, height, channels, scale, offset_r, offset_g, offset_b);
+  RectExpand expand = expand_from_configs(initparams.user_configs);
+  CustomCtx *ctx = new CustomCtx(
+      width, height, channels, scale, offset_r, offset_g, offset_b, expand);
   return ctx;
 }
 

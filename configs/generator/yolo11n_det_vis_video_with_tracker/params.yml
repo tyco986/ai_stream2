@@ -1,0 +1,20 @@
+pipeline_name: yolo11n_det_vis_video_with_tracker
+generator: DetVisVideoGenerator
+input: /root/attachments/videos/video1.mp4
+pgie:
+  model_dir: /root/models/trt/yolo11n
+  class_attrs:
+    all:
+      conf: 0.25
+  interval: 50
+analyzer: null
+tracker:
+  class_id: -1
+logger:
+  interval: 50
+  root: /root/logs/deepstream/yolo11n_det_vis_video_with_tracker
+drawer:
+  interval: 50
+  fade_time: 1
+  show_label: true
+output: /root/outputs/deepstream/yolo11n_det_vis_video_with_tracker.mp4

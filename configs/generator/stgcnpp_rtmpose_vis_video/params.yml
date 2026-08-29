@@ -1,0 +1,29 @@
+pipeline_name: stgcnpp_rtmpose_vis_video
+generator: StgcnppRtmposeVisVideoGenerator
+input: /root/attachments/videos/video1.mp4
+pgie:
+  model_dir: /root/models/trt/yolo26n
+  class_attrs:
+    0:
+      conf: 0.25
+  interval: 50
+analyzer: null
+tracker:
+  class_id: 0
+logger:
+  interval: 1
+  root: /root/logs/deepstream/stgcnpp_rtmpose_vis_video
+drawer:
+  interval: 50
+  fade_time: 1
+  show_label: true
+  show_pose: true
+  pose_threshold: 0.0
+  mode: coco17
+output: /root/outputs/deepstream/stgcnpp_rtmpose_vis_video.mp4
+sgie:
+  model_dir: /root/models/trt/rtmpose-s-coco-pruned
+  interval: 1
+stgcnpp:
+  model_dir: /root/models/trt/stgcnpp-ntu60
+  interval: 1

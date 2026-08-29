@@ -19,6 +19,5 @@ drawer:
   fade_time: 1
   show_label: true
   show_mask: true
-event_coder: null
 input: /root/attachments/images/video1.png
 output: /root/outputs/deepstream/yolo11n_seg_image.jpg

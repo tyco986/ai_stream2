@@ -19,7 +19,5 @@ Stgcnpp = {
         "input-tensor-from-meta": 1,
         "output-tensor-meta": 0,
         "classifier-threshold": 0.51,
-        "custom-lib-path": "/opt/ai_stream2/servers/deepstream/libs/libnvds_stgcnpp_classifier_parse.so",
-        "parse-classifier-func-name": "NvDsInferClassiferParseCustomStgcnpp",
     },
 }

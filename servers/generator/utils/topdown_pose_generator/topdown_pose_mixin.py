@@ -93,14 +93,8 @@ class TopdownPoseMixin:
         )
 
     def rtmpose_postprocess_properties(self) -> dict:
-        input_shape = self.sgie_config_parser.meta["input_tensor_shape"]
         sgie_id = int(self.sgie_yml["property"].get("gie-unique-id", 2))
-        return self._add_nvrtmposepostprocess(
-            infer_width=int(input_shape[3]),
-            infer_height=int(input_shape[2]),
-            padding=float(NvdspreprocessRtmposeGenerator.PADDING),
-            sgie_unique_id=sgie_id,
-        )
+        return self._add_nvrtmposepostprocess(sgie_unique_id=sgie_id)
 
     def pose_gie_tail(self) -> str:
         return "nvrtmposepostprocess"
@@ -145,8 +139,7 @@ class TopdownPoseMixin:
         )
 
     def link_kafka_from_analytics(self, edges: dict, video_next: str) -> None:
-        edges["nvdsanalytics"] = self.after_analytics()
-        self.link_event_coder(edges)
+        edges["nvdsanalytics"] = "tee_msg"
         edges["tee_msg"] = [video_next, "queue_msg"]
         edges["queue_msg"] = "nvmsgconv"
         edges["nvmsgconv"] = "nvmsgbroker"

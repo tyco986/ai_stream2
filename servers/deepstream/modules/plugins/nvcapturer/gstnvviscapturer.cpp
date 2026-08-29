@@ -13,7 +13,6 @@ enum {
   PROP_0,
   PROP_OUTPUT_DIR,
   PROP_CAPTURE_CODES,
-  PROP_INTERVAL,
   PROP_LABEL_TASK,
 };
 
@@ -56,12 +55,8 @@ gst_nvviscapturer_class_init(GstNvVisCapturerClass *klass)
   g_object_class_install_property(
       go, PROP_CAPTURE_CODES,
       g_param_spec_string("capture-codes", "Capture codes",
-                          "Event code characters that trigger dump, e.g. 1",
+                          "Event code characters that trigger dump, e.g. 1 or 12",
                           NVCAPTURER_DEFAULT_CAPTURE_CODES, RW));
-  g_object_class_install_property(
-      go, PROP_INTERVAL,
-      g_param_spec_int("interval", "Interval",
-                       "Inference period; 0 means every frame", 0, G_MAXINT, 0, RW));
   g_object_class_install_property(
       go, PROP_LABEL_TASK,
       g_param_spec_string("label-task", "Label task",
@@ -107,9 +102,6 @@ gst_nvviscapturer_set_property(GObject *object, guint prop_id, const GValue *val
     case PROP_CAPTURE_CODES:
       engine->set_capture_codes(g_value_get_string(value));
       break;
-    case PROP_INTERVAL:
-      engine->set_interval(g_value_get_int(value));
-      break;
     case PROP_LABEL_TASK:
       engine->set_label_task(g_value_get_string(value));
       break;
@@ -130,9 +122,6 @@ gst_nvviscapturer_get_property(GObject *object, guint prop_id, GValue *value,
       break;
     case PROP_CAPTURE_CODES:
       g_value_set_string(value, engine->capture_codes().c_str());
-      break;
-    case PROP_INTERVAL:
-      g_value_set_int(value, engine->interval());
       break;
     case PROP_LABEL_TASK:
       g_value_set_string(value, engine->label_task().c_str());

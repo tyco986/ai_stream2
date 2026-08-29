@@ -5,7 +5,9 @@
 #include <cstdio>
 #include <cstring>
 #include <sstream>
+#include <utility>
 
+#include <cuda_runtime.h>
 #include <glib.h>
 
 namespace {
@@ -51,8 +53,18 @@ CaptureCore::CaptureCore()
   output_dir_ = NVCAPTURER_DEFAULT_OUTPUT_DIR;
   capture_codes_str_ = NVCAPTURER_DEFAULT_CAPTURE_CODES;
   label_task_ = NVCAPTURER_DEFAULT_LABEL_TASK;
-  interval_ = 0;
+  stop_writer_ = false;
   parse_codes();
+  writer_ = std::thread(&CaptureCore::writer_loop, this);
+}
+
+CaptureCore::~CaptureCore()
+{
+  stop_writer_ = true;
+  writer_cv_.notify_all();
+  if (writer_.joinable()) {
+    writer_.join();
+  }
 }
 
 void CaptureCore::parse_codes()
@@ -79,11 +91,6 @@ void CaptureCore::set_capture_codes(const char *capture_codes)
   parse_codes();
 }
 
-void CaptureCore::set_interval(int interval)
-{
-  interval_ = interval < 0 ? 0 : interval;
-}
-
 void CaptureCore::set_label_task(const char *label_task)
 {
   std::string next = (label_task != nullptr && label_task[0] != '\0')
@@ -104,20 +111,9 @@ const std::string &CaptureCore::capture_codes() const
   return capture_codes_str_;
 }
 
-int CaptureCore::interval() const
-{
-  return interval_;
-}
-
 const std::string &CaptureCore::label_task() const
 {
   return label_task_;
-}
-
-bool CaptureCore::is_inference_frame(unsigned int frame_num) const
-{
-  bool inference = interval_ <= 0 || (static_cast<int>(frame_num) % interval_) == 0;
-  return inference;
 }
 
 const NvDsPresenceEventMeta *CaptureCore::presence_meta(NvDsFrameMeta *frame_meta) const
@@ -157,8 +153,8 @@ bool CaptureCore::should_dump(NvDsFrameMeta *frame_meta) const
 {
   const NvDsPresenceEventMeta *meta = presence_meta(frame_meta);
   bool dump = false;
-  if (frame_meta != nullptr && meta != nullptr) {
-    dump = is_inference_frame(frame_meta->frame_num) && codes_hit(meta);
+  if (frame_meta != nullptr && frame_meta->bInferDone) {
+    dump = codes_hit(meta);
   }
   return dump;
 }
@@ -168,6 +164,96 @@ unsigned int CaptureCore::take_id(int pad_index)
   unsigned int id = ids_[pad_index];
   ids_[pad_index] = id + 1;
   return id;
+}
+
+bool CaptureCore::cuda_mem_type(NvBufSurfaceMemType mem_type) const
+{
+  bool cuda = mem_type == NVBUF_MEM_CUDA_DEVICE || mem_type == NVBUF_MEM_CUDA_PINNED ||
+      mem_type == NVBUF_MEM_CUDA_UNIFIED || mem_type == NVBUF_MEM_DEFAULT;
+  return cuda;
+}
+
+void CaptureCore::pack_rgb(
+    const uint8_t *src,
+    guint pitch,
+    int width,
+    int height,
+    int channels,
+    bool swap_rb,
+    std::vector<uint8_t> *rgb)
+{
+  rgb->assign(static_cast<size_t>(width) * static_cast<size_t>(height) * 3, 0);
+  for (int y = 0; y < height; y++) {
+    const uint8_t *row = src + static_cast<size_t>(y) * static_cast<size_t>(pitch);
+    for (int x = 0; x < width; x++) {
+      const uint8_t *px = row + static_cast<size_t>(x) * static_cast<size_t>(channels);
+      size_t di = (static_cast<size_t>(y) * static_cast<size_t>(width) + static_cast<size_t>(x)) * 3;
+      uint8_t r = px[0];
+      uint8_t g = px[1];
+      uint8_t b = px[2];
+      if (swap_rb) {
+        r = px[2];
+        b = px[0];
+      }
+      (*rgb)[di] = r;
+      (*rgb)[di + 1] = g;
+      (*rgb)[di + 2] = b;
+    }
+  }
+}
+
+bool CaptureCore::copy_rgb_cuda(
+    NvBufSurfaceParams *params,
+    int channels,
+    bool swap_rb,
+    std::vector<uint8_t> *rgb)
+{
+  bool ok = false;
+  int width = static_cast<int>(params->width);
+  int height = static_cast<int>(params->height);
+  size_t row_bytes = static_cast<size_t>(width) * static_cast<size_t>(channels);
+  if (params->dataPtr != nullptr && row_bytes > 0 &&
+      row_bytes <= static_cast<size_t>(params->pitch)) {
+    std::vector<uint8_t> packed(row_bytes * static_cast<size_t>(height));
+    cudaError_t err = cudaMemcpy2D(
+        packed.data(),
+        row_bytes,
+        params->dataPtr,
+        static_cast<size_t>(params->pitch),
+        row_bytes,
+        static_cast<size_t>(height),
+        cudaMemcpyDefault);
+    if (err == cudaSuccess) {
+      pack_rgb(packed.data(), static_cast<guint>(row_bytes), width, height, channels, swap_rb, rgb);
+      ok = true;
+    } else {
+      g_warning("nvcapturer cudaMemcpy2D failed: %s", cudaGetErrorString(err));
+    }
+  }
+  return ok;
+}
+
+bool CaptureCore::copy_rgb_mapped(
+    NvBufSurface *surface,
+    guint batch_id,
+    NvBufSurfaceParams *params,
+    int channels,
+    bool swap_rb,
+    std::vector<uint8_t> *rgb)
+{
+  bool ok = false;
+  int batch = static_cast<int>(batch_id);
+  if (NvBufSurfaceMap(surface, batch, -1, NVBUF_MAP_READ) == 0) {
+    NvBufSurfaceSyncForCpu(surface, batch, -1);
+    auto *src = static_cast<const uint8_t *>(params->mappedAddr.addr[0]);
+    if (src != nullptr) {
+      pack_rgb(src, params->pitch, static_cast<int>(params->width),
+               static_cast<int>(params->height), channels, swap_rb, rgb);
+      ok = true;
+    }
+    NvBufSurfaceUnMap(surface, batch, -1);
+  }
+  return ok;
 }
 
 bool CaptureCore::copy_rgb(
@@ -186,38 +272,16 @@ bool CaptureCore::copy_rgb(
     NvBufSurfaceColorFormat format = params->colorFormat;
     bool packed = is_rgb_format(format) || is_bgr_format(format);
     int channels = channel_count(format);
+    bool swap_rb = is_bgr_format(format);
     out_width = static_cast<int>(params->width);
     out_height = static_cast<int>(params->height);
-    if (packed && out_width > 0 && out_height > 0 &&
-        NvBufSurfaceMap(surface, static_cast<int>(batch_id), -1, NVBUF_MAP_READ) == 0) {
-      NvBufSurfaceSyncForCpu(surface, static_cast<int>(batch_id), -1);
-      auto *src = static_cast<const uint8_t *>(params->mappedAddr.addr[0]);
-      if (src != nullptr) {
-        bool swap_rb = is_bgr_format(format);
-        guint pitch = params->pitch;
-        rgb->assign(static_cast<size_t>(out_width) * static_cast<size_t>(out_height) * 3, 0);
-        for (int y = 0; y < out_height; y++) {
-          const uint8_t *row = src + static_cast<size_t>(y) * static_cast<size_t>(pitch);
-          for (int x = 0; x < out_width; x++) {
-            const uint8_t *px = row + static_cast<size_t>(x) * static_cast<size_t>(channels);
-            size_t di =
-                (static_cast<size_t>(y) * static_cast<size_t>(out_width) + static_cast<size_t>(x)) *
-                3;
-            uint8_t r = px[0];
-            uint8_t g = px[1];
-            uint8_t b = px[2];
-            if (swap_rb) {
-              r = px[2];
-              b = px[0];
-            }
-            (*rgb)[di] = r;
-            (*rgb)[di + 1] = g;
-            (*rgb)[di + 2] = b;
-          }
-        }
-        ok = true;
+    if (packed && out_width > 0 && out_height > 0) {
+      if (cuda_mem_type(surface->memType)) {
+        ok = copy_rgb_cuda(params, channels, swap_rb, rgb);
       }
-      NvBufSurfaceUnMap(surface, static_cast<int>(batch_id), -1);
+      if (!ok) {
+        ok = copy_rgb_mapped(surface, batch_id, params, channels, swap_rb, rgb);
+      }
     }
   }
   *width = out_width;
@@ -225,16 +289,51 @@ bool CaptureCore::copy_rgb(
   return ok;
 }
 
-bool CaptureCore::write_png(NvBufSurface *surface, guint batch_id, const std::string &path)
+void CaptureCore::enqueue_dump(CaptureDumpJob job)
 {
-  std::vector<uint8_t> rgb;
-  int width = 0;
-  int height = 0;
-  bool ok = false;
-  if (copy_rgb(surface, batch_id, &rgb, &width, &height)) {
-    ok = png_.write_rgb(path, rgb, width, height);
+  {
+    std::lock_guard<std::mutex> lock(writer_mutex_);
+    writer_queue_.push_back(std::move(job));
   }
-  return ok;
+  writer_cv_.notify_one();
+}
+
+void CaptureCore::process_job(const CaptureDumpJob &job)
+{
+  bool png_ok = png_.write_rgb(job.png_path, job.rgb, job.width, job.height);
+  bool labels_ok = true;
+  if (job.write_labels) {
+    labels_ok = write_det_labels(
+        job.boxes, job.width, job.height, job.pad_index, job.capture_id);
+  }
+  if (!png_ok || !labels_ok) {
+    g_warning("nvcapturer dump failed path=%s png=%d labels=%d", job.png_path.c_str(),
+              static_cast<int>(png_ok), static_cast<int>(labels_ok));
+  }
+}
+
+void CaptureCore::writer_loop()
+{
+  while (true) {
+    CaptureDumpJob job;
+    bool has_job = false;
+    {
+      std::unique_lock<std::mutex> lock(writer_mutex_);
+      while (writer_queue_.empty() && !stop_writer_) {
+        writer_cv_.wait(lock);
+      }
+      if (!writer_queue_.empty()) {
+        job = std::move(writer_queue_.front());
+        writer_queue_.pop_front();
+        has_job = true;
+      } else if (stop_writer_) {
+        break;
+      }
+    }
+    if (has_job) {
+      process_job(job);
+    }
+  }
 }
 
 bool CaptureCore::dump_raw(NvBufSurface *surface, NvDsFrameMeta *frame_meta)
@@ -245,8 +344,17 @@ bool CaptureCore::dump_raw(NvBufSurface *surface, NvDsFrameMeta *frame_meta)
     unsigned int capture_id = take_id(pad_index);
     char name[64];
     snprintf(name, sizeof(name), "raw_%03d_%08u.png", pad_index, capture_id);
-    std::string path = output_dir_ + "/images/" + name;
-    ok = write_png(surface, frame_meta->batch_id, path);
+    CaptureDumpJob job;
+    job.png_path = output_dir_ + "/images/" + name;
+    job.width = 0;
+    job.height = 0;
+    job.pad_index = pad_index;
+    job.capture_id = capture_id;
+    job.write_labels = false;
+    ok = copy_rgb(surface, frame_meta->batch_id, &job.rgb, &job.width, &job.height);
+    if (ok) {
+      enqueue_dump(std::move(job));
+    }
   }
   return ok;
 }
@@ -259,18 +367,17 @@ bool CaptureCore::dump_vis(NvBufSurface *surface, NvDsFrameMeta *frame_meta)
     unsigned int capture_id = take_id(pad_index);
     char name[64];
     snprintf(name, sizeof(name), "vis_%03d_%08u.png", pad_index, capture_id);
-    std::string path = output_dir_ + "/vis/" + name;
-    std::vector<uint8_t> rgb;
-    int width = 0;
-    int height = 0;
-    std::vector<CaptureBox> boxes;
-    collect_boxes(frame_meta, &boxes);
-    ok = copy_rgb(surface, frame_meta->batch_id, &rgb, &width, &height);
+    CaptureDumpJob job;
+    job.png_path = output_dir_ + "/vis/" + name;
+    job.width = 0;
+    job.height = 0;
+    job.pad_index = pad_index;
+    job.capture_id = capture_id;
+    job.write_labels = true;
+    collect_boxes(frame_meta, &job.boxes);
+    ok = copy_rgb(surface, frame_meta->batch_id, &job.rgb, &job.width, &job.height);
     if (ok) {
-      ok = png_.write_rgb(path, rgb, width, height);
-    }
-    if (ok) {
-      ok = write_det_labels(boxes, width, height, pad_index, capture_id);
+      enqueue_dump(std::move(job));
     }
   }
   return ok;

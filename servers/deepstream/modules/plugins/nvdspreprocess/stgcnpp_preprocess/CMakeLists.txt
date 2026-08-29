@@ -11,10 +11,14 @@ else()
 endif()
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-add_library(nvds_stgcnpp_preprocess SHARED nvdspreprocess_lib.cpp)
+add_library(nvds_stgcnpp_preprocess SHARED
+    nvdspreprocess_lib.cpp
+    nvds_stgcnpp_ready_meta.cpp)
 target_compile_features(nvds_stgcnpp_preprocess PRIVATE cxx_std_17)
+target_compile_options(nvds_stgcnpp_preprocess PRIVATE -Wall -Werror)
 target_link_options(nvds_stgcnpp_preprocess PRIVATE -Wl,-no-undefined)
 target_include_directories(nvds_stgcnpp_preprocess PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
     /opt/nvidia/deepstream/deepstream/sources/gst-plugins/gst-nvdspreprocess/include
     /opt/nvidia/deepstream/deepstream/sources/includes
     /usr/local/cuda-${CUDA_VER}/include

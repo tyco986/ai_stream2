@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Run from project root. Export RTMPose-s-aic-coco-pruned ONNX via MMDeploy.
+# Run from project root. Export RTMPose-s-coco ONNX via MMDeploy.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 # shellcheck source=../../../scripts/load_project_env.sh
 source "${ROOT}/scripts/load_project_env.sh"
 
-MODEL_NAME="rtmpose-s-aic"
+MODEL_NAME="rtmpose-s-coco"
 NAME="${PROJECT_NAME}_mmdeploy"
 CKPT_HOST="${ROOT}/models/pt/${MODEL_NAME}.pth"
 

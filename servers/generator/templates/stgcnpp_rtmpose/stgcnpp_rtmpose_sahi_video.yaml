@@ -13,18 +13,17 @@ pgie:
     0:
       conf: 0.25
 sgie:
-  interval: 0
+  interval: 1
   model_dir: /root/models/trt/rtmpose-s-coco-pruned
 stgcnpp:
-  interval: 50
+  interval: 1
   model_dir: /root/models/trt/stgcnpp-ntu60
 tracker:
   class_id: 0
 analyzer: null
 logger:
-  interval: 50
+  interval: 1
 drawer: null
-event_coder: null
 input: /root/attachments/videos/video1.mp4
 sahi:
   nvsahipreprocess:

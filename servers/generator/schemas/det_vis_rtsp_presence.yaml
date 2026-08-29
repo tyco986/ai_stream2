@@ -89,6 +89,12 @@ params:
       mode:
         available: true
         default: fold
+  capturer:
+    available: true
+    params:
+      capture_codes:
+        available: true
+        default: "1"
   sahi:
     available: false
   input:

@@ -1,7 +1,7 @@
 from ..subelement_generator.kafka import KAFKA_CONN_STR, KAFKA_PROTO_LIB
 from ..subelement_generator.nvmsgconv import PAYLOAD_DEEPSTREAM_MINIMAL
 from ..subelement_generator.nvtracker import TRACKER_LL_LIB
-from .base_rtsp import BaseRTSPGenerator
+from .base_event_rtsp import BaseEventRTSPGenerator
 
 VIS_RTSP_EVENT_TOPOLOGY_DOC = """
     Topology::
@@ -12,7 +12,7 @@ VIS_RTSP_EVENT_TOPOLOGY_DOC = """
                     ─┬→ queue_raw{N} → nvvideoconvert_raw{N} → capsfilter_raw{N} → nvrawcapturer{N} → fakesink_raw{N}
                     └→ queue_osd{N} → nvvideoconvert_osd{N} → capsfilter_osd{N}(RGBA) → nvosdbin{N} → tee_vis{N}
                           ─┬→ queue_vis{N} → nvvideoconvert_vis{N} → capsfilter_vis{N} → nvviscapturer{N} → fakesink_vis{N}
-                          └→ queue_enc{N} → nvdetlogger{N} → nvv4l2h264enc{N} → h264parse{N} → rtspclientsink{N}
+                          └→ queue_enc{N} → nvpresencelogger{N} → nvv4l2h264enc{N} → h264parse{N} → rtspclientsink{N}
 
     Notes::
 
@@ -23,7 +23,7 @@ VIS_RTSP_EVENT_TOPOLOGY_DOC = """
 """
 
 
-class BaseEventVisRTSPGenerator(BaseRTSPGenerator):
+class BaseEventVisRTSPGenerator(BaseEventRTSPGenerator):
     f"""Generate YOLO RTSP pipeline for event alert + nvcapturer dump.
 
     Per-stream branches tee raw/vis capturers and continue encode to ``rtspclientsink``.
@@ -135,7 +135,7 @@ class BaseEventVisRTSPGenerator(BaseRTSPGenerator):
             self._append_node(
                 "nvrawcapturer",
                 f"nvrawcapturer{index}",
-                self._add_nvrawcapturer(),
+                self._add_nvrawcapturer(output_dir=self.capture_output_dir(), capture_codes=self.capturer_codes()),
             )
             self._append_node(
                 "fakesink",
@@ -180,7 +180,7 @@ class BaseEventVisRTSPGenerator(BaseRTSPGenerator):
             self._append_node(
                 "nvviscapturer",
                 f"nvviscapturer{index}",
-                self._add_nvviscapturer(),
+                self._add_nvviscapturer(output_dir=self.capture_output_dir(), capture_codes=self.capturer_codes()),
             )
             self._append_node(
                 "fakesink",
@@ -189,9 +189,9 @@ class BaseEventVisRTSPGenerator(BaseRTSPGenerator):
             )
             self._append_node("queue", f"queue_enc{index}", self._add_queue())
             self._append_node(
-                "nvdetlogger",
-                f"nvdetlogger{index}",
-                self._add_nvdetlogger(
+                "nvpresencelogger",
+                f"nvpresencelogger{index}",
+                self._add_nvpresencelogger(
                     root=f"/root/logs/deepstream/{self.pipeline_name}",
                     interval=int(self.logger.get("interval", 0)),
                 ),
@@ -254,8 +254,8 @@ class BaseEventVisRTSPGenerator(BaseRTSPGenerator):
             edges[f"nvvideoconvert_vis{index}"] = f"capsfilter_vis{index}"
             edges[f"capsfilter_vis{index}"] = f"nvviscapturer{index}"
             edges[f"nvviscapturer{index}"] = f"fakesink_vis{index}"
-            edges[f"queue_enc{index}"] = f"nvdetlogger{index}"
-            edges[f"nvdetlogger{index}"] = f"nvv4l2h264enc{index}"
+            edges[f"queue_enc{index}"] = f"nvpresencelogger{index}"
+            edges[f"nvpresencelogger{index}"] = f"nvv4l2h264enc{index}"
             edges[f"nvv4l2h264enc{index}"] = f"h264parse{index}"
             edges[f"h264parse{index}"] = f"rtspclientsink{index}"
         self.pipeline["deepstream"]["edges"] = edges

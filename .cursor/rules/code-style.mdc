@@ -1,5 +1,5 @@
 ---
-description: 全局代码风格 — 适用于项目所有 Python 代码
+description: 全局 Python 代码风格
 alwaysApply: true
 ---
 
@@ -7,195 +7,58 @@ alwaysApply: true
 
 ## 异常处理
 
-不要随意使用 try-except，让异常自然抛出以便调试。只在以下场景允许 try：
-- 外部 I/O 有明确恢复策略（如 HTTP 重试、Kafka 重连）
-- 框架要求捕获（如 DRF 全局异常处理器）
-
-```python
-# ✅ 让异常自然抛出
-def get_camera(camera_id):
-    return Camera.objects.get(id=camera_id)
-
-# ❌ 吞掉异常
-def get_camera(camera_id):
-    try:
-        return Camera.objects.get(id=camera_id)
-    except Camera.DoesNotExist:
-        return None
-```
+禁止随意 try-except，让异常自然抛出。仅外部 I/O 有恢复策略（HTTP 重试、Kafka 重连）或框架要求捕获时允许 try。
 
 ## 禁止 global
 
-禁止使用 `global` 关键字。需要共享状态时使用类属性、依赖注入或 Django settings。
+禁止 `global`。共享状态用类属性。
 
 ## import
 
-所有 import 必须置于文件开头，按以下顺序分组，组间空一行：
-1. 标准库
-2. 第三方库
-3. Django / DRF
-4. 项目内部模块
-
-禁止函数内部 import（除非解决循环依赖，且必须加注释说明原因）。
+全部置于文件开头，分组：标准库 / 第三方 / 项目内部，组间空一行。禁止函数内 import（循环依赖除外，须注释）。
 
 ## 命名
 
-函数名、类方法名、参数名均禁止前置 `_`。
-
-```python
-# ✅ 无前缀下划线
-def get_camera(camera_id):
-    ...
-
-class AlertEngine:
-    def calculate_score(self, detection):
-        ...
-
-# ❌ 前置下划线
-def _get_camera(_camera_id):
-    ...
-
-class AlertEngine:
-    def _calculate_score(self, detection):
-        ...
-```
+函数、方法、参数禁止前置 `_`。
 
 ## 面向对象
 
-优先使用类封装逻辑，便于复用和测试。Service 层、Client 层必须是类，不要写散落的函数集合。
-
-`__init__` 方法中首先要做的是将全部参数赋值给 `self`，再写其他逻辑。
-
-```python
-# ✅ 类封装，可复用可测试
-class DeepStreamClient:
-    def __init__(self, base_url, timeout):
-        self.base_url = base_url
-        self.timeout = timeout
-
-    async def add_stream(self, camera_id, rtsp_url):
-        ...
-
-# ❌ 散落函数，难以复用和 mock
-async def add_stream_to_deepstream(camera_id, rtsp_url):
-    base_url = settings.DEEPSTREAM_URL
-    ...
-
-# ❌ __init__ 中先做其他逻辑，或遗漏参数赋值
-class DeepStreamClient:
-    def __init__(self, base_url, timeout):
-        self.client = httpx.AsyncClient(timeout=timeout)
-        self.base_url = base_url
-```
+优先类封装；`__init__` 先把全部参数赋给 `self`，再写其他逻辑。
 
 ## 语言
 
-代码中除注释外一律使用英文（变量名、函数名、类名、字符串 key）。
-注释使用中文或英文均可，但同一文件内保持一致。
+除注释外一律英文。注释中英均可，同一文件内一致。
 
-## 废话代码（禁止补丁式堆叠）
+## 禁止环境变量
 
-「废话」指冗余实现：在旧代码上叠 if、回退路径、中间方法，而不是按新需求整理形状。
+除非用户明确要求，禁止用环境变量赋值或传参。配置用参数、类属性。
 
-- 加功能前先读现有结构；能重构就重构，不顺手就删旧路径再写，不要双轨并存
-- 新方案取代旧方案时，同步删掉失效常量、方法和分支（如已弃用的解析路径）
-- 同一职责只保留一条路径；不要「先 A 不行再 B 再 C」的层层回退，除非边界上真有多种来源
-- 改完自问：若从零实现这功能，还会是现在这个文件形状吗？若否，继续删
+## 极简化
 
-```python
-# ✅ 新 API 接受目录 → 直接改构造与调用方
-class YoloPipeline:
-    def __init__(self, config_dir, pipeline_name):
-        self.config_dir = Path(config_dir)
-        ...
+以最小形式实现；不叠回退、中间层、双轨路径。新方案直接改形状并删旧代码。
 
-# ❌ 补丁：保留旧 yaml 路径，再叠 config_dir 分支、resolve 回退、is_file 守卫
-def resolve_meta_via_pgie(...):
-    ...
-def resolve_meta_via_params(...):
-    ...
-```
+## 禁止补丁堆叠
+
+反复修改时禁止在旧代码上叠 if、回退、中间层。按新需求重构形状；改完自问：从零实现是否仍会用当前结构，若否就改到那种结构。
 
 ## 简洁
 
-- 避免不必要的 if 分支，善用字典映射、`or` 默认值
-- 不要写只有一个分支的 if-else
-
-```python
-# ✅ 单出口，用变量承接结果
-def get_status_label(status):
-    label = STATUS_MAP.get(status, "未知")
-    if status == "offline":
-        label = "离线"
-    return label
-
-# ❌ 多余的 else
-def get_status_label(status):
-    if status == "offline":
-        label = "离线"
-    else:
-        label = STATUS_MAP.get(status, "未知")
-    return label
-```
+少写 if；用字典映射、`or` 默认值。禁止只有一个分支的 if-else。
 
 ## 函数返回
 
-函数或方法若**有返回值**，`return` **有且仅有一个**，且必须放在末尾；分支逻辑通过修改变量表达，禁止中途 `return`（含早返回）。无返回值时可隐式结束，不必写 `return`。
-
-```python
-# ✅ 先定义结果变量，分支中修改，末尾唯一 return
-def get_label(status):
-    label = STATUS_MAP.get(status, "未知")
-    if status == "offline":
-        label = "离线"
-    return label
-
-# ✅ 无返回值，可隐式结束
-def log_event(event):
-    logger.info(event)
-
-# ❌ 中途 return
-def get_label(status):
-    if status == "offline":
-        return "离线"
-    return STATUS_MAP.get(status, "未知")
-```
+有返回值则末尾唯一 `return`，禁止早返回。无返回值不必写 `return`。
 
 ## 推导式
 
-尽量使用列表推导式、字典推导式（及集合推导式）替代等价的 `for` 循环构建容器；逻辑复杂、含副作用或需多步累积时仍用普通循环。
+能用列表/字典/集合推导式构建容器就不用等价 for；有副作用或多步累积时用循环。
 
-```python
-# ✅ 列表推导式
-labels = [obj.label for obj in objects if obj.label]
+## 禁止嵌套函数
 
-# ✅ 字典推导式
-scores = {det.id: det.confidence for det in detections}
+禁止函数内定义函数；辅助逻辑提取为方法或模块级函数。
 
-# ❌ 仅为构建列表而写的循环
-labels = []
-for obj in objects:
-    if obj.label:
-        labels.append(obj.label)
-```
+## 常量提取
 
-## 禁止嵌套函数定义
+功能中的常量写入对应模块的 `constants` 文件，禁止散落在业务代码里。
 
-不要在函数内部定义函数。需要辅助逻辑时提取为类方法或模块级函数。
 
-```python
-# ✅ 提取为方法
-class AlertEngine:
-    def evaluate(self, detection):
-        score = self.calculate_score(detection)
-        ...
-
-    def calculate_score(self, detection):
-        ...
-
-# ❌ 函数内定义函数
-def evaluate(detection):
-    def calculate_score(d):
-        ...
-    score = calculate_score(detection)
-```

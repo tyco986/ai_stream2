@@ -1,0 +1,30 @@
+pipeline_name: yolo10x_smoke_fire_image
+generator: DetImagePresenceGenerator
+input: /root/attachments/images/video1.png
+output: /root/outputs/deepstream/yolo10x_smoke_fire_image.jpg
+pgie:
+  model_dir: /root/models/trt/yolov10x-smoke-fire
+  class_attrs:
+    all:
+      conf: 0.25
+  interval: 50
+analyzer: null
+logger:
+  interval: 50
+  root: /root/logs/deepstream/yolo10x_smoke_fire_image
+drawer:
+  interval: 50
+  fade_time: 1
+  show_label: true
+event_coder:
+  class_ids:
+  - 0
+  - 1
+  event_names:
+  - Fire
+  - Smoke
+  length: 1
+  threshold: 0.5
+  mode: fold
+capturer:
+  capture_codes: '1'

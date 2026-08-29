@@ -215,10 +215,8 @@ class PipelineService:
             changed = True
         if changed:
             row.save(update_fields=["host_port", "updated_at"])
-        yaml_path = self.containers.deepstream_config_path(row.name)
         generator_dir = self.containers.generator_config_dir(row.name)
-        need_configs = not yaml_path.is_file() or not generator_dir.is_dir()
-        if need_configs:
+        if not generator_dir.is_dir():
             self.provision_configs(row)
         if self.containers.exists(row.name):
             if not self.containers.has_required_binds(row.name):
@@ -235,18 +233,11 @@ class PipelineService:
         orchestrator = StartStopOrchestrator()
         generator_yaml = orchestrator.build_generator_yaml(row)
         self.generator.generate(generator_yaml.encode("utf-8"))
-        start_yaml = orchestrator.build_start_yaml(row)
-        path = self.containers.deepstream_config_path(row.name)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(start_yaml, encoding="utf-8")
 
     def cleanup_config_files(self, pipeline_name):
         generator_dir = self.containers.generator_config_dir(pipeline_name)
         if generator_dir.is_dir():
             shutil.rmtree(generator_dir, ignore_errors=True)
-        yaml_path = self.containers.deepstream_config_path(pipeline_name)
-        if yaml_path.is_file():
-            yaml_path.unlink()
 
     def cleanup_resources(self, pipeline_name):
         self.containers.remove(pipeline_name)
@@ -840,8 +831,7 @@ class StartStopOrchestrator:
             self.logs.append(pipeline_id, "container started")
             self.containers.wait_healthy(row.name)
             self.logs.append(pipeline_id, "container healthy")
-            yaml_path = self.containers.deepstream_config_path(row.name)
-            start_yaml = yaml_path.read_text(encoding="utf-8")
+            start_yaml = self.build_start_yaml(row)
             client = DeepStreamClient(self.containers.base_url(row.name))
             client.start_pipeline(start_yaml.encode("utf-8"))
             row.status = PIPELINE_STATUS_RUNNING

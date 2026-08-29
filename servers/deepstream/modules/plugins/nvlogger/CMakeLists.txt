@@ -7,12 +7,19 @@ pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0 gstreamer-base-1.0 gstreamer-
 
 add_library(nvdsgst_logger SHARED
     det_log_engine.cpp
+    presence_log_engine.cpp
+    stgcnpp_log_engine.cpp
     gstnvdetlogger.cpp
+    gstnvpresencelogger.cpp
+    gstnvstgcnpplogger.cpp
     gstnvlogger_plugin.cpp
 )
 target_compile_features(nvdsgst_logger PRIVATE cxx_std_17)
 target_include_directories(nvdsgst_logger PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../nveventcoder
+    ${CMAKE_CURRENT_SOURCE_DIR}/../nvstgcnppactionlabel
+    ${CMAKE_CURRENT_SOURCE_DIR}/../nvdspreprocess/stgcnpp_preprocess
     /opt/nvidia/deepstream/deepstream/sources/includes
     ${GSTREAMER_INCLUDE_DIRS}
 )

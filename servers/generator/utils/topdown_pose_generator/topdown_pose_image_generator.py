@@ -30,7 +30,6 @@ class TopdownPoseImageGenerator(TopdownPoseMixin, BaseImageGenerator):
         sgie: dict,
         logger: dict | None = None,
         drawer: dict | None = None,
-        event_coder: dict | None = None,
     ) -> None:
         self.sgie = sgie
         super().__init__(
@@ -41,7 +40,6 @@ class TopdownPoseImageGenerator(TopdownPoseMixin, BaseImageGenerator):
             pgie=pgie,
             logger=logger,
             drawer=drawer,
-            event_coder=event_coder,
         )
 
     def add(self) -> None:
@@ -85,7 +83,6 @@ class TopdownPoseImageGenerator(TopdownPoseMixin, BaseImageGenerator):
                 gpu_id=self.pgie_generator.gpu_id,
             ),
         )
-        self.append_event_coder()
         self.append_kafka_nodes()
         gpu_id = self.pgie_generator.gpu_id
         if self.drawer is not None:

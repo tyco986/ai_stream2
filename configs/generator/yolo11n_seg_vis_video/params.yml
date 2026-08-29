@@ -1,0 +1,20 @@
+pipeline_name: yolo11n_seg_vis_video
+generator: SegVisVideoGenerator
+input: /root/attachments/videos/video1.mp4
+pgie:
+  model_dir: /root/models/trt/yolo11n-seg
+  class_attrs:
+    all:
+      conf: 0.25
+  interval: 50
+analyzer: null
+tracker: null
+logger:
+  interval: 50
+  root: /root/logs/deepstream/yolo11n_seg_vis_video
+drawer:
+  interval: 50
+  fade_time: 1
+  show_label: true
+  show_mask: true
+output: /root/outputs/deepstream/yolo11n_seg_vis_video.mp4

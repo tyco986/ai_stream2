@@ -31,7 +31,6 @@ class StgcnppRtmposeVisRTSPGenerator(StgcnppRtmposeMixin, BaseRTSPVisGenerator):
         tracker: dict | None = None,
         logger: dict | None = None,
         drawer: dict | None = None,
-        event_coder: dict | None = None,
     ) -> None:
         self.sgie = sgie
         self.stgcnpp = stgcnpp
@@ -43,7 +42,6 @@ class StgcnppRtmposeVisRTSPGenerator(StgcnppRtmposeMixin, BaseRTSPVisGenerator):
             tracker=tracker,
             logger=logger,
             drawer=drawer,
-            event_coder=event_coder,
         )
 
     def add(self) -> None:
@@ -104,7 +102,6 @@ class StgcnppRtmposeVisRTSPGenerator(StgcnppRtmposeMixin, BaseRTSPVisGenerator):
                 gpu_id=self.pgie_generator.gpu_id,
             ),
         )
-        self.append_event_coder()
         self.append_kafka_nodes()
         self._append_node("nvstreamdemux", "nvstreamdemux", self._add_nvstreamdemux())
         gpu_id = self.pgie_generator.gpu_id
@@ -131,9 +128,9 @@ class StgcnppRtmposeVisRTSPGenerator(StgcnppRtmposeMixin, BaseRTSPVisGenerator):
             )
             self._append_node("queue", f"queue_enc{index}", self._add_queue())
             self._append_node(
-                "nvdetlogger",
-                f"nvdetlogger{index}",
-                self._add_nvdetlogger(
+                "nvstgcnpplogger",
+                f"nvstgcnpplogger{index}",
+                self._add_nvstgcnpplogger(
                     root=f"/root/logs/deepstream/{self.pipeline_name}",
                     interval=int(self.logger.get("interval", 0)),
                 ),
@@ -182,8 +179,8 @@ class StgcnppRtmposeVisRTSPGenerator(StgcnppRtmposeMixin, BaseRTSPVisGenerator):
             if self.drawer is not None:
                 edges[f"nvposefadedrawer{index}"] = f"nvosdbin{index}"
             edges[f"nvosdbin{index}"] = f"queue_enc{index}"
-            edges[f"queue_enc{index}"] = f"nvdetlogger{index}"
-            edges[f"nvdetlogger{index}"] = f"nvv4l2h264enc{index}"
+            edges[f"queue_enc{index}"] = f"nvstgcnpplogger{index}"
+            edges[f"nvstgcnpplogger{index}"] = f"nvv4l2h264enc{index}"
             edges[f"nvv4l2h264enc{index}"] = f"h264parse{index}"
             edges[f"h264parse{index}"] = f"rtspclientsink{index}"
         self.pipeline["deepstream"]["edges"] = edges

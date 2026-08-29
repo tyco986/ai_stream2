@@ -2,7 +2,7 @@
 # Runs inside the mmdeploy image.
 set -euo pipefail
 
-MODEL_NAME="rtmpose-s-aic"
+MODEL_NAME="rtmpose-s-coco"
 MMDEPLOY_ROOT="${MMDEPLOY_ROOT:-/root/workspace/mmdeploy}"
 CKPT="/root/models/pt/${MODEL_NAME}.pth"
 OUT_DIR="/root/models/onnx/${MODEL_NAME}"

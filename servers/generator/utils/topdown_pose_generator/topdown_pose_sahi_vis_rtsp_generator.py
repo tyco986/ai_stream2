@@ -35,7 +35,6 @@ class TopdownPoseSahiVisRTSPGenerator(TopdownPoseMixin, BaseSahiVisRTSPGenerator
         tracker: dict | None = None,
         logger: dict | None = None,
         drawer: dict | None = None,
-        event_coder: dict | None = None,
     ) -> None:
         self.sgie = sgie
         super().__init__(
@@ -47,7 +46,6 @@ class TopdownPoseSahiVisRTSPGenerator(TopdownPoseMixin, BaseSahiVisRTSPGenerator
             tracker=tracker,
             logger=logger,
             drawer=drawer,
-            event_coder=event_coder,
         )
 
     def add(self) -> None:
@@ -136,7 +134,6 @@ class TopdownPoseSahiVisRTSPGenerator(TopdownPoseMixin, BaseSahiVisRTSPGenerator
                 gpu_id=self.pgie_generator.gpu_id,
             ),
         )
-        self.append_event_coder()
         self.append_kafka_nodes()
         self._append_node("nvstreamdemux", "nvstreamdemux", self._add_nvstreamdemux())
         gpu_id = self.pgie_generator.gpu_id

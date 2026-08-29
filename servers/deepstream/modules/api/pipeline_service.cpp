@@ -1,12 +1,8 @@
 #include "pipeline_service.hpp"
 
-#include <algorithm>
 #include <filesystem>
-#include <fstream>
-#include <stdexcept>
 #include <unistd.h>
 #include <sys/wait.h>
-#include <vector>
 
 #include "api_error.hpp"
 
@@ -39,42 +35,11 @@ bool ChildProcess::running() {
   return alive;
 }
 
-PipelineService::PipelineService(std::string schema_dir, std::string config_save_dir,
-                                 std::string runner_path)
-    : schema_dir_(std::move(schema_dir)),
-      config_save_dir_(std::move(config_save_dir)),
-      runner_path_(std::move(runner_path)),
-      schemas_(),
+PipelineService::PipelineService(std::string runner_path)
+    : runner_path_(std::move(runner_path)),
       child_(),
       pipeline_name_(),
-      pipeline_type_() {
-  loadSchemas();
-}
-
-void PipelineService::loadSchemas() {
-  std::vector<std::filesystem::path> files;
-  for (const auto& entry : std::filesystem::directory_iterator(schema_dir_)) {
-    const std::string ext = entry.path().extension().string();
-    if (entry.is_regular_file() && (ext == ".yaml" || ext == ".yml")) {
-      files.push_back(entry.path());
-    }
-  }
-  std::sort(files.begin(), files.end());
-  for (const std::filesystem::path& path : files) {
-    const YAML::Node data = YAML::LoadFile(path.string());
-    if (!data || !data.IsMap()) {
-      throw std::runtime_error("schema YAML must be a mapping: " + path.string());
-    }
-    if (!data["type"]) {
-      throw std::runtime_error("schema YAML missing type: " + path.string());
-    }
-    const std::string pipeline_type = data["type"].as<std::string>();
-    if (schemas_.find(pipeline_type) != schemas_.end()) {
-      throw std::runtime_error("duplicate schema type: " + pipeline_type);
-    }
-    schemas_[pipeline_type] = data;
-  }
-}
+      pipeline_type_() {}
 
 YAML::Node PipelineService::status() {
   YAML::Node data;
@@ -92,49 +57,13 @@ YAML::Node PipelineService::status() {
   return data;
 }
 
-YAML::Node PipelineService::types() const {
-  YAML::Node data;
-  YAML::Node items(YAML::NodeType::Sequence);
-  for (const auto& entry : schemas_) {
-    items.push_back(entry.first);
-  }
-  data["items"] = items;
-  return data;
-}
-
-YAML::Node PipelineService::schema(const std::string& pipeline_type) const {
-  YAML::Node result;
-  const auto it = schemas_.find(pipeline_type);
-  if (it == schemas_.end()) {
-    throw ApiError("unknown type '" + pipeline_type + "'", 404);
-  }
-  result = it->second;
-  return result;
-}
-
-void PipelineService::saveConfig(const std::string& filename,
-                                 const std::string& raw) const {
-  std::filesystem::path name = std::filesystem::path(filename).filename();
-  if (name.empty() || name == "." || name == "..") {
-    name = "pipeline.yaml";
-  }
-  std::filesystem::create_directories(config_save_dir_);
-  const std::filesystem::path path = std::filesystem::path(config_save_dir_) / name;
-  std::ofstream out(path, std::ios::binary);
-  out.write(raw.data(), static_cast<std::streamsize>(raw.size()));
-}
-
-YAML::Node PipelineService::start(const std::string& filename, const std::string& raw) {
-  saveConfig(filename, raw);
+YAML::Node PipelineService::start(const std::string& raw) {
   const YAML::Node config = YAML::Load(raw);
   if (!config || !config.IsMap()) {
     throw ApiError("pipeline YAML must be a mapping", 400);
   }
   const std::string type = config["type"].as<std::string>();
   const std::string config_dir = config["config_dir"].as<std::string>();
-  if (schemas_.find(type) == schemas_.end()) {
-    throw ApiError("unknown type '" + type + "'", 400);
-  }
   if (child_.running()) {
     throw ApiError("pipeline is running", 400);
   }

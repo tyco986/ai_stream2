@@ -111,7 +111,6 @@ class SegSahiVisVideoGenerator(BaseSahiVisVideoGenerator):
                 gpu_id=self.pgie_generator.gpu_id,
             ),
         )
-        self.append_event_coder()
         self._append_node("tee", "tee_msg", self._add_tee())
         self._append_node("queue", "queue_msg", self._add_queue())
         self._append_node(
@@ -195,8 +194,7 @@ class SegSahiVisVideoGenerator(BaseSahiVisVideoGenerator):
                 edges[inference_tail] = "nvtracker"
             inference_tail = "nvtracker"
         edges[inference_tail] = "nvdsanalytics"
-        edges["nvdsanalytics"] = self.after_analytics()
-        self.link_event_coder(edges)
+        edges["nvdsanalytics"] = "tee_msg"
         vis_next = "nvosdbin"
         if self.drawer is not None:
             vis_next = "nvsegfadedrawer"

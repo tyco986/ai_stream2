@@ -1,7 +1,12 @@
+import json
+from pathlib import Path
+
 from ..subelement_generator.kafka import KAFKA_CONN_STR, KAFKA_PROTO_LIB
 from ..subelement_generator.nvmsgconv import PAYLOAD_DEEPSTREAM_MINIMAL
 from ..subelement_generator.nvtracker import TRACKER_LL_LIB
-from .base_sahi_rtsp import BaseSahiRTSPGenerator
+from ..subelement_generator.nvsahipreprocess import NvsahipreprocessGenerator
+from ..subelement_generator.utils.sahi import get_sahi_box, get_sahi_preview
+from .base_event_rtsp import BaseEventRTSPGenerator
 
 SAHI_RTSP_EVENT_TOPOLOGY_DOC = """
     Topology::
@@ -12,7 +17,7 @@ SAHI_RTSP_EVENT_TOPOLOGY_DOC = """
               → queue_demux{N} → nvvideoconvert{N} → tee_raw{N}
                     ─┬→ queue_raw{N} → nvvideoconvert_raw{N} → capsfilter_raw{N} → nvrawcapturer{N} → fakesink_raw{N}
                     └→ queue_osd{N} → nvvideoconvert_osd{N} → capsfilter_osd{N}(RGBA) → nvosdbin{N}
-                          → nvdetlogger{N} → queue_vis{N} → nvvideoconvert_vis{N} → capsfilter_vis{N} → nvviscapturer{N} → fakesink_vis{N}
+                          → nvpresencelogger{N} → queue_vis{N} → nvvideoconvert_vis{N} → capsfilter_vis{N} → nvviscapturer{N} → fakesink_vis{N}
 
     Notes::
 
@@ -25,12 +30,112 @@ SAHI_RTSP_EVENT_TOPOLOGY_DOC = """
 """
 
 
-class BaseEventSahiRTSPGenerator(BaseSahiRTSPGenerator):
+class BaseEventSahiRTSPGenerator(BaseEventRTSPGenerator):
     f"""Generate YOLO SAHI RTSP pipeline for event alert + nvcapturer dump.
 
     Per-stream branches tee raw/vis capturers; no ``rtspclientsink`` preview.
     {SAHI_RTSP_EVENT_TOPOLOGY_DOC}
     """
+
+
+    SAHI_PREPROCESS_CONFIG_NAME = "nvsahipreprocess.ini"
+    SAHI_POSTPROCESS = "nvsahipostprocess"
+
+    def __init__(
+        self,
+        pipeline_name: str,
+        streams: dict[str, dict],
+        analyzer: dict | None,
+        pgie: dict,
+        sahi: dict,
+        event_coder: dict,
+        tracker: dict | None = None,
+        logger: dict | None = None,
+        drawer: dict | None = None,
+        capturer: dict | None = None,
+    ) -> None:
+        self.sahi = sahi
+        super().__init__(
+            pipeline_name=pipeline_name,
+            streams=streams,
+            analyzer=analyzer,
+            pgie=pgie,
+            tracker=tracker,
+            logger=logger,
+            drawer=drawer,
+            event_coder=event_coder,
+            capturer=capturer,
+        )
+
+    def init_streams(self) -> None:
+        super().init_streams()
+        self.mux_batch_size = len(self.streams)
+        sahi = self.sahi["nvsahipreprocess"]
+        slice_info = get_sahi_box(
+            image_width=self.width,
+            image_height=self.height,
+            slice_width=sahi["slice_width"],
+            slice_height=sahi["slice_height"],
+            overlap_width_ratio=sahi["overlap_width_ratio"],
+            overlap_height_ratio=sahi["overlap_height_ratio"],
+            enable_full_frame=sahi.get("enable_full_frame", True),
+        )
+        self.runtime_batch_size = int(slice_info["num"]) * len(self.streams)
+
+    def init_sahi(self) -> None:
+        meta = self.pgie_config_parser.meta
+        input_shape = meta["input_tensor_shape"]
+        network_input_shape = ";".join(
+            str(value) for value in [self.runtime_batch_size, *input_shape[1:]]
+        )
+        self.nvsahipreprocess_generator = NvsahipreprocessGenerator(
+            network_input_shape=network_input_shape,
+            target_unique_ids=self.pgie_generator.config["property"]["gie-unique-id"],
+            tensor_data_type=0,
+            tensor_name=meta["input_tensor_name"],
+        )
+        self.nvsahipreprocess_yml = self.nvsahipreprocess_generator.config
+
+    def init_params(self) -> None:
+        super().init_params()
+        self.params_yml["sahi"] = self.sahi
+
+    def init_pipeline(self) -> None:
+        self.init_sahi()
+        super().init_pipeline()
+
+    def apply_save_paths(self, config_save_dir: Path) -> None:
+        super().apply_save_paths(config_save_dir)
+        for node in self.pipeline_yml["deepstream"]["nodes"]:
+            name = node["name"]
+            properties = node.get("properties", {})
+            if name == "nvsahipreprocess":
+                properties["config-file"] = str(
+                    config_save_dir / self.SAHI_PREPROCESS_CONFIG_NAME
+                )
+
+    def write_sahi(self, config_save_dir: Path) -> None:
+        self.nvsahipreprocess_generator.write(
+            config_save_dir / self.SAHI_PREPROCESS_CONFIG_NAME
+        )
+        sahi = self.sahi["nvsahipreprocess"]
+        sahi_info = get_sahi_box(
+            image_width=self.width,
+            image_height=self.height,
+            slice_width=sahi["slice_width"],
+            slice_height=sahi["slice_height"],
+            overlap_width_ratio=sahi["overlap_width_ratio"],
+            overlap_height_ratio=sahi["overlap_height_ratio"],
+            enable_full_frame=sahi.get("enable_full_frame", True),
+        )
+        sahi_show = get_sahi_preview(sahi_info)
+        sahi_show.save(config_save_dir / "sahi_slice_preview.jpg")
+        with open(config_save_dir / "sahi_slice_info.json", "w", encoding="utf-8") as handle:
+            json.dump(sahi_info, handle)
+
+    def write(self, config_save_dir: str | Path) -> None:
+        super().write(config_save_dir)
+        self.write_sahi(Path(config_save_dir))
 
     def add(self) -> None:
         for index, name in enumerate(self.streams):
@@ -165,7 +270,7 @@ class BaseEventSahiRTSPGenerator(BaseSahiRTSPGenerator):
             self._append_node(
                 "nvrawcapturer",
                 f"nvrawcapturer{index}",
-                self._add_nvrawcapturer(),
+                self._add_nvrawcapturer(output_dir=self.capture_output_dir(), capture_codes=self.capturer_codes()),
             )
             self._append_node(
                 "fakesink",
@@ -196,9 +301,9 @@ class BaseEventSahiRTSPGenerator(BaseSahiRTSPGenerator):
                 self._add_nvosdbin(**osd_kwargs),
             )
             self._append_node(
-                "nvdetlogger",
-                f"nvdetlogger{index}",
-                self._add_nvdetlogger(
+                "nvpresencelogger",
+                f"nvpresencelogger{index}",
+                self._add_nvpresencelogger(
                     root=f"/root/logs/deepstream/{self.pipeline_name}",
                     interval=int(self.logger.get("interval", 0)),
                 ),
@@ -217,7 +322,7 @@ class BaseEventSahiRTSPGenerator(BaseSahiRTSPGenerator):
             self._append_node(
                 "nvviscapturer",
                 f"nvviscapturer{index}",
-                self._add_nvviscapturer(),
+                self._add_nvviscapturer(output_dir=self.capture_output_dir(), capture_codes=self.capturer_codes()),
             )
             self._append_node(
                 "fakesink",
@@ -263,8 +368,8 @@ class BaseEventSahiRTSPGenerator(BaseSahiRTSPGenerator):
             edges[f"capsfilter_osd{index}"] = osd_prev
             if self.drawer is not None:
                 edges[f"nvdetfadedrawer{index}"] = f"nvosdbin{index}"
-            edges[f"nvosdbin{index}"] = f"nvdetlogger{index}"
-            edges[f"nvdetlogger{index}"] = f"queue_vis{index}"
+            edges[f"nvosdbin{index}"] = f"nvpresencelogger{index}"
+            edges[f"nvpresencelogger{index}"] = f"queue_vis{index}"
             edges[f"queue_vis{index}"] = f"nvvideoconvert_vis{index}"
             edges[f"nvvideoconvert_vis{index}"] = f"capsfilter_vis{index}"
             edges[f"capsfilter_vis{index}"] = f"nvviscapturer{index}"

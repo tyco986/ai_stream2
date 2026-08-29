@@ -16,5 +16,4 @@ analyzer: null
 logger:
   interval: 50
 drawer: null
-event_coder: null
 input: /root/attachments/videos/video1.mp4

@@ -2,12 +2,18 @@
 
 #include "gstnvdetlogger.h"
 #include "gstnvlogger_common.h"
+#include "gstnvpresencelogger.h"
+#include "gstnvstgcnpplogger.h"
 
 static gboolean
 nvlogger_plugin_init(GstPlugin *plugin)
 {
   gboolean ok = gst_element_register(plugin, "nvdetlogger", GST_RANK_PRIMARY,
-                                     GST_TYPE_NVDETLOGGER);
+                                     GST_TYPE_NVDETLOGGER) &&
+                gst_element_register(plugin, "nvpresencelogger", GST_RANK_PRIMARY,
+                                     GST_TYPE_NVPRESENCELOGGER) &&
+                gst_element_register(plugin, "nvstgcnpplogger", GST_RANK_PRIMARY,
+                                     GST_TYPE_NVSTGCNPPLOGGER);
   return ok;
 }
 

@@ -59,8 +59,7 @@ class StgcnppYoloPoseMixin(StgcnppCoreMixin):
         )
 
     def link_kafka_from_analytics(self, edges: dict, video_next: str) -> None:
-        edges["nvdsanalytics"] = self.after_analytics()
-        self.link_event_coder(edges)
+        edges["nvdsanalytics"] = "tee_msg"
         edges["tee_msg"] = [video_next, "queue_msg"]
         edges["queue_msg"] = "nvmsgconv"
         edges["nvmsgconv"] = "nvmsgbroker"

@@ -4,7 +4,7 @@ ifeq ($(CUDA_VER),)
 endif
 
 CXX:= g++
-SRCS:= nvdspreprocess_lib.cpp
+SRCS:= nvdspreprocess_lib.cpp nvds_stgcnpp_ready_meta.cpp
 LIB:=libnvds_stgcnpp_preprocess.so
 
 CFLAGS+= -fPIC -std=c++17 -Wall -Werror \
@@ -30,6 +30,8 @@ all: $(LIB)
 
 %.o: %.cpp nvdspreprocess_lib.h Makefile
 	$(CXX) -c -o $@ $(CFLAGS) $<
+
+nvdspreprocess_lib.o: nvds_stgcnpp_ready_meta.h
 
 $(LIB): $(OBJS) Makefile
 	$(CXX) -o $@ $(OBJS) $(LIBS)

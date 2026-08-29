@@ -21,7 +21,6 @@ drawer:
   fade_time: 1
   show_label: true
   show_mask: true
-event_coder: null
 input: /root/attachments/videos/video1.mp4
 output: /root/outputs/deepstream/yolo26n_seg_sahi_vis_video_with_tracker.mp4
 sahi:

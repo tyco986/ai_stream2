@@ -43,8 +43,6 @@ class ApiServer {
   void bindRoutes();
   void handleHealth(const httplib::Request& req, httplib::Response& res);
   void handleStatus(const httplib::Request& req, httplib::Response& res);
-  void handleTypes(const httplib::Request& req, httplib::Response& res);
-  void handleSchema(const httplib::Request& req, httplib::Response& res);
   void handleStart(const httplib::Request& req, httplib::Response& res);
   void finish(httplib::Response& res, const std::function<std::string()>& body);
   void writeResult(httplib::Response& res, int status, bool success,

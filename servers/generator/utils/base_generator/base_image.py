@@ -51,7 +51,6 @@ class BaseImageGenerator(PipelineGenerator):
         pgie: dict,
         logger: dict | None = None,
         drawer: dict | None = None,
-        event_coder: dict | None = None,
     ) -> None:
         self.pipeline_name = pipeline_name
         self.input = Path(input).expanduser().resolve()
@@ -63,8 +62,6 @@ class BaseImageGenerator(PipelineGenerator):
             self.logger.update(logger)
         self.logger["root"] = f"/root/logs/deepstream/{pipeline_name}"
         self.drawer = drawer
-        self.event_coder = event_coder
-
         super().__init__()
 
         self.init_input()
@@ -92,7 +89,6 @@ class BaseImageGenerator(PipelineGenerator):
         self.params_yml["analyzer"] = self.analyzer
         self.params_yml["logger"] = self.logger
         self.params_yml["drawer"] = self.drawer
-        self.params_yml["event_coder"] = self.event_coder
 
     def init_pipeline(self) -> None:
         self.add()
@@ -247,31 +243,6 @@ class BaseImageGenerator(PipelineGenerator):
             show_mask=bool(drawer.get("show_mask", True)),
         )
 
-    def append_event_coder(self, name: str = "nvpresencecoder") -> None:
-        if self.event_coder is not None:
-            coder = self.event_coder
-            self._append_node(
-                "nvpresencecoder",
-                name,
-                self._add_nvpresencecoder(
-                    class_ids=coder.get("class_ids", []),
-                    event_names=coder.get("event_names", []),
-                    length=int(coder.get("length", 10)),
-                    threshold=float(coder.get("threshold", 0.5)),
-                    mode=coder.get("mode", "fold"),
-                ),
-            )
-
-    def after_analytics(self, tee_name: str = "tee_msg") -> str:
-        next_name = tee_name
-        if self.event_coder is not None:
-            next_name = "nvpresencecoder"
-        return next_name
-
-    def link_event_coder(self, edges: dict, tee_name: str = "tee_msg") -> None:
-        if self.event_coder is not None:
-            edges["nvpresencecoder"] = tee_name
-
     def add(self) -> None:
         self._append_node(
             "nvurisrcbin",
@@ -312,7 +283,6 @@ class BaseImageGenerator(PipelineGenerator):
                 gpu_id=self.pgie_generator.gpu_id,
             ),
         )
-        self.append_event_coder()
         self._append_node("tee", "tee_msg", self._add_tee())
         self._append_node("queue", "queue_msg", self._add_queue())
         self._append_node(
@@ -374,8 +344,7 @@ class BaseImageGenerator(PipelineGenerator):
             "nvstreammux": "pgie",
             "pgie": "nvdsanalytics",
         }
-        edges["nvdsanalytics"] = self.after_analytics()
-        self.link_event_coder(edges)
+        edges["nvdsanalytics"] = "tee_msg"
         vis_next = "nvosdbin"
         if self.drawer is not None:
             vis_next = "nvdetfadedrawer"

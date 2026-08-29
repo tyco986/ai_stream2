@@ -20,7 +20,6 @@ drawer:
   interval: 50
   fade_time: 1
   show_label: true
-event_coder: null
 input: /root/attachments/videos/video1.mp4
 output: /root/outputs/deepstream/yolo11n_det_sahi_vis_video_with_tracker.mp4
 sahi:

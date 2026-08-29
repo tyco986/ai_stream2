@@ -1,0 +1,25 @@
+pipeline_name: yolo26n_pose_rtsp
+streams:
+  video1:
+    url: rtsp://ai_stream2_mediamtx:8554/video1
+    width: 1920
+    height: 1080
+    fps: 25
+  video2:
+    url: rtsp://ai_stream2_mediamtx:8554/video2
+    width: 1920
+    height: 1080
+    fps: 25
+generator: PoseRTSPGenerator
+pgie:
+  model_dir: /root/models/trt/yolo26n-pose
+  class_attrs:
+    all:
+      conf: 0.25
+  interval: 50
+analyzer: null
+tracker: null
+logger:
+  interval: 50
+  root: /root/logs/deepstream/yolo26n_pose_rtsp
+drawer: null

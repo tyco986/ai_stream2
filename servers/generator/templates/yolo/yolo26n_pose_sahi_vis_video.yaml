@@ -23,7 +23,6 @@ drawer:
   show_pose: true
   pose_threshold: 0.0
   mode: coco17
-event_coder: null
 input: /root/attachments/videos/video1.mp4
 output: /root/outputs/deepstream/yolo26n_pose_sahi_vis_video.mp4
 sahi:

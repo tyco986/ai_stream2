@@ -57,6 +57,12 @@ demo.write_text(
     demo.read_text(encoding="utf-8").replace("RTMHead", "RTMCCHead"),
     encoding="utf-8",
 )
+struct_init = root / "structures" / "__init__.py"
+text = struct_init.read_text(encoding="utf-8")
+struct_init.write_text(
+    text.replace("from .quantization import *  # noqa: F401,F403\n", ""),
+    encoding="utf-8",
+)
 PY
 
 echo "MMDeploy: ${NAME} image=${IMAGE}"

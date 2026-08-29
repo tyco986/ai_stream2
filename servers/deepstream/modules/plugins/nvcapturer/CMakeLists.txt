@@ -18,20 +18,23 @@ target_include_directories(nvdsgst_capturer PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/../nveventcoder
     /opt/nvidia/deepstream/deepstream/sources/includes
+    /usr/local/cuda-13.1/include
     ${GSTREAMER_INCLUDE_DIRS}
 )
 target_compile_options(nvdsgst_capturer PRIVATE -Wall -Werror ${GSTREAMER_CFLAGS_OTHER})
 target_compile_definitions(nvdsgst_capturer PRIVATE PACKAGE="nvdsgst_capturer")
 target_link_directories(nvdsgst_capturer PRIVATE
     /opt/nvidia/deepstream/deepstream/lib
+    /usr/local/cuda-13.1/lib64
     /usr/local/cuda-13.1/lib64/stubs
 )
 target_link_libraries(nvdsgst_capturer PRIVATE
     nvdsgst_meta
     nvds_meta
     nvbufsurface
+    cudart
     cuda
     PNG::PNG
     ${GSTREAMER_LIBRARIES}
 )
-target_link_options(nvdsgst_capturer PRIVATE -Wl,-no-undefined -Wl,-rpath,/opt/nvidia/deepstream/deepstream/lib -Wl,-rpath-link,/usr/local/cuda-13.1/lib64/stubs)
+target_link_options(nvdsgst_capturer PRIVATE -Wl,-no-undefined -Wl,-rpath,/opt/nvidia/deepstream/deepstream/lib:/usr/local/cuda-13.1/lib64 -Wl,-rpath-link,/usr/local/cuda-13.1/lib64:/usr/local/cuda-13.1/lib64/stubs)

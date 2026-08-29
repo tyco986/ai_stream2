@@ -17,6 +17,7 @@ constexpr int kBoxWidth = 2;
 constexpr int kFontSize = 12;
 constexpr int kLabelYOffset = 14;
 constexpr char kFontName[] = "Serif";
+constexpr char kPersonLabel[] = "person";
 constexpr char kLabelSep = '|';
 
 constexpr int kMaxDisplayElements = 16;

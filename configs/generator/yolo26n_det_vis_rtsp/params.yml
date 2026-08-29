@@ -1,0 +1,29 @@
+pipeline_name: yolo26n_det_vis_rtsp
+streams:
+  video1:
+    url: rtsp://ai_stream2_mediamtx:8554/video1
+    width: 1920
+    height: 1080
+    fps: 25
+  video2:
+    url: rtsp://ai_stream2_mediamtx:8554/video2
+    width: 1920
+    height: 1080
+    fps: 25
+generator: DetVisRTSPGenerator
+pgie:
+  model_dir: /root/models/trt/yolo26n
+  class_attrs:
+    all:
+      conf: 0.4
+  interval: 50
+analyzer: null
+tracker:
+  class_id: 0
+logger:
+  interval: 50
+  root: /root/logs/deepstream/yolo26n_det_vis_rtsp
+drawer:
+  interval: 50
+  fade_time: 1
+  show_label: true

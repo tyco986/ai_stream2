@@ -1,0 +1,24 @@
+pipeline_name: topdown_pose_image
+generator: TopdownPoseImageGenerator
+input: /root/attachments/images/video1.png
+output: /root/outputs/deepstream/topdown_pose_image.jpg
+pgie:
+  model_dir: /root/models/trt/yolo26n
+  class_attrs:
+    0:
+      conf: 0.25
+  interval: 50
+analyzer: null
+logger:
+  interval: 50
+  root: /root/logs/deepstream/topdown_pose_image
+drawer:
+  interval: 50
+  fade_time: 1
+  show_label: true
+  show_pose: true
+  pose_threshold: 0.0
+  mode: coco17
+sgie:
+  model_dir: /root/models/trt/rtmpose-s-coco-pruned
+  interval: 50

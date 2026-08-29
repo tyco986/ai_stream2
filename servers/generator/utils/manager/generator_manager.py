@@ -16,6 +16,8 @@ class GeneratorManager:
         "DetVisVideoGenerator": "utils.yolo_generator.det_vis_video",
         "DetVisVideoPresenceGenerator": "utils.event_generator.det_vis_video_presence",
         "DetSahiVisVideoPresenceGenerator": "utils.event_generator.det_sahi_vis_video_presence",
+        "DetImagePresenceGenerator": "utils.event_generator.det_image_presence",
+        "DetVideoPresenceGenerator": "utils.event_generator.det_video_presence",
         "DetRTSPPresenceGenerator": "utils.event_generator.det_rtsp_presence",
         "DetSahiRTSPPresenceGenerator": "utils.event_generator.det_sahi_rtsp_presence",
         "DetVisRTSPPresenceGenerator": "utils.event_generator.det_vis_rtsp_presence",

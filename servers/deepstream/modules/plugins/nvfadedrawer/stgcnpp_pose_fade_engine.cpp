@@ -1,74 +1,53 @@
 #include "stgcnpp_pose_fade_engine.hpp"
 
+#include "nvds_stgcnpp_action_meta.h"
+
 namespace nvfadedrawer {
 
-namespace {
-
-constexpr int kDefaultClassifierUniqueId = 4;
-
-}  // namespace
-
-StgcnppPoseFadeEngine::StgcnppPoseFadeEngine()
-    : classifier_unique_id_(kDefaultClassifierUniqueId)
+void StgcnppPoseFadeEngine::cache_live_actions(NvDsFrameMeta *frame_meta)
 {
-}
-
-void StgcnppPoseFadeEngine::set_classifier_unique_id(int classifier_unique_id)
-{
-  classifier_unique_id_ = classifier_unique_id;
-}
-
-int StgcnppPoseFadeEngine::classifier_unique_id() const
-{
-  return classifier_unique_id_;
-}
-
-void StgcnppPoseFadeEngine::read_action(
-    NvDsObjectMeta *obj,
-    const char **action_name,
-    float *action_conf) const
-{
-  const char *name = "";
-  float conf = 0.0f;
-  if (obj != nullptr) {
-    for (NvDsMetaList *item = obj->classifier_meta_list; item != nullptr; item = item->next) {
-      auto *classifier = static_cast<NvDsClassifierMeta *>(item->data);
-      if (classifier == nullptr ||
-          static_cast<int>(classifier->unique_component_id) != classifier_unique_id_) {
+  if (frame_meta != nullptr) {
+    for (NvDsMetaList *item = frame_meta->obj_meta_list; item != nullptr; item = item->next) {
+      auto *obj = static_cast<NvDsObjectMeta *>(item->data);
+      if (obj == nullptr) {
         continue;
       }
-      for (NvDsMetaList *label_item = classifier->label_info_list; label_item != nullptr;
-           label_item = label_item->next) {
-        auto *info = static_cast<NvDsLabelInfo *>(label_item->data);
-        if (info == nullptr) {
-          continue;
-        }
-        if (info->pResult_label != nullptr && info->pResult_label[0] != '\0') {
-          name = info->pResult_label;
-        } else {
-          name = info->result_label;
-        }
-        conf = info->result_prob;
+      NvDsStgcnppActionMeta *meta = nvds_stgcnpp_action_meta_from_obj(obj);
+      if (meta != nullptr && meta->label[0] != '\0') {
+        LastAction action;
+        action.name = meta->label;
+        action.conf = meta->conf;
+        last_actions_[obj->object_id] = action;
       }
     }
   }
-  if (action_name != nullptr) {
-    *action_name = name;
-  }
-  if (action_conf != nullptr) {
-    *action_conf = conf;
-  }
+}
+
+void StgcnppPoseFadeEngine::process_frame(NvDsBatchMeta *batch_meta, NvDsFrameMeta *frame_meta)
+{
+  cache_live_actions(frame_meta);
+  PoseFadeEngineWithTracker::process_frame(batch_meta, frame_meta);
 }
 
 void StgcnppPoseFadeEngine::write_label(NvDsObjectMeta *obj) const
 {
-  const char *action_name = "";
-  float action_conf = 0.0f;
   if (obj != nullptr) {
-    read_action(obj, &action_name, &action_conf);
+    const char *name = "";
+    float action_conf = NVDS_STGCNPP_ACTION_CONF_NONE;
+    NvDsStgcnppActionMeta *meta = nvds_stgcnpp_action_meta_from_obj(obj);
+    if (meta != nullptr && meta->label[0] != '\0') {
+      name = meta->label;
+      action_conf = meta->conf;
+    } else {
+      auto it = last_actions_.find(obj->object_id);
+      if (it != last_actions_.end()) {
+        name = it->second.name.c_str();
+        action_conf = it->second.conf;
+      }
+    }
     fill_action_label(
         obj,
-        action_name,
+        name,
         action_conf,
         obj->confidence,
         track_display_id(obj->object_id));

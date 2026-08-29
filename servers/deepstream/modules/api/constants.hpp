@@ -11,8 +11,6 @@ class AppConfig {
   std::string host;
   int port;
   std::string log_root;
-  std::string config_save_dir;
-  std::string schema_dir;
   std::string pipeline_runner;
 
  private:

@@ -8,7 +8,7 @@ ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 source "${ROOT}/scripts/load_project_env.sh"
 
 IMAGE="${PROJECT_NAME}_deepstream_dev"
-mkdir -p "${ROOT}/models" "${ROOT}/configs" "${ROOT}/logs" "${ROOT}/attachments" "${ROOT}/outputs"
+mkdir -p "${ROOT}/models" "${ROOT}/configs" "${ROOT}/logs" "${ROOT}/attachments" "${ROOT}/outputs/deepstream"
 
 docker network create "${PROJECT_NAME}_default" 2>/dev/null || true
 docker rm -f "${PROJECT_NAME}_deepstream" 2>/dev/null || true
@@ -18,12 +18,12 @@ docker run \
   --name "${PROJECT_NAME}_deepstream" \
   --network "${PROJECT_NAME}_default" \
   --gpus all \
+  --ulimit core=0 \
   --entrypoint bash \
   -p 8092:8092 \
   -e PROJECT_NAME="${PROJECT_NAME}" \
   -e HOST=0.0.0.0 \
   -e PORT=8092 \
-  -e SCHEMA_DIR=/app/schemas \
   -e PIPELINE_RUNNER=/usr/local/bin/pipeline_runner \
   -e KAFKA_TOPIC=deepstream-detections \
   -e KAFKA_EVENT_TOPIC=deepstream-events \
@@ -40,7 +40,7 @@ docker run \
   -v "${ROOT}/logs:/root/logs" \
   -v "${ROOT}/servers/deepstream:/app" \
   "${IMAGE}" \
-  -lc 'cmake -S /app/modules/api -B /tmp/api-build && cmake --build /tmp/api-build -j"$(nproc)" && exec /tmp/api-build/deepstream_api'
+  -lc 'stub=/usr/local/cuda-13.1/lib64/stubs; ln -sf "${stub}/libcuda.so" "${stub}/libcuda.so.1"; export LIBRARY_PATH="${stub}${LIBRARY_PATH:+:${LIBRARY_PATH}}"; cmake -S /app/modules/plugins/nvlogger -B /tmp/nvlogger-build && cmake --build /tmp/nvlogger-build -j"$(nproc)" && cp /tmp/nvlogger-build/libnvdsgst_logger.so /opt/nvidia/deepstream/deepstream/lib/gst-plugins/ && cmake -S /app/modules/plugins/nvcapturer -B /tmp/nvcapturer-build && cmake --build /tmp/nvcapturer-build -j"$(nproc)" && cp /tmp/nvcapturer-build/libnvdsgst_capturer.so /opt/nvidia/deepstream/deepstream/lib/gst-plugins/ && cmake -S /app/modules/api -B /tmp/api-build && cmake --build /tmp/api-build -j"$(nproc)" && exec /tmp/api-build/deepstream_api'
 
 echo "DeepStream API: http://127.0.0.1:8092/${PROJECT_NAME}/deepstream/start_pipeline"
 echo "Health:         http://127.0.0.1:8092/${PROJECT_NAME}/deepstream/health"

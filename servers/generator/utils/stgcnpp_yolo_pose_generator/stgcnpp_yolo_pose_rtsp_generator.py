@@ -29,7 +29,6 @@ class StgcnppYoloPoseRTSPGenerator(StgcnppYoloPoseMixin, BaseRTSPGenerator):
         tracker: dict | None = None,
         logger: dict | None = None,
         drawer: dict | None = None,
-        event_coder: dict | None = None,
     ) -> None:
         self.stgcnpp = stgcnpp
         super().__init__(
@@ -40,7 +39,6 @@ class StgcnppYoloPoseRTSPGenerator(StgcnppYoloPoseMixin, BaseRTSPGenerator):
             tracker=tracker,
             logger=logger,
             drawer=drawer,
-            event_coder=event_coder,
         )
 
     def add(self) -> None:
@@ -100,15 +98,14 @@ class StgcnppYoloPoseRTSPGenerator(StgcnppYoloPoseMixin, BaseRTSPGenerator):
                 gpu_id=self.pgie_generator.gpu_id,
             ),
         )
-        self.append_event_coder()
         self.append_kafka_nodes()
         self._append_node("nvstreamdemux", "nvstreamdemux", self._add_nvstreamdemux())
         for index in range(len(self.streams)):
             self._append_node("queue", f"queue_demux{index}", self._add_queue())
             self._append_node(
-                "nvdetlogger",
-                f"nvdetlogger{index}",
-                self._add_nvdetlogger(
+                "nvstgcnpplogger",
+                f"nvstgcnpplogger{index}",
+                self._add_nvstgcnpplogger(
                     root=f"/root/logs/deepstream/{self.pipeline_name}",
                     interval=int(self.logger.get("interval", 0)),
                 ),
@@ -137,6 +134,6 @@ class StgcnppYoloPoseRTSPGenerator(StgcnppYoloPoseMixin, BaseRTSPGenerator):
         self.link_kafka_from_analytics(edges, "nvstreamdemux")
         for index in range(len(self.streams)):
             self.pad_links["nvstreamdemux"].append(f"queue_demux{index}")
-            edges[f"queue_demux{index}"] = f"nvdetlogger{index}"
-            edges[f"nvdetlogger{index}"] = f"fakesink{index}"
+            edges[f"queue_demux{index}"] = f"nvstgcnpplogger{index}"
+            edges[f"nvstgcnpplogger{index}"] = f"fakesink{index}"
         self.pipeline["deepstream"]["edges"] = edges
