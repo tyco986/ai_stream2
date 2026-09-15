@@ -199,7 +199,7 @@ gst_nvbboxsnapshot_transform_ip(GstBaseTransform *btrans, GstBuffer *inbuf)
     nvds_acquire_meta_lock(batch_meta);
     for (NvDsMetaList *item = batch_meta->frame_meta_list; item != nullptr; item = item->next) {
       auto *frame_meta = static_cast<NvDsFrameMeta *>(item->data);
-      if (frame_meta != nullptr) {
+      if (frame_meta != nullptr && frame_meta->bInferDone) {
         attach_snapshot(batch_meta, frame_meta);
       }
     }

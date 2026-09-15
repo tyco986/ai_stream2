@@ -1,4 +1,5 @@
 pipeline_name: yolo26n_seg_image
+type: SegImagePipeline
 generator: SegImageGenerator
 input: /root/attachments/images/video1.png
 output: /root/outputs/deepstream/yolo26n_seg_image.jpg

@@ -7,3 +7,7 @@ PyYAML
 numpy
 pillow
 tensorrt-cu13-bindings==10.14.1.48.post1
+opencv-python-headless
+cupy-cuda13x
+av
+

@@ -10,6 +10,7 @@ streams:
     width: 1920
     height: 1080
     fps: 25
+type: SegVisRTSPPipeline
 generator: SegVisRTSPGenerator
 pgie:
   model_dir: /root/models/trt/yolo11n-seg

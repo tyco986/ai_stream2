@@ -1,4 +1,5 @@
 pipeline_name: yolo11n_det_image
+type: DetImagePipeline
 generator: DetImageGenerator
 input: /root/attachments/images/video1.png
 output: /root/outputs/deepstream/yolo11n_det_image.jpg

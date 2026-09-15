@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse
 from utils.api.constants import (
     CAPTURE_OUTPUT_ROOT,
     DEFAULT_RECORDINGS_ROOT,
+    EXTRACT_OUTPUT_ROOT,
     FFMPEG_BASE,
     FFPROBE_BASE,
     INPUT_ROOT,
@@ -246,6 +247,32 @@ class CaptureService:
             base, frac = timestamp.split(".", 1)
             normalized = f"{base}.{frac.ljust(3, '0')[:3]}"
         return normalized
+
+
+class ExtractService:
+    def __init__(self, runner: FFmpegRunner, storage: InputStorage) -> None:
+        self.runner = runner
+        self.storage = storage
+
+    def extract(self, upload: UploadFile, interval: int) -> ApiEnvelope:
+        input_path = self.storage.ensure(upload)
+        output_dir = EXTRACT_OUTPUT_ROOT / input_path.stem
+        shutil.rmtree(output_dir, ignore_errors=True)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        cmd = [
+            *FFMPEG_BASE,
+            "-i",
+            str(input_path),
+            "-vf",
+            f"select=not(mod(n\\,{interval}))",
+            "-fps_mode",
+            "vfr",
+            "-start_number",
+            "0",
+            str(output_dir / "%08d.png"),
+        ]
+        self.runner.run(cmd)
+        return ApiEnvelope.ok(data=str(output_dir), command=shlex.join(cmd))
 
 
 class NobService:

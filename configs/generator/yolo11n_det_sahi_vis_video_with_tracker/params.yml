@@ -1,4 +1,5 @@
 pipeline_name: yolo11n_det_sahi_vis_video_with_tracker
+type: DetSahiVisVideoPipeline
 generator: DetSahiVisVideoGenerator
 input: /root/attachments/videos/video1.mp4
 pgie:

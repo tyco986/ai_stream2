@@ -38,9 +38,6 @@ deepstream:
   - type: nvrtmposepostprocess
     name: nvrtmposepostprocess
     properties:
-      infer-width: 192
-      infer-height: 256
-      padding: 1.25
       sgie-unique-id: 2
   - type: nvdsanalytics
     name: nvdsanalytics
@@ -78,7 +75,7 @@ deepstream:
       fade-time: 1
       show-label: true
       show-pose: true
-      pose-threshold: 0.0
+      pose-threshold: 0.5
       mode: coco17
   - type: nvosdbin
     name: nvosdbin

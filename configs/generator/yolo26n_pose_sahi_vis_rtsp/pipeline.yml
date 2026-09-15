@@ -52,7 +52,7 @@ deepstream:
     properties:
       gie-ids: '1'
       class-agnostic: false
-      oks-threshold: 0.5
+      oks-threshold: 0.2
       vis-threshold: 0.0
       num-keypoints: 0
   - type: nvdsanalytics
@@ -101,7 +101,7 @@ deepstream:
       fade-time: 1
       show-label: true
       show-pose: true
-      pose-threshold: 0.0
+      pose-threshold: 0.5
       mode: coco17
   - type: nvosdbin
     name: nvosdbin0
@@ -151,7 +151,7 @@ deepstream:
       fade-time: 1
       show-label: true
       show-pose: true
-      pose-threshold: 0.0
+      pose-threshold: 0.5
       mode: coco17
   - type: nvosdbin
     name: nvosdbin1

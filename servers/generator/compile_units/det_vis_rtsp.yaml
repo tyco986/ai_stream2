@@ -1,6 +1,8 @@
 type: DetVisRTSPGenerator
 entry: utils/yolo_generator/det_vis_rtsp.py
 files:
+- utils/base_generator/utils/__init__.py
+- utils/base_generator/utils/generator_pipeline_map.py
 - utils/base_generator/base_rtsp.py
 - utils/base_generator/base_rtsp_vis.py
 - utils/subelement_generator/nvdsanalytics.py

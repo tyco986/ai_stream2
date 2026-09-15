@@ -20,7 +20,7 @@ drawer:
   fade_time: 1
   show_label: true
   show_pose: true
-  pose_threshold: 0.0
+  pose_threshold: 0.5
   mode: coco17
 input: /root/attachments/videos/video1.mp4
 output: /root/outputs/deepstream/yolo26n_pose_vis_video.mp4

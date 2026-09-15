@@ -66,41 +66,10 @@ mkdir -p "${DEEPSTREAM_LIBS_ROOT}"; \
 cp "${SEG_SRC}/libnvdsinfer_custom_impl_Yolo_seg.so" "${DEEPSTREAM_LIBS_ROOT}/"; \
 '
 
+COPY servers/deepstream/scripts/install_modules.sh /tmp/install_modules.sh
 COPY servers/deepstream/modules /tmp/modules
-RUN bash -ec '\
-set -euo pipefail; \
-export PATH="/usr/local/cuda-${CUDA_VER}/bin:${PATH}"; \
-stub="/usr/local/cuda-${CUDA_VER}/lib64/stubs"; \
-ln -sf "${stub}/libcuda.so" "${stub}/libcuda.so.1"; \
-export LIBRARY_PATH="${stub}${LIBRARY_PATH:+:${LIBRARY_PATH}}"; \
-mkdir -p "${DEEPSTREAM_LIBS_ROOT}" "${GST_PLUGIN_PATH}"; \
-mapfile -t cmake_lists < <(find /tmp/modules -name CMakeLists.txt | sort); \
-test "${#cmake_lists[@]}" -gt 0; \
-for cm in "${cmake_lists[@]}"; do \
-  src="$(dirname "$cm")"; \
-  cmake -S "$src" -B "$src/build"; \
-  cmake --build "$src/build" -j"$(nproc)"; \
-  shopt -s nullglob; \
-  for so in "$src/build"/*.so; do \
-    name="$(basename "$so")"; \
-    dest="${DEEPSTREAM_LIBS_ROOT}"; \
-    if [[ "$name" == libnvdsgst_* ]]; then dest="${GST_PLUGIN_PATH}"; fi; \
-    cp "$so" "${dest}/"; \
-    test -f "${dest}/${name}"; \
-  done; \
-  for bin in "$src/build"/*; do \
-    if [[ -f "$bin" && -x "$bin" && "$bin" != *.so ]]; then \
-      name="$(basename "$bin")"; \
-      cp "$bin" "/usr/local/bin/${name}"; \
-      test -x "/usr/local/bin/${name}"; \
-    fi; \
-  done; \
-done; \
-test -x /usr/local/bin/pipeline_runner; \
-test -x /usr/local/bin/deepstream_api; \
-test -f "${DEEPSTREAM_LIBS_ROOT}/libgsource_remove_guard.so"; \
-rm -rf /tmp/modules; \
-'
+RUN MODULES_ROOT=/tmp/modules bash /tmp/install_modules.sh && rm -rf /tmp/modules
+
 
 ENV LD_PRELOAD=/opt/ai_stream2/servers/deepstream/libs/libgsource_remove_guard.so:/opt/ai_stream2/servers/deepstream/libs/libnvdsinfer_custom_impl_Yolo_seg.so
 

@@ -16,6 +16,7 @@ from ..subelement_generator.pipeline import PipelineGenerator
 from ..subelement_generator.utils.pgie_parser import PgieParser
 from ..subelement_generator.utils.nvdsanalytics_parser import NvdsanalyticsParser
 from ..subelement_generator.utils.nvtracker_parser import NvtrackerParser
+from .utils.generator_pipeline_map import GENERATOR_PIPELINE_MAP
 
 RTSP_TOPOLOGY_DOC = """
     Topology::
@@ -93,6 +94,7 @@ class BaseRTSPGenerator(PipelineGenerator):
         self.params_yml = {}
         self.params_yml["pipeline_name"] = self.pipeline_name
         self.params_yml["streams"] = self.streams
+        self.params_yml["type"] = GENERATOR_PIPELINE_MAP[self.GENERATOR]
         self.params_yml["generator"] = self.GENERATOR
         self.params_yml["pgie"] = self.pgie
         self.params_yml["analyzer"] = self.analyzer

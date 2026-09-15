@@ -1,0 +1,33 @@
+pipeline_name: yolo26n_pose_sahi_vis_video_no_interval_tracker
+type: PoseSahiVisVideoPipeline
+generator: PoseSahiVisVideoGenerator
+input: /root/attachments/videos/video1.mp4
+pgie:
+  model_dir: /root/models/trt/yolo26n-pose
+  class_attrs:
+    all:
+      conf: 0.25
+  interval: 1
+analyzer: null
+tracker:
+  class_id: 0
+logger:
+  interval: 1
+  root: /root/logs/deepstream/yolo26n_pose_sahi_vis_video_no_interval_tracker
+drawer:
+  interval: 1
+  fade_time: 1
+  show_label: true
+  show_snap: false
+  show_pose: true
+  pose_threshold: 0.5
+  mode: coco17
+sahi:
+  nvsahipreprocess:
+    slice_width: 640
+    slice_height: 640
+    overlap_width_ratio: 0.2
+    overlap_height_ratio: 0.2
+  nvsahipostprocess_pose:
+    oks_threshold: 0.2
+output: /root/outputs/deepstream/yolo26n_pose_sahi_vis_video_no_interval_tracker.mp4

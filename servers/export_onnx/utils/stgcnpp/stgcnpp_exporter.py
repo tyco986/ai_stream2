@@ -30,7 +30,7 @@ class StgcnppExporter:
         validate_export_args(weights, dynamic, dummy_batch)
         model = self.build_model(weights)
         labels_path = output_dir / "labels.txt"
-        labels_path.write_text("\n".join(NTU60_LABELS) + "\n", encoding="utf-8")
+        labels_path.write_text(NTU60_LABELS + "\n", encoding="utf-8")
 
         dummy = torch.zeros(
             dummy_batch,
@@ -59,7 +59,7 @@ class StgcnppExporter:
             onnx.save(onnxslim.slim(onnx.load(str(onnx_path))), str(onnx_path))
 
     def build_model(self, weights: Path) -> StgcnppRecognizer:
-        model = StgcnppRecognizer(num_classes=len(NTU60_LABELS))
+        model = StgcnppRecognizer(num_classes=len(NTU60_LABELS.split(";")))
         state = torch.load(str(weights), map_location="cpu", weights_only=False)
         if isinstance(state, dict) and "state_dict" in state:
             state = state["state_dict"]

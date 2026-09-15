@@ -11,7 +11,7 @@ pgie:
       conf: 0.4
 stgcnpp:
   interval: 1
-  model_dir: /root/models/trt/stgcnpp-ntu60
+  model_dir: /root/models/trt/stgcnpp-ntu60-j
 tracker:
   class_id: 0
 analyzer: null

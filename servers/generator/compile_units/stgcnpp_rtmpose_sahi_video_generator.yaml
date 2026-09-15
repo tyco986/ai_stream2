@@ -1,6 +1,8 @@
 type: StgcnppRtmposeSahiVideoGenerator
 entry: utils/stgcnpp_rtmpose_generator/stgcnpp_rtmpose_sahi_video_generator.py
 files:
+- utils/base_generator/utils/__init__.py
+- utils/base_generator/utils/generator_pipeline_map.py
 - utils/base_generator/base_sahi_video.py
 - utils/base_generator/base_video.py
 - utils/stgcnpp_rtmpose_generator/stgcnpp_core_mixin.py

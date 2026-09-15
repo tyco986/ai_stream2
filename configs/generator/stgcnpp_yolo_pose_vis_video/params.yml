@@ -1,4 +1,5 @@
 pipeline_name: stgcnpp_yolo_pose_vis_video
+type: StgcnppYoloPoseVisVideoPipeline
 generator: StgcnppYoloPoseVisVideoGenerator
 input: /root/attachments/videos/video1.mp4
 pgie:
@@ -18,9 +19,9 @@ drawer:
   fade_time: 1
   show_label: true
   show_pose: true
-  pose_threshold: 0.0
+  pose_threshold: 0.5
   mode: coco17
 output: /root/outputs/deepstream/stgcnpp_yolo_pose_vis_video.mp4
 stgcnpp:
-  model_dir: /root/models/trt/stgcnpp-ntu60
+  model_dir: /root/models/trt/stgcnpp-ntu60-j
   interval: 1

@@ -13,6 +13,8 @@ namespace nvfadedrawer {
 
 namespace {
 
+constexpr float kColorPurple[] = {0.62f, 0.13f, 0.94f, 1.0f};
+
 void copy_color(NvOSD_ColorParams *dst, const Rgba &src)
 {
   dst->red = src.r;
@@ -69,11 +71,6 @@ void DetFadeEngine::set_show_label(bool show_label)
   show_label_ = show_label;
 }
 
-void DetFadeEngine::set_show_snap(bool show_snap)
-{
-  show_snap_ = show_snap;
-}
-
 int DetFadeEngine::interval() const
 {
   return interval_;
@@ -89,27 +86,9 @@ bool DetFadeEngine::show_label() const
   return show_label_;
 }
 
-bool DetFadeEngine::show_snap() const
-{
-  return show_snap_;
-}
-
 void DetFadeEngine::drop_pad(int pad_index)
 {
   streams_.erase(pad_index);
-}
-
-const NvDsBboxSnapshotMeta *DetFadeEngine::find_snapshot_meta(NvDsFrameMeta *frame_meta) const
-{
-  const NvDsBboxSnapshotMeta *snapshot = nullptr;
-  for (NvDsMetaList *item = frame_meta->frame_user_meta_list; item != nullptr; item = item->next) {
-    auto *user_meta = static_cast<NvDsUserMeta *>(item->data);
-    if (snapshot == nullptr && user_meta != nullptr &&
-        user_meta->base_meta.meta_type == NVDS_BBOX_SNAPSHOT_USER_META) {
-      snapshot = static_cast<const NvDsBboxSnapshotMeta *>(user_meta->user_meta_data);
-    }
-  }
-  return snapshot;
 }
 
 Rgba DetFadeEngine::fade_color(const float color[4], float alpha) const
@@ -218,31 +197,13 @@ std::int64_t DetFadeEngine::track_display_id(std::uint64_t object_id) const
   return display_id(object_id);
 }
 
-void DetFadeEngine::fill_action_label(
-    NvDsObjectMeta *obj,
-    const char *action_name,
-    float action_conf,
-    float person_conf,
-    std::int64_t track_id) const
+void DetFadeEngine::apply_label_text(NvDsObjectMeta *obj, const char *line) const
 {
   NvOSD_TextParams *text = &obj->text_params;
   NvOSD_RectParams *rect = &obj->rect_params;
   if (!show_label_) {
     clear_label(obj);
   } else {
-    char line[256];
-    const char *name = action_name != nullptr ? action_name : "";
-    std::snprintf(
-        line,
-        sizeof(line),
-        "%s%c%.2f%c%.2f%c%lld",
-        name,
-        kLabelSep,
-        action_conf,
-        kLabelSep,
-        person_conf,
-        kLabelSep,
-        static_cast<long long>(track_id));
     g_free(text->display_text);
     text->display_text = g_strdup(line);
     text->x_offset = static_cast<unsigned int>(rect->left);
@@ -256,33 +217,15 @@ void DetFadeEngine::fill_action_label(
 
 void DetFadeEngine::write_label(NvDsObjectMeta *obj) const
 {
-  fill_label(obj, obj->obj_label, obj->confidence, track_display_id(obj->object_id));
+  fill_label(obj, obj->obj_label, obj->confidence);
 }
 
-void DetFadeEngine::fill_label(
-    NvDsObjectMeta *obj,
-    const char *label,
-    float conf,
-    std::int64_t track_id) const
+void DetFadeEngine::fill_label(NvDsObjectMeta *obj, const char *label, float conf) const
 {
-  NvOSD_TextParams *text = &obj->text_params;
-  NvOSD_RectParams *rect = &obj->rect_params;
-  if (!show_label_) {
-    clear_label(obj);
-  } else {
-    char line[160];
-    const char *name = label != nullptr ? label : "";
-    std::snprintf(line, sizeof(line), "%s%c%.2f%c%lld", name, kLabelSep, conf, kLabelSep,
-                  static_cast<long long>(track_id));
-    g_free(text->display_text);
-    text->display_text = g_strdup(line);
-    text->x_offset = static_cast<unsigned int>(rect->left);
-    int y = static_cast<int>(rect->top) - kLabelYOffset;
-    text->y_offset = y < 0 ? 0u : static_cast<unsigned int>(y);
-    text->font_params.font_name = const_cast<char *>(kFontName);
-    text->font_params.font_size = kFontSize;
-    text->set_bg_clr = 1;
-  }
+  char line[160];
+  const char *name = label != nullptr ? label : "";
+  std::snprintf(line, sizeof(line), "%s%c%.2f", name, kLabelSep, conf);
+  apply_label_text(obj, line);
 }
 
 void DetFadeEngine::apply_style(
@@ -311,26 +254,38 @@ void DetFadeEngine::decorate_object(
   (void)fade_alpha;
 }
 
+void DetFadeEngine::decorate_cached(
+    NvDsBatchMeta *batch_meta,
+    NvDsFrameMeta *frame_meta,
+    const CachedObject &cached,
+    float fade_alpha)
+{
+  (void)batch_meta;
+  (void)frame_meta;
+  (void)cached;
+  (void)fade_alpha;
+}
+
 void DetFadeEngine::copy_mask(
-    CachedObject &cached,
+    CachedMask &cached,
     const float *data,
     unsigned int mask_size,
     unsigned int mask_width,
     unsigned int mask_height,
     float mask_threshold) const
 {
-  cached.mask.clear();
-  cached.mask_size = 0;
-  cached.mask_width = 0;
-  cached.mask_height = 0;
-  cached.mask_threshold = 0.0f;
+  cached.data.clear();
+  cached.size = 0;
+  cached.width = 0;
+  cached.height = 0;
+  cached.threshold = 0.0f;
   if (data != nullptr && mask_size > 0) {
-    cached.mask_size = mask_size;
-    cached.mask_width = mask_width;
-    cached.mask_height = mask_height;
-    cached.mask_threshold = mask_threshold;
-    cached.mask.resize(mask_size / sizeof(float));
-    std::memcpy(cached.mask.data(), data, mask_size);
+    cached.size = mask_size;
+    cached.width = mask_width;
+    cached.height = mask_height;
+    cached.threshold = mask_threshold;
+    cached.data.resize(mask_size / sizeof(float));
+    std::memcpy(cached.data.data(), data, mask_size);
   }
 }
 
@@ -346,7 +301,7 @@ DetFadeEngine::CachedObject DetFadeEngine::cache_object(const NvDsObjectMeta *ob
   cached.object_id = obj->object_id;
   cached.label = obj->obj_label;
   copy_mask(
-      cached,
+      cached.mask,
       obj->mask_params.data,
       obj->mask_params.size,
       obj->mask_params.width,
@@ -367,7 +322,7 @@ DetFadeEngine::CachedObject DetFadeEngine::cache_object(const NvDsBboxSnapshotBo
   cached.object_id = box.object_id;
   cached.label = box.label;
   copy_mask(
-      cached, box.mask, box.mask_size, box.mask_width, box.mask_height, box.mask_threshold);
+      cached.mask, box.mask, box.mask_size, box.mask_width, box.mask_height, box.mask_threshold);
   return cached;
 }
 
@@ -381,22 +336,50 @@ void DetFadeEngine::restore_object(NvDsObjectMeta *obj, const CachedObject &cach
   obj->rect_params.width = cached.width;
   obj->rect_params.height = cached.height;
   g_strlcpy(obj->obj_label, cached.label.c_str(), sizeof(obj->obj_label));
-  if (!cached.mask.empty() && cached.mask_size > 0) {
-    obj->mask_params.width = cached.mask_width;
-    obj->mask_params.height = cached.mask_height;
-    obj->mask_params.size = cached.mask_size;
-    obj->mask_params.threshold = cached.mask_threshold;
-    obj->mask_params.data = static_cast<float *>(g_malloc(cached.mask_size));
-    std::memcpy(obj->mask_params.data, cached.mask.data(), cached.mask_size);
+  if (!cached.mask.data.empty() && cached.mask.size > 0) {
+    obj->mask_params.width = cached.mask.width;
+    obj->mask_params.height = cached.mask.height;
+    obj->mask_params.size = cached.mask.size;
+    obj->mask_params.threshold = cached.mask.threshold;
+    obj->mask_params.data = static_cast<float *>(g_malloc(cached.mask.size));
+    std::memcpy(obj->mask_params.data, cached.mask.data.data(), cached.mask.size);
   }
 }
 
-void DetFadeEngine::hide_tracker_mask(NvDsObjectMeta *obj) const
+void DetFadeEngineWithTracker::cache_live_tracks(StreamState &state, NvDsFrameMeta *frame_meta) const
 {
-  (void)obj;
+  for (NvDsMetaList *item = frame_meta->obj_meta_list; item != nullptr; item = item->next) {
+    auto *obj = static_cast<NvDsObjectMeta *>(item->data);
+    if (obj != nullptr && obj->object_id != kUntrackedObjectId) {
+      TrackCache &track = state.tracks[obj->object_id];
+      if (obj->confidence >= kMinCachedConfidence) {
+        track.confidence = obj->confidence;
+      }
+      if (obj->mask_params.data != nullptr && obj->mask_params.size > 0) {
+        copy_mask(
+            track.mask,
+            obj->mask_params.data,
+            obj->mask_params.size,
+            obj->mask_params.width,
+            obj->mask_params.height,
+            obj->mask_params.threshold);
+      }
+    }
+  }
 }
 
-void DetFadeEngine::snapshot_objects(StreamState &state, const NvDsBboxSnapshotMeta *snapshot) const
+void DetFadeEngineWithTracker::apply_track_cache(NvDsObjectMeta *obj, const StreamState &state) const
+{
+  if (obj->object_id != kUntrackedObjectId) {
+    auto it = state.tracks.find(obj->object_id);
+    if (it != state.tracks.end()) {
+      obj->confidence = it->second.confidence;
+    }
+  }
+}
+
+void DetFadeEngineWithTracker::snapshot_objects(
+    StreamState &state, const NvDsBboxSnapshotMeta *snapshot) const
 {
   state.objects.clear();
   if (snapshot != nullptr && snapshot->boxes != nullptr) {
@@ -434,33 +417,60 @@ void DetFadeEngine::style_frame_objects(
   }
 }
 
-void DetFadeEngine::hide_tracker_visuals(NvDsFrameMeta *frame_meta)
+void DetFadeEngineWithTracker::apply_shadow_style(NvDsBatchMeta *batch_meta, NvDsFrameMeta *frame_meta)
 {
-  for (NvDsMetaList *item = frame_meta->obj_meta_list; item != nullptr; item = item->next) {
-    auto *obj = static_cast<NvDsObjectMeta *>(item->data);
-    if (obj != nullptr) {
-      obj->rect_params.border_width = 0;
-      obj->rect_params.has_bg_color = 0;
-      clear_label(obj);
-      hide_tracker_mask(obj);
-    }
-  }
-}
-
-void DetFadeEngine::style_tracker_objects(
-    NvDsBatchMeta *batch_meta,
-    NvDsFrameMeta *frame_meta)
-{
+  StreamState &state = state_for(static_cast<int>(frame_meta->pad_index));
   Rgba box_color = fade_color(kColorPurple, 1.0f);
   Rgba text_color = fade_color(kColorText, 1.0f);
   Rgba text_bg_color = fade_color(kColorTextBg, 1.0f);
   for (NvDsMetaList *item = frame_meta->obj_meta_list; item != nullptr; item = item->next) {
     auto *obj = static_cast<NvDsObjectMeta *>(item->data);
     if (obj != nullptr) {
+      apply_track_cache(obj, state);
       apply_style(obj, box_color, text_color, text_bg_color);
-      hide_tracker_mask(obj);
       decorate_object(batch_meta, frame_meta, obj, 1.0f);
     }
+  }
+}
+
+void DetFadeEngineWithTracker::apply_snap_style(
+    NvDsBatchMeta *batch_meta,
+    NvDsFrameMeta *frame_meta,
+    const StreamState &state,
+    float fade_alpha,
+    const Rgba &box_color)
+{
+  NvDsDisplayMeta *display = nullptr;
+  for (const CachedObject &cached : state.objects) {
+    bool full = display != nullptr &&
+        display->num_rects >= static_cast<guint>(kMaxDisplayElements);
+    if (display != nullptr && full) {
+      nvds_add_display_meta_to_frame(frame_meta, display);
+      display = nullptr;
+    }
+    if (display == nullptr) {
+      display = nvds_acquire_display_meta_from_pool(batch_meta);
+      if (display != nullptr) {
+        display->num_rects = 0;
+        display->num_labels = 0;
+      }
+    }
+    if (display == nullptr) {
+      continue;
+    }
+    NvOSD_RectParams *rect = &display->rect_params[display->num_rects];
+    rect->left = cached.left;
+    rect->top = cached.top;
+    rect->width = cached.width;
+    rect->height = cached.height;
+    set_rect_color(rect, box_color);
+    display->num_rects += 1;
+  }
+  if (display != nullptr) {
+    nvds_add_display_meta_to_frame(frame_meta, display);
+  }
+  for (const CachedObject &cached : state.objects) {
+    decorate_cached(batch_meta, frame_meta, cached, fade_alpha);
   }
 }
 
@@ -513,47 +523,67 @@ void DetFadeEngine::process_frame(NvDsBatchMeta *batch_meta, NvDsFrameMeta *fram
   state.phase = next_phase;
 }
 
-void DetFadeEngine::process_tracker_frame(NvDsBatchMeta *batch_meta, NvDsFrameMeta *frame_meta)
+void DetFadeEngineWithTracker::set_show_snap(bool show_snap)
 {
-  if (!show_snap_) {
-    Rgba base = resolve_box_color(frame_meta);
-    Rgba box_color = fade_color(&base.r, 1.0f);
-    Rgba text_color = fade_color(kColorText, 1.0f);
-    Rgba text_bg_color = fade_color(kColorTextBg, 1.0f);
-    style_frame_objects(batch_meta, frame_meta, 1.0f, box_color, text_color, text_bg_color);
-  } else {
-    int pad_index = static_cast<int>(frame_meta->pad_index);
-    StreamState &state = state_for(pad_index);
-    const NvDsBboxSnapshotMeta *snapshot = find_snapshot_meta(frame_meta);
-    bool inferred = frame_meta->bInferDone;
-    if (inferred && snapshot != nullptr) {
-      snapshot_objects(state, snapshot);
+  show_snap_ = show_snap;
+}
+
+bool DetFadeEngineWithTracker::show_snap() const
+{
+  return show_snap_;
+}
+
+const NvDsBboxSnapshotMeta *DetFadeEngineWithTracker::find_snapshot_meta(
+    NvDsFrameMeta *frame_meta) const
+{
+  const NvDsBboxSnapshotMeta *snapshot = nullptr;
+  for (NvDsMetaList *item = frame_meta->frame_user_meta_list; item != nullptr; item = item->next) {
+    auto *user_meta = static_cast<NvDsUserMeta *>(item->data);
+    if (snapshot == nullptr && user_meta != nullptr &&
+        user_meta->base_meta.meta_type == NVDS_BBOX_SNAPSHOT_USER_META) {
+      snapshot = static_cast<const NvDsBboxSnapshotMeta *>(user_meta->user_meta_data);
     }
-    int lut_size = static_cast<int>(alpha_lut_.size());
-    int phase = inferred ? 0 : state.phase;
-    float fade_alpha = alpha_lut_[phase % lut_size];
-    Rgba base = resolve_box_color(frame_meta);
-    Rgba faded_box = fade_color(&base.r, fade_alpha);
-    Rgba faded_text = fade_color(kColorText, fade_alpha);
-    Rgba faded_text_bg = fade_color(kColorTextBg, fade_alpha);
-    int next_phase = (phase + 1) % lut_size;
-    if (inferred) {
-      next_phase = lut_size > 0 ? 1 % lut_size : 0;
-    }
-    if (inferred) {
-      hide_tracker_visuals(frame_meta);
-    } else {
-      style_tracker_objects(batch_meta, frame_meta);
-    }
-    inject_inferred_objects(
-        batch_meta, frame_meta, state, fade_alpha, faded_box, faded_text, faded_text_bg);
-    state.phase = next_phase;
   }
+  return snapshot;
 }
 
 void DetFadeEngineWithTracker::process_frame(NvDsBatchMeta *batch_meta, NvDsFrameMeta *frame_meta)
 {
-  process_tracker_frame(batch_meta, frame_meta);
+  int pad_index = static_cast<int>(frame_meta->pad_index);
+  StreamState &state = state_for(pad_index);
+  cache_live_tracks(state, frame_meta);
+  const NvDsBboxSnapshotMeta *snapshot = nullptr;
+  if (show_snap_) {
+    snapshot = find_snapshot_meta(frame_meta);
+    if (snapshot != nullptr) {
+      snapshot_objects(state, snapshot);
+    }
+  }
+  if (show_snap_) {
+    int lut_size = static_cast<int>(alpha_lut_.size());
+    bool snapped = snapshot != nullptr;
+    int phase = snapped ? 0 : state.phase;
+    float fade_alpha = alpha_lut_[phase % lut_size];
+    Rgba base = resolve_box_color(frame_meta);
+    Rgba faded_box = fade_color(&base.r, fade_alpha);
+    int next_phase = (phase + 1) % lut_size;
+    if (snapped) {
+      next_phase = lut_size > 0 ? 1 % lut_size : 0;
+    }
+    apply_snap_style(batch_meta, frame_meta, state, fade_alpha, faded_box);
+    state.phase = next_phase;
+  }
+  apply_shadow_style(batch_meta, frame_meta);
+}
+
+void DetFadeEngineWithTracker::write_label(NvDsObjectMeta *obj) const
+{
+  char line[160];
+  const char *name = obj->obj_label;
+  std::snprintf(
+      line, sizeof(line), "%s%c%.2f%c%lld", name != nullptr ? name : "", kLabelSep, obj->confidence,
+      kLabelSep, static_cast<long long>(track_display_id(obj->object_id)));
+  apply_label_text(obj, line);
 }
 
 }  // namespace nvfadedrawer

@@ -28,7 +28,6 @@ from pages.pipelines.models import (
 )
 from pages.pipelines.port_manager import DeepStreamPortManager
 from pages.pipelines.type_registry import (
-    PARSER_PIPELINE_TYPES,
     RTSP_PIPELINE_TYPES,
     TypeRegistry,
 )
@@ -831,9 +830,8 @@ class StartStopOrchestrator:
             self.logs.append(pipeline_id, "container started")
             self.containers.wait_healthy(row.name)
             self.logs.append(pipeline_id, "container healthy")
-            start_yaml = self.build_start_yaml(row)
             client = DeepStreamClient(self.containers.base_url(row.name))
-            client.start_pipeline(start_yaml.encode("utf-8"))
+            client.start_pipeline(self.containers.generator_config_dir(row.name))
             row.status = PIPELINE_STATUS_RUNNING
             row.status_message = ""
             row.save(update_fields=["status", "status_message", "updated_at"])
@@ -887,37 +885,6 @@ class StartStopOrchestrator:
             body["output"] = config["output"]
         if config.get("sahi"):
             body["sahi"] = config["sahi"]
-        payload = yaml.safe_dump(body, sort_keys=False)
-        return payload
-
-    def build_start_yaml(self, row):
-        config = row.config or {}
-        config_dir = Path(settings.GENERATOR_CONFIG_ROOT) / row.name
-        body = {
-            "type": row.type,
-            "name": row.name,
-            "config_dir": str(config_dir),
-            "logger": {
-                "root": str(Path(settings.DEEPSTREAM_LOG_ROOT) / row.name / "probe"),
-                "interval": (config.get("logger") or {}).get("interval", 50),
-            },
-            "messager": {
-                "topic": f"{settings.PROJECT_NAME}_{row.name}",
-                "host": f"{settings.PROJECT_NAME}_kafka",
-                "port": settings.DEEPSTREAM_KAFKA_PORT,
-            },
-        }
-        if row.type in PARSER_PIPELINE_TYPES:
-            parser = config.get("parser")
-            if parser is not None:
-                body["parser"] = parser
-        else:
-            drawer = config.get("drawer")
-            if drawer is not None:
-                body["drawer"] = drawer
-        debouncer = config.get("debouncer")
-        if debouncer is not None:
-            body["debouncer"] = debouncer
         payload = yaml.safe_dump(body, sort_keys=False)
         return payload
 

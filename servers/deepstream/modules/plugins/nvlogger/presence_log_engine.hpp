@@ -5,7 +5,7 @@
 
 #define NVLOGGER_PRESENCE_LOG_HEADER \
   "# object item: [x1, y1, x2, y2, conf, cls, label, id]\n" \
-  "# line: {pad, source, frame, latency, num, eventcode, object}\n"
+  "# line: {ts, pad, source, frame, latency, num, eventcode, object}\n"
 
 namespace nvlogger {
 

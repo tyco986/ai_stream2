@@ -46,7 +46,7 @@ deepstream:
     properties:
       gie-ids: '1'
       class-agnostic: false
-      oks-threshold: 0.5
+      oks-threshold: 0.2
       vis-threshold: 0.0
       num-keypoints: 0
   - type: nvdsanalytics

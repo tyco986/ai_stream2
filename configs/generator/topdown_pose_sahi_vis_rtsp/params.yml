@@ -10,6 +10,7 @@ streams:
     width: 1920
     height: 1080
     fps: 25
+type: TopdownPoseSahiVisRTSPPipeline
 generator: TopdownPoseSahiVisRTSPGenerator
 pgie:
   model_dir: /root/models/trt/yolo26n
@@ -27,7 +28,7 @@ drawer:
   fade_time: 1
   show_label: true
   show_pose: true
-  pose_threshold: 0.0
+  pose_threshold: 0.5
   mode: coco17
 sahi:
   nvsahipreprocess:
@@ -39,5 +40,5 @@ sahi:
   nvsahipostprocess:
     match_threshold: 0.5
 sgie:
-  model_dir: /root/models/trt/rtmpose-s-coco-pruned
+  model_dir: /root/models/trt/rtmpose-t-body8
   interval: 50

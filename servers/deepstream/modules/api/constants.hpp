@@ -3,6 +3,10 @@
 
 #include <string>
 
+inline constexpr const char* kConfigDirKey = "config_dir";
+inline constexpr const char* kParamsFile = "params.yml";
+inline constexpr const char* kPipelineFile = "pipeline.yml";
+
 class AppConfig {
  public:
   AppConfig();

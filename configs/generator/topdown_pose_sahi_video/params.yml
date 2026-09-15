@@ -1,4 +1,5 @@
 pipeline_name: topdown_pose_sahi_video
+type: TopdownPoseSahiVideoPipeline
 generator: TopdownPoseSahiVideoGenerator
 input: /root/attachments/videos/video1.mp4
 pgie:
@@ -23,5 +24,5 @@ sahi:
   nvsahipostprocess:
     match_threshold: 0.5
 sgie:
-  model_dir: /root/models/trt/rtmpose-s-coco-pruned
+  model_dir: /root/models/trt/rtmpose-t-body8
   interval: 50

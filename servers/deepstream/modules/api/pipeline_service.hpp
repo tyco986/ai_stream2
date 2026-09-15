@@ -24,7 +24,7 @@ class PipelineService {
   explicit PipelineService(std::string runner_path);
 
   YAML::Node status();
-  YAML::Node start(const std::string& raw);
+  YAML::Node start(const std::string& config_dir);
 
  private:
   std::string runner_path_;

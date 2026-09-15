@@ -1,6 +1,8 @@
 type: StgcnppYoloPoseVideoGenerator
 entry: utils/stgcnpp_yolo_pose_generator/stgcnpp_yolo_pose_video_generator.py
 files:
+- utils/base_generator/utils/__init__.py
+- utils/base_generator/utils/generator_pipeline_map.py
 - utils/base_generator/base_video.py
 - utils/stgcnpp_rtmpose_generator/stgcnpp_core_mixin.py
 - utils/stgcnpp_yolo_pose_generator/stgcnpp_yolo_pose_mixin.py

@@ -1,6 +1,9 @@
 #include "stgcnpp_pose_fade_engine.hpp"
 
+#include <cstdio>
+
 #include "nvds_stgcnpp_action_meta.h"
+#include "nvds_stgcnpp_ready_meta.h"
 
 namespace nvfadedrawer {
 
@@ -26,7 +29,7 @@ void StgcnppPoseFadeEngine::cache_live_actions(NvDsFrameMeta *frame_meta)
 void StgcnppPoseFadeEngine::process_frame(NvDsBatchMeta *batch_meta, NvDsFrameMeta *frame_meta)
 {
   cache_live_actions(frame_meta);
-  PoseFadeEngineWithTracker::process_frame(batch_meta, frame_meta);
+  DetFadeEngineWithTracker::process_frame(batch_meta, frame_meta);
 }
 
 void StgcnppPoseFadeEngine::write_label(NvDsObjectMeta *obj) const
@@ -34,6 +37,7 @@ void StgcnppPoseFadeEngine::write_label(NvDsObjectMeta *obj) const
   if (obj != nullptr) {
     const char *name = "";
     float action_conf = NVDS_STGCNPP_ACTION_CONF_NONE;
+    int clip_length = 0;
     NvDsStgcnppActionMeta *meta = nvds_stgcnpp_action_meta_from_obj(obj);
     if (meta != nullptr && meta->label[0] != '\0') {
       name = meta->label;
@@ -45,12 +49,25 @@ void StgcnppPoseFadeEngine::write_label(NvDsObjectMeta *obj) const
         action_conf = it->second.conf;
       }
     }
-    fill_action_label(
-        obj,
+    NvDsStgcnppReadyMeta *ready = nvds_stgcnpp_ready_meta_from_obj(obj);
+    if (ready != nullptr) {
+      clip_length = ready->length;
+    }
+    char line[256];
+    std::snprintf(
+        line,
+        sizeof(line),
+        "%s%c%.2f%c%d%c%.2f%c%lld",
         name,
+        kLabelSep,
         action_conf,
+        kLabelSep,
+        clip_length,
+        kLabelSep,
         obj->confidence,
-        track_display_id(obj->object_id));
+        kLabelSep,
+        static_cast<long long>(track_display_id(obj->object_id)));
+    apply_label_text(obj, line);
   }
 }
 

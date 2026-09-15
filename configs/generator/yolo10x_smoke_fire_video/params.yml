@@ -1,4 +1,5 @@
 pipeline_name: yolo10x_smoke_fire_video
+type: PresenceVideoPipeline
 generator: DetVideoPresenceGenerator
 input: /root/attachments/videos/video2.mp4
 pgie:

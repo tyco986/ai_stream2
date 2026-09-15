@@ -15,6 +15,7 @@ from ..subelement_generator.pgie import PgieGenerator
 from ..subelement_generator.pipeline import PipelineGenerator
 from ..subelement_generator.utils.nvdsanalytics_parser import NvdsanalyticsParser
 from ..subelement_generator.utils.pgie_parser import PgieParser
+from .utils.generator_pipeline_map import GENERATOR_PIPELINE_MAP
 
 IMAGE_STREAM_NAME = "image"
 
@@ -82,6 +83,7 @@ class BaseImageGenerator(PipelineGenerator):
     def init_params(self) -> None:
         self.params_yml = {}
         self.params_yml["pipeline_name"] = self.pipeline_name
+        self.params_yml["type"] = GENERATOR_PIPELINE_MAP[self.GENERATOR]
         self.params_yml["generator"] = self.GENERATOR
         self.params_yml["input"] = str(self.input)
         self.params_yml["output"] = str(self.output)

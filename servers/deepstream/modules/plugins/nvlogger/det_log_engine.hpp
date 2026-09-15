@@ -30,6 +30,7 @@ class DetLogEngine {
   virtual std::string build_line(NvDsFrameMeta *frame_meta, double latency_ms) const;
   virtual void append_object_item(std::ostringstream &json, NvDsObjectMeta *object_meta) const;
   virtual void append_object_item_tail(std::ostringstream &json, NvDsObjectMeta *object_meta) const;
+  void append_det_fields(std::ostringstream &json, NvDsObjectMeta *object_meta) const;
   std::string escape_label(const char *label) const;
 
  private:

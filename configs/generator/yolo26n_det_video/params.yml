@@ -1,4 +1,5 @@
 pipeline_name: yolo26n_det_video
+type: DetVideoPipeline
 generator: DetVideoGenerator
 input: /root/attachments/videos/video1.mp4
 pgie:

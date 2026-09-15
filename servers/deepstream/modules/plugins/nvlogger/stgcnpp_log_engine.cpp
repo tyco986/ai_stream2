@@ -1,6 +1,5 @@
 #include "stgcnpp_log_engine.hpp"
 
-#include "gstnvlogger_common.h"
 #include "nvds_stgcnpp_action_meta.h"
 #include "nvds_stgcnpp_ready_meta.h"
 
@@ -9,12 +8,21 @@
 
 namespace nvlogger {
 
+namespace {
+
+constexpr char kStgcnppLogHeader[] =
+    "# object item: {det:[x1, y1, x2, y2, conf, cls, label, id],"
+    "action:[action_conf, action_cls, action_label, ready, length]}\n"
+    "# line: {ts, pad, source, frame, latency, num, object}\n";
+
+}  // namespace
+
 const char *StgcnppLogEngine::log_header() const
 {
-  return NVLOGGER_STGCNPP_LOG_HEADER;
+  return kStgcnppLogHeader;
 }
 
-void StgcnppLogEngine::append_object_item_tail(
+void StgcnppLogEngine::append_object_item(
     std::ostringstream &json,
     NvDsObjectMeta *object_meta) const
 {
@@ -35,8 +43,11 @@ void StgcnppLogEngine::append_object_item_tail(
     length = ready_meta->length;
   }
   double logged = std::round(static_cast<double>(conf) * 100.0) / 100.0;
-  json << "," << std::fixed << std::setprecision(2) << logged << "," << class_id << ",\""
-       << escape_label(label) << "\"," << (ready ? "true" : "false") << "," << length;
+  json << "{\"det\":[";
+  append_det_fields(json, object_meta);
+  json << "],\"action\":[" << std::fixed << std::setprecision(2) << logged << "," << class_id
+       << ",\"" << escape_label(label) << "\"," << (ready ? "true" : "false") << "," << length
+       << "]}";
 }
 
 }  // namespace nvlogger

@@ -4,6 +4,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <ctime>
 #include <iomanip>
 #include <map>
 #include <sstream>
@@ -149,7 +150,13 @@ std::string DetLogEngine::escape_label(const char *label) const {
 
 std::string DetLogEngine::build_line(NvDsFrameMeta *frame_meta, double latency_ms) const {
   std::ostringstream json;
-  json << "{\"pad\":" << static_cast<int>(frame_meta->pad_index)
+  time_t now = time(nullptr);
+  struct tm local {};
+  localtime_r(&now, &local);
+  char ts[32];
+  strftime(ts, sizeof(ts), NVLOGGER_TS_FORMAT, &local);
+  json << "{\"ts\":\"" << ts << "\""
+       << ",\"pad\":" << static_cast<int>(frame_meta->pad_index)
        << ",\"source\":" << static_cast<int>(frame_meta->source_id)
        << ",\"frame\":" << static_cast<int>(frame_meta->frame_num)
        << ",\"latency\":";
@@ -188,7 +195,7 @@ std::string DetLogEngine::build_line(NvDsFrameMeta *frame_meta, double latency_m
   return json.str();
 }
 
-void DetLogEngine::append_object_item(std::ostringstream &json, NvDsObjectMeta *object_meta) const
+void DetLogEngine::append_det_fields(std::ostringstream &json, NvDsObjectMeta *object_meta) const
 {
   float left = object_meta->rect_params.left;
   float top = object_meta->rect_params.top;
@@ -201,10 +208,16 @@ void DetLogEngine::append_object_item(std::ostringstream &json, NvDsObjectMeta *
   if (object_meta->object_id != kUntrackedObjectId) {
     object_id = static_cast<int32_t>(object_meta->object_id);
   }
-  json << "[" << x1 << "," << y1 << "," << x2 << "," << y2 << ","
+  json << x1 << "," << y1 << "," << x2 << "," << y2 << ","
        << std::fixed << std::setprecision(2) << logged << ","
        << object_meta->class_id << ",\"" << escape_label(object_meta->obj_label)
        << "\"," << object_id;
+}
+
+void DetLogEngine::append_object_item(std::ostringstream &json, NvDsObjectMeta *object_meta) const
+{
+  json << "[";
+  append_det_fields(json, object_meta);
   append_object_item_tail(json, object_meta);
   json << "]";
 }

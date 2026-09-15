@@ -10,6 +10,7 @@ streams:
     width: 1920
     height: 1080
     fps: 25
+type: PresenceRTSPPipeline
 generator: DetRTSPPresenceGenerator
 pgie:
   model_dir: /root/models/trt/yolov10x-smoke-fire

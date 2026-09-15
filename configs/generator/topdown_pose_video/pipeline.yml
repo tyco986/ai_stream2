@@ -37,9 +37,6 @@ deepstream:
   - type: nvrtmposepostprocess
     name: nvrtmposepostprocess
     properties:
-      infer-width: 192
-      infer-height: 256
-      padding: 1.25
       sgie-unique-id: 2
   - type: nvdsanalytics
     name: nvdsanalytics

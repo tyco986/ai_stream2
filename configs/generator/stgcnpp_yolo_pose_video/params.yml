@@ -1,4 +1,5 @@
 pipeline_name: stgcnpp_yolo_pose_video
+type: StgcnppYoloPoseVideoPipeline
 generator: StgcnppYoloPoseVideoGenerator
 input: /root/attachments/videos/video1.mp4
 pgie:
@@ -15,5 +16,5 @@ logger:
   root: /root/logs/deepstream/stgcnpp_yolo_pose_video
 drawer: null
 stgcnpp:
-  model_dir: /root/models/trt/stgcnpp-ntu60
+  model_dir: /root/models/trt/stgcnpp-ntu60-j
   interval: 1

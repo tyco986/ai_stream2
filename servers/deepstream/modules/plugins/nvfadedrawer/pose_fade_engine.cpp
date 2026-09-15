@@ -67,14 +67,16 @@ int PoseFadeEngine::clamp_y(float value, int frame_height) const
   return y;
 }
 
-std::vector<float> PoseFadeEngine::decode_keypoints(NvDsObjectMeta *obj) const
+std::vector<float> PoseFadeEngine::decode_keypoints_from(
+    const float *data,
+    unsigned int width_dim,
+    unsigned int height_dim,
+    float left,
+    float top,
+    float bw,
+    float bh) const
 {
   std::vector<float> keypoints;
-  float *data = obj->mask_params.data;
-  unsigned int width_dim = obj->mask_params.width;
-  unsigned int height_dim = obj->mask_params.height;
-  float bw = obj->rect_params.width;
-  float bh = obj->rect_params.height;
   unsigned int k = height_dim;
   if (data == nullptr || bw <= 0.0f || bh <= 0.0f) {
     k = 0;
@@ -90,12 +92,24 @@ std::vector<float> PoseFadeEngine::decode_keypoints(NvDsObjectMeta *obj) const
   if (k > 0) {
     keypoints.resize(static_cast<std::size_t>(k) * 3);
     for (unsigned int j = 0; j < k; j++) {
-      keypoints[j * 3 + 0] = obj->rect_params.left + data[j * 3 + 0] * bw;
-      keypoints[j * 3 + 1] = obj->rect_params.top + data[j * 3 + 1] * bh;
+      keypoints[j * 3 + 0] = left + data[j * 3 + 0] * bw;
+      keypoints[j * 3 + 1] = top + data[j * 3 + 1] * bh;
       keypoints[j * 3 + 2] = data[j * 3 + 2];
     }
   }
   return keypoints;
+}
+
+std::vector<float> PoseFadeEngine::decode_keypoints(NvDsObjectMeta *obj) const
+{
+  return decode_keypoints_from(
+      obj->mask_params.data,
+      obj->mask_params.width,
+      obj->mask_params.height,
+      obj->rect_params.left,
+      obj->rect_params.top,
+      obj->rect_params.width,
+      obj->rect_params.height);
 }
 
 void PoseFadeEngine::draw_pose(
@@ -201,12 +215,41 @@ void PoseFadeEngine::decorate_object(
     NvDsObjectMeta *obj,
     float fade_alpha)
 {
-  draw_pose(batch_meta, frame_meta, decode_keypoints(obj), fade_alpha);
+  std::vector<float> keypoints = decode_keypoints(obj);
+  if (keypoints.empty() && obj->object_id != kUntrackedObjectId) {
+    StreamState &state = state_for(static_cast<int>(frame_meta->pad_index));
+    auto it = state.tracks.find(obj->object_id);
+    if (it != state.tracks.end() && !it->second.mask.data.empty()) {
+      const CachedMask &pose = it->second.mask;
+      keypoints = decode_keypoints_from(
+          pose.data.data(),
+          pose.width,
+          pose.height,
+          obj->rect_params.left,
+          obj->rect_params.top,
+          obj->rect_params.width,
+          obj->rect_params.height);
+    }
+  }
+  draw_pose(batch_meta, frame_meta, keypoints, fade_alpha);
 }
 
-void PoseFadeEngineWithTracker::process_frame(NvDsBatchMeta *batch_meta, NvDsFrameMeta *frame_meta)
+void PoseFadeEngine::decorate_cached(
+    NvDsBatchMeta *batch_meta,
+    NvDsFrameMeta *frame_meta,
+    const CachedObject &cached,
+    float fade_alpha)
 {
-  process_tracker_frame(batch_meta, frame_meta);
+  const float *data = cached.mask.data.empty() ? nullptr : cached.mask.data.data();
+  std::vector<float> keypoints = decode_keypoints_from(
+      data,
+      cached.mask.width,
+      cached.mask.height,
+      cached.left,
+      cached.top,
+      cached.width,
+      cached.height);
+  draw_pose(batch_meta, frame_meta, keypoints, fade_alpha);
 }
 
 }  // namespace nvfadedrawer

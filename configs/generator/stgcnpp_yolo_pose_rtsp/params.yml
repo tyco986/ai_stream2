@@ -10,6 +10,7 @@ streams:
     width: 1920
     height: 1080
     fps: 25
+type: StgcnppYoloPoseRTSPPipeline
 generator: StgcnppYoloPoseRTSPGenerator
 pgie:
   model_dir: /root/models/trt/yolo26n-pose
@@ -25,5 +26,5 @@ logger:
   root: /root/logs/deepstream/stgcnpp_yolo_pose_rtsp
 drawer: null
 stgcnpp:
-  model_dir: /root/models/trt/stgcnpp-ntu60
+  model_dir: /root/models/trt/stgcnpp-ntu60-j
   interval: 1

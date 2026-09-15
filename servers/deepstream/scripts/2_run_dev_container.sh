@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Run from project root. Dev image + mount servers/deepstream -> /app.
-# Rebuilds and starts deepstream_api from /app/modules/api.
+# Starts image-built deepstream_api (plugins compiled in 1_build).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
@@ -19,7 +19,6 @@ docker run \
   --network "${PROJECT_NAME}_default" \
   --gpus all \
   --ulimit core=0 \
-  --entrypoint bash \
   -p 8092:8092 \
   -e PROJECT_NAME="${PROJECT_NAME}" \
   -e HOST=0.0.0.0 \
@@ -40,8 +39,8 @@ docker run \
   -v "${ROOT}/logs:/root/logs" \
   -v "${ROOT}/servers/deepstream:/app" \
   "${IMAGE}" \
-  -lc 'stub=/usr/local/cuda-13.1/lib64/stubs; ln -sf "${stub}/libcuda.so" "${stub}/libcuda.so.1"; export LIBRARY_PATH="${stub}${LIBRARY_PATH:+:${LIBRARY_PATH}}"; cmake -S /app/modules/plugins/nvlogger -B /tmp/nvlogger-build && cmake --build /tmp/nvlogger-build -j"$(nproc)" && cp /tmp/nvlogger-build/libnvdsgst_logger.so /opt/nvidia/deepstream/deepstream/lib/gst-plugins/ && cmake -S /app/modules/plugins/nvcapturer -B /tmp/nvcapturer-build && cmake --build /tmp/nvcapturer-build -j"$(nproc)" && cp /tmp/nvcapturer-build/libnvdsgst_capturer.so /opt/nvidia/deepstream/deepstream/lib/gst-plugins/ && cmake -S /app/modules/api -B /tmp/api-build && cmake --build /tmp/api-build -j"$(nproc)" && exec /tmp/api-build/deepstream_api'
+  deepstream_api
 
 echo "DeepStream API: http://127.0.0.1:8092/${PROJECT_NAME}/deepstream/start_pipeline"
 echo "Health:         http://127.0.0.1:8092/${PROJECT_NAME}/deepstream/health"
-echo "Mode:           dev image=${IMAGE} (modules/api)"
+echo "Mode:           dev image=${IMAGE}"

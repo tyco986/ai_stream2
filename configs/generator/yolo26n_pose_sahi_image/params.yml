@@ -1,4 +1,5 @@
 pipeline_name: yolo26n_pose_sahi_image
+type: PoseSahiImagePipeline
 generator: PoseSahiImageGenerator
 input: /root/attachments/images/video1.png
 output: /root/outputs/deepstream/yolo26n_pose_sahi_image.jpg
@@ -17,7 +18,7 @@ drawer:
   fade_time: 1
   show_label: true
   show_pose: true
-  pose_threshold: 0.0
+  pose_threshold: 0.5
   mode: coco17
 sahi:
   nvsahipreprocess:
@@ -26,4 +27,4 @@ sahi:
     overlap_width_ratio: 0.2
     overlap_height_ratio: 0.2
   nvsahipostprocess_pose:
-    oks_threshold: 0.5
+    oks_threshold: 0.2

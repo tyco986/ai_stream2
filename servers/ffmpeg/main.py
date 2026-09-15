@@ -17,6 +17,7 @@ from utils.api.constants import (
     CAPTURE_OUTPUT_ROOT,
     DEFAULT_HOST,
     DEFAULT_PORT,
+    EXTRACT_OUTPUT_ROOT,
     INPUT_ROOT,
     LOG_FORMAT,
     LOG_ROOT,
@@ -28,6 +29,7 @@ from utils.api.schemas import ApiEnvelope
 from utils.api.services import (
     AppError,
     CaptureService,
+    ExtractService,
     FFmpegRunner,
     InputStorage,
     NobService,
@@ -85,9 +87,11 @@ async def lifespan(app: FastAPI):
     app.state.rtsp_probe = RtspProbeService(runner)
     app.state.capture = CaptureService(runner, resolver)
     app.state.nob = NobService(runner, storage)
+    app.state.extract = ExtractService(runner, storage)
 
     INPUT_ROOT.mkdir(parents=True, exist_ok=True)
     CAPTURE_OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
+    EXTRACT_OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
     NOB_OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
 
     logger = logging.getLogger(LOGGER_NAME)

@@ -1,6 +1,8 @@
 type: TopdownPoseSahiImageGenerator
 entry: utils/topdown_pose_generator/topdown_pose_sahi_image_generator.py
 files:
+- utils/base_generator/utils/__init__.py
+- utils/base_generator/utils/generator_pipeline_map.py
 - utils/base_generator/base_image.py
 - utils/base_generator/base_sahi_image.py
 - utils/subelement_generator/kafka.py

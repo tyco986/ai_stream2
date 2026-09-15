@@ -10,6 +10,7 @@ streams:
     width: 1920
     height: 1080
     fps: 25
+type: TopdownPoseRTSPPipeline
 generator: TopdownPoseRTSPGenerator
 pgie:
   model_dir: /root/models/trt/yolo26n
@@ -25,5 +26,5 @@ logger:
   root: /root/logs/deepstream/topdown_pose_rtsp
 drawer: null
 sgie:
-  model_dir: /root/models/trt/rtmpose-s-coco-pruned
+  model_dir: /root/models/trt/rtmpose-t-body8
   interval: 50

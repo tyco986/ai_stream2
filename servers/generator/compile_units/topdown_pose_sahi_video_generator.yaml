@@ -1,6 +1,8 @@
 type: TopdownPoseSahiVideoGenerator
 entry: utils/topdown_pose_generator/topdown_pose_sahi_video_generator.py
 files:
+- utils/base_generator/utils/__init__.py
+- utils/base_generator/utils/generator_pipeline_map.py
 - utils/base_generator/base_sahi_video.py
 - utils/base_generator/base_video.py
 - utils/subelement_generator/kafka.py

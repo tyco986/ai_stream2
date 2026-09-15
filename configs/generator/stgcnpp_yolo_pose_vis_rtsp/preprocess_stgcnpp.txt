@@ -25,6 +25,7 @@ custom-tensor-preparation-function=CustomTensorPreparation
 frames-sequence-length=100
 num-joints=17
 num-person=2
+patience=11
 
 [group-0]
 src-ids=0;1

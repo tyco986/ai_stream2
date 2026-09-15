@@ -18,6 +18,6 @@ Stgcnpp = {
         "output-blob-names": "output",
         "input-tensor-from-meta": 1,
         "output-tensor-meta": 0,
-        "classifier-threshold": 0.51,
+        "classifier-threshold": 0.0,
     },
 }

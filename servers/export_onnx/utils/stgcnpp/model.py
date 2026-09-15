@@ -20,68 +20,22 @@ COCO_INWARD = [
     (2, 0),
     (4, 2),
 ]
-NTU60_LABELS = [
-    "drink water",
-    "eat meal",
-    "brush teeth",
-    "brush hair",
-    "drop",
-    "pick up",
-    "throw",
-    "sit down",
-    "stand up",
-    "clapping",
-    "reading",
-    "writing",
-    "tear up paper",
-    "wear jacket",
-    "take off jacket",
-    "wear a shoe",
-    "take off a shoe",
-    "wear glasses",
-    "take off glasses",
-    "put on a hat/cap",
-    "take off a hat/cap",
-    "cheer up",
-    "hand waving",
-    "kicking something",
-    "reach into pocket",
-    "hopping",
-    "jump up",
-    "make a phone call",
-    "playing with phone/tablet",
-    "typing on a keyboard",
-    "pointing to something",
-    "taking a selfie",
-    "check time",
-    "rub two hands together",
-    "nod head/bow",
-    "shake head",
-    "wipe face",
-    "salute",
-    "put the palms together",
-    "cross hands in front",
-    "sneeze/cough",
-    "staggering",
-    "falling",
-    "touch head",
-    "touch chest",
-    "touch back",
-    "touch neck",
-    "nausea or vomiting",
-    "use a fan",
-    "punching/slapping other person",
-    "kicking other person",
-    "pushing other person",
-    "pat on back of other person",
-    "point finger at the other person",
-    "hugging other person",
-    "giving something to other person",
-    "touch other person's pocket",
-    "handshaking",
-    "walking towards each other",
-    "walking apart from each other",
-]
+NTU60_LABELS = (
+    "drink water;eat meal;brush teeth;brush hair;drop;pick up;throw;sit down;"
+    "stand up;clapping;reading;writing;tear up paper;wear jacket;take off jacket;"
+    "wear a shoe;take off a shoe;wear glasses;take off glasses;put on a hat/cap;"
+    "take off a hat/cap;cheer up;hand waving;kicking something;reach into pocket;"
+    "hopping;jump up;make a phone call;playing with phone/tablet;typing on a keyboard;"
+    "pointing to something;taking a selfie;check time;rub two hands together;"
+    "nod head/bow;shake head;wipe face;salute;put the palms together;"
+    "cross hands in front;sneeze/cough;staggering;falling;touch head;touch chest;"
+    "touch back;touch neck;nausea or vomiting;use a fan;"
+    "punching/slapping other person;kicking other person;pushing other person;"
+    "pat on back of other person;point finger at the other person;"
+    "hugging other person;giving something to other person;"
+    "touch other person's pocket;handshaking;walking towards each other;"
+    "walking apart from each other"
+)
 
 
 def coco_spatial_adjacency(num_node=17):

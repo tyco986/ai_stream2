@@ -1,4 +1,5 @@
 pipeline_name: yolo26n_seg_vis_video
+type: SegVisVideoPipeline
 generator: SegVisVideoGenerator
 input: /root/attachments/videos/video1.mp4
 pgie:

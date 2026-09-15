@@ -57,7 +57,7 @@ gst_nvdetfadedrawer_class_init(GstNvDetFadeDrawerClass *klass)
   g_object_class_install_property(
       go, PROP_SHOW_LABEL,
       g_param_spec_boolean("show-label", "Show label",
-                           "Show {label}|{conf}|{id} text", FALSE, RW));
+                           "Show {label}|{conf} text", FALSE, RW));
 #undef RW
 
   gst_element_class_add_pad_template(ge, gst_static_pad_template_get(&src_tmpl));

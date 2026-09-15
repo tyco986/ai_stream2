@@ -1,6 +1,8 @@
 type: StgcnppYoloPoseSahiVideoGenerator
 entry: utils/stgcnpp_yolo_pose_generator/stgcnpp_yolo_pose_sahi_video_generator.py
 files:
+- utils/base_generator/utils/__init__.py
+- utils/base_generator/utils/generator_pipeline_map.py
 - utils/base_generator/base_sahi_pose.py
 - utils/base_generator/base_sahi_pose_video.py
 - utils/base_generator/base_sahi_video.py

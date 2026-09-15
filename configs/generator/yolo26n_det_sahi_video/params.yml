@@ -1,4 +1,5 @@
 pipeline_name: yolo26n_det_sahi_video
+type: DetSahiVideoPipeline
 generator: DetSahiVideoGenerator
 input: /root/attachments/videos/video1.mp4
 pgie:

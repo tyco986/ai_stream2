@@ -14,10 +14,10 @@ pgie:
       conf: 0.25
 sgie:
   interval: 1
-  model_dir: /root/models/trt/rtmpose-s-coco-pruned
+  model_dir: /root/models/trt/rtmpose-t-body8
 stgcnpp:
   interval: 1
-  model_dir: /root/models/trt/stgcnpp-ntu60
+  model_dir: /root/models/trt/stgcnpp-ntu60-j
 tracker:
   class_id: 0
 analyzer: null
@@ -28,7 +28,7 @@ drawer:
   fade_time: 1
   show_label: true
   show_pose: true
-  pose_threshold: 0.0
+  pose_threshold: 0.5
   mode: coco17
 input: /root/attachments/videos/video1.mp4
 output: /root/outputs/deepstream/stgcnpp_rtmpose_sahi_vis_video.mp4

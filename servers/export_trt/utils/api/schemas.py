@@ -30,3 +30,11 @@ class TrtExportConfig(BaseModel):
     gpu_id: int = 0
     precision: str | None = None
     opt_level: int | None = None
+
+
+class TrtTestConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: str
+    engine: str
+    input: str

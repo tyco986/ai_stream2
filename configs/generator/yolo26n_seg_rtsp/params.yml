@@ -10,6 +10,7 @@ streams:
     width: 1920
     height: 1080
     fps: 25
+type: SegRTSPPipeline
 generator: SegRTSPGenerator
 pgie:
   model_dir: /root/models/trt/yolo26n-seg

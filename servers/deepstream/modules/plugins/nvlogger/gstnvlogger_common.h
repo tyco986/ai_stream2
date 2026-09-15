@@ -14,11 +14,9 @@
 
 #define NVLOGGER_PLACEHOLDER_ROOT "/tmp/ds-detlog"
 #define NVLOGGER_MAX_BYTES (1024 * 1024)
+#define NVLOGGER_TS_FORMAT "%Y-%m-%d %H:%M:%S"
 
 #define NVLOGGER_LOG_HEADER \
   "# object item: [x1, y1, x2, y2, conf, cls, label, id]\n" \
-  "# line: {pad, source, frame, latency, num, object}\n"
+  "# line: {ts, pad, source, frame, latency, num, object}\n"
 
-#define NVLOGGER_STGCNPP_LOG_HEADER \
-  "# object item: [x1, y1, x2, y2, conf, cls, label, id, action_conf, action_cls, action_label, ready, length]\n" \
-  "# line: {pad, source, frame, latency, num, object}\n"

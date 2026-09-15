@@ -1,0 +1,24 @@
+pipeline_name: yolo26n_pose_sahi_video_no_interval
+type: PoseSahiVideoPipeline
+generator: PoseSahiVideoGenerator
+input: /root/attachments/videos/video1.mp4
+pgie:
+  model_dir: /root/models/trt/yolo26n-pose
+  class_attrs:
+    all:
+      conf: 0.25
+  interval: 1
+analyzer: null
+tracker: null
+logger:
+  interval: 1
+  root: /root/logs/deepstream/yolo26n_pose_sahi_video_no_interval
+drawer: null
+sahi:
+  nvsahipreprocess:
+    slice_width: 640
+    slice_height: 640
+    overlap_width_ratio: 0.2
+    overlap_height_ratio: 0.2
+  nvsahipostprocess_pose:
+    oks_threshold: 0.2

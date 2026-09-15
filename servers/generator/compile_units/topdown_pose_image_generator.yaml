@@ -1,6 +1,8 @@
 type: TopdownPoseImageGenerator
 entry: utils/topdown_pose_generator/topdown_pose_image_generator.py
 files:
+- utils/base_generator/utils/__init__.py
+- utils/base_generator/utils/generator_pipeline_map.py
 - utils/base_generator/base_image.py
 - utils/subelement_generator/kafka.py
 - utils/subelement_generator/nvdsanalytics.py

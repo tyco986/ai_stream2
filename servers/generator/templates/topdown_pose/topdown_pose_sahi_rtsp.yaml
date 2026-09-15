@@ -11,7 +11,7 @@ pgie:
       conf: 0.25
 sgie:
   interval: 50
-  model_dir: /root/models/trt/rtmpose-s-coco-pruned
+  model_dir: /root/models/trt/rtmpose-t-body8
 tracker: null
 analyzer: null
 logger:

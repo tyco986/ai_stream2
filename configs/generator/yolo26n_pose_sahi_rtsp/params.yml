@@ -10,6 +10,7 @@ streams:
     width: 1920
     height: 1080
     fps: 25
+type: PoseSahiRTSPPipeline
 generator: PoseSahiRTSPGenerator
 pgie:
   model_dir: /root/models/trt/yolo26n-pose
@@ -30,4 +31,4 @@ sahi:
     overlap_width_ratio: 0.2
     overlap_height_ratio: 0.2
   nvsahipostprocess_pose:
-    oks_threshold: 0.5
+    oks_threshold: 0.2

@@ -11,7 +11,16 @@ enum class PoseMode {
   Coco17,
 };
 
-class PoseFadeEngine : public DetFadeEngine {
+constexpr float kColorOrange[] = {1.0f, 0.5f, 0.0f, 1.0f};
+constexpr int kKptRadius = 2;
+constexpr int kSkeletonWidth = 2;
+constexpr int kCoco17EdgeCount = 16;
+constexpr int kCoco17Edges[kCoco17EdgeCount][2] = {
+    {0, 1},  {0, 2},  {1, 3},  {2, 4},  {5, 6},  {5, 7},  {7, 9},  {6, 8},
+    {8, 10}, {5, 11}, {6, 12}, {11, 12}, {11, 13}, {13, 15}, {12, 14}, {14, 16},
+};
+
+class PoseFadeEngine : public virtual DetFadeEngine {
  public:
   void set_show_pose(bool show_pose);
   void set_pose_threshold(float pose_threshold);
@@ -26,9 +35,22 @@ class PoseFadeEngine : public DetFadeEngine {
       NvDsFrameMeta *frame_meta,
       NvDsObjectMeta *obj,
       float fade_alpha) override;
+  void decorate_cached(
+      NvDsBatchMeta *batch_meta,
+      NvDsFrameMeta *frame_meta,
+      const CachedObject &cached,
+      float fade_alpha) override;
 
  private:
   std::vector<float> decode_keypoints(NvDsObjectMeta *obj) const;
+  std::vector<float> decode_keypoints_from(
+      const float *data,
+      unsigned int width_dim,
+      unsigned int height_dim,
+      float left,
+      float top,
+      float bw,
+      float bh) const;
   void draw_pose(
       NvDsBatchMeta *batch_meta,
       NvDsFrameMeta *frame_meta,
@@ -42,9 +64,6 @@ class PoseFadeEngine : public DetFadeEngine {
   PoseMode pose_mode_ = PoseMode::Coco17;
 };
 
-class PoseFadeEngineWithTracker : public PoseFadeEngine {
- public:
-  void process_frame(NvDsBatchMeta *batch_meta, NvDsFrameMeta *frame_meta) override;
-};
+class PoseFadeEngineWithTracker : public PoseFadeEngine, public DetFadeEngineWithTracker {};
 
 }  // namespace nvfadedrawer

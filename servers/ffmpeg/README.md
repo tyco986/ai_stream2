@@ -1,6 +1,6 @@
 # FFmpeg API
 
-FastAPI 封装 `ffmpeg` / `ffprobe`：RTSP 推流、探测、截图、去 B 帧。容器内运行。
+FastAPI 封装 `ffmpeg` / `ffprobe`：RTSP 推流、探测、截图、抽帧、去 B 帧。容器内运行。
 
 
 | 文件                  | 职责                               |
@@ -46,8 +46,9 @@ FastAPI 封装 `ffmpeg` / `ffprobe`：RTSP 推流、探测、截图、去 B 帧�
 | 容器路径                           | 用途                                      |
 | ------------------------------ | --------------------------------------- |
 | `/root/recordings`             | 本地视频（`video/capture` 的 `input`）         |
-| `/root/tmp`                    | 上传临时文件（`publishers` / `nob`） |
+| `/root/tmp`                    | 上传临时文件（`publishers` / `nob` / `extract`） |
 | `/root/outputs/ffmpeg/capture` | 截图 PNG                                  |
+| `/root/outputs/ffmpeg/extract/{basename}` | 抽帧 PNG                        |
 | `/root/outputs/nob`            | 无 B 帧 MP4                               |
 | `/root/logs/ffmpeg`            | 滚动日志 `app.log`                          |
 
@@ -69,6 +70,7 @@ FastAPI 封装 `ffmpeg` / `ffprobe`：RTSP 推流、探测、截图、去 B 帧�
 | POST | `/rtsp/probe`               | 单路 RTSP 探测            |
 | POST | `/rtsp/batch/probe`         | 批量探测                  |
 | POST | `/video/capture`           | 截图                    |
+| POST | `/video/extract`           | 抽帧（每 N 帧一张，N=1 为每帧） |
 | POST | `/video/nob`               | 无 B 帧转码（成功返回 mp4 文件） |
 
 
@@ -91,6 +93,7 @@ FastAPI 封装 `ffmpeg` / `ffprobe`：RTSP 推流、探测、截图、去 B 帧�
 | `rtsp/publishers` GET  | `{name: rtsp_url, ...}`                                      |
 | `rtsp/publishers` DELETE | 已停止的 `{name: rtsp_url, ...}`                            |
 | `video/capture`        | PNG 路径字符串                                                    |
+| `video/extract`        | 输出目录路径字符串                                                  |
 | `health`               | `null`                                                       |
 
 
@@ -102,6 +105,7 @@ FastAPI 封装 `ffmpeg` / `ffprobe`：RTSP 推流、探测、截图、去 B 帧�
 | 接口                     | 格式        | 字段                                                                                                           |
 | ---------------------- | --------- | ------------------------------------------------------------------------------------------------------------ |
 | `video/capture`        | multipart | `input`（容器内路径）、`timestamp`（`HH:MM:SS` 或 `HH:MM:SS.mmm`，1～3 位小数）                                              |
+| `video/extract`        | multipart | 文件 `input`；`interval`（默认 1，每 N 帧保留一张）                                                                  |
 | `video/nob`            | multipart | 文件字段 `input`                                                                                                 |
 | `rtsp/publishers` POST | multipart | 文件 `input`；可选 `name`（默认文件名去后缀）、`loop`（默认 true）、`mediamtx_host`（默认 `${PROJECT_NAME}_mediamtx`）、`mediamtx_port`（默认 8554）；推流地址为 `rtsp://{host}:{port}/{name}` |
 | `rtsp/probe`            | JSON      | `{"rtsp":"..."}`                                                                                             |
@@ -114,6 +118,8 @@ FastAPI 封装 `ffmpeg` / `ffprobe`：RTSP 推流、探测、截图、去 B 帧�
 
 ```bash
 ./servers/ffmpeg/scripts/3_capture.sh --input recordings/video1.mp4 --timestamp 00:00:01
+./servers/ffmpeg/scripts/3_extract.sh --input path/to/video.mp4
+./servers/ffmpeg/scripts/3_extract.sh --input path/to/video.mp4 --interval 5
 ./servers/ffmpeg/scripts/3_nob.sh --input path/to/video.mp4 --output ./out_nob.mp4
 ./servers/ffmpeg/scripts/3_publishers.sh --input path/to/video.mp4
 ./servers/ffmpeg/scripts/3_publishers.sh --input path/to/video.mp4 --name cam1

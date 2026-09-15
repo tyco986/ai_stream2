@@ -10,6 +10,7 @@ streams:
     width: 1920
     height: 1080
     fps: 25
+type: StgcnppYoloPoseSahiRTSPPipeline
 generator: StgcnppYoloPoseSahiRTSPGenerator
 pgie:
   model_dir: /root/models/trt/yolo26n-pose
@@ -33,5 +34,5 @@ sahi:
   nvsahipostprocess_pose:
     oks_threshold: 0.5
 stgcnpp:
-  model_dir: /root/models/trt/stgcnpp-ntu60
+  model_dir: /root/models/trt/stgcnpp-ntu60-j
   interval: 1

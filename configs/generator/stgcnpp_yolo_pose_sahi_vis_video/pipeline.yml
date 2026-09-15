@@ -113,7 +113,7 @@ deepstream:
       fade-time: 1
       show-label: true
       show-pose: true
-      pose-threshold: 0.0
+      pose-threshold: 0.5
       mode: coco17
       show-snap: true
   - type: nvosdbin

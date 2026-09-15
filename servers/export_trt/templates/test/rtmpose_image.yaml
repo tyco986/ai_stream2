@@ -1,0 +1,4 @@
+# bash servers/export_trt/scripts/3_test.sh --config servers/export_trt/templates/test/rtmpose_image.yaml
+type: RTMPOSE-IMAGE
+engine: /root/models/trt/rtmpose-t-body8/rtmpose-t-body8.engine
+input: /root/attachments/images/video1.png

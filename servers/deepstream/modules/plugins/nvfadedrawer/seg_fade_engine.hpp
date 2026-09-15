@@ -4,7 +4,7 @@
 
 namespace nvfadedrawer {
 
-class SegFadeEngine : public DetFadeEngine {
+class SegFadeEngine : public virtual DetFadeEngine {
  public:
   void set_show_mask(bool show_mask);
   bool show_mask() const;
@@ -15,7 +15,6 @@ class SegFadeEngine : public DetFadeEngine {
       NvDsFrameMeta *frame_meta,
       NvDsObjectMeta *obj,
       float fade_alpha) override;
-  void hide_tracker_mask(NvDsObjectMeta *obj) const override;
 
  private:
   void clear_mask(NvDsObjectMeta *obj) const;
@@ -23,9 +22,6 @@ class SegFadeEngine : public DetFadeEngine {
   bool show_mask_ = true;
 };
 
-class SegFadeEngineWithTracker : public SegFadeEngine {
- public:
-  void process_frame(NvDsBatchMeta *batch_meta, NvDsFrameMeta *frame_meta) override;
-};
+class SegFadeEngineWithTracker : public SegFadeEngine, public DetFadeEngineWithTracker {};
 
 }  // namespace nvfadedrawer

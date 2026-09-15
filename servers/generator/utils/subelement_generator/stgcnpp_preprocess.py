@@ -13,6 +13,7 @@ class StgcnppPreprocessGenerator:
         num_person: int,
         tensor_name: str,
         stream_count: int,
+        patience: int,
     ) -> None:
         self.batch_size = batch_size
         self.clip_len = clip_len
@@ -20,6 +21,7 @@ class StgcnppPreprocessGenerator:
         self.num_person = num_person
         self.tensor_name = tensor_name
         self.stream_count = stream_count
+        self.patience = patience
 
     def render(self) -> str:
         src_ids = ";".join(str(index) for index in range(self.stream_count))
@@ -59,6 +61,7 @@ class StgcnppPreprocessGenerator:
             f"frames-sequence-length={self.clip_len}\n"
             f"num-joints={self.num_joints}\n"
             f"num-person={self.num_person}\n"
+            f"patience={self.patience}\n"
             "\n"
             "[group-0]\n"
             f"src-ids={src_ids}\n"

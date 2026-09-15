@@ -60,7 +60,7 @@ gst_nvposefadedrawer_class_init(GstNvPoseFadeDrawerClass *klass)
   g_object_class_install_property(
       go, PROP_SHOW_LABEL,
       g_param_spec_boolean("show-label", "Show label",
-                           "Show {label}|{conf}|{id} text", FALSE, RW));
+                           "Show {label}|{conf} text", FALSE, RW));
   g_object_class_install_property(
       go, PROP_SHOW_POSE,
       g_param_spec_boolean("show-pose", "Show pose",

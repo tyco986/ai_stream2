@@ -1,6 +1,8 @@
 type: PoseSahiVisRTSPGenerator
 entry: utils/yolo_generator/pose_sahi_vis_rtsp.py
 files:
+- utils/base_generator/utils/__init__.py
+- utils/base_generator/utils/generator_pipeline_map.py
 - utils/base_generator/base_rtsp.py
 - utils/base_generator/base_sahi_pose.py
 - utils/base_generator/base_sahi_pose_rtsp_vis.py

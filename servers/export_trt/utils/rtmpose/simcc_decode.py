@@ -7,7 +7,10 @@ from utils.rtmpose.utils.constants import (
 
 
 class SimccDecodeGraft:
-    """Append SimCC ArgMax decode so the graph outputs keypoints [B, K, 3]."""
+    """Append SimCC ArgMax decode so the graph outputs keypoints [B, K, 3].
+
+    Score matches MMPose get_simcc_maximum: min of raw SimCC maxima, ReLU clip.
+    """
 
     def __init__(self, model, num_keypoints):
         self.model = model
@@ -65,55 +68,33 @@ class SimccDecodeGraft:
         )
         return coord_name
 
+    def reduce_max(self, logits_name, suffix):
+        max_name = self.tensor_name(f"max_{suffix}")
+        self.append_node(
+            "ReduceMax",
+            [logits_name],
+            [max_name],
+            self.tensor_name(f"reducemax_{suffix}"),
+            axes=[2],
+            keepdims=1,
+        )
+        return max_name
+
     def decode_score(self, simcc_x, simcc_y):
-        softmax_x = self.tensor_name("softmax_x")
-        softmax_y = self.tensor_name("softmax_y")
-        max_x = self.tensor_name("max_x")
-        max_y = self.tensor_name("max_y")
-        sum_name = self.tensor_name("score_sum")
+        # MMPose get_simcc_maximum: min(raw max_x, raw max_y), clip negatives.
+        min_name = self.tensor_name("score_min")
         score_name = self.tensor_name("score")
-        half_name = self.append_constant("half", TensorProto.FLOAT, [], [0.5])
         self.append_node(
-            "Softmax",
-            [simcc_x],
-            [softmax_x],
-            self.tensor_name("softmax_x_op"),
-            axis=2,
+            "Min",
+            [self.reduce_max(simcc_x, "x"), self.reduce_max(simcc_y, "y")],
+            [min_name],
+            self.tensor_name("min_score"),
         )
         self.append_node(
-            "Softmax",
-            [simcc_y],
-            [softmax_y],
-            self.tensor_name("softmax_y_op"),
-            axis=2,
-        )
-        self.append_node(
-            "ReduceMax",
-            [softmax_x],
-            [max_x],
-            self.tensor_name("reducemax_x"),
-            axes=[2],
-            keepdims=1,
-        )
-        self.append_node(
-            "ReduceMax",
-            [softmax_y],
-            [max_y],
-            self.tensor_name("reducemax_y"),
-            axes=[2],
-            keepdims=1,
-        )
-        self.append_node(
-            "Add",
-            [max_x, max_y],
-            [sum_name],
-            self.tensor_name("add_score"),
-        )
-        self.append_node(
-            "Mul",
-            [sum_name, half_name],
+            "Relu",
+            [min_name],
             [score_name],
-            self.tensor_name("mul_score"),
+            self.tensor_name("relu_score"),
         )
         return score_name
 

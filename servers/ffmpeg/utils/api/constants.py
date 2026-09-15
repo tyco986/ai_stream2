@@ -21,6 +21,7 @@ PUBLISHER_START_TIMEOUT_S = 1.0
 DEFAULT_RECORDINGS_ROOT = Path("/root/recordings")
 INPUT_ROOT = Path("/root/tmp")
 CAPTURE_OUTPUT_ROOT = Path("/root/outputs/ffmpeg/capture")
+EXTRACT_OUTPUT_ROOT = Path("/root/outputs/ffmpeg/extract")
 NOB_OUTPUT_ROOT = Path("/root/outputs/nob")
 LOG_ROOT = Path("/root/logs/ffmpeg")
 DEFAULT_HOST = os.environ.get("HOST", "0.0.0.0")

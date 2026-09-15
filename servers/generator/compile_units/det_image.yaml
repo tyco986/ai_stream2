@@ -1,6 +1,8 @@
 type: DetImageGenerator
 entry: utils/yolo_generator/det_image.py
 files:
+- utils/base_generator/utils/__init__.py
+- utils/base_generator/utils/generator_pipeline_map.py
 - utils/base_generator/base_image.py
 - utils/subelement_generator/nvdsanalytics.py
 - utils/subelement_generator/pgie.py

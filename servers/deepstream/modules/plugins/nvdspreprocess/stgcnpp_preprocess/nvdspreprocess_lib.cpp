@@ -24,6 +24,7 @@ constexpr int kDefaultClipLen = 100;
 constexpr int kDefaultNumJoints = 17;
 constexpr int kDefaultNumPerson = 2;
 constexpr int kDefaultChannels = 3;
+constexpr int kDefaultPatience = 0;
 
 int parse_int(
     const std::unordered_map<std::string, std::string> &configs,
@@ -66,6 +67,11 @@ struct FrameGroup {
     std::vector<int> unit_indices;
 };
 
+struct TrackState {
+    std::deque<std::vector<float>> clip;
+    int miss = 0;
+};
+
 }  // namespace
 
 class StgcnppPreprocess {
@@ -73,7 +79,8 @@ public:
     StgcnppPreprocess(
         int clip_len,
         int num_joints,
-        int num_person);
+        int num_person,
+        int patience);
 
     NvDsPreProcessStatus prepare(
         NvDsPreProcessBatch *batch,
@@ -108,12 +115,13 @@ private:
     int clip_len;
     int num_joints;
     int num_person;
+    int patience;
     int channels;
     int frame_floats;
     int person_floats;
     int sample_floats;
     std::mutex mutex;
-    std::unordered_map<TrackKey, std::deque<std::vector<float>>, TrackKeyHash> poses;
+    std::unordered_map<TrackKey, TrackState, TrackKeyHash> tracks;
 };
 
 struct CustomCtx {
@@ -122,8 +130,9 @@ struct CustomCtx {
     CustomCtx(
         int clip_len,
         int num_joints,
-        int num_person)
-        : preprocess(clip_len, num_joints, num_person)
+        int num_person,
+        int patience)
+        : preprocess(clip_len, num_joints, num_person, patience)
     {
     }
 };
@@ -131,11 +140,13 @@ struct CustomCtx {
 StgcnppPreprocess::StgcnppPreprocess(
     int clip_len,
     int num_joints,
-    int num_person)
+    int num_person,
+    int patience)
 {
     this->clip_len = clip_len;
     this->num_joints = num_joints;
     this->num_person = num_person;
+    this->patience = patience;
     this->channels = kDefaultChannels;
     this->frame_floats = this->num_joints * this->channels;
     this->person_floats = this->clip_len * this->frame_floats;
@@ -249,30 +260,39 @@ void StgcnppPreprocess::drop_dead_tracks(
     gint source_id,
     const std::unordered_set<guint64> &current_ids)
 {
-    for (auto it = poses.begin(); it != poses.end();) {
-        if (it->first.source_id == source_id && current_ids.count(it->first.object_id) == 0) {
-            it = poses.erase(it);
-        } else {
+    for (auto it = tracks.begin(); it != tracks.end();) {
+        if (it->first.source_id != source_id) {
             ++it;
+        } else if (current_ids.count(it->first.object_id) != 0) {
+            it->second.miss = 0;
+            ++it;
+        } else {
+            it->second.miss += 1;
+            if (it->second.miss > patience) {
+                it = tracks.erase(it);
+            } else {
+                ++it;
+            }
         }
     }
 }
 
 void StgcnppPreprocess::append_pose(const TrackKey &key, const float *frame_xy_score)
 {
-    std::deque<std::vector<float>> &clip = poses[key];
-    clip.emplace_back(frame_xy_score, frame_xy_score + frame_floats);
-    while (static_cast<int>(clip.size()) > clip_len) {
-        clip.pop_front();
+    TrackState &track = tracks[key];
+    track.miss = 0;
+    track.clip.emplace_back(frame_xy_score, frame_xy_score + frame_floats);
+    while (static_cast<int>(track.clip.size()) > clip_len) {
+        track.clip.pop_front();
     }
 }
 
 int StgcnppPreprocess::track_clip_length(const TrackKey &key)
 {
     int length = 0;
-    auto it = poses.find(key);
-    if (it != poses.end()) {
-        length = static_cast<int>(it->second.size());
+    auto it = tracks.find(key);
+    if (it != tracks.end()) {
+        length = static_cast<int>(it->second.clip.size());
     }
     return length;
 }
@@ -408,7 +428,7 @@ NvDsPreProcessStatus StgcnppPreprocess::prepare(
     std::vector<float> host(static_cast<size_t>(std::max(ready_count, 0) * sample_floats), 0.0f);
     for (int i = 0; i < ready_count; ++i) {
         TrackKey key = unit_key(ready_units[i]);
-        write_clip(host.data() + i * sample_floats, poses[key]);
+        write_clip(host.data() + i * sample_floats, tracks[key].clip);
     }
     if (ready_count > 0) {
         cudaMemcpy(
@@ -471,7 +491,11 @@ extern "C" CustomCtx *initLib(CustomInitParams initparams)
     if (num_person < 1) {
         num_person = kDefaultNumPerson;
     }
-    CustomCtx *ctx = new CustomCtx(clip_len, num_joints, num_person);
+    int patience = parse_int(initparams.user_configs, "patience", kDefaultPatience);
+    if (patience < 0) {
+        patience = kDefaultPatience;
+    }
+    CustomCtx *ctx = new CustomCtx(clip_len, num_joints, num_person, patience);
     return ctx;
 }
 

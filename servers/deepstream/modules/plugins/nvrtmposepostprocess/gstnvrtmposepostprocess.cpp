@@ -1,6 +1,7 @@
 #include "gstnvrtmposepostprocess.h"
 
 #include <string>
+#include <utility>
 
 #include <gst/video/video.h>
 
@@ -48,11 +49,27 @@ static NvDsRtmposeCropMeta *crop_from_object(NvDsObjectMeta *object_meta)
   return crop;
 }
 
-static const float *keypoints_from_tensor(
+static NvDsInferTensorMeta *tensor_from_roi(NvDsRoiMeta *roi)
+{
+  NvDsInferTensorMeta *tensor = nullptr;
+  if (roi != nullptr) {
+    for (NvDsMetaList *item = roi->roi_user_meta_list; item != nullptr; item = item->next) {
+      auto *user_meta = static_cast<NvDsUserMeta *>(item->data);
+      if (user_meta != nullptr &&
+          user_meta->base_meta.meta_type == NVDSINFER_TENSOR_OUTPUT_META) {
+        tensor = static_cast<NvDsInferTensorMeta *>(user_meta->user_meta_data);
+      }
+    }
+  }
+  return tensor;
+}
+
+static std::pair<const float *, int> keypoints_from_tensor(
     GstNvRtmposePostprocess *self,
     NvDsInferTensorMeta *tensor_meta)
 {
   const float *data = nullptr;
+  int joints = 0;
   if (tensor_meta != nullptr &&
       static_cast<int>(tensor_meta->unique_id) == self->sgie_unique_id) {
     for (guint i = 0; i < tensor_meta->num_output_layers; ++i) {
@@ -74,39 +91,10 @@ static const float *keypoints_from_tensor(
             cudaMemcpyDeviceToHost);
         data = self->host_scratch->data();
       }
+      joints = elements / 3;
     }
   }
-  return data;
-}
-
-static NvDsInferTensorMeta *tensor_from_roi(NvDsRoiMeta *roi)
-{
-  NvDsInferTensorMeta *tensor = nullptr;
-  if (roi != nullptr) {
-    for (NvDsMetaList *item = roi->roi_user_meta_list; item != nullptr; item = item->next) {
-      auto *user_meta = static_cast<NvDsUserMeta *>(item->data);
-      if (user_meta != nullptr &&
-          user_meta->base_meta.meta_type == NVDSINFER_TENSOR_OUTPUT_META) {
-        tensor = static_cast<NvDsInferTensorMeta *>(user_meta->user_meta_data);
-      }
-    }
-  }
-  return tensor;
-}
-
-static int tensor_num_joints(NvDsInferTensorMeta *tensor_meta, int sgie_unique_id)
-{
-  int joints = 0;
-  if (tensor_meta != nullptr &&
-      static_cast<int>(tensor_meta->unique_id) == sgie_unique_id) {
-    for (guint i = 0; i < tensor_meta->num_output_layers; ++i) {
-      const NvDsInferLayerInfo &layer = tensor_meta->output_layers_info[i];
-      if (layer.layerName != nullptr && std::string(layer.layerName) == kKeypointsLayer) {
-        joints = static_cast<int>(layer.inferDims.numElements) / 3;
-      }
-    }
-  }
-  return joints;
+  return {data, joints};
 }
 
 static void write_mask_params(
@@ -146,36 +134,23 @@ static void write_mask_params(
 static void process_roi(GstNvRtmposePostprocess *self, NvDsRoiMeta *roi)
 {
   NvDsObjectMeta *object_meta = roi != nullptr ? roi->object_meta : nullptr;
-  NvDsInferTensorMeta *tensor = tensor_from_roi(roi);
-  NvDsRtmposeCropMeta *crop = nullptr;
-  const float *crop_xy_score = keypoints_from_tensor(self, tensor);
-  int num_joints = tensor_num_joints(tensor, self->sgie_unique_id);
-  if (object_meta != nullptr) {
-    crop = crop_from_object(object_meta);
-  }
-  if (object_meta != nullptr && crop != nullptr && crop_xy_score != nullptr && num_joints >= 1) {
-    write_mask_params(object_meta, crop, crop_xy_score, num_joints);
+  NvDsRtmposeCropMeta *crop = object_meta != nullptr ? crop_from_object(object_meta) : nullptr;
+  std::pair<const float *, int> keypoints = keypoints_from_tensor(self, tensor_from_roi(roi));
+  if (object_meta != nullptr && crop != nullptr && keypoints.first != nullptr &&
+      keypoints.second >= 1) {
+    write_mask_params(object_meta, crop, keypoints.first, keypoints.second);
   }
 }
 
-static void process_frame(GstNvRtmposePostprocess *self, NvDsFrameMeta *frame_meta)
+static bool batch_targets_sgie(const GstNvDsPreProcessBatchMeta *batch, int sgie_id)
 {
-  if (frame_meta != nullptr) {
-    for (NvDsMetaList *item = frame_meta->frame_user_meta_list; item != nullptr; item = item->next) {
-      auto *user_meta = static_cast<NvDsUserMeta *>(item->data);
-      if (user_meta == nullptr ||
-          user_meta->base_meta.meta_type != NVDS_PREPROCESS_BATCH_META) {
-        continue;
-      }
-      auto *batch = static_cast<GstNvDsPreProcessBatchMeta *>(user_meta->user_meta_data);
-      if (batch == nullptr) {
-        continue;
-      }
-      for (NvDsRoiMeta &roi : batch->roi_vector) {
-        process_roi(self, &roi);
-      }
+  bool hit = false;
+  if (batch != nullptr) {
+    for (guint64 id : batch->target_unique_ids) {
+      hit = hit || static_cast<int>(id) == sgie_id;
     }
   }
+  return hit;
 }
 
 static GstFlowReturn
@@ -184,9 +159,20 @@ gst_nvrtmposepostprocess_transform_ip(GstBaseTransform *btrans, GstBuffer *inbuf
   GstNvRtmposePostprocess *self = GST_NVRTMPOSEPOSTPROCESS(btrans);
   NvDsBatchMeta *batch_meta = gst_buffer_get_nvds_batch_meta(inbuf);
   if (batch_meta != nullptr) {
-    for (NvDsMetaList *frame_item = batch_meta->frame_meta_list; frame_item != nullptr;
-         frame_item = frame_item->next) {
-      process_frame(self, static_cast<NvDsFrameMeta *>(frame_item->data));
+    for (NvDsMetaList *item = batch_meta->batch_user_meta_list; item != nullptr;
+         item = item->next) {
+      auto *user_meta = static_cast<NvDsUserMeta *>(item->data);
+      if (user_meta == nullptr ||
+          user_meta->base_meta.meta_type != NVDS_PREPROCESS_BATCH_META) {
+        continue;
+      }
+      auto *batch = static_cast<GstNvDsPreProcessBatchMeta *>(user_meta->user_meta_data);
+      if (batch == nullptr || !batch_targets_sgie(batch, self->sgie_unique_id)) {
+        continue;
+      }
+      for (NvDsRoiMeta &roi : batch->roi_vector) {
+        process_roi(self, &roi);
+      }
     }
   }
   return GST_FLOW_OK;

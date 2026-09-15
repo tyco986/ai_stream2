@@ -32,4 +32,4 @@ sahi:
     overlap_width_ratio: 0.2
     overlap_height_ratio: 0.2
   nvsahipostprocess_pose:
-    oks_threshold: 0.5
+    oks_threshold: 0.2

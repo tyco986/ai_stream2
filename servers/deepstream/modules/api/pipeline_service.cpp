@@ -5,6 +5,7 @@
 #include <sys/wait.h>
 
 #include "api_error.hpp"
+#include "constants.hpp"
 
 ChildProcess::ChildProcess() : pid_(-1) {}
 
@@ -57,18 +58,16 @@ YAML::Node PipelineService::status() {
   return data;
 }
 
-YAML::Node PipelineService::start(const std::string& raw) {
-  const YAML::Node config = YAML::Load(raw);
-  if (!config || !config.IsMap()) {
-    throw ApiError("pipeline YAML must be a mapping", 400);
+YAML::Node PipelineService::start(const std::string& config_dir) {
+  if (!std::filesystem::is_directory(config_dir)) {
+    throw ApiError("config_dir is not a directory", 400);
   }
-  const std::string type = config["type"].as<std::string>();
-  const std::string config_dir = config["config_dir"].as<std::string>();
   if (child_.running()) {
     throw ApiError("pipeline is running", 400);
   }
-  const std::filesystem::path spec = std::filesystem::path(config_dir) / "pipeline.yml";
-  const std::filesystem::path params = std::filesystem::path(config_dir) / "params.yml";
+  const std::filesystem::path dir(config_dir);
+  const std::filesystem::path spec = dir / kPipelineFile;
+  const std::filesystem::path params = dir / kParamsFile;
   if (!std::filesystem::is_regular_file(spec)) {
     throw ApiError("missing pipeline.yml in config_dir", 400);
   }
@@ -79,7 +78,11 @@ YAML::Node PipelineService::start(const std::string& raw) {
   if (!params_node || !params_node["pipeline_name"]) {
     throw ApiError("params.yml missing pipeline_name", 400);
   }
+  if (!params_node["type"]) {
+    throw ApiError("params.yml missing type", 400);
+  }
   const std::string name = params_node["pipeline_name"].as<std::string>();
+  const std::string type = params_node["type"].as<std::string>();
   child_.spawn(runner_path_, config_dir);
   pipeline_name_ = name;
   pipeline_type_ = type;

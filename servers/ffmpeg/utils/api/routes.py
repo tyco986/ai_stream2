@@ -6,6 +6,7 @@ from utils.api.constants import PROJECT_NAME
 from utils.api.schemas import ApiEnvelope, RtspBatchBody, RtspBody
 from utils.api.services import (
     CaptureService,
+    ExtractService,
     NobService,
     RtspProbeService,
     Video2RtspService,
@@ -29,6 +30,10 @@ def get_capture(request: Request) -> CaptureService:
 
 def get_nob(request: Request) -> NobService:
     return request.app.state.nob
+
+
+def get_extract(request: Request) -> ExtractService:
+    return request.app.state.extract
 
 
 @router.get("/health", response_model=ApiEnvelope, summary="Health check")
@@ -98,6 +103,15 @@ def route_capture(
     svc: CaptureService = Depends(get_capture),
 ) -> ApiEnvelope:
     return svc.capture(input, timestamp)
+
+
+@router.post("/video/extract", response_model=ApiEnvelope, summary="Extract frames")
+def route_extract(
+    input: UploadFile = File(...),
+    interval: int = Form(1),
+    svc: ExtractService = Depends(get_extract),
+) -> ApiEnvelope:
+    return svc.extract(input, interval)
 
 
 @router.post("/video/nob", summary="Encode video without B-frames")

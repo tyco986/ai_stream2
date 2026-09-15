@@ -99,21 +99,7 @@ class StgcnppExporter:
             raise ValueError("folder must contain exactly one .onnx file")
         return onnx_paths[0]
 
-    def load_labels(self, labels_path: Path) -> list[str]:
-        if not labels_path.is_file():
-            raise ValueError(f"missing {LABELS_NAME}: {labels_path}")
-        labels = [
-            line.strip()
-            for line in labels_path.read_text(encoding="utf-8").splitlines()
-            if line.strip()
-        ]
-        if len(labels) != STGCNPP_NUM_CLASSES:
-            raise ValueError(
-                f"stgcnpp expected {STGCNPP_NUM_CLASSES} labels, got {len(labels)}"
-            )
-        return labels
-
-    def build_meta(self, inputs: list[dict], outputs: list[dict], classes: list[str]) -> dict:
+    def build_meta(self, inputs: list[dict], outputs: list[dict]) -> dict:
         input_t = inputs[0]
         is_dynamic = any(dim < 0 for dim in input_t["dims"]) or any(
             any(dim < 0 for dim in tensor["dims"]) for tensor in outputs
@@ -127,7 +113,6 @@ class StgcnppExporter:
             "input_tensor_name": input_t["name"],
             "output_tensor_name": output_t["name"],
             "output_tensor_names": [tensor["name"] for tensor in outputs],
-            "classes": classes,
             "input_tensor_shape": self.resolve_shape(input_t, batch_size),
             "output_tensor_shape": self.resolve_shape(output_t, batch_size),
             "output_tensor_shapes": [
@@ -205,11 +190,12 @@ class StgcnppExporter:
             raise ValueError(f"input not found or not a directory: {onnx_dir}")
         onnx_path = self.find_onnx(onnx_dir)
         labels_path = onnx_dir / LABELS_NAME
-        classes = self.load_labels(labels_path)
+        if not labels_path.is_file():
+            raise ValueError(f"missing {LABELS_NAME}: {labels_path}")
         model = onnx.load(str(onnx_path), load_external_data=False)
         inputs, outputs = self.parse_model(model)
         self.validate_graph(inputs, outputs)
-        meta = self.build_meta(inputs, outputs, classes)
+        meta = self.build_meta(inputs, outputs)
         resolved_batch = self.resolve_batch(meta, batch_size)
 
         engine_path = output_dir / f"{onnx_path.stem}.engine"

@@ -11,7 +11,7 @@ pgie:
       conf: 0.4
 sgie:
   interval: 50
-  model_dir: /root/models/trt/rtmpose-s-coco-pruned
+  model_dir: /root/models/trt/rtmpose-t-body8
 tracker: null
 analyzer: null
 logger:
@@ -21,7 +21,7 @@ drawer:
   fade_time: 1
   show_label: true
   show_pose: true
-  pose_threshold: 0.0
+  pose_threshold: 0.5
   mode: coco17
 streams:
   video1:

@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "api_error.hpp"
+#include "constants.hpp"
 #include "json.hpp"
 
 FileLogger::FileLogger(std::string path)
@@ -111,11 +112,15 @@ void ApiServer::handleStatus(const httplib::Request&, httplib::Response& res) {
 
 void ApiServer::handleStart(const httplib::Request& req, httplib::Response& res) {
   finish(res, [this, &req] {
-    if (!req.has_file("input")) {
-      throw ApiError("missing file field input", 400);
+    const YAML::Node body = YAML::Load(req.body);
+    const std::string config_dir =
+        (body && body.IsMap() && body[kConfigDirKey])
+            ? body[kConfigDirKey].as<std::string>()
+            : "";
+    if (config_dir.empty()) {
+      throw ApiError("missing config_dir", 400);
     }
-    const httplib::MultipartFormData file = req.get_file_value("input");
-    return YamlJson::dump(service_.start(file.content));
+    return YamlJson::dump(service_.start(config_dir));
   });
 }
 

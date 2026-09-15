@@ -1,4 +1,5 @@
 pipeline_name: topdown_pose_image
+type: TopdownPoseImagePipeline
 generator: TopdownPoseImageGenerator
 input: /root/attachments/images/video1.png
 output: /root/outputs/deepstream/topdown_pose_image.jpg
@@ -17,8 +18,8 @@ drawer:
   fade_time: 1
   show_label: true
   show_pose: true
-  pose_threshold: 0.0
+  pose_threshold: 0.5
   mode: coco17
 sgie:
-  model_dir: /root/models/trt/rtmpose-s-coco-pruned
+  model_dir: /root/models/trt/rtmpose-t-body8
   interval: 50

@@ -43,14 +43,14 @@ class DeepStreamClient:
         )
         self.prefix = f"/{settings.PROJECT_NAME}/deepstream"
 
-    def start_pipeline(self, yaml_bytes, filename="pipeline.yaml"):
+    def start_pipeline(self, config_dir):
         url = f"{self.base_url}{self.prefix}/start_pipeline"
         payload = {}
         try:
             with httpx.Client(timeout=self.timeout) as client:
                 response = client.post(
                     url,
-                    files={"input": (filename, yaml_bytes, "application/x-yaml")},
+                    json={"config_dir": str(config_dir)},
                 )
         except httpx.HTTPError as exc:
             raise AppError(f"DeepStream unreachable: {exc}", status_code=502) from exc

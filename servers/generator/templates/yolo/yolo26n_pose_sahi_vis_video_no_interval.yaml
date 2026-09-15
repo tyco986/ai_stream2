@@ -21,7 +21,7 @@ drawer:
   fade_time: 1
   show_label: true
   show_pose: true
-  pose_threshold: 0.0
+  pose_threshold: 0.5
   mode: coco17
 input: /root/attachments/videos/video1.mp4
 output: /root/outputs/deepstream/yolo26n_pose_sahi_vis_video_no_interval.mp4
@@ -32,4 +32,4 @@ sahi:
     overlap_width_ratio: 0.2
     overlap_height_ratio: 0.2
   nvsahipostprocess_pose:
-    oks_threshold: 0.5
+    oks_threshold: 0.2

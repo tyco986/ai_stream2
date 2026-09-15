@@ -52,7 +52,11 @@ Swagger：`http://127.0.0.1:8092/docs`
 
 ### start_pipeline
 
-上传 YAML：必填 `type`、`config_dir`（目录内须有 generator 产出的 `pipeline.yml` 与 `params.yml`）。
+JSON body：必填 `config_dir`（容器内路径）。目录须含 generator 产出的 `pipeline.yml` 与 `params.yml`；`type` 从 `params.yml` 读取。
+
+```json
+{"config_dir": "/root/configs/generator/yolo26n_det_sahi_vis_video"}
+```
 
 ### 响应
 
@@ -65,7 +69,7 @@ Swagger：`http://127.0.0.1:8092/docs`
 ## 典型流程
 
 ```bash
-./servers/deepstream/scripts/3_start_pipeline.sh --config path/to/start.yml
+./servers/deepstream/scripts/3_start_pipeline.sh --config configs/generator/yolo26n_det_sahi_vis_video
 docker stop ai_stream2_deepstream
 ```
 

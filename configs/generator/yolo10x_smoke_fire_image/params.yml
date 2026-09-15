@@ -1,4 +1,5 @@
 pipeline_name: yolo10x_smoke_fire_image
+type: PresenceImagePipeline
 generator: DetImagePresenceGenerator
 input: /root/attachments/images/video1.png
 output: /root/outputs/deepstream/yolo10x_smoke_fire_image.jpg

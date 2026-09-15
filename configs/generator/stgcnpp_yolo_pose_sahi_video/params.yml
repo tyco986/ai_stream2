@@ -1,4 +1,5 @@
 pipeline_name: stgcnpp_yolo_pose_sahi_video
+type: StgcnppYoloPoseSahiVideoPipeline
 generator: StgcnppYoloPoseSahiVideoGenerator
 input: /root/attachments/videos/video1.mp4
 pgie:
@@ -23,5 +24,5 @@ sahi:
   nvsahipostprocess_pose:
     oks_threshold: 0.5
 stgcnpp:
-  model_dir: /root/models/trt/stgcnpp-ntu60
+  model_dir: /root/models/trt/stgcnpp-ntu60-j
   interval: 1

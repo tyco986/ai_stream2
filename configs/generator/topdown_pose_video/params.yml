@@ -1,4 +1,5 @@
 pipeline_name: topdown_pose_video
+type: TopdownPoseVideoPipeline
 generator: TopdownPoseVideoGenerator
 input: /root/attachments/videos/video1.mp4
 pgie:
@@ -14,5 +15,5 @@ logger:
   root: /root/logs/deepstream/topdown_pose_video
 drawer: null
 sgie:
-  model_dir: /root/models/trt/rtmpose-s-coco-pruned
+  model_dir: /root/models/trt/rtmpose-t-body8
   interval: 50

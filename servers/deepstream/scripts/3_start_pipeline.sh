@@ -8,15 +8,18 @@ source "${ROOT}/scripts/load_project_env.sh"
 API_URL="http://127.0.0.1:8092"
 ENDPOINT="${API_URL}/${PROJECT_NAME}/deepstream/start_pipeline"
 HEALTH_ENDPOINT="${API_URL}/${PROJECT_NAME}/deepstream/health"
+HOST_CONFIGS="${ROOT}/configs"
+CONTAINER_CONFIGS="/root/configs"
 
 usage() {
   cat <<EOF
-usage: $0 --config PATH
+usage: $0 --config DIR
 
-Build and start a DeepStream pipeline via API from a YAML with type and config_dir.
+Start a DeepStream pipeline via API. DIR is a generator config directory
+(host path under configs/ or container path /root/configs/...).
 
 Options:
-  --config PATH   Start YAML (must exist; API reads type and config_dir)
+  --config DIR   Config directory (must exist; API reads params.yml type)
 
 Prerequisites: 1_build_dev_image.sh or 1_build_prod_image.sh, 2_run_dev_container.sh or 2_run_prod_container.sh
   (container runs deepstream_api from modules/api)
@@ -45,8 +48,12 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ -n "$CONFIG" ]] || { echo "--config is required" >&2; usage; exit 1; }
-[[ -f "$CONFIG" ]] || { echo "config not found: $CONFIG" >&2; exit 1; }
+[[ -d "$CONFIG" ]] || { echo "config dir not found: $CONFIG" >&2; exit 1; }
 CONFIG_PATH="$(realpath "$CONFIG")"
+CONTAINER_DIR="$CONFIG_PATH"
+if [[ "$CONFIG_PATH" == "${HOST_CONFIGS}/"* ]]; then
+  CONTAINER_DIR="${CONTAINER_CONFIGS}/${CONFIG_PATH#"${HOST_CONFIGS}/"}"
+fi
 
 curl -sS --connect-timeout 2 "${HEALTH_ENDPOINT}" >/dev/null \
   || { echo "deepstream_api not ready: ${HEALTH_ENDPOINT}" >&2; exit 1; }
@@ -56,7 +63,8 @@ trap 'rm -f "${RESPONSE_BODY}"' EXIT
 
 HTTP_CODE="$(curl -sS -w "%{http_code}" -o "${RESPONSE_BODY}" \
   -X POST "${ENDPOINT}" \
-  -F "input=@${CONFIG_PATH}")"
+  -H "Content-Type: application/json" \
+  -d "{\"config_dir\":\"${CONTAINER_DIR}\"}")"
 
 cat "${RESPONSE_BODY}"
 echo

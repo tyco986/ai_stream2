@@ -22,11 +22,6 @@ void SegFadeEngine::clear_mask(NvDsObjectMeta *obj) const
   obj->mask_params.threshold = 0.0f;
 }
 
-void SegFadeEngine::hide_tracker_mask(NvDsObjectMeta *obj) const
-{
-  clear_mask(obj);
-}
-
 void SegFadeEngine::decorate_object(
     NvDsBatchMeta *batch_meta,
     NvDsFrameMeta *frame_meta,
@@ -39,11 +34,6 @@ void SegFadeEngine::decorate_object(
   if (!show_mask_) {
     clear_mask(obj);
   }
-}
-
-void SegFadeEngineWithTracker::process_frame(NvDsBatchMeta *batch_meta, NvDsFrameMeta *frame_meta)
-{
-  process_tracker_frame(batch_meta, frame_meta);
 }
 
 }  // namespace nvfadedrawer

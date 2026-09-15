@@ -59,14 +59,6 @@ wait_until_idle() {
   return 1
 }
 
-pipeline_type_from_params() {
-  local params_path="$1"
-  local generator
-  generator="$(sed -n 's/^generator:[[:space:]]*//p' "${params_path}" | head -n 1 | tr -d '\r')"
-  [[ -n "${generator}" ]] || return 1
-  printf '%s\n' "${generator%Generator}Pipeline"
-}
-
 curl -sS --connect-timeout 2 "${HEALTH_ENDPOINT}" >/dev/null \
   || { echo "deepstream_api not ready: ${HEALTH_ENDPOINT}" >&2; exit 1; }
 
@@ -88,24 +80,20 @@ for config_path in "${CONFIGS[@]}"; do
     skipped=$((skipped + 1))
     continue
   fi
-  pipeline_type="$(pipeline_type_from_params "${params_path}")" \
-    || { echo "SKIP params.yml missing generator: ${name}" >&2; skipped=$((skipped + 1)); continue; }
   echo "==> ${name}"
   if ! wait_until_idle; then
     echo "FAILED idle before start: ${name}" >&2
     failed=$((failed + 1))
     continue
   fi
-  start_yaml="$(mktemp)"
   response_body="$(mktemp)"
-  printf 'type: %s\nconfig_dir: %s/%s\n' \
-    "${pipeline_type}" "${CONTAINER_CONFIGS_DIR}" "${name}" > "${start_yaml}"
   http_code="$(curl -sS -w "%{http_code}" -o "${response_body}" \
     -X POST "${START_ENDPOINT}" \
-    -F "input=@${start_yaml}")"
+    -H "Content-Type: application/json" \
+    -d "{\"config_dir\":\"${CONTAINER_CONFIGS_DIR}/${name}\"}")"
   cat "${response_body}"
   echo
-  rm -f "${start_yaml}" "${response_body}"
+  rm -f "${response_body}"
   if [[ "${http_code}" != "200" ]]; then
     echo "FAILED start: ${name} (http ${http_code})" >&2
     failed=$((failed + 1))

@@ -6,6 +6,7 @@ import yaml
 from ..subelement_generator.stgcnpp import StgcnppGenerator
 from ..subelement_generator.stgcnpp_preprocess import StgcnppPreprocessGenerator
 from ..subelement_generator.utils.default_gie.manager import StgcnppManager
+from ..subelement_generator.utils.nvtracker_parser import NvtrackerParser
 from ..subelement_generator.utils.stgcnpp_parser import StgcnppParser
 
 
@@ -37,6 +38,7 @@ class StgcnppCoreMixin:
         parsed = self.stgcnpp_config_parser.build()
         self.stgcnpp_generator = StgcnppGenerator(**parsed)
         self.apply_stgcnpp_config()
+        patience = NvtrackerParser(int(self.pgie["interval"])).maxShadowTrackingAge
         self.stgcnpp_preprocess_generator = StgcnppPreprocessGenerator(
             batch_size=self.stgcnpp_generator.batch_size,
             clip_len=self.stgcnpp_generator.clip_len,
@@ -44,6 +46,7 @@ class StgcnppCoreMixin:
             num_person=self.stgcnpp_generator.num_person,
             tensor_name=self.stgcnpp_generator.tensor_name,
             stream_count=self.stream_count(),
+            patience=patience,
         )
         self.stgcnpp_preprocess_ini = self.stgcnpp_preprocess_generator.render()
         self.params_yml["stgcnpp"] = self.stgcnpp

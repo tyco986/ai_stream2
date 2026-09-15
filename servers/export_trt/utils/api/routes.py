@@ -4,6 +4,7 @@ from utils.api.constants import PROJECT_NAME
 from utils.api.schemas import ApiEnvelope
 from utils.api.services import ExportTrtService
 from utils.manager.trt_exporter_manager import TrtExporterManager
+from utils.tester.manager.tester_manager import TrtTesterManager
 
 router = APIRouter(prefix=f"/{PROJECT_NAME}/export_trt", tags=["export_trt"])
 
@@ -44,4 +45,15 @@ def export(
     config: UploadFile = File(...),
 ) -> ApiEnvelope:
     payload = ExportTrtService().export(input, config)
+    return payload
+
+
+@router.post(
+    "/test",
+    response_model=ApiEnvelope,
+    summary="Run a TensorRT tester",
+    responses=EXPORT_RESPONSES,
+)
+def test(config: UploadFile = File(...)) -> ApiEnvelope:
+    payload = TrtTesterManager().test(config)
     return payload

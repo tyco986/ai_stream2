@@ -1,6 +1,8 @@
 type: DetSahiVisVideoPresenceGenerator
 entry: utils/event_generator/det_sahi_vis_video_presence.py
 files:
+- utils/base_generator/utils/__init__.py
+- utils/base_generator/utils/generator_pipeline_map.py
 - utils/base_generator/base_event_sahi_vis_video.py
 - utils/base_generator/base_sahi_video.py
 - utils/base_generator/base_sahi_vis_video.py

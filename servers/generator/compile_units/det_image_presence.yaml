@@ -1,6 +1,8 @@
 type: DetImagePresenceGenerator
 entry: utils/event_generator/det_image_presence.py
 files:
+- utils/base_generator/utils/__init__.py
+- utils/base_generator/utils/generator_pipeline_map.py
 - utils/base_generator/base_event_image.py
 - utils/base_generator/base_image.py
 - utils/event_generator/det_image_presence.py

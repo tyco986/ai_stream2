@@ -12,9 +12,9 @@ enum {
 G_DEFINE_TYPE(GstNvSegFadeDrawerWithTracker, gst_nvsegfadedrawerwithtracker,
               GST_TYPE_NVSEGFADEDRAWER);
 
-static nvfadedrawer::SegFadeEngine *engine_of(GstNvSegFadeDrawerWithTracker *self)
+static nvfadedrawer::SegFadeEngineWithTracker *engine_of(GstNvSegFadeDrawerWithTracker *self)
 {
-  return static_cast<nvfadedrawer::SegFadeEngine *>(GST_NVSEGFADEDRAWER(self)->engine);
+  return static_cast<nvfadedrawer::SegFadeEngineWithTracker *>(GST_NVSEGFADEDRAWER(self)->engine);
 }
 
 static void gst_nvsegfadedrawerwithtracker_set_property(

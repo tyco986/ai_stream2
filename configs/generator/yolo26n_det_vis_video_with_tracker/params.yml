@@ -1,4 +1,5 @@
 pipeline_name: yolo26n_det_vis_video_with_tracker
+type: DetVisVideoPipeline
 generator: DetVisVideoGenerator
 input: /root/attachments/videos/video1.mp4
 pgie:
