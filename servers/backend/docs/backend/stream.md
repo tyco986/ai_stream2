@@ -1,22 +1,14 @@
 # Streams（后端）
 
-对应前端契约：[stream_api.md](../frontend/stream_api.md)。  
-实现包：`servers/django/pages/streams/`。前缀：`/ai_stream2/backend/streams`。
+## 代理
 
----
+| 本页触发 | 上游 | 上游路径 | 用途 |
+|----------|------|----------|------|
+| `POST /{stream_id}/probe`、`POST /batch/probe` | ffmpeg `http://puskas_ffmpeg:8080` | `POST /puskas/ffmpeg/rtsp/probe` | 用库内 `url` 探测，得到 width / height / fps / status |
+| `enabled=true` 的 `POST /`、`PATCH`、`batch/enable`；已启用时改 `url` / `name` / `recording`；`batch/record`、`batch/unrecord` | mediamtx `http://puskas_mediamtx:9997` | `POST /v3/config/paths/replace/{name}` | 挂载。`source` 为库内 `url`，`record` 为 `recording` |
+| `enabled=false` 的 `PATCH`、`batch/disable`；`DELETE`、`batch/remove` | mediamtx | `DELETE /v3/config/paths/delete/{name}` | 卸除。删流时仅已启用的流卸 path |
 
-## 代理的 API
-
-| 本页触发 | 上游 server | 上游路径 | 用途 |
-|----------|-------------|----------|------|
-| `POST /{stream_id}/probe`、`POST /batch/probe`、`POST /probe` | **ffmpeg**（容器 `${PROJECT_NAME}_ffmpeg`） | `POST /{PROJECT_NAME}/ffmpeg/rtsp/probe`（批量可用 `.../rtsp/batch/probe`） | 探测 RTSP → width / height / fps / online\|offline |
-| `POST /publishers` | **ffmpeg** | `POST /{PROJECT_NAME}/ffmpeg/rtsp/publishers`（multipart，`loop` 固定 true） | 上传视频并推 RTSP；返回 `{name,url}` |
-| `enabled=true`：`POST /`、`PATCH`、`batch/enable`；以及已启用时改 `url`/`name`/`recording` | **mediamtx**（容器 `${PROJECT_NAME}_mediamtx`） | `POST /v3/config/paths/replace/{path}` | **挂载**代理：`source`=库内 `url`；`record`=`recording` |
-| `enabled=false`：`PATCH`、`batch/disable`；以及 `DELETE` / `batch/remove` | **mediamtx** | path delete（或等价卸除） | **取消挂载**；删流时若仍挂着也卸 path |
-
-其余端点不代理。MediaMTX **不**透传给前端；仅本页 Service 副作用调用。
-
-**挂载规则（唯一真相）**：`enabled=true` ↔ MediaMTX 上存在该流 path；`enabled=false` ↔ 无 path。`recording` 只在已挂载时写入 `record`；Disable 卸 path 即停拉流并停录（库内 `recording` 可仍为 true，下次 Enable 再按该值开录）。
+其余接口不访问这两个上游。`enabled=true` 表示 MediaMTX 上有该 path；`enabled=false` 表示没有。停用会卸 path，库内 `recording` 可以仍为 true。
 
 ---
 
@@ -35,7 +27,6 @@
 | `GET` | `/map` | 流 name → id |
 | `GET` | `/` | 分页列表（按 group/stream/search 筛） |
 | `POST` | `/` | 新建流（仅 `enabled=true` 时挂 MediaMTX） |
-| `POST` | `/publishers` | 上传视频推 RTSP（`add_stream`；loop 固定 true） |
 | `GET` | `/{stream_id}` | 流详情 |
 | `PATCH` | `/{stream_id}` | 更新流（`enabled` 控制挂/卸；已启用时改 `url`/`recording`/`name` 同步 path） |
 | `DELETE` | `/{stream_id}` | 删除流（卸 path） |
@@ -233,29 +224,6 @@
 ```
 
 `data` 为新建的流，字段与列表中的单条相同。
-
-### `POST /publishers`
-
-上传视频并推 RTSP。`name` 可省略，缺省用文件名。`loop` 未传也按 `true` 转给 ffmpeg。不写流表，不挂 MediaMTX。
-
-请求体：
-
-```json
-{
-  "input": "<video file>",
-  "name": "clip",
-  "loop": true
-}
-```
-
-`data`：
-
-```json
-{
-  "name": "clip",
-  "url": "rtsp://mediamtx/clip"
-}
-```
 
 ### `GET /{stream_id}`
 
@@ -529,61 +497,3 @@ null
 | `enabled` | bool | 非空 | `true` | **true=挂载代理 / false=卸除**；不改 `status` |
 | `recording` | bool | 非空 | `false` | 意图开录；仅 `enabled=true` 时写入 MediaMTX `record` |
 | `probed_at` | timestamptz | 可空 | `NULL` | 最近一次 Test **成功**时间 |
-
----
-
-## 调用顺序
-
-### 组树 / CRUD
-
-```
-GET tree:     StreamGroupService.tree → All 节点
-POST group:   校验 parent → 唯一 name → create
-DELETE group: 禁删 All → 收集子树 id → 流改 ALL_GROUP_ID → 删组
-PUT members:  校验组 → 将 stream_ids 设为该 group_id（其余规则见契约）
-```
-
-### 流列表 / CRUD（enabled ↔ MediaMTX 挂载）
-
-```
-GET /:   解析 group_id|stream_id|search|page → StreamService.list → 分页外壳
-POST /:  默认 group=All → 唯一 name → create
-         → 若 enabled: MediaMTXClient.upsert_path(name, url, record=recording)
-PATCH/:  部分更新；enabled/recording 不改 status
-         → enabled↑: upsert_path；enabled↓: delete_path
-         → 已启用且 url/name/recording 变: upsert_path
-batch/enable:  写 enabled=true → upsert_path
-batch/disable: 写 enabled=false → delete_path
-DELETE/: / batch/remove: delete_path（若有）→ 删库
-```
-
-Preview / Recordings **只消费**已挂载 path（WebRTC / 录像文件），**不**配置 MediaMTX。未 Enable 的流无代理可读。
-
-### Test（含批量）
-
-```
-View → require change 权
-    → StreamTestService.test(ids)
-         → 对每条: FFmpegClient.probe(库内 url) → data.width/height/fps
-         → 包装 id/status/probed_at（或 error）写入库
-         → TestResult | {results}
-```
-
-### Logs
-
-```
-View → POST /ai_stream2/backend/logs/enable → 打开 debug
-View → GET /ai_stream2/backend/logs?date=&page= → {content}
-```
-
----
-
-## 依赖边界
-
-| 依赖 | 说明 |
-|------|------|
-| ffmpeg 容器 | Test 必需；不可达 → 该条 Test 失败（offline + error） |
-| mediamtx 容器 | Enable / Disable / 已启用时改 url·recording·name / 删流 必需；不可达 → 该写操作失败（库与挂载一致，失败不半写） |
-| shell / login | 仅会话与权限；不 import |
-| Site Config | 本页注册切片；编排在 shell；导入后仅对 `enabled=true` upsert，并对 false 卸残留 |
-| Preview / Recordings | 只读消费已 Enable 的 MediaMTX path / 录像；**不**由本页之外配置 path |
