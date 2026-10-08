@@ -11,13 +11,7 @@
   >
     <template v-if="stream">
       <div class="slot-cell__body">
-        <video
-          ref="videoRef"
-          class="slot-cell__video"
-          autoplay
-          muted
-          playsinline
-        />
+        <div ref="videoHost" class="slot-cell__video-host" />
         <div v-if="playState === 'loading'" class="slot-cell__mask">
           {{ t('preview.loading') }}
         </div>
@@ -69,19 +63,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { Stream } from '@/api/streams'
-import type { TreeStreamNode } from '@/api/streams'
+import type { Stream, TreeStreamNode } from '@/api/streams'
 import UiIcon from '@/shared/ui/Icon.vue'
 import {
   type WhepPlayState,
 } from '../utils/mediamtxWhep'
 import {
-  bindSlotMedia,
-  peekSlotMedia,
-  slotMediaMap,
+  ensureSlotMedia,
+  mountSlotVideo,
+  setSlotPaused,
+  slotMediaStatus,
   unbindSlotMedia,
+  unmountSlotVideo,
 } from '../utils/slotMediaHub'
 
 const props = withDefaults(
@@ -91,18 +86,15 @@ const props = withDefaults(
     detail?: Stream | null
     selected: boolean
     compact?: boolean
-    /** null = uncontrolled local pause; boolean = synced from parent */
-    paused?: boolean | null
-    /** Reuse an existing MediaStream (focus main mirrors list thumb). */
-    mirrorSrcObject?: MediaStream | null
+    paused?: boolean
+    /** Focus main shows the hub mirror element; the list keeps the primary. */
     useMirror?: boolean
     fit?: 'cover' | 'contain'
   }>(),
   {
     detail: null,
     compact: false,
-    paused: null,
-    mirrorSrcObject: null,
+    paused: false,
     useMirror: false,
     fit: 'cover',
   },
@@ -115,13 +107,11 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const videoRef = ref<HTMLVideoElement | null>(null)
+const videoHost = ref<HTMLElement | null>(null)
 const playState = ref<WhepPlayState>('idle')
-const localPaused = ref(false)
+let syncToken = 0
 
-const effectivePaused = computed(() =>
-  props.paused === null ? localPaused.value : props.paused,
-)
+const effectivePaused = computed(() => props.paused)
 
 const metaText = computed(() => {
   const resolution = props.detail?.resolution || '—'
@@ -129,150 +119,101 @@ const metaText = computed(() => {
   return `${resolution} · ${fps} FPS`
 })
 
-async function applyPaused(next: boolean) {
-  const videoEl = videoRef.value
-  if (!videoEl || playState.value === 'failed' || playState.value === 'loading') {
-    return
-  }
-  if (next) {
-    videoEl.pause()
-  } else if (videoEl.paused) {
-    await videoEl.play()
-    playState.value = 'playing'
+function parkHost() {
+  const host = videoHost.value
+  if (host) {
+    unmountSlotVideo(host)
   }
 }
 
-function detachVideo() {
-  if (videoRef.value) {
-    videoRef.value.srcObject = null
+function mountHost(token: number, mirror: boolean) {
+  const host = videoHost.value
+  if (host && token === syncToken) {
+    mountSlotVideo(props.index, host, mirror)
   }
-  localPaused.value = false
 }
 
-async function startPlay() {
+async function syncMirror(token: number) {
+  const host = videoHost.value
   const stream = props.stream
-  const videoEl = videoRef.value
-  if (!stream || !videoEl) {
-    return
+  let state: WhepPlayState = 'idle'
+  if (host && stream && stream.status !== 'offline' && stream.enabled) {
+    mountHost(token, true)
+    state = slotMediaStatus.value[props.index] ?? 'loading'
+    await setSlotPaused(props.index, props.paused)
   }
-  if (stream.status === 'offline' || !stream.enabled) {
-    playState.value = 'idle'
-    detachVideo()
-    return
+  if (token === syncToken) {
+    playState.value = state
   }
-  const pathName = props.detail?.name || stream.name
-  const existing = peekSlotMedia(props.index, stream.id)
-  if (existing) {
-    videoEl.srcObject = existing
-    localPaused.value = false
-    if (effectivePaused.value) {
-      videoEl.pause()
-    } else {
-      await videoEl.play()
-    }
-    playState.value = 'playing'
-    return
-  }
-  playState.value = 'loading'
-  localPaused.value = false
-  const state = await bindSlotMedia({
-    slotIndex: props.index,
-    streamId: stream.id,
-    pathName,
-    videoEl,
-  })
-  if (state === 'playing') {
-    if (effectivePaused.value) {
-      videoEl.pause()
-    } else {
-      await videoEl.play()
+}
+
+async function syncOwner(token: number) {
+  const host = videoHost.value
+  const stream = props.stream
+  let state: WhepPlayState = 'idle'
+  if (!stream) {
+    unbindSlotMedia(props.index)
+  } else if (host && stream.status !== 'offline' && stream.enabled) {
+    const pathName = props.detail?.name || stream.name
+    const pending = ensureSlotMedia({
+      slotIndex: props.index,
+      streamId: stream.id,
+      pathName,
+    })
+    mountHost(token, false)
+    await setSlotPaused(props.index, props.paused)
+    state = await pending
+    if (token === syncToken) {
+      mountHost(token, false)
+      await setSlotPaused(props.index, props.paused)
     }
   }
-  playState.value = state
+  if (token === syncToken) {
+    playState.value = state
+  }
 }
 
-async function applyMirror() {
-  localPaused.value = false
-  const stream = props.stream
-  const videoEl = videoRef.value
-  if (!stream || !videoEl) {
-    detachVideo()
-    playState.value = 'idle'
-    return
-  }
-  if (stream.status === 'offline' || !stream.enabled) {
-    detachVideo()
-    playState.value = 'idle'
-    return
-  }
-  const media = props.mirrorSrcObject
-  if (!media) {
-    videoEl.srcObject = null
-    playState.value = 'loading'
-    return
-  }
-  if (videoEl.srcObject !== media) {
-    videoEl.srcObject = media
-  }
-  if (effectivePaused.value) {
-    videoEl.pause()
+async function syncPlayback() {
+  syncToken += 1
+  const token = syncToken
+  if (props.useMirror) {
+    await syncMirror(token)
   } else {
-    await videoEl.play()
+    await syncOwner(token)
   }
-  playState.value = 'playing'
 }
 
-async function togglePlayback() {
-  const next = !effectivePaused.value
-  if (props.paused === null) {
-    await applyPaused(next)
-    localPaused.value = next
-  }
-  emit('playback-change', next)
+function togglePlayback() {
+  emit('playback-change', !props.paused)
 }
 
 watch(
   () => props.paused,
-  async (value) => {
-    if (value === null) {
-      return
-    }
-    await applyPaused(value)
+  (paused) => {
+    void setSlotPaused(props.index, paused)
   },
 )
 
 watch(
-  () => [
-    props.useMirror,
-    props.mirrorSrcObject,
-    props.stream?.id,
-    props.stream?.status,
-    props.stream?.enabled,
-    props.detail?.name,
-    videoRef.value,
-    // Only mirrors react to hub updates; owners write the map and must not re-enter.
-    props.useMirror ? slotMediaMap.value[props.index] : null,
-  ],
-  async () => {
-    await nextTick()
-    if (props.useMirror) {
-      await applyMirror()
-      return
-    }
-    if (!props.stream) {
-      unbindSlotMedia(props.index)
-      detachVideo()
-      playState.value = 'idle'
-      return
-    }
-    await startPlay()
+  () => ({
+    mirror: props.useMirror,
+    index: props.index,
+    streamId: props.stream?.id ?? '',
+    status: props.stream?.status ?? '',
+    enabled: props.stream?.enabled ?? false,
+    pathName: props.detail?.name || props.stream?.name || '',
+    host: videoHost.value,
+    mediaStatus: props.useMirror ? (slotMediaStatus.value[props.index] ?? 'idle') : '',
+  }),
+  () => {
+    void syncPlayback()
   },
   { immediate: true },
 )
 
 onBeforeUnmount(() => {
-  // Keep WHEP alive across grid/focus remounts; only detach this video element.
-  detachVideo()
+  syncToken += 1
+  parkHost()
 })
 </script>
 
@@ -321,7 +262,12 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 
-.slot-cell__video {
+.slot-cell__video-host {
+  position: absolute;
+  inset: 0;
+}
+
+.slot-cell__video-host :deep(.slot-cell__video) {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -330,7 +276,7 @@ onBeforeUnmount(() => {
   background: #000;
 }
 
-.slot-cell--contain .slot-cell__video {
+.slot-cell--contain .slot-cell__video-host :deep(.slot-cell__video) {
   object-fit: contain;
 }
 

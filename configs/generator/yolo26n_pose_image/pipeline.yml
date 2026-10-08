@@ -76,6 +76,10 @@ deepstream:
     properties:
       root: /root/logs/deepstream/yolo26n_pose_image
       interval: 50
+  - type: capsfilter
+    name: capsfilter_jpeg
+    properties:
+      caps: video/x-raw(memory:NVMM), format=I420
   - type: nvjpegenc
     name: nvjpegenc
     properties:
@@ -98,6 +102,7 @@ deepstream:
     queue_msg: nvmsgconv
     nvmsgconv: nvmsgbroker
     nvosdbin: nvvideoconvert
-    nvvideoconvert: nvdetlogger
+    nvvideoconvert: capsfilter_jpeg
+    capsfilter_jpeg: nvdetlogger
     nvdetlogger: nvjpegenc
     nvjpegenc: filesink

@@ -1,0 +1,10 @@
+type: StgcnppYoloPoseRTSPPipeline
+modules:
+  - plugins/nvbboxsnapshot
+  - plugins/nvfadedrawer
+  - plugins/nvlogger
+  - plugins/nvstgcnppactionlabel
+  - gie_custom_lib/nvdsinfer_yolo_pose
+  - plugins/nvdspreprocess/stgcnpp_preprocess
+extras:
+  []

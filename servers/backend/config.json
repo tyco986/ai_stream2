@@ -1,0 +1,18 @@
+{
+  "plugins": [
+    {
+      "name": "drogon::plugin::AccessLogger",
+      "dependencies": [],
+      "config": {
+        "use_spdlog": false,
+        "log_path": "/root/logs/backend",
+        "log_file": "service.log",
+        "log_format": "$request_date $method $url [$body_bytes_received] ($remote_addr - $local_addr) $status $body_bytes_sent $processing_time",
+        "log_size_limit": 100000000,
+        "max_files": 1,
+        "use_local_time": true,
+        "show_microseconds": true
+      }
+    }
+  ]
+}

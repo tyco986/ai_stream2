@@ -29,6 +29,13 @@
         <div class="recordings-page__toolbar">
           <UiButton
             type="primary"
+            :disabled="filesLoading || !selectedDate"
+            @click="onRefreshFiles"
+          >
+            {{ t('recordings.refresh') }}
+          </UiButton>
+          <UiButton
+            type="primary"
             :disabled="!selectedIds.length || downloading"
             @click="onDownloadSelected"
           >
@@ -103,6 +110,7 @@ const {
   clearSelection,
   setCalendarMonth,
   selectDate,
+  refreshFiles,
   shiftMonth,
 } = session
 
@@ -139,6 +147,10 @@ function expandAll(node: { id: string; children?: unknown[]; streams?: unknown[]
   for (const child of children) {
     expandAll(child as { id: string; children?: unknown[] })
   }
+}
+
+async function onRefreshFiles() {
+  await refreshFiles()
 }
 
 async function onRefresh() {
@@ -361,4 +373,5 @@ onMounted(async () => {
   gap: 8px;
   border-bottom: 1px solid #ebeef5;
 }
+
 </style>

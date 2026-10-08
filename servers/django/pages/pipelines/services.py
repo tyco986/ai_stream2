@@ -10,7 +10,6 @@ from django.db import close_old_connections
 from django.db.models import Q
 from django.utils import timezone as django_timezone
 
-from pages.pipelines.clients import DeepStreamClient, GeneratorClient, SnapshotClient
 from pages.pipelines.container_service import DeepStreamContainerService
 from pages.pipelines.models import (
     PIPELINE_STATUS_ERROR,
@@ -31,6 +30,9 @@ from pages.pipelines.type_registry import (
     RTSP_PIPELINE_TYPES,
     TypeRegistry,
 )
+from shared.clients.deepstream import DeepStreamClient
+from shared.clients.ffmpeg import FFmpegClient
+from shared.clients.generator import GeneratorClient
 from shared.http.exceptions import AppError
 from shared.models_lookup import model_built_resolver
 from shared.pagination import PaginationService
@@ -507,7 +509,7 @@ class AnalyzerTemplateService:
     def __init__(self):
         self.pagination = PaginationService()
         self.media_dir = Path(settings.PIPELINES_MEDIA_DIR)
-        self.snapshots = SnapshotClient()
+        self.ffmpeg = FFmpegClient()
 
     def list_templates(self, search=None, page=1, page_size=20):
         queryset = AnalyzerTemplate.objects.all().order_by("name")
@@ -623,7 +625,7 @@ class AnalyzerTemplateService:
         row = self.resolve(analyzer_id)
         stream_name = stream_name_resolver.resolve(stream_id) or str(stream_id)
         try:
-            self.snapshots.capture(stream_id)
+            self.ffmpeg.capture(stream_name, "00:00:00")
         except AppError:
             raise AppError(f"Snapshot failed for {stream_name}", status_code=502)
         now = django_timezone.now()

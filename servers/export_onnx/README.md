@@ -1,6 +1,14 @@
-# ExportOnnx Export API
+# ExportOnnx API
 
-在 `ai_stream2_export_onnx` 镜像中运行的 FastAPI 服务，将 `.pt` 权重导出为 DeepStream 可用的 ONNX 产物。
+FastAPI：将 `.pt` / `.pth` 导出为 DeepStream 可用的 ONNX 目录。默认端口 `8090`。
+
+## 镜像
+
+| 镜像 | 构建 | 容器 | 说明 |
+|------|------|------|------|
+| `${PROJECT_NAME}_export_onnx` | `1_build_image.sh` | `${PROJECT_NAME}_export_onnx` | 代码打进镜像 |
+
+网络：`${PROJECT_NAME}_default`。
 
 ## 构建与运行
 
@@ -11,28 +19,33 @@
 ./servers/export_onnx/scripts/2_run_container.sh
 ```
 
-容器名 `{PROJECT_NAME}_export_onnx`（默认 `ai_stream2_export_onnx`），端口 `8090`。挂载 `models` → `/root/models`，`logs` → `/root/logs`。
-
-API：`http://127.0.0.1:8090/ai_stream2/export_onnx/health`  
+健康检查：`http://127.0.0.1:8090/ai_stream2/export_onnx/health`（前缀随 `${PROJECT_NAME}`）  
 Swagger：`http://127.0.0.1:8090/docs`
 
-## 导出流程
+## 目录挂载
 
-1. `input` 上传 `.pt`，`config` 上传 YAML（见 `templates/`）
-2. `.pt` 落盘到 `/root/models/pt/{name}.pt`，清空并创建 `/root/models/onnx/{name}/` 后导出
-3. 返回 JSON，`data` 为 ONNX 目录路径
+| 宿主机 | 容器路径 | 用途 |
+|--------|----------|------|
+| `models/` | `/root/models` | `pt/` 权重、`onnx/` 产物 |
+| `logs/` | `/root/logs` | `{LOG_ROOT}/app.log` |
 
 ## 接口
 
+前缀：`/{PROJECT_NAME}/export_onnx`。
+
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/ai_stream2/export_onnx/health` | 健康检查 |
-| GET | `/ai_stream2/export_onnx/types` | 可用导出类型 |
-| POST | `/ai_stream2/export_onnx/export` | 导出 ONNX |
+| GET | `/health` | 健康检查 |
+| GET | `/types` | 可用导出类型 |
+| POST | `/export` | 导出 ONNX |
 
-`POST` 为 `multipart/form-data`：`input` 为 `.pt`，`config` 为 YAML。
+## 约定
 
-YAML 字段：`type`（必填）、`size`、`opset`、`batch`、`dynamic`、`simplify`、`max_det`、`conf`、`iou`。`dynamic=true` 与 `batch>1` 不可同时使用。
+`POST /export` 为 `multipart/form-data`：`input`（`.pt` 或 `.pth`）、`config`（YAML，见 `templates/`）。
+
+`.pt` 落到 `/root/models/pt/{filename}`，清空并写入 `/root/models/onnx/{stem}/`。成功时 `data` 为该目录路径。
+
+YAML：`type` 必填；其余默认 `size=640`、`opset=18`、`batch=1`、`dynamic=false`、`simplify=false`、`max_det=30`、`conf`、`iou`。`dynamic=true` 时 meta 中 `batch_size` 为 null，`batch` 仍作导出 batch。`iou` 仅 YOLO11 DET/SEG 使用。类型以 `GET /types` 为准。
 
 ```bash
 curl -s -X POST http://127.0.0.1:8090/ai_stream2/export_onnx/export \
@@ -40,7 +53,7 @@ curl -s -X POST http://127.0.0.1:8090/ai_stream2/export_onnx/export \
   -F "config=@servers/export_onnx/templates/yolo26_det.yaml"
 ```
 
-## 命令行导出
+## 命令行
 
 ```bash
 ./servers/export_onnx/scripts/3_export.sh --input models/pt/yolo26n.pt --config servers/export_onnx/templates/yolo26_det.yaml
@@ -48,11 +61,10 @@ curl -s -X POST http://127.0.0.1:8090/ai_stream2/export_onnx/export \
 
 ## 服务参数
 
-| 变量 / 参数 | 默认值 |
-|-------------|--------|
+| 项 | 默认 |
+|----|------|
+| `PROJECT_NAME` | `ai_stream2`（环境） |
 | `HOST` / `--host` | `0.0.0.0` |
 | `PORT` / `--port` | `8090` |
-| `LOG_ROOT` / `--log-root` | `/root/logs/export_onnx` |
-| `--model-root` | `/root/models`（其下 `pt/`、`onnx/`） |
-
-日志：`{LOG_ROOT}/app.log`（滚动，10×1MB）。
+| 日志目录 | `/root/logs/export_onnx`（硬编码） |
+| 模型根 | `/root/models`（硬编码） |

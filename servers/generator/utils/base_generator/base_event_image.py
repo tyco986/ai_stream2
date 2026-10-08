@@ -15,8 +15,9 @@ from ..subelement_generator.pgie import PgieGenerator
 from ..subelement_generator.pipeline import PipelineGenerator
 from ..subelement_generator.utils.nvdsanalytics_parser import NvdsanalyticsParser
 from ..subelement_generator.utils.pgie_parser import PgieParser
-from .event_pipeline import EventPipelineMixin
+from .utils.event_pipeline import EventPipelineMixin
 from .utils.generator_pipeline_map import GENERATOR_PIPELINE_MAP
+from .utils.jpeg_filesink import JpegFilesinkMixin
 
 IMAGE_STREAM_NAME = "image"
 
@@ -28,7 +29,7 @@ IMAGE_EVENT_TOPOLOGY_DOC = """
               ─┬→ queue_raw → nvvideoconvert_raw → capsfilter_raw → nvrawcapturer0 → fakesink_raw0
               └→ queue_osd → nvvideoconvert_osd → capsfilter_osd(RGBA) → nvosdbin → tee_vis
                     ─┬→ queue_vis → nvvideoconvert_vis → capsfilter_vis → nvviscapturer0 → fakesink_vis0
-                    └→ queue_enc → nvpresencelogger → nvjpegenc → filesink
+                    └→ queue_enc → nvvideoconvert_enc → capsfilter_jpeg → nvpresencelogger → nvjpegenc → filesink
 
     Notes::
 
@@ -39,7 +40,7 @@ IMAGE_EVENT_TOPOLOGY_DOC = """
 """
 
 
-class BaseEventImageGenerator(EventPipelineMixin, PipelineGenerator):
+class BaseEventImageGenerator(EventPipelineMixin, JpegFilesinkMixin, PipelineGenerator):
     PIPELINE_CONFIG_NAME = "pipeline.yml"
     PGIE_CONFIG_NAME = "pgie.yml"
     ANALYTICS_CONFIG_NAME = "nvdsanalytics.yml"
@@ -414,12 +415,12 @@ class BaseEventImageGenerator(EventPipelineMixin, PipelineGenerator):
             "fakesink_vis0",
             self._add_fakesink(sync=False, async_=False),
         )
-        self._append_node("nvjpegenc", "nvjpegenc", self._add_nvjpegenc())
         self._append_node(
-            "filesink",
-            "filesink",
-            self._add_filesink(self.output, sync=False, async_=False),
+            "nvvideoconvert",
+            "nvvideoconvert_enc",
+            self._add_nvvideoconvert(gpu_id=gpu_id),
         )
+        self.append_jpeg_filesink()
 
     def link(self) -> None:
         edges = {
@@ -452,7 +453,6 @@ class BaseEventImageGenerator(EventPipelineMixin, PipelineGenerator):
         edges["nvvideoconvert_vis"] = "capsfilter_vis"
         edges["capsfilter_vis"] = "nvviscapturer0"
         edges["nvviscapturer0"] = "fakesink_vis0"
-        edges["queue_enc"] = "nvpresencelogger"
-        edges["nvpresencelogger"] = "nvjpegenc"
-        edges["nvjpegenc"] = "filesink"
+        edges["queue_enc"] = "nvvideoconvert_enc"
+        self.link_jpeg_from(edges, "nvvideoconvert_enc", "nvpresencelogger")
         self.pipeline["deepstream"]["edges"] = edges

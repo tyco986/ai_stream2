@@ -8,7 +8,6 @@
         :selected="selectedSlotIndex === focusIndex"
         :paused="pausedBySlot[focusIndex] ?? false"
         :use-mirror="showList"
-        :mirror-src-object="focusMirrorStream"
         fit="contain"
         @select="emit('select-slot', focusIndex)"
         @clear="emit('clear-slot', focusIndex)"
@@ -50,7 +49,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
 import type { Stream, TreeStreamNode } from '@/api/streams'
-import { slotMediaMap } from '../utils/slotMediaHub'
 import SlotCell from './SlotCell.vue'
 
 const SCROLLBAR_HIDE_MS = 800
@@ -104,10 +102,6 @@ const focusDetail = computed(() => {
   const id = props.slots[props.focusIndex]
   return id ? (props.streamDetailMap.get(id) ?? null) : null
 })
-
-const focusMirrorStream = computed(
-  () => slotMediaMap.value[props.focusIndex] ?? null,
-)
 
 function clearHideTimer() {
   if (hideTimer) {

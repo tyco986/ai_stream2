@@ -1,0 +1,7 @@
+type: SegImagePipeline
+modules:
+  - plugins/nvfadedrawer
+  - plugins/nvlogger
+extras:
+  - deepstream_sahi
+  - yolo_seg

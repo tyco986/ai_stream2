@@ -1,0 +1,11 @@
+type: StgcnppRtmposeRTSPPipeline
+modules:
+  - plugins/nvbboxsnapshot
+  - plugins/nvfadedrawer
+  - plugins/nvlogger
+  - plugins/nvstgcnppactionlabel
+  - plugins/nvdspreprocess/rtmpose_preprocess
+  - plugins/nvrtmposepostprocess
+  - plugins/nvdspreprocess/stgcnpp_preprocess
+extras:
+  - deepstream_sahi

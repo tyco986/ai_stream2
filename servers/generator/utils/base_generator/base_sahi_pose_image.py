@@ -126,12 +126,7 @@ class BaseSahiPoseImageGenerator(BaseSahiPose, BaseSahiImageGenerator):
                 interval=int(self.logger.get("interval", 0)),
             ),
         )
-        self._append_node("nvjpegenc", "nvjpegenc", self._add_nvjpegenc())
-        self._append_node(
-            "filesink",
-            "filesink",
-            self._add_filesink(self.output, sync=False, async_=False),
-        )
+        self.append_jpeg_filesink()
 
     def link(self) -> None:
         edges = {
@@ -152,7 +147,5 @@ class BaseSahiPoseImageGenerator(BaseSahiPose, BaseSahiImageGenerator):
         edges["queue_msg"] = "nvmsgconv"
         edges["nvmsgconv"] = "nvmsgbroker"
         edges["nvosdbin"] = "nvvideoconvert"
-        edges["nvvideoconvert"] = "nvdetlogger"
-        edges["nvdetlogger"] = "nvjpegenc"
-        edges["nvjpegenc"] = "filesink"
+        self.link_jpeg_from(edges, "nvvideoconvert", "nvdetlogger")
         self.pipeline["deepstream"]["edges"] = edges

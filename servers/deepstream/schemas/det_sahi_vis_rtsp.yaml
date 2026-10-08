@@ -1,0 +1,7 @@
+type: DetSahiVisRTSPPipeline
+modules:
+  - plugins/nvbboxsnapshot
+  - plugins/nvfadedrawer
+  - plugins/nvlogger
+extras:
+  - deepstream_sahi

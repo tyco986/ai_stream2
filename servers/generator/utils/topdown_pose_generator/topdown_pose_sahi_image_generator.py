@@ -8,7 +8,7 @@ TOPDOWN_POSE_SAHI_IMAGE_TOPOLOGY_DOC = """
 
         nvurisrcbin → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
             → nvdspreprocess_rtmpose → sgie0 → nvrtmposepostprocess → nvdsanalytics
-            → nvosdbin → nvvideoconvert → nvjpegenc → filesink
+            → nvosdbin → nvvideoconvert → capsfilter_jpeg → nvjpegenc → filesink
 
     Notes::
 
@@ -145,12 +145,7 @@ class TopdownPoseSahiImageGenerator(TopdownPoseMixin, BaseSahiImageGenerator):
                 interval=int(self.logger.get("interval", 0)),
             ),
         )
-        self._append_node("nvjpegenc", "nvjpegenc", self._add_nvjpegenc())
-        self._append_node(
-            "filesink",
-            "filesink",
-            self._add_filesink(self.output, sync=False, async_=False),
-        )
+        self.append_jpeg_filesink()
 
     def link(self) -> None:
         edges = {
@@ -168,8 +163,6 @@ class TopdownPoseSahiImageGenerator(TopdownPoseMixin, BaseSahiImageGenerator):
             "queue_msg": "nvmsgconv",
             "nvmsgconv": "nvmsgbroker",
             "nvosdbin": "nvvideoconvert",
-            "nvvideoconvert": "nvdetlogger",
-            "nvdetlogger": "nvjpegenc",
-            "nvjpegenc": "filesink",
         })
+        self.link_jpeg_from(edges, "nvvideoconvert", "nvdetlogger")
         self.pipeline["deepstream"]["edges"] = edges

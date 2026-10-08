@@ -150,6 +150,14 @@ deepstream:
     properties:
       sync: false
       async: false
+  - type: nvvideoconvert
+    name: nvvideoconvert_enc
+    properties:
+      gpu-id: 0
+  - type: capsfilter
+    name: capsfilter_jpeg
+    properties:
+      caps: video/x-raw(memory:NVMM), format=I420
   - type: nvjpegenc
     name: nvjpegenc
     properties:
@@ -191,6 +199,8 @@ deepstream:
     nvvideoconvert_vis: capsfilter_vis
     capsfilter_vis: nvviscapturer0
     nvviscapturer0: fakesink_vis0
-    queue_enc: nvpresencelogger
+    queue_enc: nvvideoconvert_enc
+    nvvideoconvert_enc: capsfilter_jpeg
+    capsfilter_jpeg: nvpresencelogger
     nvpresencelogger: nvjpegenc
     nvjpegenc: filesink

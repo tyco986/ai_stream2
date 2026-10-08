@@ -1,0 +1,8 @@
+type: SegSahiVideoPipeline
+modules:
+  - plugins/nvbboxsnapshot
+  - plugins/nvfadedrawer
+  - plugins/nvlogger
+extras:
+  - deepstream_sahi
+  - yolo_seg

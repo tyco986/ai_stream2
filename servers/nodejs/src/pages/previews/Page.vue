@@ -153,6 +153,8 @@ const {
   dirty,
   selectedSlotIndex,
   focusIndex,
+  pausedBySlot,
+  allPaused,
   tree,
   presets,
   loaded,
@@ -172,6 +174,8 @@ const {
   selectSlot,
   clearSlot,
   bindStream,
+  onPlaybackChange,
+  toggleAllPlayback,
   save,
   saveAs,
   renamePreset,
@@ -195,28 +199,8 @@ const stageSlotWidth = ref(0)
 const stageSlotHeight = ref(0)
 const layoutStageHeight = ref(0)
 const isFullscreen = ref(false)
-const pausedBySlot = ref<Record<number, boolean>>({})
 let shellObserver: ResizeObserver | null = null
 let stageSlotObserver: ResizeObserver | null = null
-
-const allPaused = computed(() => {
-  const boundIndexes = slots.value.flatMap((id, index) => (id ? [index] : []))
-  return (
-    boundIndexes.length > 0 &&
-    boundIndexes.every((index) => pausedBySlot.value[index] ?? false)
-  )
-})
-
-function onPlaybackChange(index: number, paused: boolean) {
-  pausedBySlot.value = { ...pausedBySlot.value, [index]: paused }
-}
-
-function toggleAllPlayback() {
-  const next = !allPaused.value
-  pausedBySlot.value = Object.fromEntries(
-    slots.value.map((_, index) => [index, next]),
-  )
-}
 
 const pageChrome = computed(() => {
   const cols = Number(layout.value.split('x')[0]) || 1

@@ -59,7 +59,7 @@ MEDIAMTX_RECORD_SEGMENT_DURATION = os.environ.get(
 )
 MEDIAMTX_RECORD_DELETE_AFTER = os.environ.get("MEDIAMTX_RECORD_DELETE_AFTER", "24h")
 RECORDINGS_PLAYBACK_WINDOW_SECONDS = float(
-    os.environ.get("RECORDINGS_PLAYBACK_WINDOW_SECONDS", "10")
+    os.environ.get("RECORDINGS_PLAYBACK_WINDOW_SECONDS", "120")
 )
 STREAM_LOG_DIR = Path(
     os.environ.get("STREAM_LOG_DIR", str(BASE_DIR / "logs" / "streams"))
@@ -105,7 +105,6 @@ EXPORT_TRT_BASE_URL = os.environ.get(
     "EXPORT_TRT_BASE_URL",
     f"http://{PROJECT_NAME}_export_trt:9000",
 )
-MODELS_EXPORT_ONNX_ROUTE = "export_yolo11"
 MODELS_BUILD_TIMEOUT = float(os.environ.get("MODELS_BUILD_TIMEOUT", "3600"))
 GENERATOR_BASE_URL = os.environ.get(
     "GENERATOR_BASE_URL",

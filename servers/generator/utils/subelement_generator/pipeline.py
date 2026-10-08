@@ -639,11 +639,14 @@ class PipelineGenerator:
         """
         return {"gpu-id": gpu_id}
 
-    def _add_capsfilter(self, caps: str) -> dict:
-        """Build properties for ``capsfilter`` (force negotiated caps, e.g. RGB for nvcapturer).
+    def _add_capsfilter(
+        self,
+        caps: str = "video/x-raw(memory:NVMM), format=I420",
+    ) -> dict:
+        """Build properties for ``capsfilter`` (force negotiated caps).
 
         Args:
-            caps: GStreamer caps string (e.g. ``video/x-raw(memory:NVMM), format=RGB``).
+            caps: GStreamer caps string. Default is NVMM I420 for ``nvjpegenc``.
         """
         return {"caps": caps}
 

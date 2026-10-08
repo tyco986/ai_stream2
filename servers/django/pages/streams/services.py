@@ -6,7 +6,6 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone as django_timezone
 
-from pages.streams.clients import FFmpegClient, MediaMTXClient
 from pages.streams.models import (
     ALL_GROUP_ID,
     STREAM_STATUS_OFFLINE,
@@ -14,6 +13,8 @@ from pages.streams.models import (
     Group,
     Stream,
 )
+from shared.clients.ffmpeg import FFmpegClient
+from shared.clients.mediamtx import MediaMTXClient
 from shared.http.exceptions import AppError
 from shared.pagination import PaginationService
 
@@ -478,7 +479,14 @@ class StreamProbeService:
         }
         if cleaned:
             try:
-                result = self.ffmpeg.probe(cleaned)
+                payload = self.ffmpeg.probe_rtsp(cleaned)
+                data = payload.get("data") or {}
+                result = {
+                    "success": True,
+                    "error": None,
+                    "resolution": data.get("resolution"),
+                    "fps": data.get("fps"),
+                }
             except AppError as exc:
                 result = {
                     "success": False,
@@ -613,4 +621,9 @@ class StreamPublisherService:
         cleaned_name = (name or "").strip() or None
         if upload is None:
             raise AppError("input is required", status_code=400)
-        return self.ffmpeg.publish(upload, cleaned_name)
+        payload = self.ffmpeg.create_publisher(upload, name=cleaned_name)
+        mapping = payload.get("data") or {}
+        if not isinstance(mapping, dict) or not mapping:
+            raise AppError("publish failed", status_code=502)
+        stream_name, rtsp_url = next(iter(mapping.items()))
+        return {"name": stream_name, "url": rtsp_url}

@@ -37,6 +37,7 @@ const presetName = ref('Default')
 const dirty = ref(false)
 const selectedSlotIndex = ref<number | null>(null)
 const focusIndex = ref(0)
+const pausedBySlot = ref<Record<number, boolean>>({})
 const tree = ref<GroupsTree | null>(null)
 const presets = ref<LayoutPresetSummary[]>([])
 const loaded = ref(false)
@@ -71,8 +72,27 @@ export function usePreviewSession() {
     () => new Set(slots.value.filter((id): id is string => id !== null)),
   )
 
+  const allPaused = computed(() => {
+    const boundIndexes = slots.value.flatMap((id, index) => (id ? [index] : []))
+    return (
+      boundIndexes.length > 0 &&
+      boundIndexes.every((index) => pausedBySlot.value[index] ?? false)
+    )
+  })
+
   function markDirty() {
     dirty.value = true
+  }
+
+  function onPlaybackChange(index: number, paused: boolean) {
+    pausedBySlot.value = { ...pausedBySlot.value, [index]: paused }
+  }
+
+  function toggleAllPlayback() {
+    const next = !allPaused.value
+    pausedBySlot.value = Object.fromEntries(
+      slots.value.map((_, index) => [index, next]),
+    )
   }
 
   function applyPreset(preset: LayoutPreset) {
@@ -337,6 +357,10 @@ export function usePreviewSession() {
     dirty,
     selectedSlotIndex,
     focusIndex,
+    pausedBySlot,
+    allPaused,
+    onPlaybackChange,
+    toggleAllPlayback,
     tree,
     presets,
     loaded,

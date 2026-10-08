@@ -17,7 +17,7 @@ from ..subelement_generator.utils.pgie_parser import PgieParser
 from ..subelement_generator.utils.nvdsanalytics_parser import NvdsanalyticsParser
 from ..subelement_generator.utils.nvtracker_parser import NvtrackerParser
 from ..subelement_generator.utils.validate_video import probe_video
-from .event_pipeline import EventPipelineMixin
+from .utils.event_pipeline import EventPipelineMixin
 from .utils.generator_pipeline_map import GENERATOR_PIPELINE_MAP
 
 VIDEO_STREAM_NAME = "video"

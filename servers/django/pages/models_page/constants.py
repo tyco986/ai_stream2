@@ -1,0 +1,13 @@
+FAMILY_EXPORT_TYPE = {
+    "yolo10": "YOLO10-DET",
+    "yolo11": "YOLO11-DET",
+    "yolo26": "YOLO26-DET",
+    "stgcnpp": "STGCNPP",
+    "rtmpose": "RTMPOSE",
+}
+
+ONNX_DEFAULT_SIZE = 640
+ONNX_DEFAULT_OPSET = 18
+ONNX_DEFAULT_SIMPLIFY = False
+ONNX_DEFAULT_MAX_DET = 30
+TRT_DEFAULT_GPU_ID = 0

@@ -150,6 +150,13 @@ export function useRecordingsSession() {
     await loadFilesForDate(date)
   }
 
+  async function refreshFiles() {
+    const date = selectedDate.value
+    if (date) {
+      await loadFilesForDate(date)
+    }
+  }
+
   return {
     tree,
     loaded,
@@ -173,6 +180,7 @@ export function useRecordingsSession() {
     clearSelection,
     setCalendarMonth,
     selectDate,
+    refreshFiles,
     shiftMonth,
   }
 }

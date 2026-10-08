@@ -4,8 +4,9 @@ from pathlib import Path
 
 from django.conf import settings
 
-from pages.servers.clients import DockerProxyClient, HealthHttpClient
 from pages.servers.registry import ServerRegistry
+from shared.clients.docker import DockerProxyClient
+from shared.clients.health import HealthHttpClient
 from shared.http.exceptions import AppError
 
 

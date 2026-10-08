@@ -16,7 +16,7 @@ from ..subelement_generator.pipeline import PipelineGenerator
 from ..subelement_generator.utils.pgie_parser import PgieParser
 from ..subelement_generator.utils.nvdsanalytics_parser import NvdsanalyticsParser
 from ..subelement_generator.utils.nvtracker_parser import NvtrackerParser
-from .event_pipeline import EventPipelineMixin
+from .utils.event_pipeline import EventPipelineMixin
 from .utils.generator_pipeline_map import GENERATOR_PIPELINE_MAP
 
 RTSP_EVENT_TOPOLOGY_DOC = """

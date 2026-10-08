@@ -12,7 +12,7 @@ SAHI_IMAGE_TOPOLOGY_DOC = """
 
         nvurisrcbin → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
             → nvdsanalytics → tee_msg
-              ─┬→ nvosdbin → nvvideoconvert → nvdetlogger → nvjpegenc → filesink
+              ─┬→ nvosdbin → nvvideoconvert → capsfilter_jpeg → nvdetlogger → nvjpegenc → filesink
               └→ queue_msg → nvmsgconv → nvmsgbroker
 
     Notes::
@@ -234,12 +234,7 @@ class BaseSahiImageGenerator(BaseImageGenerator):
                 interval=int(self.logger.get("interval", 0)),
             ),
         )
-        self._append_node("nvjpegenc", "nvjpegenc", self._add_nvjpegenc())
-        self._append_node(
-            "filesink",
-            "filesink",
-            self._add_filesink(self.output, sync=False, async_=False),
-        )
+        self.append_jpeg_filesink()
 
     def link(self) -> None:
         edges = {
@@ -260,9 +255,7 @@ class BaseSahiImageGenerator(BaseImageGenerator):
         edges["queue_msg"] = "nvmsgconv"
         edges["nvmsgconv"] = "nvmsgbroker"
         edges["nvosdbin"] = "nvvideoconvert"
-        edges["nvvideoconvert"] = "nvdetlogger"
-        edges["nvdetlogger"] = "nvjpegenc"
-        edges["nvjpegenc"] = "filesink"
+        self.link_jpeg_from(edges, "nvvideoconvert", "nvdetlogger")
         self.pipeline["deepstream"]["edges"] = edges
 
     def sahi_postprocess_properties(self, postprocess: dict) -> dict:

@@ -1,0 +1,8 @@
+type: PoseSahiImagePipeline
+modules:
+  - plugins/nvfadedrawer
+  - plugins/nvlogger
+  - gie_custom_lib/nvdsinfer_yolo_pose
+  - plugins/nvsahipostprocess_pose
+extras:
+  - deepstream_sahi

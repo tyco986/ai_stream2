@@ -1,0 +1,11 @@
+type: StgcnppYoloPoseSahiRTSPPipeline
+modules:
+  - plugins/nvbboxsnapshot
+  - plugins/nvfadedrawer
+  - plugins/nvlogger
+  - plugins/nvstgcnppactionlabel
+  - gie_custom_lib/nvdsinfer_yolo_pose
+  - plugins/nvdspreprocess/stgcnpp_preprocess
+  - plugins/nvsahipostprocess_pose
+extras:
+  - deepstream_sahi

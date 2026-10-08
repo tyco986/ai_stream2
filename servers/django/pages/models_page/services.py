@@ -1,14 +1,24 @@
+import io
 import json
 import shutil
 import threading
+import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
+import yaml
 from django.conf import settings
 from django.db import close_old_connections, transaction
 from django.db.models import Q
 
-from pages.models_page.clients import ExportOnnxClient, ExportTrtClient
+from pages.models_page.constants import (
+    FAMILY_EXPORT_TYPE,
+    ONNX_DEFAULT_MAX_DET,
+    ONNX_DEFAULT_OPSET,
+    ONNX_DEFAULT_SIMPLIFY,
+    ONNX_DEFAULT_SIZE,
+    TRT_DEFAULT_GPU_ID,
+)
 from pages.models_page.models import (
     DEFAULT_CONF,
     DEFAULT_IOU,
@@ -21,6 +31,8 @@ from pages.models_page.models import (
     BATCH_MODE_DYNAMIC,
     MlModel,
 )
+from shared.clients.export_onnx import ExportOnnxClient
+from shared.clients.export_trt import ExportTrtClient
 from shared.http.exceptions import AppError
 from shared.pagination import PaginationService
 
@@ -29,9 +41,13 @@ class ModelTypeService:
     def list_types(self):
         items = []
         try:
-            items = ExportOnnxClient().list_types()
+            payload = ExportOnnxClient().types()
+            data = payload.get("data") or {}
+            items = data.get("items") if isinstance(data, dict) else []
+            if not isinstance(items, list):
+                items = []
         except AppError:
-            return {"items": []}
+            items = []
         return {"items": items}
 
 
@@ -375,26 +391,28 @@ class BuildOrchestrator:
         error = None
         try:
             self.logs.append(model_id, "export_onnx export start")
-            onnx_dir = self.export_onnx.export_pt(
+            export_type = self.export_type(row.family, row.source_path)
+            onnx_payload = self.export_onnx.export(
                 Path(row.source_path),
-                dynamic=(row.batch_mode == BATCH_MODE_DYNAMIC),
-                batch_size=row.batch_size,
-                family=row.family,
-                conf=row.conf,
-                iou=row.iou,
+                yaml.safe_dump(self.onnx_config(row, export_type)).encode("utf-8"),
             )
+            onnx_dir = onnx_payload.get("data") or ""
+            if not onnx_dir:
+                raise AppError("export_onnx did not return onnx path", status_code=502)
             self.logs.append(model_id, f"export_onnx export done: {onnx_dir}")
             meta = self.load_meta(onnx_dir)
             self.logs.append(model_id, "export_trt start")
-            engine_dir = self.export_trt.export_engine(
-                onnx_dir,
-                batch_size=row.batch_size,
-                dynamic=(row.batch_mode == BATCH_MODE_DYNAMIC),
-                precision=row.precision or PRECISION_FP16,
-                optimization_level=row.optimization_level,
-                family=row.family,
-                task=meta.get("task"),
+            export_type = self.export_type(
+                row.family, row.source_path, meta.get("task")
             )
+            trt_payload = self.export_trt.export(
+                self.zip_directory(onnx_dir),
+                yaml.safe_dump(self.trt_config(row, export_type)).encode("utf-8"),
+                filename=f"{Path(onnx_dir).name}.zip",
+            )
+            engine_dir = trt_payload.get("data") or ""
+            if not engine_dir:
+                raise AppError("export_trt did not return engine path", status_code=502)
             self.logs.append(model_id, f"export_trt done: {engine_dir}")
             classes = self.load_classes(onnx_dir)
             row.engine_path = engine_dir
@@ -454,3 +472,53 @@ class BuildOrchestrator:
             if text.isdigit():
                 version = f"v{int(text) + 1}"
         return version
+
+    def export_type(self, family, source_path, task=None):
+        raw = (family or "").strip()
+        mapped = FAMILY_EXPORT_TYPE.get(raw.lower())
+        result = mapped or raw.upper().replace("_", "-")
+        stem = Path(source_path or "").stem.lower()
+        task_name = (task or "").strip().lower()
+        if task_name == "segment" or stem.endswith("-seg") or stem.endswith("_seg"):
+            result = result.replace("-DET", "-SEG")
+            if "-SEG" not in result:
+                result = f"{result}-SEG"
+        elif task_name == "pose" or stem.endswith("-pose") or stem.endswith("_pose"):
+            result = result.replace("-DET", "-POSE")
+            if "-POSE" not in result:
+                result = f"{result}-POSE"
+        return result
+
+    def onnx_config(self, row, export_type):
+        return {
+            "type": export_type,
+            "size": ONNX_DEFAULT_SIZE,
+            "opset": ONNX_DEFAULT_OPSET,
+            "batch": int(row.batch_size),
+            "dynamic": row.batch_mode == BATCH_MODE_DYNAMIC,
+            "simplify": ONNX_DEFAULT_SIMPLIFY,
+            "max_det": ONNX_DEFAULT_MAX_DET,
+            "conf": float(row.conf) if row.conf is not None else DEFAULT_CONF,
+            "iou": float(row.iou) if row.iou is not None else DEFAULT_IOU,
+        }
+
+    def trt_config(self, row, export_type):
+        config = {
+            "type": export_type,
+            "gpu_id": TRT_DEFAULT_GPU_ID,
+            "precision": row.precision or PRECISION_FP16,
+        }
+        if row.batch_mode == BATCH_MODE_DYNAMIC:
+            config["batch_size"] = int(row.batch_size)
+        if row.optimization_level is not None:
+            config["opt_level"] = int(row.optimization_level)
+        return config
+
+    def zip_directory(self, directory):
+        root = Path(directory)
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+            for path in root.rglob("*"):
+                if path.is_file():
+                    archive.write(path, path.relative_to(root))
+        return buffer.getvalue()

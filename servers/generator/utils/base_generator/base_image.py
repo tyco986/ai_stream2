@@ -16,6 +16,7 @@ from ..subelement_generator.pipeline import PipelineGenerator
 from ..subelement_generator.utils.nvdsanalytics_parser import NvdsanalyticsParser
 from ..subelement_generator.utils.pgie_parser import PgieParser
 from .utils.generator_pipeline_map import GENERATOR_PIPELINE_MAP
+from .utils.jpeg_filesink import JpegFilesinkMixin
 
 IMAGE_STREAM_NAME = "image"
 
@@ -23,12 +24,12 @@ IMAGE_TOPOLOGY_DOC = """
     Topology::
 
         nvurisrcbin → nvstreammux → pgie → nvdsanalytics → tee_msg
-          ─┬→ nvosdbin → nvvideoconvert → nvdetlogger → nvjpegenc → filesink
+          ─┬→ nvosdbin → nvvideoconvert → capsfilter_jpeg → nvdetlogger → nvjpegenc → filesink
           └→ queue_msg → nvmsgconv → nvmsgbroker
 """
 
 
-class BaseImageGenerator(PipelineGenerator):
+class BaseImageGenerator(JpegFilesinkMixin, PipelineGenerator):
     PIPELINE_CONFIG_NAME = "pipeline.yml"
     PGIE_CONFIG_NAME = "pgie.yml"
     ANALYTICS_CONFIG_NAME = "nvdsanalytics.yml"
@@ -333,12 +334,7 @@ class BaseImageGenerator(PipelineGenerator):
                 interval=int(self.logger.get("interval", 0)),
             ),
         )
-        self._append_node("nvjpegenc", "nvjpegenc", self._add_nvjpegenc())
-        self._append_node(
-            "filesink",
-            "filesink",
-            self._add_filesink(self.output, sync=False, async_=False),
-        )
+        self.append_jpeg_filesink()
 
     def link(self) -> None:
         edges = {
@@ -356,9 +352,7 @@ class BaseImageGenerator(PipelineGenerator):
         edges["queue_msg"] = "nvmsgconv"
         edges["nvmsgconv"] = "nvmsgbroker"
         edges["nvosdbin"] = "nvvideoconvert"
-        edges["nvvideoconvert"] = "nvdetlogger"
-        edges["nvdetlogger"] = "nvjpegenc"
-        edges["nvjpegenc"] = "filesink"
+        self.link_jpeg_from(edges, "nvvideoconvert", "nvdetlogger")
         self.pipeline["deepstream"]["edges"] = edges
 
     @staticmethod

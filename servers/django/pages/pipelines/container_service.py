@@ -4,8 +4,9 @@ from pathlib import Path
 
 from django.conf import settings
 
-from pages.pipelines.clients import DeepStreamClient
-from pages.servers.clients import DockerProxyClient, HealthHttpClient
+from shared.clients.deepstream import DeepStreamClient
+from shared.clients.docker import DockerProxyClient
+from shared.clients.health import HealthHttpClient
 from shared.http.exceptions import AppError
 
 DOCKER_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
@@ -171,7 +172,10 @@ class DeepStreamContainerService:
                 if result["ok"]:
                     ok = True
                     try:
-                        data = DeepStreamClient(self.base_url(pipeline_name)).get_pipeline_status()
+                        payload = DeepStreamClient(
+                            self.base_url(pipeline_name)
+                        ).pipeline_status()
+                        data = payload.get("data") or {}
                         pipeline_running = bool(data.get("pipeline_running"))
                     except AppError as exc:
                         detail = str(exc.detail)
