@@ -282,17 +282,17 @@
 
 ### 单条动作
 
-#### `POST /{model_id}/upload`
+#### `PATCH /{model_id}`
 
-**完整地址**：`http://127.0.0.1:8000/ai_stream2/backend/models/{model_id}/upload`
+**完整地址**：`http://127.0.0.1:8000/ai_stream2/backend/models/{model_id}`
 
-**说明**：Operations **⬆ Upload**；替换已有模型的 `.pt` 源文件。
+**说明**：Operations **⬆ Upload**；替换已有模型的 `.pt` 源文件。也可同时改参数。
 
 **请求**：`multipart/form-data`
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `file` | file | `.pt` 文件；必填 |
+| `file` | file | `.pt` 文件；上传时必填。未传则只改参数 |
 
 **响应 `data`**：更新后的 `Model`（`source_file` 已更新）。
 
@@ -331,9 +331,9 @@
 
 ---
 
-#### `GET /{model_id}/build/status`
+#### `GET /{model_id}/status`
 
-**完整地址**：`http://127.0.0.1:8000/ai_stream2/backend/models/{model_id}/build/status`
+**完整地址**：`http://127.0.0.1:8000/ai_stream2/backend/models/{model_id}/status`
 
 **说明**：Build 进行中轮询；或 WebSocket 推送的 HTTP 兜底。
 
@@ -376,9 +376,9 @@
 }
 ```
 
-#### `POST /batch/delete`
+#### `POST /batch/remove`
 
-**完整地址**：`http://127.0.0.1:8000/ai_stream2/backend/models/batch/delete`
+**完整地址**：`http://127.0.0.1:8000/ai_stream2/backend/models/batch/remove`
 
 **说明**：工具栏 **Remove**（二次确认后）。
 
@@ -388,7 +388,7 @@
 
 ```json
 {
-  "deleted_count": 2,
+  "removed_count": 2,
   "failed_ids": []
 }
 ```
@@ -424,17 +424,17 @@
 |----------|------|------|
 | **Refresh** | `GET` | `/?page={current}&page_size={current}&search={current}` |
 | **Add** → Save | `POST` | `/`（`multipart/form-data`；可选 `source_file`） |
-| **Remove** → 确认 | `POST` | `/batch/delete` |
+| **Remove** → 确认 | `POST` | `/batch/remove` |
 | 翻页 | `GET` | `/?page={n}&page_size={page_size}&search={current}` |
 
 ### Operations
 
 | 调用节点 | 方法 | 路径 |
 |----------|------|------|
-| **⬆ Upload**（首次） | `POST` | `/{model_id}/upload` |
-| **⬆ Upload**（覆盖） | 二次确认 → `POST` | `/{model_id}/upload` |
+| **⬆ Upload**（首次） | `PATCH` | `/{model_id}` |
+| **⬆ Upload**（覆盖） | 二次确认 → `PATCH` | `/{model_id}` |
 | **🔨 Build** | `POST` | `/{model_id}/build` |
-| Build 进行中轮询 | `GET` | `/{model_id}/build/status`（直至 `status` ≠ `building`） |
+| Build 进行中轮询 | `GET` | `/{model_id}/status`（直至 `status` ≠ `building`） |
 | **📓 Log** | `GET` | `/{model_id}/logs` |
 
 ### 表格
@@ -472,14 +472,14 @@ GET /?page=1
 
 ```
 POST /{model_id}/build
-GET /{model_id}/build/status   # status=building 时轮询
+GET /{model_id}/status   # status=building 时轮询
 GET /?page={current}             # 结束后刷新表格
 ```
 
 ### 批量删除
 
 ```
-POST /batch/delete  { ids: [...] }
+POST /batch/remove  { ids: [...] }
 GET /?page={current}
 GET /map
 ```

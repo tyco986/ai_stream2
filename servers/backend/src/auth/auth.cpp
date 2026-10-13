@@ -1,6 +1,6 @@
 #include "auth/auth.hpp"
 
-#include "constants/auth.hpp"
+#include "constants/auth_const.hpp"
 #include "response/response.hpp"
 
 void AuthFilter::doFilter(const drogon::HttpRequestPtr& request,

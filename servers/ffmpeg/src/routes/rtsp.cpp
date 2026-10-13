@@ -9,7 +9,7 @@
 #include <nlohmann/json.hpp>
 
 void RtspRoute::bind(httplib::Server& server) {
-    server.Post(RTSP_PROBE_PATH, probe);
+    server.Post(rtsp::RTSP_PROBE_PATH, probe);
 }
 
 void RtspRoute::probe(const httplib::Request& request, httplib::Response& response) {

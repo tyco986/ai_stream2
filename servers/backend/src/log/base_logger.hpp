@@ -17,6 +17,7 @@ struct LogEntry {
   std::string ip;
   std::size_t inBytes;
   std::size_t outBytes;
+  std::string error;
 };
 
 class BaseLogger {

@@ -1,12 +1,16 @@
 #pragma once
 
-#include <functional>
+#include <drogon/utils/coroutine.h>
+#include <json/json.h>
+
 #include <string>
 
-#include <json/json.h>
+struct ProbeResult {
+  bool accepted;
+  Json::Value data;
+};
 
 class Ffmpeg {
  public:
-  static void probe(const std::string& url,
-                   std::function<void(bool accepted, const Json::Value& data)> callback);
+  static drogon::Task<ProbeResult> probe(const std::string& url);
 };

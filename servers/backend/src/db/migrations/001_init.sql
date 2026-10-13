@@ -62,9 +62,9 @@ CREATE TABLE stream (
   width INT,
   height INT,
   fps NUMERIC(6, 2),
-  status VARCHAR(16) NOT NULL DEFAULT 'offline',
-  enabled BOOLEAN NOT NULL DEFAULT TRUE,
-  recording BOOLEAN NOT NULL DEFAULT FALSE,
+  status VARCHAR(16) NOT NULL,
+  enabled BOOLEAN NOT NULL,
+  record BOOLEAN NOT NULL,
   probed_at TIMESTAMPTZ
 );
 
@@ -78,17 +78,28 @@ VALUES ('00000000-0000-4000-8000-000000000001', 'All', NULL);
 CREATE TABLE model (
   id UUID PRIMARY KEY,
   name VARCHAR(150) NOT NULL UNIQUE,
+  type VARCHAR(16) NOT NULL,
   version VARCHAR(64),
   batch_size INT NOT NULL,
   batch_mode VARCHAR(16) NOT NULL,
-  precision VARCHAR(16) NOT NULL DEFAULT 'fp16',
+  input_tensor_name TEXT,
+  input_tensor_shape TEXT,
+  precision VARCHAR(16) NOT NULL,
+  opt_level INT,
+  device INT NOT NULL,
+  workspace INT NOT NULL,
+  static_plugin TEXT,
+  max_det INT,
+  conf NUMERIC(4, 2),
+  iou NUMERIC(4, 2),
   num_class INT,
   classes JSONB,
   source_path TEXT,
   engine_path TEXT,
-  status VARCHAR(16) NOT NULL DEFAULT 'not_built',
+  status VARCHAR(16) NOT NULL,
   built_at TIMESTAMPTZ,
-  ever_built BOOLEAN NOT NULL DEFAULT FALSE
+  trt_version VARCHAR(64),
+  ever_built BOOLEAN NOT NULL
 );
 
 -- preview page

@@ -5,10 +5,14 @@
 | 本页触发 | 上游 | 上游路径 | 用途 |
 |----------|------|----------|------|
 | `POST /{stream_id}/probe`、`POST /batch/probe` | ffmpeg `http://puskas_ffmpeg:8080` | `POST /puskas/ffmpeg/rtsp/probe` | 用库内 `url` 探测，得到 width / height / fps / status |
-| `enabled=true` 的 `POST /`、`PATCH`、`batch/enable`；已启用时改 `url` / `name` / `recording`；`batch/record`、`batch/unrecord` | mediamtx `http://puskas_mediamtx:9997` | `POST /v3/config/paths/replace/{name}` | 挂载。`source` 为库内 `url`，`record` 为 `recording` |
-| `enabled=false` 的 `PATCH`、`batch/disable`；`DELETE`、`batch/remove` | mediamtx | `DELETE /v3/config/paths/delete/{name}` | 卸除。删流时仅已启用的流卸 path |
+| `enabled=true` 的 `POST /`、`batch/enable` | mediamtx `http://puskas_mediamtx:9997` | `POST /v3/config/paths/replace/{name}` | 挂载。`source` 为库内 `url`，`record` 为库内 `record` |
+| `batch/unrecord` | mediamtx | `GET /v3/config/paths/get/{name}`，存在则 `POST /v3/config/paths/replace/{name}` | path 存在才把 `record` 写成 false；库内 `record` 一律写成 false |
+| `batch/record` | mediamtx | `GET /v3/config/paths/get/{name}`，存在则 `POST /v3/config/paths/replace/{name}` | path 存在才把 `record` 写成 true；不存在放入 `skipped_ids` |
+| `PATCH` | mediamtx | `GET /v3/config/paths/get/{name}`，再按需 `DELETE` / `replace` | 用 get 判断 path 是否存在。目标 `enabled=false` 或改名且 path 存在时卸旧 path；目标 `enabled=true` 且 path 不存在或 `name`/`url`/`record` 变化时挂载 |
+| `batch/disable` | mediamtx | `GET /v3/config/paths/get/{name}`，存在则 `DELETE /v3/config/paths/delete/{name}` | path 存在才卸除，然后写 `enabled=false` |
+| `DELETE`、`batch/remove` | mediamtx | `GET /v3/config/paths/get/{name}`，存在则 `DELETE /v3/config/paths/delete/{name}` | 先确认 path 存在再卸除，然后删库 |
 
-其余接口不访问这两个上游。`enabled=true` 表示 MediaMTX 上有该 path；`enabled=false` 表示没有。停用会卸 path，库内 `recording` 可以仍为 true。
+其余接口不访问这两个上游。`enabled=true` 表示 MediaMTX 上有该 path；`enabled=false` 表示没有。停用会卸 path，库内 `record` 可以仍为 true。
 
 ---
 
@@ -24,11 +28,16 @@
 | `GET` | `/groups/{group_id}/members` | Transfer 右侧已在组内流 |
 | `GET` | `/groups/{group_id}/candidates` | Transfer 左侧可选流 |
 | `PUT` | `/groups/{group_id}/members` | Transfer Save：设置组内成员 |
+| `POST` | `/groups/import` | 上传组 CSV，整单写入或整单失败 |
+| `GET` | `/groups/export` | 导出全部组为 CSV |
 | `GET` | `/map` | 流 name → id |
+| `GET` | `/default` | Add 弹窗缺省值 |
 | `GET` | `/` | 分页列表（按 group/stream/search 筛） |
 | `POST` | `/` | 新建流（仅 `enabled=true` 时挂 MediaMTX） |
+| `POST` | `/import` | 上传 CSV，整单写入或整单失败 |
+| `GET` | `/export` | 导出全部流为 CSV |
 | `GET` | `/{stream_id}` | 流详情 |
-| `PATCH` | `/{stream_id}` | 更新流（`enabled` 控制挂/卸；已启用时改 `url`/`recording`/`name` 同步 path） |
+| `PATCH` | `/{stream_id}` | 更新流（先 get path；目标 `enabled` 决定挂/卸） |
 | `DELETE` | `/{stream_id}` | 删除流（卸 path） |
 | `POST` | `/{stream_id}/probe` | 单条探测（代理 ffmpeg） |
 | `POST` | `/ai_stream2/backend/logs/enable` | 打开页面 debug 日志 |
@@ -36,13 +45,13 @@
 | `POST` | `/batch/remove` | 批量删（卸 path） |
 | `POST` | `/batch/enable` | 批量启用（挂 path） |
 | `POST` | `/batch/disable` | 批量停用（卸 path） |
-| `POST` | `/batch/record` | 批量开录（仅已启用流；同步 MediaMTX `record`） |
-| `POST` | `/batch/unrecord` | 批量停录（同步 MediaMTX `record`） |
+| `POST` | `/batch/record` | 批量开录（path 存在才同步 MediaMTX `record`） |
+| `POST` | `/batch/unrecord` | 批量停录（path 存在才同步 MediaMTX `record`） |
 | `POST` | `/batch/probe` | 批量探测（代理 ffmpeg） |
 
 ### `GET /groups/tree`
 
-`data` 即 `All` 节点。组节点含 `id`、`name`、`type`（`group`）、`children`；流节点含 `id`、`name`、`type`（`stream`）、`enabled`、`status`、`recording`。同一层先直属流、后子组，各自按 `name` 排序。
+`data` 即 `All` 节点。组节点含 `id`、`name`、`type`（`group`）、`children`；流节点含 `id`、`name`、`type`（`stream`）、`enabled`、`status`、`record`。同一层先直属流、后子组，各自按 `name` 排序。
 
 ```json
 {
@@ -56,7 +65,7 @@
       "type": "stream",
       "enabled": true,
       "status": "offline",
-      "recording": false
+      "record": false
     },
     {
       "id": "b2000001-0000-4000-8000-000000000001",
@@ -77,6 +86,37 @@
   "All": "00000000-0000-4000-8000-000000000001",
   "Site A": "b2000001-0000-4000-8000-000000000001"
 }
+```
+
+### `POST /groups/import`
+
+`multipart/form-data`，字段 `file` 为 CSV。表头两列：`group`、`parent`，都是组名。不访问 MediaMTX。路径注册在 `/groups/{group_id}` 之前。
+
+先校验再写库。任一条件成立则整单失败，不写任何行：文件内 `group` 重复；`parent` 在库中不存在；`parent` 为空且 `group` 不是 `All`；试图给 `All` 指定父组。`group` 已存在时只改它的父组。新组插入到该父组下。
+
+```csv
+group,parent
+All,
+Site A,All
+```
+
+`data` 为本次新建条数和只改父组的条数。
+
+```json
+{
+  "created_count": 1,
+  "updated_count": 0
+}
+```
+
+### `GET /groups/export`
+
+无查询参数、无请求体。不访问 MediaMTX。导出 `stream_group` 全表，按 `name` 排序。响应为 `multipart/form-data`，字段 `file` 的文件名是 `groups.csv`。`All` 的 `parent` 为空。路径注册在 `/groups/{group_id}` 之前。
+
+```csv
+group,parent
+All,
+Site A,All
 ```
 
 ### `POST /groups/{parent_group_id}`
@@ -181,7 +221,7 @@
 
 按 `group_id`（该组及子组内的流）、`stream_id`（只这一条）、`search` 筛选，并用 `page`、`page_size` 分页。未传筛选时视为 `group_id` 为 `All`。
 
-`data` 含本页流、总数和页码。流字段为 `id`、`name`、`group_id`、`group_name`、`url`、`width`、`height`、`fps`、`status`、`enabled`、`recording`、`probed_at`。未 Test 成功时 `width`、`height`、`fps`、`probed_at` 为 `null`。
+`data` 含本页流、总数和页码。流字段为 `id`、`name`、`group_id`、`group_name`、`url`、`width`、`height`、`fps`、`status`、`enabled`、`record`、`probed_at`。未 Test 成功时 `width`、`height`、`fps`、`probed_at` 为 `null`。
 
 ```json
 {
@@ -197,7 +237,7 @@
       "fps": 25,
       "status": "online",
       "enabled": true,
-      "recording": false,
+      "record": false,
       "probed_at": "2026-06-28T10:15:00Z"
     }
   ],
@@ -207,9 +247,22 @@
 }
 ```
 
+### `GET /default`
+
+无查询参数、无请求体。不读库、不访问 MediaMTX。`data` 为新建流的缺省字段，与 `POST /` 缺省一致。`name`、`url` 无缺省，不返回。路径注册在 `/{stream_id}` 之前。
+
+```json
+{
+  "group_id": "00000000-0000-4000-8000-000000000001",
+  "group_name": "All",
+  "enabled": true,
+  "record": false
+}
+```
+
 ### `POST /`
 
-新建流。`name`、`url` 全库唯一。缺省 `group_id` 为 `All`，`enabled` 为 `true`，`recording` 为 `false`。`status` 为 `offline`，`width`、`height`、`fps`、`probed_at` 为 `null`。仅 `enabled=true` 时把该流挂到 MediaMTX（`source` 为 `url`，`record` 为 `recording`）。
+新建流。`name`、`url` 全库唯一。缺省 `group_id` 为 `All`，`enabled` 为 `true`，`record` 为 `false`。`status` 为 `offline`，`width`、`height`、`fps`、`probed_at` 为 `null`。仅 `enabled=true` 时把该流挂到 MediaMTX（`source` 为 `url`，`record` 为库内 `record`）。
 
 请求体：
 
@@ -219,11 +272,40 @@
   "group_id": "00000000-0000-4000-8000-000000000001",
   "url": "rtsp://user:pass@192.168.1.10/s1",
   "enabled": true,
-  "recording": false
+  "record": false
 }
 ```
 
 `data` 为新建的流，字段与列表中的单条相同。
+
+### `POST /import`
+
+`multipart/form-data`，字段 `file` 为 CSV。表头三列：`name`、`url`、`group`。`group` 为组名（含 `All`）。不访问 MediaMTX。路径注册在 `/{stream_id}` 之前。
+
+先校验再写库。任一条件成立则整单失败，不写任何行：组名不存在；文件内 `name` 或 `url` 重复；`name` 或 `url` 已属于另一条流。`name` 与 `url` 都对上同一条已有流时，只改该流的 `group`。新行插入时 `enabled=false`、`record=false`，`status` 为 `offline`，`width`、`height`、`fps`、`probed_at` 为 `null`。
+
+```csv
+name,url,group
+cam-01,rtsp://user:pass@192.168.1.10/s1,All
+```
+
+`data` 为本次新建条数和只改组的条数。
+
+```json
+{
+  "created_count": 1,
+  "updated_count": 0
+}
+```
+
+### `GET /export`
+
+无查询参数、无请求体。不访问 MediaMTX。导出 `stream` 全表，按 `name` 排序。响应为 `multipart/form-data`，字段 `file` 的文件名是 `streams.csv`，内容为表头 `name,url,group` 加每条流一行。`group` 为组名。路径注册在 `/{stream_id}` 之前。
+
+```csv
+name,url,group
+cam-01,rtsp://user:pass@192.168.1.10/s1,Entrance
+```
 
 ### `GET /{stream_id}`
 
@@ -241,14 +323,14 @@
   "fps": 25,
   "status": "online",
   "enabled": true,
-  "recording": false,
+  "record": false,
   "probed_at": "2026-06-28T10:15:00Z"
 }
 ```
 
 ### `PATCH /{stream_id}`
 
-部分更新 `name`、`group_id`、`url`、`enabled`、`recording`。不改 `status`、`width`、`height`、`fps`、`probed_at`。`enabled` 从 false 变为 true 时挂 MediaMTX；从 true 变为 false 时卸 path。保持 `enabled=true` 且 `name`、`url` 或 `recording` 变化时同步 path（`name` 变了先卸旧 path）。保持 `enabled=false` 时不调 MediaMTX。
+部分更新 `name`、`group_id`、`url`、`enabled`、`record`。不改 `status`、`width`、`height`、`fps`、`probed_at`。请求未带 `enabled` 时，目标状态用库内 `enabled`。先 `GET` path：path 存在且目标为停用或改名时卸旧 path；目标为启用且 path 不存在或 `name`、`url`、`record` 变化时挂载。
 
 请求体（只包含要改的字段）：
 
@@ -257,7 +339,7 @@
   "name": "cam-01",
   "url": "rtsp://user:pass@192.168.1.10/s1",
   "enabled": true,
-  "recording": false
+  "record": false
 }
 ```
 
@@ -341,7 +423,7 @@ null
 
 ### `POST /batch/enable`
 
-把这些流写成 `enabled=true`，并按库内 `url`、`recording` 挂 MediaMTX（`source`=`url`，`record`=`recording`）。不改 `status`、`width`、`height`、`fps`、`probed_at`。
+把这些流写成 `enabled=true`，并按库内 `url`、`record` 挂 MediaMTX。不改 `status`、`width`、`height`、`fps`、`probed_at`。
 
 请求体：
 
@@ -364,7 +446,7 @@ null
 
 ### `POST /batch/disable`
 
-把这些流写成 `enabled=false`，并卸 MediaMTX path（停拉流、停录）。库内 `recording` 保持原值。不改 `status`、`width`、`height`、`fps`、`probed_at`。
+把这些流写成 `enabled=false`。先 `GET` path，存在才卸除（停拉流、停录）。库内 `record` 保持原值。不改 `status`、`width`、`height`、`fps`、`probed_at`。
 
 请求体：
 
@@ -387,7 +469,7 @@ null
 
 ### `POST /batch/record`
 
-仅对已启用流把 `recording` 写成 `true`，并同步 MediaMTX `record=true`。未启用的流不改库、不挂 path。
+先 `GET` path。path 存在才把 `record` 写成 `true`，并同步 MediaMTX `record=true`。path 不存在的流不改库、不挂 path，id 放入 `skipped_ids`。
 
 请求体：
 
@@ -400,7 +482,7 @@ null
 }
 ```
 
-`data` 为本次开录条数，以及因未启用而跳过的 id。
+`data` 为本次开录条数，以及因 path 不存在而跳过的 id。
 
 ```json
 {
@@ -411,7 +493,7 @@ null
 
 ### `POST /batch/unrecord`
 
-把这些流的 `recording` 写成 `false`。已启用的同步 MediaMTX `record=false`；未启用的只改库。
+把这些流的 `record` 写成 `false`。path 存在才同步 MediaMTX `record=false`；不存在只改库。
 
 请求体：
 
@@ -495,5 +577,5 @@ null
 | `fps` | numeric(6, 2) | 可空 | `NULL` | 仅 Test **成功**写入 |
 | `status` | varchar | 非空 | `offline` | `online` \| `offline`；**仅 Test** 写 |
 | `enabled` | bool | 非空 | `true` | **true=挂载代理 / false=卸除**；不改 `status` |
-| `recording` | bool | 非空 | `false` | 意图开录；仅 `enabled=true` 时写入 MediaMTX `record` |
+| `record` | bool | 非空 | `false` | 意图开录；仅 `enabled=true` 时写入 MediaMTX `record` |
 | `probed_at` | timestamptz | 可空 | `NULL` | 最近一次 Test **成功**时间 |

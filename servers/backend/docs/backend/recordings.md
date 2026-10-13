@@ -11,7 +11,7 @@
 |----------|------|------|
 | `GET /availability`、`/files`、`/playback`、`/download*` | MediaMTX 录像卷（容器内 `/recordings`） | 扫盘索引；单文件 Range / 附件 / zip |
 
-无 HTTP 上游代理。流树 / `recording` 标志由前端调 stream_api。
+无 HTTP 上游代理。流树 / `record` 标志由前端调 stream API。
 
 ---
 
@@ -57,7 +57,7 @@
 | 录像索引 | **造**（`RecordingIndexService` 扫盘；path = 流 `name`） |
 | 回放 URL / Range | **造**（`PlaybackService` + media view） |
 | 下载 / zip | **造**（`DownloadService`） |
-| MediaMTX 开录 | **复用** streams Enable + `recording`→`record`；本页只读文件 |
+| MediaMTX 开录 | **复用** streams Enable + `record`；本页只读文件 |
 | stream 元数据 | 软引用 UUID；`shared` 只读 `resolve_stream_name(stream_id)` |
 | Site Config | **不**注册 |
 

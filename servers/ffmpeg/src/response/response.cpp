@@ -12,9 +12,9 @@ void http::Response::error(httplib::Response& response, int status, const char* 
 
 void http::Response::envelope(httplib::Response& response, bool success, int status, const char* message, const nlohmann::json& data) {
     const nlohmann::json body = {
-        {KEY_SUCCESS, success},
-        {KEY_MESSAGE, message},
-        {KEY_DATA, data},
+        {::response::KEY_SUCCESS, success},
+        {::response::KEY_MESSAGE, message},
+        {::response::KEY_DATA, data},
     };
     response.status = status;
     response.set_content(body.dump(), "application/json");

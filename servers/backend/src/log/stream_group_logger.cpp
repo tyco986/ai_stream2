@@ -1,6 +1,6 @@
 #include "log/stream_group_logger.hpp"
 
-#include "constants/log.hpp"
+#include "constants/log_const.hpp"
 
 const char* StreamGroupLogger::directory() const {
   return log::STREAM_GROUP_DIR;

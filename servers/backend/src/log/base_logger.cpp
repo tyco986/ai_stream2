@@ -1,6 +1,6 @@
 #include "log/base_logger.hpp"
 
-#include "constants/log.hpp"
+#include "constants/log_const.hpp"
 
 #include <json/json.h>
 #include <spdlog/sinks/daily_file_sink.h>
@@ -56,6 +56,7 @@ std::string BaseLogger::line(const LogEntry& entry) {
   body[log::KEY_IP] = entry.ip;
   body[log::KEY_IN_BYTES] = static_cast<Json::UInt64>(entry.inBytes);
   body[log::KEY_OUT_BYTES] = static_cast<Json::UInt64>(entry.outBytes);
+  body[log::KEY_ERROR] = entry.error;
 
   Json::StreamWriterBuilder builder;
   builder["indentation"] = "";

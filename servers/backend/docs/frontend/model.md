@@ -250,9 +250,9 @@ Save 失败（重名、BatchSize 非法、`source_file` 非 `.pt` 等）时在�
 |------|------|
 | 列表 | `GET /models`（相对前缀 `GET /`）；**Search**、**Refresh** 与初次加载共用 `search` 参数 |
 | 创建 | `POST /models`（`POST /`）；`multipart/form-data`；含 name、type、batch_size、precision（固定 fp16）、可选 **source_file**；响应 `data.id` 即 **model_id** |
-| 删除 | `POST /models/batch/delete` 批量（body `{ "ids": [...] }`）；UI **Remove** 仅走此路径。`DELETE /models/{model_id}` 为 API 保留，当前 UI 无单条删除 |
-| 上传 | `POST /models/{model_id}/upload`；multipart 字段 **`file`**（`.pt`） |
-| 编译 | `POST /models/{model_id}/build`；异步；轮询 `GET /models/{model_id}/build/status`（实现可选 WebSocket 推送）更新 **Status**、**Last Build**、Version 等列 |
+| 删除 | `POST /models/batch/remove` 批量（body `{ "ids": [...] }`）；UI **Remove** 仅走此路径。`DELETE /models/{model_id}` 为 API 保留，当前 UI 无单条删除 |
+| 上传 | `PATCH /models/{model_id}`；`multipart/form-data`，字段 **`file`**（`.pt`） |
+| 编译 | `POST /models/{model_id}/build`；异步；轮询 `GET /models/{model_id}/status`（实现可选 WebSocket 推送）更新 **Status**、**Last Build**、Version 等列 |
 | 日志 | `GET /models/{model_id}/logs`；**Log** 图标打开 |
 
 路径参数 **`model_id`** 与响应字段 **`id`** 同值（UUID）。
@@ -276,6 +276,6 @@ Save 失败（重名、BatchSize 非法、`source_file` 非 `.pt` 等）时在�
 |------|------|
 | id（模型） | UUID；后端生成；不可改 |
 | Name（模型） | 非空；**全库唯一**（不可与其他模型 **name** 重名）；Add 弹窗可编辑 |
-| 删除模型 | 二次确认；工具栏 **Remove** 批量删除（`POST /batch/delete`） |
+| 删除模型 | 二次确认；工具栏 **Remove** 批量删除（`POST /batch/remove`） |
 | Refresh | 按 **model id** 恢复勾选状态 |
 | 弹窗 | Add Model **不展示** id；Save 成功后表格行 key 为响应 **id** |

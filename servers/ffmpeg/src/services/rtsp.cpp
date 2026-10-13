@@ -14,8 +14,8 @@
 
 nlohmann::json FFmpegRTSP::probe(const std::string& url) const {
     nlohmann::json result{{"status", "offline"}, {"width", nullptr}, {"height", nullptr}, {"fps", nullptr}, {"probed_at", ""}};
-    const std::string command = std::string(FFPROBE_BINARY)
-        + " -v error -rtsp_transport tcp -timeout " + std::to_string(FFPROBE_TIMEOUT * 1000000)
+    const std::string command = std::string(rtsp::FFPROBE_BINARY)
+        + " -v error -rtsp_transport tcp -timeout " + std::to_string(rtsp::FFPROBE_TIMEOUT * 1000000)
         + " -select_streams v:0 -show_entries stream=width,height,r_frame_rate -of json '" + url + "'";
     std::string output;
     char buffer[4096];

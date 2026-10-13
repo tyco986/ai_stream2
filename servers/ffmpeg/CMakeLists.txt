@@ -9,6 +9,7 @@ find_package(Threads REQUIRED)
 
 add_executable(ffmpeg
     main.cpp
+    src/routes/health.cpp
     src/routes/rtsp.cpp
     src/services/rtsp.cpp
     src/response/response.cpp

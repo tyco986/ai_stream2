@@ -39,13 +39,18 @@ Swagger：`http://127.0.0.1:8090/docs`
 | GET | `/types` | 可用导出类型 |
 | POST | `/export` | 导出 ONNX |
 
+`POST /export` 为 `multipart/form-data`。
+
+| 字段 | 位置 | 说明 |
+|------|------|------|
+| `input` | form file | `.pt` 或 `.pth` |
+| `config` | form file | YAML，见 `templates/`。`type` 必填；默认 `size=640`、`opset=18`、`batch=1`、`dynamic=false`、`simplify=false`、`max_det=30`、`conf=0.25`、`iou=0.45` |
+
+响应为 `ApiEnvelope`：`success`、`message`、`data`。成功时 `data` 为产物目录 `/root/models/onnx/{stem}`。失败时 `success=false`，`message` 为错误信息。
+
 ## 约定
 
-`POST /export` 为 `multipart/form-data`：`input`（`.pt` 或 `.pth`）、`config`（YAML，见 `templates/`）。
-
-`.pt` 落到 `/root/models/pt/{filename}`，清空并写入 `/root/models/onnx/{stem}/`。成功时 `data` 为该目录路径。
-
-YAML：`type` 必填；其余默认 `size=640`、`opset=18`、`batch=1`、`dynamic=false`、`simplify=false`、`max_det=30`、`conf`、`iou`。`dynamic=true` 时 meta 中 `batch_size` 为 null，`batch` 仍作导出 batch。`iou` 仅 YOLO11 DET/SEG 使用。类型以 `GET /types` 为准。
+权重落到 `/root/models/pt/{filename}`，清空并写入 `/root/models/onnx/{stem}/`。`dynamic=true` 时 meta 中 `batch_size` 为 null，`batch` 仍作导出 batch。`iou` 仅 YOLO11 DET/SEG 使用。类型以 `GET /types` 为准。
 
 ```bash
 curl -s -X POST http://127.0.0.1:8090/ai_stream2/export_onnx/export \
