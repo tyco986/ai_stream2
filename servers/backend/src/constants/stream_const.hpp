@@ -40,8 +40,12 @@ inline const char* MULTIPART_BOUNDARY = "ai_stream2_stream_export";
 inline const char* MULTIPART_CONTENT_TYPE = "multipart/form-data; boundary=ai_stream2_stream_export";
 inline const char* KEY_IDS = "ids";
 inline const char* KEY_REMOVED_COUNT = "removed_count";
-inline const char* KEY_CREATED_COUNT = "created_count";
 inline const char* KEY_UPDATED_COUNT = "updated_count";
+inline const char* KEY_FAILED_COUNT = "failed_count";
+inline const char* KEY_SKIPPED_COUNT = "skipped_count";
+inline const char* KEY_UPDATED_ROWS = "updated_rows";
+inline const char* KEY_FAILED_ROWS = "failed_rows";
+inline const char* KEY_SKIPPED_ROWS = "skipped_rows";
 inline const char* KEY_SKIPPED_IDS = "skipped_ids";
 inline const char* KEY_RESULTS = "results";
 
@@ -64,6 +68,17 @@ inline Json::Value ROW() {
   node[KEY_ENABLED] = true;
   node[KEY_RECORD] = false;
   node[KEY_PROBED_AT] = Json::Value();
+  return node;
+}
+
+inline Json::Value BATCH_DATA() {
+  Json::Value node;
+  node[KEY_UPDATED_ROWS] = Json::Value(Json::arrayValue);
+  node[KEY_FAILED_ROWS] = Json::Value(Json::arrayValue);
+  node[KEY_SKIPPED_ROWS] = Json::Value(Json::arrayValue);
+  node[KEY_UPDATED_COUNT] = Json::UInt64(0);
+  node[KEY_FAILED_COUNT] = Json::UInt64(0);
+  node[KEY_SKIPPED_COUNT] = Json::UInt64(0);
   return node;
 }
 

@@ -19,6 +19,8 @@ RUN rm -f /etc/apt/sources.list.d/debian.sources \
       libssl-dev \
       uuid-dev \
       zip \
+      libzip-dev \
+      libyaml-cpp-dev \
       zlib1g-dev \
     && rm -rf /var/lib/apt/lists/* \
     && git config --global url."https://gh-proxy.com/https://github.com/".insteadOf "https://github.com/" \

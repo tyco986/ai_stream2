@@ -5,9 +5,6 @@
 #include "services/exporter.hpp"
 
 #include <cstdint>
-#include <fstream>
-#include <iterator>
-#include <stdexcept>
 #include <string>
 
 void ExportRoute::bind(httplib::Server& server) {
@@ -19,13 +16,7 @@ void ExportRoute::exportModel(const httplib::Request& request, httplib::Response
     const httplib::FormData config_file = request.form.get_file(::exporter::FIELD_CONFIG);
     const nlohmann::json config = yaml2json(YAML::Load(config_file.content));
     const ExportResult result = Exporter().exportModel(upload.filename, upload.content, config);
-    std::ifstream stream(result.archive, std::ios::binary);
-    const bool opened = stream.is_open();
-    const std::string bytes((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
-    if (!opened) {
-        throw std::runtime_error("engine zip missing");
-    }
-    http::Response::ok(response, result.data, "", result.archive.filename().string(), bytes);
+    http::Response::ok(response, result.data, "", result.fileName, result.file);
 }
 
 nlohmann::json ExportRoute::yaml2json(const YAML::Node& node) {

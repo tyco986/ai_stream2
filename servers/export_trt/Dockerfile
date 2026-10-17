@@ -14,7 +14,7 @@ RUN printf '%s\n' \
         'Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg' \
         > /etc/apt/sources.list.d/ubuntu.sources \
     && apt-get update \
-    && apt-get install -y --no-install-recommends g++ cmake nlohmann-json3-dev libyaml-cpp-dev unzip ca-certificates \
+    && apt-get install -y --no-install-recommends g++ cmake nlohmann-json3-dev libyaml-cpp-dev libzip-dev unzip ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

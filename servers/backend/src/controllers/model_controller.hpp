@@ -17,6 +17,7 @@ class ModelController : public drogon::HttpController<ModelController> {
   METHOD_LIST_BEGIN
   ADD_METHOD_TO(ModelController::list, model::PATH_LIST, drogon::Get, "AuthFilter");
   ADD_METHOD_TO(ModelController::create, model::PATH_LIST, drogon::Post, "AuthFilter");
+  ADD_METHOD_TO(ModelController::importModels, model::PATH_IMPORT, drogon::Post, "AuthFilter");
   ADD_METHOD_TO(ModelController::get, model::PATH_ITEM, drogon::Get, "AuthFilter");
   ADD_METHOD_TO(ModelController::update, model::PATH_ITEM, drogon::Patch, "AuthFilter");
   ADD_METHOD_TO(ModelController::remove, model::PATH_ITEM, drogon::Delete, "AuthFilter");
@@ -30,6 +31,8 @@ class ModelController : public drogon::HttpController<ModelController> {
             std::function<void(const drogon::HttpResponsePtr&)>&& callback);
   void create(const drogon::HttpRequestPtr& request,
               std::function<void(const drogon::HttpResponsePtr&)>&& callback);
+  void importModels(const drogon::HttpRequestPtr& request,
+                    std::function<void(const drogon::HttpResponsePtr&)>&& callback);
   void get(const drogon::HttpRequestPtr& request,
            std::function<void(const drogon::HttpResponsePtr&)>&& callback,
            const std::string& model_id);

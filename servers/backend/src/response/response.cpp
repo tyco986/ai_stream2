@@ -8,8 +8,9 @@ drogon::HttpResponsePtr http::Response::ok(const Json::Value& data, const char* 
 }
 
 drogon::HttpResponsePtr http::Response::error(drogon::HttpStatusCode status,
-                                              const char* message) {
-  auto response = envelope(false, status, message, Json::Value(Json::nullValue));
+                                              const char* message,
+                                              const Json::Value& data) {
+  auto response = envelope(false, status, message, data);
   return response;
 }
 

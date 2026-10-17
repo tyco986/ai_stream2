@@ -25,6 +25,7 @@ namespace export_trt {
 
 inline const char* PREFIX = "/puskas/export_trt";
 inline const char* BASE_URL = "http://puskas_export_trt:9000";
+inline const double REQUEST_TIMEOUT_SECONDS = 180;
 
 }
 
@@ -32,6 +33,7 @@ namespace export_onnx {
 
 inline const char* PREFIX = "/puskas/export_onnx";
 inline const char* BASE_URL = "http://puskas_export_onnx:8090";
+inline const double REQUEST_TIMEOUT_SECONDS = 180;
 
 }
 

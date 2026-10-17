@@ -1,5 +1,7 @@
 #pragma once
 
+#include <json/json.h>
+
 namespace stream_group {
 
 // paths
@@ -21,11 +23,7 @@ inline const char* KEY_ENABLED = "enabled";
 inline const char* KEY_STATUS = "status";
 inline const char* KEY_RECORD = "record";
 inline const char* KEY_PARENT_ID = "parent_id";
-inline const char* KEY_DELETED_GROUP_IDS = "deleted_group_ids";
-inline const char* KEY_MOVED_STREAM_COUNT = "moved_stream_count";
 inline const char* KEY_STREAM_IDS = "stream_ids";
-inline const char* KEY_CREATED_COUNT = "created_count";
-inline const char* KEY_UPDATED_COUNT = "updated_count";
 inline const char* FIELD_FILE = "file";
 inline const char* EXPORT_FILENAME = "groups.csv";
 inline const char* CSV_HEADER = "group,parent";
@@ -36,8 +34,15 @@ inline const char* ERR_CSV = "invalid csv";
 inline const char* ERR_PARENT_MISSING = "parent not found";
 inline const char* ERR_GROUP_EXISTS = "group name exists";
 inline const char* ERR_ALL = "cannot move All";
-inline const char* KEY_REMOVED_COUNT = "removed_count";
 inline const char* ALL_GROUP_ID = "00000000-0000-4000-8000-000000000001";
+
+inline Json::Value ROW() {
+  Json::Value node;
+  node[KEY_ID] = Json::Value();
+  node[KEY_NAME] = Json::Value();
+  node[KEY_PARENT_ID] = Json::Value();
+  return node;
+}
 
 // types
 inline const char* TYPE_GROUP = "group";

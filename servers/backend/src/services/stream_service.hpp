@@ -4,7 +4,6 @@
 #include <json/json.h>
 
 #include <string>
-#include <vector>
 
 class StreamService {
  public:
@@ -36,12 +35,9 @@ class StreamService {
                      const Json::Value& height,
                      const Json::Value& fps,
                      const Json::Value& probedAt);
-  void enable(const std::string& streamId);
-  void disable(const std::string& streamId);
-  void record(const std::string& streamId);
-  void unrecord(const std::string& streamId);
-  void remove(const std::string& streamId);
-  void batchRemove(const std::vector<std::string>& streamIds);
+  void setEnabled(const std::string& streamId, bool enabled);
+  void setRecord(const std::string& streamId, bool recording);
+  Json::Value remove(const std::string& streamId);
   Json::Value importCSV(const std::string& csv);
   std::string exportCSV();
   Json::Value probe(const std::string& streamId,
@@ -52,8 +48,7 @@ class StreamService {
                     const Json::Value& probedAt);
 
  private:
-  Json::Value item(const drogon::orm::Row& row);
-  Json::Value probeItem(const drogon::orm::Row& row);
+  Json::Value row2json(const drogon::orm::Row& row);
 
   drogon::orm::DbClientPtr dbClient;
 };

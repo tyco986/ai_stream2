@@ -5,7 +5,6 @@
 
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 class StreamGroupService {
@@ -23,26 +22,11 @@ class StreamGroupService {
   std::string exportCSV();
 
  private:
-  struct GroupRow {
-    std::string id;
-    std::string name;
-    std::string parentId;
-  };
-
-  struct StreamRow {
-    std::string id;
-    std::string name;
-    bool enabled;
-    std::string status;
-    bool recording;
-  };
-
   std::vector<std::string> subtreeIds(const std::string& groupId);
 
-  Json::Value groupNode(const GroupRow& group,
-                        const std::unordered_map<std::string, std::vector<GroupRow>>& children,
-                        const std::unordered_map<std::string, std::vector<StreamRow>>& streams);
-  Json::Value streamNode(const StreamRow& row);
+  Json::Value groupNode(const Json::Value& group,
+                        const std::unordered_map<std::string, std::vector<Json::Value>>& children,
+                        const std::unordered_map<std::string, std::vector<Json::Value>>& streams);
 
   drogon::orm::DbClientPtr dbClient;
 };

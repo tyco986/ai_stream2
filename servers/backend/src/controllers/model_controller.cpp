@@ -12,6 +12,7 @@
 #include <exception>
 #include <filesystem>
 #include <fstream>
+#include <vector>
 
 ModelController::ModelController() : service(Database::client()) {}
 
@@ -213,6 +214,35 @@ void ModelController::update(
   respond(request, response, started, callback, errorText);
 }
 
+void ModelController::importModels(
+    const drogon::HttpRequestPtr& request,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
+  const auto started = std::chrono::steady_clock::now();
+  drogon::MultiPartParser parser;
+  const bool parsed = parser.parse(request) == 0;
+  std::vector<ImportFile> files;
+  for (const auto& file : parser.getFiles()) {
+    const bool matched = file.getItemName() == model::FIELD_FILE;
+    if (matched) {
+      ImportFile item;
+      item.fileName = file.getFileName();
+      item.fileContent = std::string(file.fileData(), file.fileLength());
+      files.push_back(item);
+    }
+  }
+  drogon::HttpResponsePtr response = http::Response::error(drogon::k400BadRequest, model::MSG_IMPORT_ERROR);
+  std::string errorText;
+  try {
+    if (parsed && !files.empty()) {
+      response = http::Response::ok(service.importModel(files), model::MSG_IMPORT_OK);
+    }
+  } catch (const std::exception& error) {
+    response = http::Response::error(drogon::k500InternalServerError, model::MSG_IMPORT_ERROR);
+    errorText = error.what();
+  }
+  respond(request, response, started, callback, errorText);
+}
+
 void ModelController::upload(
     const drogon::HttpRequestPtr& request,
     std::function<void(const drogon::HttpResponsePtr&)>&& callback,
@@ -251,8 +281,7 @@ void ModelController::remove(
   drogon::HttpResponsePtr response;
   std::string errorText;
   try {
-    service.remove(model_id);
-    response = http::Response::ok(Json::Value(Json::nullValue), model::MSG_REMOVE_OK);
+    response = http::Response::ok(service.remove(model_id), model::MSG_REMOVE_OK);
   } catch (const std::exception& error) {
     const std::string reason = error.what();
     const bool occupied = reason == model::ERR_OCCUPIED;
@@ -275,8 +304,6 @@ drogon::Task<drogon::HttpResponsePtr> ModelController::build(const drogon::HttpR
     building = true;
     const std::string sourcePath = service.get(model_id)[model::KEY_SOURCE_PATH].asString();
     const std::filesystem::path source(sourcePath);
-    const std::filesystem::path onnxZip =
-        std::filesystem::path(model::ONNX_DIR) / (source.stem().string() + model::SUFFIX_ZIP);
     auto onnxRequest = drogon::HttpRequest::newHttpRequest();
     onnxRequest->setMethod(drogon::Post);
     onnxRequest->setPath(model::PATH_EXPORT_ONNX);
@@ -284,30 +311,27 @@ drogon::Task<drogon::HttpResponsePtr> ModelController::build(const drogon::HttpR
     onnxRequest->setBody(zip2Multipart(source.filename().string(), zip2Bytes(sourcePath)) +
                            yaml2Multipart(recipes.exportOnnx));
     auto onnxClient = drogon::HttpClient::newHttpClient(export_onnx::BASE_URL);
-    const auto onnxResponse = co_await onnxClient->sendRequestCoro(onnxRequest);
-    const bool onnxOk = onnxResponse->statusCode() >= drogon::k200OK &&
-        onnxResponse->statusCode() < drogon::k300MultipleChoices && std::filesystem::is_regular_file(onnxZip);
+    const auto onnxResponse = co_await onnxClient->sendRequestCoro(onnxRequest, export_onnx::REQUEST_TIMEOUT_SECONDS);
+    const bool onnxOk = onnxResponse->statusCode() >= drogon::k200OK && onnxResponse->statusCode() < drogon::k300MultipleChoices;
     if (!onnxOk) {
       throw std::runtime_error("export onnx failed");
     }
+    const ExportResponse onnx = service.buildParse(onnxResponse->getHeader("content-type"), std::string(onnxResponse->getBody()));
     auto trtRequest = drogon::HttpRequest::newHttpRequest();
     trtRequest->setMethod(drogon::Post);
     trtRequest->setPath(model::PATH_EXPORT_TRT);
     trtRequest->addHeader("content-type", model::MULTIPART_CONTENT_TYPE);
-    trtRequest->setBody(zip2Multipart(onnxZip.filename().string(), zip2Bytes(onnxZip.string())) +
-                          yaml2Multipart(recipes.exportTrt));
+    trtRequest->setBody(zip2Multipart(onnx.fileName, onnx.fileContent) + yaml2Multipart(recipes.exportTrt));
     auto trtClient = drogon::HttpClient::newHttpClient(export_trt::BASE_URL);
-    const auto trtResponse = co_await trtClient->sendRequestCoro(trtRequest);
-    Json::Value result;
-    const bool parsed = trtResponse->statusCode() >= drogon::k200OK &&
-        trtResponse->statusCode() < drogon::k300MultipleChoices &&
-        Json::Reader().parse(std::string(trtResponse->getBody()), result);
-    if (!parsed) {
+    const auto trtResponse = co_await trtClient->sendRequestCoro(trtRequest, export_trt::REQUEST_TIMEOUT_SECONDS);
+    const bool trtOk = trtResponse->statusCode() >= drogon::k200OK && trtResponse->statusCode() < drogon::k300MultipleChoices;
+    if (!trtOk) {
       throw std::runtime_error("export trt failed");
     }
-    service.buildEnd(model_id, result);
+    const ExportResponse trt = service.buildParse(trtResponse->getHeader("content-type"), std::string(trtResponse->getBody()));
+    const Json::Value built = service.buildEnd(model_id, trt.data, trt.fileName, trt.fileContent);
     building = false;
-    response = http::Response::ok(service.get(model_id), model::MSG_BUILD_OK);
+    response = http::Response::ok(built, model::MSG_BUILD_OK);
   } catch (const std::exception& error) {
     const std::string reason = error.what();
     const bool conflict = reason == model::ERR_BUILDING;
@@ -329,16 +353,13 @@ void ModelController::status(
   const auto started = std::chrono::steady_clock::now();
   try {
     const Json::Value model = service.get(model_id);
-    const bool building = model[model::KEY_STATUS].asString() == model::STATUS_BUILDING;
     Json::Value data;
     data[model::KEY_ID] = model[model::KEY_ID];
     data[model::KEY_STATUS] = model[model::KEY_STATUS];
     data[model::KEY_BUILT_AT] = model[model::KEY_BUILT_AT];
-    if (!building) {
-      data[model::KEY_VERSION] = model[model::KEY_VERSION];
-      data[model::KEY_NUM_CLASS] = model[model::KEY_NUM_CLASS];
-      data[model::KEY_CLASSES] = model[model::KEY_CLASSES];
-    }
+    data[model::KEY_VERSION] = model[model::KEY_VERSION];
+    data[model::KEY_NUM_CLASS] = model[model::KEY_NUM_CLASS];
+    data[model::KEY_CLASSES] = model[model::KEY_CLASSES];
     respond(request, http::Response::ok(data, model::MSG_STATUS_OK), started, callback);
   } catch (const std::exception& error) {
     respond(request,

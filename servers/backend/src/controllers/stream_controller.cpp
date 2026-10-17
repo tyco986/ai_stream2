@@ -196,8 +196,7 @@ drogon::Task<drogon::HttpResponsePtr> StreamController::remove(const drogon::Htt
   }
   if (removed) {
     try {
-      service.remove(stream_id);
-      response = http::Response::ok(Json::Value(Json::nullValue), stream::MSG_DELETE_OK);
+      response = http::Response::ok(service.remove(stream_id), stream::MSG_DELETE_OK);
     } catch (const std::exception& error) {
       errorText = error.what();
     }

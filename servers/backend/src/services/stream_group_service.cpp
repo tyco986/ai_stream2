@@ -4,6 +4,7 @@
 
 #include <sstream>
 #include <stdexcept>
+#include <unordered_set>
 #include <utility>
 
 StreamGroupService::StreamGroupService(drogon::orm::DbClientPtr dbClient) {
@@ -17,28 +18,30 @@ Json::Value StreamGroupService::tree() {
       "SELECT id::text AS id, name, group_id::text AS group_id, enabled, status, record "
       "FROM stream ORDER BY name");
 
-  GroupRow root;
-  std::unordered_map<std::string, std::vector<GroupRow>> children;
+  Json::Value root;
+  std::unordered_map<std::string, std::vector<Json::Value>> children;
   for (const auto& row : groupRows) {
-    GroupRow group;
-    group.id = row["id"].as<std::string>();
-    group.name = row["name"].as<std::string>();
-    group.parentId = row["parent_id"].isNull() ? "" : row["parent_id"].as<std::string>();
-    if (group.parentId.empty()) {
+    Json::Value group;
+    group[stream_group::KEY_ID] = row["id"].as<std::string>();
+    group[stream_group::KEY_NAME] = row["name"].as<std::string>();
+    group[stream_group::KEY_TYPE] = stream_group::TYPE_GROUP;
+    const std::string parentId = row["parent_id"].isNull() ? "" : row["parent_id"].as<std::string>();
+    if (parentId.empty()) {
       root = group;
     } else {
-      children[group.parentId].push_back(group);
+      children[parentId].push_back(group);
     }
   }
 
-  std::unordered_map<std::string, std::vector<StreamRow>> streams;
+  std::unordered_map<std::string, std::vector<Json::Value>> streams;
   for (const auto& row : streamRows) {
-    StreamRow stream;
-    stream.id = row["id"].as<std::string>();
-    stream.name = row["name"].as<std::string>();
-    stream.enabled = row["enabled"].as<bool>();
-    stream.status = row["status"].as<std::string>();
-    stream.recording = row["record"].as<bool>();
+    Json::Value stream;
+    stream[stream_group::KEY_ID] = row["id"].as<std::string>();
+    stream[stream_group::KEY_NAME] = row["name"].as<std::string>();
+    stream[stream_group::KEY_TYPE] = stream_group::TYPE_STREAM;
+    stream[stream_group::KEY_ENABLED] = row["enabled"].as<bool>();
+    stream[stream_group::KEY_STATUS] = row["status"].as<std::string>();
+    stream[stream_group::KEY_RECORD] = row["record"].as<bool>();
     streams[row["group_id"].as<std::string>()].push_back(stream);
   }
 
@@ -128,20 +131,20 @@ Json::Value StreamGroupService::importCSV(const std::string& csv) {
       creates.emplace_back(names[index], parent->second);
     }
   }
-  auto transaction = dbClient->newTransaction();
-  for (const auto& created : creates) {
-    transaction->execSqlSync(
-        "INSERT INTO stream_group (id, name, parent_id) VALUES (gen_random_uuid(), $1, $2::uuid)",
-        created.first,
-        created.second);
+  {
+    auto transaction = dbClient->newTransaction();
+    for (const auto& created : creates) {
+      transaction->execSqlSync(
+          "INSERT INTO stream_group (id, name, parent_id) VALUES (gen_random_uuid(), $1, $2::uuid)",
+          created.first,
+          created.second);
+    }
+    for (const auto& updated : updates) {
+      transaction->execSqlSync(
+          "UPDATE stream_group SET parent_id = $1::uuid WHERE id = $2::uuid", updated.second, updated.first);
+    }
   }
-  for (const auto& updated : updates) {
-    transaction->execSqlSync(
-        "UPDATE stream_group SET parent_id = $1::uuid WHERE id = $2::uuid", updated.second, updated.first);
-  }
-  Json::Value data;
-  data[stream_group::KEY_CREATED_COUNT] = static_cast<Json::UInt64>(creates.size());
-  data[stream_group::KEY_UPDATED_COUNT] = static_cast<Json::UInt64>(updates.size());
+  Json::Value data = tree();
   return data;
 }
 
@@ -160,21 +163,18 @@ std::string StreamGroupService::exportCSV() {
 }
 
 Json::Value StreamGroupService::groupNode(
-    const GroupRow& group,
-    const std::unordered_map<std::string, std::vector<GroupRow>>& children,
-    const std::unordered_map<std::string, std::vector<StreamRow>>& streams) {
-  Json::Value node;
-  node[stream_group::KEY_ID] = group.id;
-  node[stream_group::KEY_NAME] = group.name;
-  node[stream_group::KEY_TYPE] = stream_group::TYPE_GROUP;
+    const Json::Value& group,
+    const std::unordered_map<std::string, std::vector<Json::Value>>& children,
+    const std::unordered_map<std::string, std::vector<Json::Value>>& streams) {
+  Json::Value node = group;
   Json::Value kids(Json::arrayValue);
-  const auto streamIt = streams.find(group.id);
+  const auto streamIt = streams.find(group[stream_group::KEY_ID].asString());
   if (streamIt != streams.end()) {
     for (const auto& row : streamIt->second) {
-      kids.append(streamNode(row));
+      kids.append(row);
     }
   }
-  const auto childIt = children.find(group.id);
+  const auto childIt = children.find(group[stream_group::KEY_ID].asString());
   if (childIt != children.end()) {
     for (const auto& child : childIt->second) {
       kids.append(groupNode(child, children, streams));
@@ -194,7 +194,7 @@ Json::Value StreamGroupService::create(const std::string& parentGroupId, const s
   if (rows.empty()) {
     throw std::runtime_error("group not created");
   }
-  Json::Value data;
+  Json::Value data = stream_group::ROW();
   data[stream_group::KEY_ID] = rows[0]["id"].as<std::string>();
   data[stream_group::KEY_NAME] = rows[0]["name"].as<std::string>();
   data[stream_group::KEY_PARENT_ID] = rows[0]["parent_id"].as<std::string>();
@@ -243,31 +243,27 @@ Json::Value StreamGroupService::setMembers(const std::string& groupId,
     throw std::runtime_error("group not found");
   }
   std::unordered_set<std::string> selected(streamIds.begin(), streamIds.end());
-  auto transaction = dbClient->newTransaction();
-  int updated = 0;
-  for (const auto& id : selected) {
-    const auto result = transaction->execSqlSync(
-        "UPDATE stream SET group_id = $1::uuid WHERE id = $2::uuid AND group_id <> $1::uuid",
-        groupId,
-        id);
-    updated += result.affectedRows();
-  }
-  const auto current = transaction->execSqlSync(
-      "SELECT id::text AS id FROM stream WHERE group_id = $1::uuid", groupId);
-  int removed = 0;
-  for (const auto& row : current) {
-    const auto id = row["id"].as<std::string>();
-    if (selected.count(id) == 0) {
+  {
+    auto transaction = dbClient->newTransaction();
+    for (const auto& id : selected) {
       transaction->execSqlSync(
-          "UPDATE stream SET group_id = $1::uuid WHERE id = $2::uuid",
-          stream_group::ALL_GROUP_ID,
+          "UPDATE stream SET group_id = $1::uuid WHERE id = $2::uuid AND group_id <> $1::uuid",
+          groupId,
           id);
-      ++removed;
+    }
+    const auto current = transaction->execSqlSync(
+        "SELECT id::text AS id FROM stream WHERE group_id = $1::uuid", groupId);
+    for (const auto& row : current) {
+      const auto id = row["id"].as<std::string>();
+      if (selected.count(id) == 0) {
+        transaction->execSqlSync(
+            "UPDATE stream SET group_id = $1::uuid WHERE id = $2::uuid",
+            stream_group::ALL_GROUP_ID,
+            id);
+      }
     }
   }
-  Json::Value data;
-  data[stream_group::KEY_UPDATED_COUNT] = updated;
-  data[stream_group::KEY_REMOVED_COUNT] = removed;
+  Json::Value data = tree();
   return data;
 }
 
@@ -280,7 +276,7 @@ Json::Value StreamGroupService::rename(const std::string& groupId, const std::st
   if (rows.empty()) {
     throw std::runtime_error("group not renamed");
   }
-  Json::Value data;
+  Json::Value data = stream_group::ROW();
   data[stream_group::KEY_ID] = rows[0]["id"].as<std::string>();
   data[stream_group::KEY_NAME] = rows[0]["name"].as<std::string>();
   data[stream_group::KEY_PARENT_ID] = rows[0]["parent_id"].as<std::string>();
@@ -318,56 +314,42 @@ Json::Value StreamGroupService::remove(const std::string& groupId) {
   if (ids.empty()) {
     throw std::runtime_error("group not deleted");
   }
-  auto transaction = dbClient->newTransaction();
-  int moved = 0;
-  for (const auto& id : ids) {
-    const auto updated = transaction->execSqlSync(
-        "UPDATE stream SET group_id = $1::uuid WHERE group_id = $2::uuid",
-        stream_group::ALL_GROUP_ID,
-        id);
-    moved += updated.affectedRows();
-  }
-  std::unordered_set<std::string> remaining(ids.begin(), ids.end());
-  std::unordered_map<std::string, std::vector<std::string>> children;
-  const auto rows = dbClient->execSqlSync(
-      "SELECT id::text AS id, parent_id::text AS parent_id FROM stream_group");
-  for (const auto& row : rows) {
-    if (!row["parent_id"].isNull()) {
-      children[row["parent_id"].as<std::string>()].push_back(row["id"].as<std::string>());
+  {
+    auto transaction = dbClient->newTransaction();
+    for (const auto& id : ids) {
+      transaction->execSqlSync(
+          "UPDATE stream SET group_id = $1::uuid WHERE group_id = $2::uuid",
+          stream_group::ALL_GROUP_ID,
+          id);
     }
-  }
-  Json::Value deleted(Json::arrayValue);
-  while (!remaining.empty()) {
-    std::string leaf;
-    for (const auto& id : remaining) {
-      const auto childIt = children.find(id);
-      bool hasChild = false;
-      if (childIt != children.end()) {
-        for (const auto& child : childIt->second) {
-          hasChild = hasChild || remaining.count(child) > 0;
+    std::unordered_set<std::string> remaining(ids.begin(), ids.end());
+    std::unordered_map<std::string, std::vector<std::string>> children;
+    const auto rows = dbClient->execSqlSync(
+        "SELECT id::text AS id, parent_id::text AS parent_id FROM stream_group");
+    for (const auto& row : rows) {
+      if (!row["parent_id"].isNull()) {
+        children[row["parent_id"].as<std::string>()].push_back(row["id"].as<std::string>());
+      }
+    }
+    while (!remaining.empty()) {
+      std::string leaf;
+      for (const auto& id : remaining) {
+        const auto childIt = children.find(id);
+        bool hasChild = false;
+        if (childIt != children.end()) {
+          for (const auto& child : childIt->second) {
+            hasChild = hasChild || remaining.count(child) > 0;
+          }
+        }
+        if (!hasChild) {
+          leaf = id;
         }
       }
-      if (!hasChild) {
-        leaf = id;
-      }
+      transaction->execSqlSync("DELETE FROM stream_group WHERE id = $1::uuid", leaf);
+      remaining.erase(leaf);
     }
-    transaction->execSqlSync("DELETE FROM stream_group WHERE id = $1::uuid", leaf);
-    deleted.append(leaf);
-    remaining.erase(leaf);
   }
-  Json::Value data;
-  data[stream_group::KEY_DELETED_GROUP_IDS] = deleted;
-  data[stream_group::KEY_MOVED_STREAM_COUNT] = moved;
+  Json::Value data = tree();
   return data;
 }
 
-Json::Value StreamGroupService::streamNode(const StreamRow& row) {
-  Json::Value node;
-  node[stream_group::KEY_ID] = row.id;
-  node[stream_group::KEY_NAME] = row.name;
-  node[stream_group::KEY_TYPE] = stream_group::TYPE_STREAM;
-  node[stream_group::KEY_ENABLED] = row.enabled;
-  node[stream_group::KEY_STATUS] = row.status;
-  node[stream_group::KEY_RECORD] = row.recording;
-  return node;
-}

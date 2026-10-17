@@ -70,8 +70,7 @@ void ModelBatchController::respond(
 drogon::Task<drogon::HttpResponsePtr> ModelBatchController::batchBuild(const drogon::HttpRequestPtr& request) {
   const auto started = std::chrono::steady_clock::now();
   const auto body = request->getJsonObject();
-  Json::Value items(Json::arrayValue);
-  Json::Value failedIds(Json::arrayValue);
+  Json::Value data = model::BATCH_DATA();
   const bool hasIds = body && (*body).isMember(model::KEY_IDS) && (*body)[model::KEY_IDS].isArray();
   if (hasIds) {
     for (const auto& node : (*body)[model::KEY_IDS]) {
@@ -82,8 +81,6 @@ drogon::Task<drogon::HttpResponsePtr> ModelBatchController::batchBuild(const dro
         building = true;
         const std::string sourcePath = service.get(modelId)[model::KEY_SOURCE_PATH].asString();
         const std::filesystem::path source(sourcePath);
-        const std::filesystem::path onnxZip =
-            std::filesystem::path(model::ONNX_DIR) / (source.stem().string() + model::SUFFIX_ZIP);
         auto onnxRequest = drogon::HttpRequest::newHttpRequest();
         onnxRequest->setMethod(drogon::Post);
         onnxRequest->setPath(model::PATH_EXPORT_ONNX);
@@ -91,41 +88,44 @@ drogon::Task<drogon::HttpResponsePtr> ModelBatchController::batchBuild(const dro
         onnxRequest->setBody(zip2Multipart(source.filename().string(), zip2Bytes(sourcePath)) +
                               yaml2Multipart(recipes.exportOnnx));
         auto onnxClient = drogon::HttpClient::newHttpClient(export_onnx::BASE_URL);
-        const auto onnxResponse = co_await onnxClient->sendRequestCoro(onnxRequest);
-        const bool onnxOk = onnxResponse->statusCode() >= drogon::k200OK &&
-            onnxResponse->statusCode() < drogon::k300MultipleChoices && std::filesystem::is_regular_file(onnxZip);
+        const auto onnxResponse = co_await onnxClient->sendRequestCoro(onnxRequest, export_onnx::REQUEST_TIMEOUT_SECONDS);
+        const bool onnxOk = onnxResponse->statusCode() >= drogon::k200OK && onnxResponse->statusCode() < drogon::k300MultipleChoices;
         if (!onnxOk) {
           throw std::runtime_error("export onnx failed");
         }
+        const ExportResponse onnx = service.buildParse(onnxResponse->getHeader("content-type"), std::string(onnxResponse->getBody()));
         auto trtRequest = drogon::HttpRequest::newHttpRequest();
         trtRequest->setMethod(drogon::Post);
         trtRequest->setPath(model::PATH_EXPORT_TRT);
         trtRequest->addHeader("content-type", model::MULTIPART_CONTENT_TYPE);
-        trtRequest->setBody(zip2Multipart(onnxZip.filename().string(), zip2Bytes(onnxZip.string())) +
-                             yaml2Multipart(recipes.exportTrt));
+        trtRequest->setBody(zip2Multipart(onnx.fileName, onnx.fileContent) + yaml2Multipart(recipes.exportTrt));
         auto trtClient = drogon::HttpClient::newHttpClient(export_trt::BASE_URL);
-        const auto trtResponse = co_await trtClient->sendRequestCoro(trtRequest);
-        Json::Value result;
-        const bool parsed = trtResponse->statusCode() >= drogon::k200OK &&
-            trtResponse->statusCode() < drogon::k300MultipleChoices &&
-            Json::Reader().parse(std::string(trtResponse->getBody()), result);
-        if (!parsed) {
+        const auto trtResponse = co_await trtClient->sendRequestCoro(trtRequest, export_trt::REQUEST_TIMEOUT_SECONDS);
+        const bool trtOk = trtResponse->statusCode() >= drogon::k200OK && trtResponse->statusCode() < drogon::k300MultipleChoices;
+        if (!trtOk) {
           throw std::runtime_error("export trt failed");
         }
-        service.buildEnd(modelId, result);
+        const ExportResponse trt = service.buildParse(trtResponse->getHeader("content-type"), std::string(trtResponse->getBody()));
+        const Json::Value built = service.buildEnd(modelId, trt.data, trt.fileName, trt.fileContent);
         building = false;
-        items.append(service.get(modelId));
+        data[model::KEY_UPDATED_ROWS].append(built);
       } catch (const std::exception&) {
+        Json::Value failed;
+        failed[model::KEY_ID] = modelId;
         if (building) {
-          service.buildEnd(modelId, Json::Value());
+          try {
+            failed = service.buildEnd(modelId, Json::Value());
+          } catch (const std::exception&) {
+            failed[model::KEY_ID] = modelId;
+          }
         }
-        failedIds.append(modelId);
+        data[model::KEY_FAILED_ROWS].append(failed);
       }
     }
   }
-  Json::Value data;
-  data[model::KEY_ITEMS] = items;
-  data[model::KEY_FAILED_IDS] = failedIds;
+  data[model::KEY_UPDATED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_UPDATED_ROWS].size());
+  data[model::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_FAILED_ROWS].size());
+  data[model::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_SKIPPED_ROWS].size());
   drogon::HttpResponsePtr response = http::Response::ok(data, model::MSG_BUILD_OK);
   respond(request, response, started, [](const drogon::HttpResponsePtr&) {});
   co_return response;
@@ -136,32 +136,30 @@ void ModelBatchController::batchStatus(
     std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
   const auto started = std::chrono::steady_clock::now();
   const auto body = request->getJsonObject();
-  Json::Value items(Json::arrayValue);
-  Json::Value failedIds(Json::arrayValue);
+  Json::Value data = model::BATCH_DATA();
   const bool hasIds = body && (*body).isMember(model::KEY_IDS) && (*body)[model::KEY_IDS].isArray();
   if (hasIds) {
     for (const auto& node : (*body)[model::KEY_IDS]) {
       try {
         const Json::Value model = service.get(node.asString());
-        const bool building = model[model::KEY_STATUS].asString() == model::STATUS_BUILDING;
         Json::Value item;
         item[model::KEY_ID] = model[model::KEY_ID];
         item[model::KEY_STATUS] = model[model::KEY_STATUS];
         item[model::KEY_BUILT_AT] = model[model::KEY_BUILT_AT];
-        if (!building) {
-          item[model::KEY_VERSION] = model[model::KEY_VERSION];
-          item[model::KEY_NUM_CLASS] = model[model::KEY_NUM_CLASS];
-          item[model::KEY_CLASSES] = model[model::KEY_CLASSES];
-        }
-        items.append(item);
+        item[model::KEY_VERSION] = model[model::KEY_VERSION];
+        item[model::KEY_NUM_CLASS] = model[model::KEY_NUM_CLASS];
+        item[model::KEY_CLASSES] = model[model::KEY_CLASSES];
+        data[model::KEY_UPDATED_ROWS].append(item);
       } catch (const std::exception&) {
-        failedIds.append(node.asString());
+        Json::Value failed;
+        failed[model::KEY_ID] = node.asString();
+        data[model::KEY_FAILED_ROWS].append(failed);
       }
     }
   }
-  Json::Value data;
-  data[model::KEY_ITEMS] = items;
-  data[model::KEY_FAILED_IDS] = failedIds;
+  data[model::KEY_UPDATED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_UPDATED_ROWS].size());
+  data[model::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_FAILED_ROWS].size());
+  data[model::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_SKIPPED_ROWS].size());
   respond(request, http::Response::ok(data, model::MSG_STATUS_OK), started, callback);
 }
 
@@ -170,21 +168,21 @@ void ModelBatchController::batchRemove(
     std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
   const auto started = std::chrono::steady_clock::now();
   const auto body = request->getJsonObject();
-  Json::Value failedIds(Json::arrayValue);
-  std::size_t removedCount = 0;
+  Json::Value data = model::BATCH_DATA();
   const bool hasIds = body && (*body).isMember(model::KEY_IDS) && (*body)[model::KEY_IDS].isArray();
   if (hasIds) {
     for (const auto& node : (*body)[model::KEY_IDS]) {
       try {
-        service.remove(node.asString());
-        removedCount += 1;
+        data[model::KEY_UPDATED_ROWS].append(service.remove(node.asString()));
       } catch (const std::exception&) {
-        failedIds.append(node.asString());
+        Json::Value failed;
+        failed[model::KEY_ID] = node.asString();
+        data[model::KEY_FAILED_ROWS].append(failed);
       }
     }
   }
-  Json::Value data;
-  data[model::KEY_REMOVED_COUNT] = static_cast<Json::UInt64>(removedCount);
-  data[model::KEY_FAILED_IDS] = failedIds;
+  data[model::KEY_UPDATED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_UPDATED_ROWS].size());
+  data[model::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_FAILED_ROWS].size());
+  data[model::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_SKIPPED_ROWS].size());
   respond(request, http::Response::ok(data, model::MSG_REMOVE_OK), started, callback);
 }

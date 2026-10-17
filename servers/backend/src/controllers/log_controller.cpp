@@ -23,7 +23,8 @@ void LogController::get(
   const std::string date = request->getParameter(log::QUERY_DATE);
   const std::string page = request->getParameter(log::QUERY_PAGE);
   const bool knownPage =
-      page == log::STREAM_DIR || page == log::STREAM_GROUP_DIR || page == log::MODEL_DIR;
+      page == log::STREAM_DIR || page == log::STREAM_GROUP_DIR || page == log::MODEL_DIR ||
+      page == log::PIPELINE_DIR || page == log::PIPELINE_GIE_DIR || page == log::PIPELINE_ANALYZER_DIR;
   const bool accepted = dateValid(date) && knownPage;
   std::string content;
   bool found = false;

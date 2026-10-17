@@ -82,8 +82,8 @@ CREATE TABLE model (
   version VARCHAR(64),
   batch_size INT NOT NULL,
   batch_mode VARCHAR(16) NOT NULL,
-  input_tensor_name TEXT,
-  input_tensor_shape TEXT,
+  input_tensors JSONB,
+  output_tensors JSONB,
   precision VARCHAR(16) NOT NULL,
   opt_level INT,
   device INT NOT NULL,
@@ -133,17 +133,29 @@ CREATE TABLE pipeline (
   id UUID PRIMARY KEY,
   name VARCHAR(150) NOT NULL UNIQUE,
   type VARCHAR(64) NOT NULL,
-  status VARCHAR(16) NOT NULL DEFAULT 'stopped',
-  config JSONB NOT NULL,
+  status VARCHAR(16) NOT NULL,
+  input JSONB,
+  config_path TEXT,
+  stream_ids UUID[] NOT NULL,
+  gie_ids UUID[] NOT NULL,
+  analyzer_ids UUID[] NOT NULL,
+  start_time TIMESTAMPTZ,
+  end_time TIMESTAMPTZ,
+  duration BIGINT,
   updated_at TIMESTAMPTZ
 );
+
+CREATE INDEX pipeline_stream_ids_idx ON pipeline USING GIN (stream_ids);
+CREATE INDEX pipeline_gie_ids_idx ON pipeline USING GIN (gie_ids);
+CREATE INDEX pipeline_analyzer_ids_idx ON pipeline USING GIN (analyzer_ids);
 
 CREATE TABLE pipeline_gie (
   id UUID PRIMARY KEY,
   name VARCHAR(150) NOT NULL UNIQUE,
   model_id UUID NOT NULL,
   model_name VARCHAR(150),
-  class_attrs JSONB NOT NULL,
+  class_attrs JSONB,
+  interval INT NOT NULL,
   updated_at TIMESTAMPTZ
 );
 
@@ -151,7 +163,7 @@ CREATE TABLE pipeline_analyzer (
   id UUID PRIMARY KEY,
   name VARCHAR(150) NOT NULL UNIQUE,
   source_path TEXT,
-  annotations JSONB NOT NULL DEFAULT '[]'::jsonb,
+  annotations JSONB NOT NULL,
   updated_at TIMESTAMPTZ
 );
 

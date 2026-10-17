@@ -82,7 +82,7 @@ Json::Value StreamService::list(const std::string& groupId,
             offset);
   Json::Value items(Json::arrayValue);
   for (const auto& row : rows) {
-    items.append(item(row));
+    items.append(row2json(row));
   }
   Json::Value data;
   data[stream::KEY_ITEMS] = items;
@@ -141,7 +141,7 @@ Json::Value StreamService::create(const Json::Value& name,
   if (rows.empty()) {
     throw std::runtime_error("stream not created");
   }
-  Json::Value result = item(rows[0]);
+  Json::Value result = row2json(rows[0]);
   return result;
 }
 
@@ -156,7 +156,7 @@ Json::Value StreamService::get(const std::string& streamId) {
   if (rows.empty()) {
     throw std::runtime_error("stream not found");
   }
-  Json::Value data = item(rows[0]);
+  Json::Value data = row2json(rows[0]);
   return data;
 }
 
@@ -212,7 +212,7 @@ Json::Value StreamService::update(const std::string& streamId,
   if (rows.empty()) {
     throw std::runtime_error("stream not updated");
   }
-  Json::Value data = item(rows[0]);
+  Json::Value data = row2json(rows[0]);
   return data;
 }
 
@@ -230,7 +230,9 @@ Json::Value StreamService::probe(const std::string& streamId,
   const auto rows = dbClient->execSqlSync(
       "UPDATE stream SET status = $1, width = $2, height = $3, fps = $4, probed_at = $5::timestamptz "
       "WHERE id = $6::uuid "
-      "RETURNING id::text AS id, status, width, height, fps, probed_at",
+      "RETURNING id::text AS id, name, group_id::text AS group_id, "
+      "(SELECT name FROM stream_group WHERE id = group_id) AS group_name, "
+      "url, width, height, fps, status, enabled, record, probed_at",
       status.asString(),
       widthValue,
       heightValue,
@@ -240,53 +242,38 @@ Json::Value StreamService::probe(const std::string& streamId,
   if (rows.empty()) {
     throw std::runtime_error("stream not probed");
   }
-  Json::Value data = probeItem(rows[0]);
+  Json::Value data = row2json(rows[0]);
   return data;
 }
 
-void StreamService::enable(const std::string& streamId) {
+void StreamService::setEnabled(const std::string& streamId, bool enabled) {
   const auto rows = dbClient->execSqlSync(
-      "UPDATE stream SET enabled = true WHERE id = $1::uuid RETURNING id", streamId);
+      "UPDATE stream SET enabled = $1 WHERE id = $2::uuid RETURNING id", enabled, streamId);
   if (rows.empty()) {
-    throw std::runtime_error("stream not enabled");
+    throw std::runtime_error("stream enabled not set");
   }
 }
 
-void StreamService::disable(const std::string& streamId) {
+void StreamService::setRecord(const std::string& streamId, bool recording) {
   const auto rows = dbClient->execSqlSync(
-      "UPDATE stream SET enabled = false WHERE id = $1::uuid RETURNING id", streamId);
+      "UPDATE stream SET record = $1 WHERE id = $2::uuid RETURNING id", recording, streamId);
   if (rows.empty()) {
-    throw std::runtime_error("stream not disabled");
+    throw std::runtime_error("stream record not set");
   }
 }
 
-void StreamService::record(const std::string& streamId) {
+Json::Value StreamService::remove(const std::string& streamId) {
   const auto rows = dbClient->execSqlSync(
-      "UPDATE stream SET record = true WHERE id = $1::uuid RETURNING id", streamId);
-  if (rows.empty()) {
-    throw std::runtime_error("stream not recorded");
-  }
-}
-
-void StreamService::unrecord(const std::string& streamId) {
-  const auto rows = dbClient->execSqlSync(
-      "UPDATE stream SET record = false WHERE id = $1::uuid RETURNING id", streamId);
-  if (rows.empty()) {
-    throw std::runtime_error("stream not unrecorded");
-  }
-}
-
-void StreamService::remove(const std::string& streamId) {
-  const auto rows = dbClient->execSqlSync("DELETE FROM stream WHERE id = $1::uuid RETURNING id", streamId);
+      "DELETE FROM stream WHERE id = $1::uuid "
+      "RETURNING id::text AS id, name, group_id::text AS group_id, "
+      "(SELECT name FROM stream_group WHERE id = group_id) AS group_name, "
+      "url, width, height, fps, status, enabled, record, probed_at",
+      streamId);
   if (rows.empty()) {
     throw std::runtime_error("stream not deleted");
   }
-}
-
-void StreamService::batchRemove(const std::vector<std::string>& streamIds) {
-  for (const auto& streamId : streamIds) {
-    remove(streamId);
-  }
+  Json::Value data = row2json(rows[0]);
+  return data;
 }
 
 Json::Value StreamService::importCSV(const std::string& csv) {
@@ -299,6 +286,7 @@ Json::Value StreamService::importCSV(const std::string& csv) {
   if (!headed || line != stream::CSV_HEADER) {
     throw std::runtime_error(stream::ERR_CSV);
   }
+  Json::Value data = stream::BATCH_DATA();
   std::vector<std::string> names;
   std::vector<std::string> urls;
   std::vector<std::string> groups;
@@ -314,23 +302,27 @@ Json::Value StreamService::importCSV(const std::string& csv) {
     const bool columns = first != std::string::npos && second != std::string::npos &&
         line.find(',', second + 1) == std::string::npos;
     if (!blank && !columns) {
-      throw std::runtime_error(stream::ERR_CSV);
+      Json::Value failed;
+      failed[stream::KEY_NAME] = line;
+      data[stream::KEY_FAILED_ROWS].append(failed);
     }
-    if (!blank) {
+    if (!blank && columns) {
       const std::string name = line.substr(0, first);
       const std::string url = line.substr(first + 1, second - first - 1);
       const std::string group = line.substr(second + 1);
       const bool nameSeen = !seenNames.insert(name).second;
       const bool urlSeen = !seenUrls.insert(url).second;
-      if (nameSeen) {
-        throw std::runtime_error(stream::ERR_NAME_EXISTS);
+      if (nameSeen || urlSeen) {
+        Json::Value failed;
+        failed[stream::KEY_NAME] = name;
+        failed[stream::KEY_URL] = url;
+        failed[stream::KEY_GROUP_NAME] = group;
+        data[stream::KEY_FAILED_ROWS].append(failed);
+      } else {
+        names.push_back(name);
+        urls.push_back(url);
+        groups.push_back(group);
       }
-      if (urlSeen) {
-        throw std::runtime_error(stream::ERR_URL_EXISTS);
-      }
-      names.push_back(name);
-      urls.push_back(url);
-      groups.push_back(group);
     }
   }
   std::unordered_map<std::string, std::string> groupIds;
@@ -340,53 +332,79 @@ Json::Value StreamService::importCSV(const std::string& csv) {
   }
   std::unordered_map<std::string, std::string> idByName;
   std::unordered_map<std::string, std::string> idByUrl;
-  const auto streamRows = dbClient->execSqlSync("SELECT id::text AS id, name, url FROM stream");
+  std::unordered_map<std::string, std::string> groupByStream;
+  const auto streamRows = dbClient->execSqlSync(
+      "SELECT id::text AS id, name, url, group_id::text AS group_id FROM stream");
   for (const auto& row : streamRows) {
-    idByName[row["name"].as<std::string>()] = row["id"].as<std::string>();
-    idByUrl[row["url"].as<std::string>()] = row["id"].as<std::string>();
+    const std::string id = row["id"].as<std::string>();
+    idByName[row["name"].as<std::string>()] = id;
+    idByUrl[row["url"].as<std::string>()] = id;
+    groupByStream[id] = row["group_id"].as<std::string>();
   }
+  std::vector<std::string> skipped;
   std::vector<std::pair<std::string, std::string>> updates;
   std::vector<std::tuple<std::string, std::string, std::string>> creates;
   for (std::size_t index = 0; index < names.size(); index += 1) {
     const auto group = groupIds.find(groups[index]);
-    if (group == groupIds.end()) {
-      throw std::runtime_error(stream::ERR_GROUP_MISSING);
-    }
     const auto named = idByName.find(names[index]);
     const auto addressed = idByUrl.find(urls[index]);
+    const bool hasGroup = group != groupIds.end();
     const bool hasName = named != idByName.end();
     const bool hasUrl = addressed != idByUrl.end();
     const bool same = hasName && hasUrl && named->second == addressed->second;
-    if (hasName && !same) {
-      throw std::runtime_error(stream::ERR_NAME_EXISTS);
+    const bool unchanged = same && hasGroup && groupByStream[named->second] == group->second;
+    if (!hasGroup || (hasName && !same) || (hasUrl && !same)) {
+      Json::Value failed;
+      failed[stream::KEY_NAME] = names[index];
+      failed[stream::KEY_URL] = urls[index];
+      failed[stream::KEY_GROUP_NAME] = groups[index];
+      data[stream::KEY_FAILED_ROWS].append(failed);
     }
-    if (hasUrl && !same) {
-      throw std::runtime_error(stream::ERR_URL_EXISTS);
+    if (unchanged) {
+      skipped.push_back(named->second);
     }
-    if (same) {
+    if (same && hasGroup && !unchanged) {
       updates.emplace_back(named->second, group->second);
     }
-    if (!hasName && !hasUrl) {
+    if (!hasName && !hasUrl && hasGroup) {
       creates.emplace_back(names[index], urls[index], group->second);
     }
   }
-  auto transaction = dbClient->newTransaction();
-  for (const auto& created : creates) {
-    transaction->execSqlSync(
-        "INSERT INTO stream (id, name, group_id, url, status, enabled, record) "
-        "VALUES (gen_random_uuid(), $1, $2::uuid, $3, $4, false, false)",
-        std::get<0>(created),
-        std::get<2>(created),
-        std::get<1>(created),
-        stream::STATUS_OFFLINE);
+  const char* returning =
+      "id::text AS id, name, group_id::text AS group_id, "
+      "(SELECT name FROM stream_group WHERE id = group_id) AS group_name, "
+      "url, width, height, fps, status, enabled, record, probed_at";
+  {
+    auto transaction = dbClient->newTransaction();
+    for (const auto& created : creates) {
+      const auto rows = transaction->execSqlSync(
+          std::string("INSERT INTO stream (id, name, group_id, url, status, enabled, record) "
+                      "VALUES (gen_random_uuid(), $1, $2::uuid, $3, $4, false, false) RETURNING ") +
+              returning,
+          std::get<0>(created),
+          std::get<2>(created),
+          std::get<1>(created),
+          stream::STATUS_OFFLINE);
+      if (!rows.empty()) {
+        data[stream::KEY_UPDATED_ROWS].append(row2json(rows[0]));
+      }
+    }
+    for (const auto& updated : updates) {
+      const auto rows = transaction->execSqlSync(
+          std::string("UPDATE stream SET group_id = $1::uuid WHERE id = $2::uuid RETURNING ") + returning,
+          updated.second,
+          updated.first);
+      if (!rows.empty()) {
+        data[stream::KEY_UPDATED_ROWS].append(row2json(rows[0]));
+      }
+    }
   }
-  for (const auto& updated : updates) {
-    transaction->execSqlSync(
-        "UPDATE stream SET group_id = $1::uuid WHERE id = $2::uuid", updated.second, updated.first);
+  for (const auto& id : skipped) {
+    data[stream::KEY_SKIPPED_ROWS].append(get(id));
   }
-  Json::Value data;
-  data[stream::KEY_CREATED_COUNT] = static_cast<Json::UInt64>(creates.size());
-  data[stream::KEY_UPDATED_COUNT] = static_cast<Json::UInt64>(updates.size());
+  data[stream::KEY_UPDATED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_UPDATED_ROWS].size());
+  data[stream::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_FAILED_ROWS].size());
+  data[stream::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_SKIPPED_ROWS].size());
   return data;
 }
 
@@ -404,19 +422,7 @@ std::string StreamService::exportCSV() {
   return csv.str();
 }
 
-Json::Value StreamService::probeItem(const drogon::orm::Row& row) {
-  Json::Value node;
-  node[stream::KEY_ID] = row["id"].as<std::string>();
-  node[stream::KEY_STATUS] = row["status"].as<std::string>();
-  node[stream::KEY_WIDTH] = row["width"].isNull() ? Json::Value() : row["width"].as<int>();
-  node[stream::KEY_HEIGHT] = row["height"].isNull() ? Json::Value() : row["height"].as<int>();
-  node[stream::KEY_FPS] = row["fps"].isNull() ? Json::Value() : row["fps"].as<double>();
-  node[stream::KEY_PROBED_AT] =
-      row["probed_at"].isNull() ? Json::Value() : row["probed_at"].as<std::string>();
-  return node;
-}
-
-Json::Value StreamService::item(const drogon::orm::Row& row) {
+Json::Value StreamService::row2json(const drogon::orm::Row& row) {
   Json::Value node;
   node[stream::KEY_ID] = row["id"].as<std::string>();
   node[stream::KEY_NAME] = row["name"].as<std::string>();
