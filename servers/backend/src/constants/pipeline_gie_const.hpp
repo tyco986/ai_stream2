@@ -52,6 +52,17 @@ inline Json::Value BATCH_DATA() {
   return node;
 }
 
+inline const char* KEY_ITEMS = "items";
+inline const char* KEY_TOTAL = "total";
+inline const char* KEY_PAGE = "page";
+inline const char* KEY_PAGE_SIZE = "page_size";
+inline const char* QUERY_SEARCH = "search";
+inline const char* QUERY_PAGE = "page";
+inline const char* QUERY_PAGE_SIZE = "page_size";
+inline const int DEFAULT_PAGE = 1;
+inline const int DEFAULT_PAGE_SIZE = 20;
+inline const char* MSG_LIST_OK = "Loaded gie list";
+inline const char* MSG_LIST_ERROR = "Failed to load gie list";
 inline const char* MSG_MODELS_OK = "Loaded models";
 inline const char* MSG_MODELS_ERROR = "Failed to load models";
 inline const char* MSG_MAP_OK = "Loaded gie map";

@@ -1,12 +1,36 @@
 #include "services/pipeline_analyzer_service.hpp"
 
 #include "constants/pipeline_analyzer_const.hpp"
+#include "searcher/searcher.hpp"
 
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
 
 PipelineAnalyzerService::PipelineAnalyzerService(drogon::orm::DbClientPtr dbClient) : dbClient(std::move(dbClient)) {}
+
+Json::Value PipelineAnalyzerService::list(const std::string& search, int page, int pageSize) {
+  const int offset = (page - 1) * pageSize;
+  const std::string match = Searcher::clause({"id", "name", "source_path", "annotations"}, 1);
+  const std::string from = "FROM pipeline_analyzer WHERE " + match + " ";
+  const auto counted = dbClient->execSqlSync("SELECT count(*) AS total " + from, search);
+  const auto rows = dbClient->execSqlSync(
+      "SELECT id::text AS id, name, source_path, annotations::text AS annotations, updated_at " + from +
+          "ORDER BY name LIMIT $2 OFFSET $3",
+      search,
+      pageSize,
+      offset);
+  Json::Value items(Json::arrayValue);
+  for (const auto& row : rows) {
+    items.append(row2json(row));
+  }
+  Json::Value data;
+  data[pipeline_analyzer::KEY_ITEMS] = items;
+  data[pipeline_analyzer::KEY_TOTAL] = counted[0]["total"].as<long>();
+  data[pipeline_analyzer::KEY_PAGE] = page;
+  data[pipeline_analyzer::KEY_PAGE_SIZE] = pageSize;
+  return data;
+}
 
 Json::Value PipelineAnalyzerService::get(const std::string& analyzerId) {
   const auto rows = dbClient->execSqlSync(

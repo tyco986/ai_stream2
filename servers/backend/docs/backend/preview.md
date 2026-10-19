@@ -1,159 +1,93 @@
-# Preview（后端）
+# Preview
 
-对应前端契约：[preview_api.md](../frontend/preview_api.md)。  
-实现包：`servers/django/pages/preview/`。前缀：`/ai_stream2/backend/preview`。
+前缀：`/ai_stream2/backend/preview`。全部接口经 `AuthFilter`。当前用户由请求头 `authorization` 的 token 解析。
 
----
+JSON 成功外壳：`{success, message, data}`。
 
-## 代理的 API
+预设对象键：`id`、`user_id`、`name`、`layout`、`mode`、`slots`、`active`。`layout` 为 `1x1`、`2x2`、`3x3`、`4x4`，槽位数依次为 1、4、9、16。`slots` 的键是从 `"1"` 起的槽号。入库存流 id 或 `null`；出参把能找到的流展开为对象，否则为 `null`。流对象键：`id`、`name`、`group_id`、`group_name`、`url`、`width`、`height`、`fps`、`status`、`enabled`、`record`、`probed_at`。
 
-无。播放 RTSP / WebRTC 由前端经 [stream_api](../frontend/stream_api.md) 取流信息；本页**不**配置 MediaMTX。
-
----
-
-## 暴露的 API
-
-| 方法 | 路径 | 功能 |
-|------|------|------|
-| `GET` | `/active_layout` | 当前用户激活预设 id |
-| `PUT` | `/active_layout` | 设置激活预设 |
-| `GET` | `/layouts` | 全部预设（站点全局） |
-| `GET` | `/layouts/map` | name → id |
-| `GET` | `/layouts/{preset_id}` | 预设详情 |
-| `POST` | `/layouts` | Save As 新建 |
-| `PATCH` | `/layouts/{preset_id}` | Save（layout/slots/mode）或 Rename |
-| `DELETE` | `/layouts/{preset_id}` | 删预设（禁 Default） |
-| `POST` | `/layouts/batch/delete` | 批量删；含 Default → `403` |
-| `PUT` | `/layouts/{preset_id}/shot` | 上传 Grid 合成缩略图 |
-| `GET` | `/layouts/{preset_id}/shot` | 取缩略图 |
-
-字段 / 错误码 / 固定段顺序以 [preview_api.md](../frontend/preview_api.md) 为准。
-
-权限：`previews.view_preview` / `add_preview` / `change_preview` / `delete_preview`。
-
-常量：`DEFAULT_LAYOUT_ID=00000000-0000-4000-8000-000000000002`；`DEFAULT_LAYOUT_NAME=Default`；seed `layout=2x2`、四槽 `null`、`mode=grid`。
+同一用户同时只有一条 `active=true`。名为 `Default` 的预设不可删。
 
 ---
 
-## 技术栈
+## 1. API
 
-| 层 | 选用 |
-|----|------|
-| 框架 | Django + DRF |
-| ORM | `LayoutPreset`（站点全局）；`ActiveLayout`（按 user） |
-| 文件 | shot 落盘媒体卷；`shot_url` 指向本前缀 GET |
-| 鉴权 | session + `has_perm` |
+| 方法 | 路径 | 入参键 | 出参键（`data`） | 功能 |
+|------|------|--------|------------------|------|
+| `GET` | `/ai_stream2/backend/preview/map` | 无 | `{预设名: id}` | 当前用户的预设名到 id |
+| `GET` | `/ai_stream2/backend/preview/tree` | 无 | 根节点 `id`、`name`、`type`、`children` | 流组树，供选槽 |
+| `GET` | `/ai_stream2/backend/preview/active` | 无 | 预设对象 | 当前用户的激活预设 |
+| `GET` | `/ai_stream2/backend/preview/{preset_id}` | path：`preset_id` | 预设对象 | 当前用户的一条预设 |
+| `POST` | `/ai_stream2/backend/preview` | `name`、`layout`、`mode`、`slots`、`active` | 预设对象 | 新建预设 |
+| `PATCH` | `/ai_stream2/backend/preview/{preset_id}` | 同新建 | 预设对象 | 全量更新 |
+| `DELETE` | `/ai_stream2/backend/preview/{preset_id}` | path：`preset_id` | 预设对象 | 删除，不可删 Default |
+
+### GET `/ai_stream2/backend/preview/map`
+
+入参：无。
+
+出参 `data`：键为预设名，值为 id，只含当前用户，按名排序。`message`：`Loaded preset map`。失败 `500`，`Failed to load preset map`。
+
+### GET `/ai_stream2/backend/preview/tree`
+
+根为 All。`children` 先放直属流再放子组。组节点：`id`、`name`、`type=group`、`children`。流节点：`id`、`name`、`type=stream`、`enabled`、`status`、`record`。
+
+入参：无。
+
+出参 `data`：根节点。`message`：`Loaded preview tree`。失败 `500`，`Failed to load preview tree`。
+
+### GET `/ai_stream2/backend/preview/active`
+
+入参：无。
+
+出参 `data`：当前用户 `active=true` 的预设，`slots` 已展开。`message`：`Loaded active preset`。没有激活预设 `500`，`Failed to load active preset`。
+
+### GET `/ai_stream2/backend/preview/{preset_id}`
+
+只返回属于当前用户的预设。
+
+入参：path `preset_id`。
+
+出参 `data`：预设对象。`message`：`Loaded preset`。不存在或不属于当前用户 `500`，`Failed to load preset`。
+
+### POST `/ai_stream2/backend/preview`
+
+`user_id` 取当前用户。`slots` 必须是对象，键恰好为 `"1"` 到槽位数，值为流 id 字符串或 `null`。`active=true` 时先把该用户其它预设的 `active` 置为 `false`。
+
+入参：`name`、`layout`、`mode`、`slots`、`active`。
+
+出参 `data`：预设对象。`message`：`Created preset`。布局或槽非法 `500`，`Failed to create preset`。
+
+### PATCH `/ai_stream2/backend/preview/{preset_id}`
+
+一次写入 `name`、`layout`、`mode`、`slots`、`active`。槽校验同新建。`active=true` 时取消该用户其它预设的激活。只改当前用户自己的行。
+
+入参：同新建。
+
+出参 `data`：预设对象。`message`：`Updated preset`。失败 `500`，`Failed to update preset`。
+
+### DELETE `/ai_stream2/backend/preview/{preset_id}`
+
+`name=Default` 不可删。只删当前用户的预设。
+
+入参：path `preset_id`。
+
+出参 `data`：删除前的预设对象。`message`：`Removed preset`。失败 `500`，`Failed to remove preset`。
 
 ---
 
-## 造轮子 vs 复用
-
-| 能力 | 做法 |
-|------|------|
-| 布局 CRUD / slots 校验 | **造**（`LayoutPresetService`） |
-| 激活预设 per-user | **造**（对齐 shell `PageSettings`） |
-| Default seed | **造**（data migration；不可删/不可改名） |
-| 流是否存在 | **软引用**：只存 UUID；响应时可把已删流置 `null` + `missing_stream_ids`；**不** FK 到 streams |
-| 分组树 / 流详情 | 前端直调 stream_api；本页不代理 |
-| Site Config 切片 | **造**（预设；不含 per-user active） |
-| 响应外壳 | **复用** `shared.*` |
-
----
-
-## 目录结构
-
-```
-servers/django/pages/preview/
-  apps.py
-  urls.py                 # active_layout、map、batch、shot 先于 {preset_id}
-  models.py               # LayoutPreset, ActiveLayout
-  serializers.py
-  views.py
-  services.py             # LayoutPresetService, ActiveLayoutService, ShotService
-  permissions.py
-  migrations/             # Default seed
-```
-
-禁止 import `pages.streams` / `pages.recordings`。
-
----
-
-## 类与职责
-
-| 类 | 职责 |
-|----|------|
-| `LayoutPreset` | 站点全局预设行 |
-| `ActiveLayout` | `user_id` → `preset_id`（1:1） |
-| `LayoutPresetService` | list / map / get / create / patch / delete / batch_delete；slots 校验 |
-| `ActiveLayoutService` | get（无行 → `DEFAULT_LAYOUT_ID`）/ set |
-| `ShotService` | put / get 缩略图文件 |
-| Views | 薄封装 |
-
----
-
-## 数据库
+## 2. DATA
 
 ### `preview_preset`
 
-| 列 | 类型 | 约束 | 默认 | 说明 |
-|----|------|------|------|------|
-| `id` | UUID | PK | uuid4 | Default 固定为 `DEFAULT_LAYOUT_ID` |
-| `name` | varchar | UNIQUE，非空 | — | 保留名 `Default` 仅种子行 |
-| `layout` | varchar | 非空 | — | `1x1`\|`2x2`\|`3x3`\|`4x4` |
-| `mode` | varchar | 非空 | `grid` | `grid`\|`focus` |
-| `slots` | JSON | 非空 | — | UUID\|null 数组；长度=槽位数 |
+| 列 | 类型 | 默认值 | 约束 |
+|----|------|--------|------|
+| `id` | UUID | 无（插入用 `gen_random_uuid()`） | PRIMARY KEY |
+| `user_id` | UUID | 无 | NOT NULL，REFERENCES `"user"(id)` |
+| `name` | VARCHAR(150) | 无 | NOT NULL，UNIQUE (`user_id`, `name`) |
+| `layout` | VARCHAR(16) | 无 | NOT NULL |
+| `mode` | VARCHAR(16) | 无 | NOT NULL |
+| `slots` | JSONB | 无 | NOT NULL |
+| `active` | BOOLEAN | 无 | NOT NULL |
 
-只读响应字段 `stream_count` = 非 null 槽数，不入库。
-
-种子：`id=DEFAULT_LAYOUT_ID`、`name=Default`、`layout=2x2`、`slots=[null×4]`、`mode=grid`。
-
-### `preview_active`
-
-| 列 | 类型 | 约束 | 说明 |
-|----|------|------|------|
-| `id` | UUID | PK | |
-| `user_id` | UUID | UNIQUE，非空 | 当前登录用户 |
-| `preset_id` | UUID | 非空 | 指向本页预设（软引用，无跨表 FK 强制） |
-
-无行时 GET 返回 Default，**不**自动 INSERT。
-
----
-
-## 各请求写库明细
-
-| 请求 | 表 | 写入 / 变更 |
-|------|-----|-------------|
-| `PUT /active_layout` | `preview_active` | UPSERT `preset_id`（须存在） |
-| `POST /layouts` | `preview_preset` | INSERT；禁 name=`Default`；校验 slots |
-| `PATCH /layouts/{id}` | 同左 | 更新 layout/slots/mode 和/或 name；Default **禁改名** |
-| `DELETE` / `batch/delete` | 同左 | 删行；含 Default → `403`；响应可带 `active_deleted` |
-| `PUT .../shot` | 文件 | 写缩略图文件 |
-| `GET` 系列 | — | 只读 |
-
-**不**持久化：`focus_index`、选中槽、未 Save 的会话编辑。
-
-Site Config import：重建预设（含 Default 幂等）；**不**导入各用户 `ActiveLayout`。
-
----
-
-## 调用顺序
-
-```
-进页: GET active_layout → GET layouts/{id} →（前端）streams/groups/tree
-Save As: POST /layouts → PUT shot → PUT active_layout
-Save: PATCH /layouts/{id} → PUT shot
-删激活项: DELETE → 前端 PUT active=Default
-```
-
-slots：长度匹配 layout；同一 stream_id 至多一次；非法 UUID 在写时 `400`，读时软清理可选。
-
----
-
-## 依赖边界
-
-| 依赖 | 说明 |
-|------|------|
-| streams | 仅 UUID 软引用；树/播放不经本页 |
-| recordings | **独立**预设命名空间（不同 Default id） |
-| Site Config | **注册** layouts 切片 |
-| MediaMTX | 不本页配置 |
+部分唯一索引 `preview_preset_one_active_idx`：每个 `user_id` 至多一行 `active=true`。新建用户时插入 `name=Default`、`layout=2x2`、`mode=grid`、`slots={"1":null,"2":null,"3":null,"4":null}`、`active=true`。

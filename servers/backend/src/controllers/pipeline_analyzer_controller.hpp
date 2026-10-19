@@ -22,12 +22,14 @@ class PipelineAnalyzerController : public drogon::HttpController<PipelineAnalyze
   PipelineAnalyzerController();
 
   METHOD_LIST_BEGIN
+  ADD_METHOD_TO(PipelineAnalyzerController::list, pipeline_analyzer::PATH_LIST, drogon::Get, "AuthFilter");
   ADD_METHOD_TO(PipelineAnalyzerController::get, pipeline_analyzer::PATH_ITEM, drogon::Get, "AuthFilter");
   ADD_METHOD_TO(PipelineAnalyzerController::create, pipeline_analyzer::PATH_LIST, drogon::Post, "AuthFilter");
   ADD_METHOD_TO(PipelineAnalyzerController::update, pipeline_analyzer::PATH_ITEM, drogon::Put, "AuthFilter");
   ADD_METHOD_TO(PipelineAnalyzerController::remove, pipeline_analyzer::PATH_ITEM, drogon::Delete, "AuthFilter");
   METHOD_LIST_END
 
+  void list(const drogon::HttpRequestPtr& request, std::function<void(const drogon::HttpResponsePtr&)>&& callback);
   void get(const drogon::HttpRequestPtr& request,
            std::function<void(const drogon::HttpResponsePtr&)>&& callback,
            const std::string& analyzer_id);

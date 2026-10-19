@@ -15,6 +15,7 @@ class PipelineGieController : public drogon::HttpController<PipelineGieControlle
   PipelineGieController();
 
   METHOD_LIST_BEGIN
+  ADD_METHOD_TO(PipelineGieController::list, pipeline_gie::PATH_LIST, drogon::Get, "AuthFilter");
   ADD_METHOD_TO(PipelineGieController::getModel, pipeline_gie::PATH_MODELS, drogon::Get, "AuthFilter");
   ADD_METHOD_TO(PipelineGieController::map, pipeline_gie::PATH_MAP, drogon::Get, "AuthFilter");
   ADD_METHOD_TO(PipelineGieController::get, pipeline_gie::PATH_ITEM, drogon::Get, "AuthFilter");
@@ -23,6 +24,7 @@ class PipelineGieController : public drogon::HttpController<PipelineGieControlle
   ADD_METHOD_TO(PipelineGieController::remove, pipeline_gie::PATH_ITEM, drogon::Delete, "AuthFilter");
   METHOD_LIST_END
 
+  void list(const drogon::HttpRequestPtr& request, std::function<void(const drogon::HttpResponsePtr&)>&& callback);
   void getModel(const drogon::HttpRequestPtr& request,
                 std::function<void(const drogon::HttpResponsePtr&)>&& callback);
   void map(const drogon::HttpRequestPtr& request,

@@ -1,6 +1,7 @@
 #include "services/pipeline_gie_service.hpp"
 
 #include "constants/pipeline_gie_const.hpp"
+#include "searcher/searcher.hpp"
 
 #include <stdexcept>
 
@@ -24,6 +25,32 @@ Json::Value PipelineGieService::map() {
   for (const auto& row : rows) {
     data[row["name"].as<std::string>()] = row["id"].as<std::string>();
   }
+  return data;
+}
+
+Json::Value PipelineGieService::list(const std::string& search, int page, int pageSize) {
+  const int offset = (page - 1) * pageSize;
+  const std::string match = Searcher::clause(
+      {"g.id", "g.name", "g.model_name", "g.class_attrs", "g.interval", "m.engine_path"}, 1);
+  const std::string from = "FROM pipeline_gie g JOIN model m ON m.id = g.model_id WHERE " + match + " ";
+  const auto counted = dbClient->execSqlSync("SELECT count(*) AS total " + from, search);
+  const auto rows = dbClient->execSqlSync(
+      "SELECT g.id::text AS id, g.name, g.model_id::text AS model_id, g.model_name, "
+      "g.class_attrs::text AS class_attrs, g.interval, g.updated_at, m.engine_path " +
+          from + "ORDER BY g.name LIMIT $2 OFFSET $3",
+      search,
+      pageSize,
+      offset);
+  Json::Value items(Json::arrayValue);
+  for (const auto& row : rows) {
+    const std::string enginePath = row["engine_path"].isNull() ? "" : row["engine_path"].as<std::string>();
+    items.append(row2json(row, enginePath));
+  }
+  Json::Value data;
+  data[pipeline_gie::KEY_ITEMS] = items;
+  data[pipeline_gie::KEY_TOTAL] = counted[0]["total"].as<long>();
+  data[pipeline_gie::KEY_PAGE] = page;
+  data[pipeline_gie::KEY_PAGE_SIZE] = pageSize;
   return data;
 }
 

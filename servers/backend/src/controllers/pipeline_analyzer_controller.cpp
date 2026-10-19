@@ -12,6 +12,29 @@
 
 PipelineAnalyzerController::PipelineAnalyzerController() : service(Database::client()) {}
 
+void PipelineAnalyzerController::list(
+    const drogon::HttpRequestPtr& request,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
+  const auto started = std::chrono::steady_clock::now();
+  try {
+    const auto pageText = request->getParameter(pipeline_analyzer::QUERY_PAGE);
+    const auto pageSizeText = request->getParameter(pipeline_analyzer::QUERY_PAGE_SIZE);
+    const int page = pageText.empty() ? pipeline_analyzer::DEFAULT_PAGE : std::stoi(pageText);
+    const int pageSize = pageSizeText.empty() ? pipeline_analyzer::DEFAULT_PAGE_SIZE : std::stoi(pageSizeText);
+    respond(request,
+            http::Response::ok(service.list(request->getParameter(pipeline_analyzer::QUERY_SEARCH), page, pageSize),
+                               pipeline_analyzer::MSG_LIST_OK),
+            started,
+            callback);
+  } catch (const std::exception& error) {
+    respond(request,
+            http::Response::error(drogon::k500InternalServerError, pipeline_analyzer::MSG_LIST_ERROR),
+            started,
+            callback,
+            error.what());
+  }
+}
+
 AnalyzerForm PipelineAnalyzerController::multipart2Form(const drogon::HttpRequestPtr& request) {
   drogon::MultiPartParser parser;
   const bool parsed = parser.parse(request) == 0;

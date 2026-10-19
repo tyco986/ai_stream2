@@ -33,6 +33,29 @@ void PipelineGieController::respond(
   callback(response);
 }
 
+void PipelineGieController::list(
+    const drogon::HttpRequestPtr& request,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
+  const auto started = std::chrono::steady_clock::now();
+  try {
+    const auto pageText = request->getParameter(pipeline_gie::QUERY_PAGE);
+    const auto pageSizeText = request->getParameter(pipeline_gie::QUERY_PAGE_SIZE);
+    const int page = pageText.empty() ? pipeline_gie::DEFAULT_PAGE : std::stoi(pageText);
+    const int pageSize = pageSizeText.empty() ? pipeline_gie::DEFAULT_PAGE_SIZE : std::stoi(pageSizeText);
+    respond(request,
+            http::Response::ok(service.list(request->getParameter(pipeline_gie::QUERY_SEARCH), page, pageSize),
+                               pipeline_gie::MSG_LIST_OK),
+            started,
+            callback);
+  } catch (const std::exception& error) {
+    respond(request,
+            http::Response::error(drogon::k500InternalServerError, pipeline_gie::MSG_LIST_ERROR),
+            started,
+            callback,
+            error.what());
+  }
+}
+
 void PipelineGieController::getModel(
     const drogon::HttpRequestPtr& request,
     std::function<void(const drogon::HttpResponsePtr&)>&& callback) {

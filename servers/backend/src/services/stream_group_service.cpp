@@ -184,12 +184,12 @@ Json::Value StreamGroupService::groupNode(
   return node;
 }
 
-Json::Value StreamGroupService::create(const std::string& parentGroupId, const std::string& name) {
+Json::Value StreamGroupService::create(const std::string& parentGroupId, const Json::Value& name) {
   const auto rows = dbClient->execSqlSync(
       "INSERT INTO stream_group (id, name, parent_id) "
       "SELECT gen_random_uuid(), $1, id FROM stream_group WHERE id = $2::uuid "
       "RETURNING id::text AS id, name, parent_id::text AS parent_id",
-      name,
+      name.asString(),
       parentGroupId);
   if (rows.empty()) {
     throw std::runtime_error("group not created");
@@ -235,14 +235,16 @@ Json::Value StreamGroupService::candidates(const std::string& groupId) {
   return data;
 }
 
-Json::Value StreamGroupService::setMembers(const std::string& groupId,
-                                           const std::vector<std::string>& streamIds) {
+Json::Value StreamGroupService::setMembers(const std::string& groupId, const Json::Value& streamIds) {
   const auto groups = dbClient->execSqlSync(
       "SELECT id FROM stream_group WHERE id = $1::uuid", groupId);
   if (groups.empty()) {
     throw std::runtime_error("group not found");
   }
-  std::unordered_set<std::string> selected(streamIds.begin(), streamIds.end());
+  std::unordered_set<std::string> selected;
+  for (const auto& id : streamIds) {
+    selected.insert(id.asString());
+  }
   {
     auto transaction = dbClient->newTransaction();
     for (const auto& id : selected) {
@@ -267,11 +269,11 @@ Json::Value StreamGroupService::setMembers(const std::string& groupId,
   return data;
 }
 
-Json::Value StreamGroupService::rename(const std::string& groupId, const std::string& name) {
+Json::Value StreamGroupService::rename(const std::string& groupId, const Json::Value& name) {
   const auto rows = dbClient->execSqlSync(
       "UPDATE stream_group SET name = $1 WHERE id = $2::uuid AND parent_id IS NOT NULL "
       "RETURNING id::text AS id, name, parent_id::text AS parent_id",
-      name,
+      name.asString(),
       groupId);
   if (rows.empty()) {
     throw std::runtime_error("group not renamed");
@@ -310,6 +312,9 @@ std::vector<std::string> StreamGroupService::subtreeIds(const std::string& group
 }
 
 Json::Value StreamGroupService::remove(const std::string& groupId) {
+  if (groupId == stream_group::ALL_GROUP_ID) {
+    throw std::runtime_error(stream_group::ERR_ALL_DELETE);
+  }
   const auto ids = subtreeIds(groupId);
   if (ids.empty()) {
     throw std::runtime_error("group not deleted");

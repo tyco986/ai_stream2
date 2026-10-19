@@ -1,47 +1,52 @@
-# Servers（后端）
+# Server
 
-对应前端契约：[server_api.md](../frontend/server_api.md)。  
-实现包：`servers/django/pages/servers/`。前缀：`/ai_stream2/backend/servers`。
+路径：`/ai_stream2/backend/server`。全部接口经 `AuthFilter`。
 
----
+JSON 成功外壳：`{success, message, data}`。全库只有一行，`id` = `00000000-0000-4000-8000-000000000005`。
 
-API
-
-| 本页触发 | 上游 | 上游路径 / 动作 | 用途 |
-|----------|------|-----------------|------|
-| `GET /{server_id}/hello_world`；`POST /refresh` 内部 | 各微服务 / per-pipeline DeepStream | 注册表 `health_upstream` | 健康探测 → online/offline |
-| `POST /{server_id}/restart` | **docker_socket_proxy** | `POST /containers/{container_name}/restart` | 整容器重启 |
-| `GET /{server_id}/logs` | 挂载日志文件，或 docker_socket_proxy logs | 读尾部 | Log 弹窗 |
-
-列表按 **`category`** 区分 Infrastructure（静态）与 Pipeline（`pipelines` 动态）。无共享 `deepstream` 静态条目。`DOCKER_HOST=tcp://${PROJECT_NAME}_docker_socket_proxy:2375`。
+对象键：`id`、`probed_at`、`deepstream`、`generator`、`export_onnx`、`export_trt`、`mediamtx`、`kafka`、`postgresql`、`frontend`、`backend`。`deepstream` 为数组，元素键：`id`（pipeline id）、`name`、`healthy`。其余服务键为布尔值。`probed_at` 未探测时为 `null`。
 
 ---
 
-## API
+## 1. API
 
-| 方法 | 路径 | 功能 |
-|------|------|------|
-| `GET` | `/` | 注册表列表 + 缓存 status / last_refresh_at |
-| `POST` | `/refresh` | 并发探测全部；部分失败不整请求失败 |
-| `POST` | `/{server_id}/restart` | Docker restart |
-| `GET` | `/{server_id}/logs` | 日志文本（`tail` 默认 500） |
+| 方法 | 路径 | 入参键 | 出参键（`data`） | 功能 |
+|------|------|--------|------------------|------|
+| `GET` | `/ai_stream2/backend/server` | 无 | 服务器对象 | 读取上次探测结果 |
+| `POST` | `/ai_stream2/backend/server/probe` | 无 | 服务器对象 | 探测各服务并写回 |
 
-## 数据库
+### GET `/ai_stream2/backend/server`
+
+入参：无。
+
+出参 `data`：服务器对象。`message`：`Loaded server`。失败 `500`，`Failed to load server`。
+
+### POST `/ai_stream2/backend/server/probe`
+
+按 pipeline 名探测 `http://puskas_{name}:9000/health`，结果写入 `deepstream`。同时探测 generator、export_onnx、export_trt、mediamtx、kafka、frontend、backend 的健康地址，以及执行 `SELECT 1` 判断 postgresql。超时 3 秒。写回 `probed_at=now()` 和各布尔值。
+
+入参：无。
+
+出参 `data`：探测后的服务器对象。`message`：`Probed server`。失败 `500`，`Failed to probe server`。
+
+---
+
+## 2. DATA
 
 ### `server`
 
-| 列 | 类型 | 约束 | 默认 | 说明 |
-|----|------|------|------|------|
-| `id` | UUID | PK | uuid4 | |
-| `probed_at` | timestamptz | 可空 | `NULL` | 最近一次探测时间 |
-| `deepstream` | JSON | 可空 | `NULL` | |
-| `generator` | bool | 非空 | `false` | |
-| `export_onnx` | bool | 非空 | `false` | |
-| `export_trt` | bool | 非空 | `false` | |
-| `mediamtx` | bool | 非空 | `false` | |
-| `kafka` | bool | 非空 | `false` | |
-| `postgresql` | bool | 非空 | `false` | |
-| `frontend` | bool | 非空 | `false` | |
-| `backend` | bool | 非空 | `false` | |
+| 列 | 类型 | 默认值 | 约束 |
+|----|------|--------|------|
+| `id` | UUID | 无 | PRIMARY KEY |
+| `probed_at` | TIMESTAMPTZ | `NULL` | 可空 |
+| `deepstream` | JSONB | 种子为 `[]` | 可空 |
+| `generator` | BOOLEAN | 无 | NOT NULL |
+| `export_onnx` | BOOLEAN | 无 | NOT NULL |
+| `export_trt` | BOOLEAN | 无 | NOT NULL |
+| `mediamtx` | BOOLEAN | 无 | NOT NULL |
+| `kafka` | BOOLEAN | 无 | NOT NULL |
+| `postgresql` | BOOLEAN | 无 | NOT NULL |
+| `frontend` | BOOLEAN | 无 | NOT NULL |
+| `backend` | BOOLEAN | 无 | NOT NULL |
 
----
+种子行：`id` = `00000000-0000-4000-8000-000000000005`，`deepstream` = `[]`，各布尔列为 `FALSE`，`probed_at` 为空。触发器拒绝删除任意行。

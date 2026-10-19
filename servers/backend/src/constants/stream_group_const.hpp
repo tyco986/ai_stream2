@@ -34,6 +34,7 @@ inline const char* ERR_CSV = "invalid csv";
 inline const char* ERR_PARENT_MISSING = "parent not found";
 inline const char* ERR_GROUP_EXISTS = "group name exists";
 inline const char* ERR_ALL = "cannot move All";
+inline const char* ERR_ALL_DELETE = "cannot delete All";
 inline const char* ALL_GROUP_ID = "00000000-0000-4000-8000-000000000001";
 
 inline Json::Value ROW() {

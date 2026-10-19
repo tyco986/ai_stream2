@@ -3,27 +3,27 @@
 CREATE TABLE user_group (
   id UUID PRIMARY KEY,
   name VARCHAR(150) NOT NULL UNIQUE,
-  stream CHAR(4) NOT NULL DEFAULT '0000',
-  model CHAR(4) NOT NULL DEFAULT '0000',
-  preview CHAR(4) NOT NULL DEFAULT '0000',
-  pipeline CHAR(4) NOT NULL DEFAULT '0000',
-  recording CHAR(4) NOT NULL DEFAULT '0000',
-  server CHAR(4) NOT NULL DEFAULT '0000',
-  "user" CHAR(4) NOT NULL DEFAULT '0000',
-  event CHAR(4) NOT NULL DEFAULT '0000'
+  stream_crud CHAR(4) NOT NULL,
+  model_crud CHAR(4) NOT NULL,
+  preview_crud CHAR(4) NOT NULL,
+  pipeline_crud CHAR(4) NOT NULL,
+  recording_crud CHAR(4) NOT NULL,
+  server_crud CHAR(4) NOT NULL,
+  user_crud CHAR(4) NOT NULL,
+  event_crud CHAR(4) NOT NULL
 );
 
 CREATE TABLE "user" (
   id UUID PRIMARY KEY,
   username VARCHAR(150) NOT NULL UNIQUE,
-  password VARCHAR(128) NOT NULL,
-  active BOOLEAN NOT NULL DEFAULT TRUE,
+  passwd VARCHAR(128) NOT NULL,
+  token VARCHAR(36) UNIQUE,
+  active BOOLEAN NOT NULL,
   group_id UUID REFERENCES user_group (id),
-  group_name VARCHAR(150),
   last_login TIMESTAMPTZ
 );
 
-INSERT INTO user_group (id, name, stream, model, preview, pipeline, recording, server, "user", event)
+INSERT INTO user_group (id, name, stream_crud, model_crud, preview_crud, pipeline_crud, recording_crud, server_crud, user_crud, event_crud)
 VALUES (
   '00000000-0000-4000-8000-000000000003',
   'admin',
@@ -37,14 +37,54 @@ VALUES (
   '1111'
 );
 
-INSERT INTO "user" (id, username, password, group_id, group_name)
+INSERT INTO "user" (id, username, passwd, active, group_id)
 VALUES (
   '00000000-0000-4000-8000-000000000004',
   'admin',
   'admin',
-  '00000000-0000-4000-8000-000000000003',
-  'admin'
+  TRUE,
+  '00000000-0000-4000-8000-000000000003'
 );
+
+CREATE FUNCTION user_group_reject_change() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  IF OLD.id = '00000000-0000-4000-8000-000000000003' THEN
+    RAISE EXCEPTION 'admin group cannot be changed';
+  END IF;
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER user_group_reject_change
+BEFORE DELETE OR UPDATE ON user_group
+FOR EACH ROW
+EXECUTE FUNCTION user_group_reject_change();
+
+CREATE FUNCTION user_reject_change() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  IF OLD.id = '00000000-0000-4000-8000-000000000004' THEN
+    IF TG_OP = 'DELETE' OR NEW.username IS DISTINCT FROM OLD.username
+       OR NEW.active IS DISTINCT FROM OLD.active
+       OR NEW.group_id IS DISTINCT FROM OLD.group_id THEN
+      RAISE EXCEPTION 'admin user cannot be changed';
+    END IF;
+  END IF;
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER user_reject_change
+BEFORE DELETE OR UPDATE ON "user"
+FOR EACH ROW
+EXECUTE FUNCTION user_reject_change();
 
 -- stream page
 
@@ -72,6 +112,21 @@ CREATE INDEX stream_group_id_idx ON stream (group_id);
 
 INSERT INTO stream_group (id, name, parent_id)
 VALUES ('00000000-0000-4000-8000-000000000001', 'All', NULL);
+
+CREATE FUNCTION stream_group_reject_delete() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  IF OLD.id = '00000000-0000-4000-8000-000000000001' THEN
+    RAISE EXCEPTION 'All group cannot be deleted';
+  END IF;
+  RETURN OLD;
+END;
+$$;
+
+CREATE TRIGGER stream_group_reject_delete
+BEFORE DELETE ON stream_group
+FOR EACH ROW
+EXECUTE FUNCTION stream_group_reject_delete();
 
 -- model page
 
@@ -106,26 +161,18 @@ CREATE TABLE model (
 
 CREATE TABLE preview_preset (
   id UUID PRIMARY KEY,
-  name VARCHAR(150) NOT NULL UNIQUE,
+  user_id UUID NOT NULL REFERENCES "user" (id),
+  name VARCHAR(150) NOT NULL,
   layout VARCHAR(16) NOT NULL,
-  mode VARCHAR(16) NOT NULL DEFAULT 'grid',
-  slots JSONB NOT NULL
+  mode VARCHAR(16) NOT NULL,
+  slots JSONB NOT NULL,
+  active BOOLEAN NOT NULL,
+  UNIQUE (user_id, name)
 );
 
-CREATE TABLE preview_active (
-  id UUID PRIMARY KEY,
-  user_id UUID NOT NULL UNIQUE,
-  preset_id UUID NOT NULL
-);
-
-INSERT INTO preview_preset (id, name, layout, mode, slots)
-VALUES (
-  '00000000-0000-4000-8000-000000000002',
-  'Default',
-  '2x2',
-  'grid',
-  '[null, null, null, null]'::jsonb
-);
+CREATE UNIQUE INDEX preview_preset_one_active_idx
+ON preview_preset (user_id)
+WHERE active;
 
 -- pipeline page
 
@@ -178,7 +225,7 @@ CREATE TABLE event (
   pipeline_name VARCHAR(150) NOT NULL,
   event_code VARCHAR(64) NOT NULL,
   event_label VARCHAR(150) NOT NULL,
-  status VARCHAR(16) NOT NULL DEFAULT 'new',
+  status VARCHAR(16) NOT NULL,
   raw_path TEXT,
   visualization_path TEXT,
   annotations JSONB
@@ -189,18 +236,59 @@ CREATE INDEX event_stream_id_idx ON event (stream_id);
 CREATE INDEX event_pipeline_id_event_code_idx ON event (pipeline_id, event_code);
 CREATE INDEX event_status_idx ON event (status);
 
+-- notice
+
+CREATE TABLE notice (
+  id UUID PRIMARY KEY,
+  created_at TIMESTAMPTZ NOT NULL,
+  read_at TIMESTAMPTZ,
+  user_id UUID REFERENCES "user" (id) ON DELETE CASCADE,
+  level VARCHAR(16) NOT NULL,
+  source VARCHAR(64) NOT NULL,
+  text TEXT NOT NULL,
+  ref_id UUID
+);
+
+CREATE INDEX notice_user_id_created_at_idx ON notice (user_id, created_at);
+
 -- server page
 
 CREATE TABLE server (
   id UUID PRIMARY KEY,
   probed_at TIMESTAMPTZ,
   deepstream JSONB,
-  generator BOOLEAN NOT NULL DEFAULT FALSE,
-  export_onnx BOOLEAN NOT NULL DEFAULT FALSE,
-  export_trt BOOLEAN NOT NULL DEFAULT FALSE,
-  mediamtx BOOLEAN NOT NULL DEFAULT FALSE,
-  kafka BOOLEAN NOT NULL DEFAULT FALSE,
-  postgresql BOOLEAN NOT NULL DEFAULT FALSE,
-  frontend BOOLEAN NOT NULL DEFAULT FALSE,
-  backend BOOLEAN NOT NULL DEFAULT FALSE
+  generator BOOLEAN NOT NULL,
+  export_onnx BOOLEAN NOT NULL,
+  export_trt BOOLEAN NOT NULL,
+  mediamtx BOOLEAN NOT NULL,
+  kafka BOOLEAN NOT NULL,
+  postgresql BOOLEAN NOT NULL,
+  frontend BOOLEAN NOT NULL,
+  backend BOOLEAN NOT NULL
+);
+
+CREATE FUNCTION server_reject_delete() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'server row cannot be deleted';
+END;
+$$;
+
+CREATE TRIGGER server_reject_delete
+BEFORE DELETE ON server
+FOR EACH ROW
+EXECUTE FUNCTION server_reject_delete();
+
+INSERT INTO server (id, deepstream, generator, export_onnx, export_trt, mediamtx, kafka, postgresql, frontend, backend)
+VALUES (
+  '00000000-0000-4000-8000-000000000005',
+  '[]'::jsonb,
+  FALSE,
+  FALSE,
+  FALSE,
+  FALSE,
+  FALSE,
+  FALSE,
+  FALSE,
+  FALSE
 );

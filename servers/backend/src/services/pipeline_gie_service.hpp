@@ -10,6 +10,7 @@ class PipelineGieService {
   explicit PipelineGieService(drogon::orm::DbClientPtr dbClient);
   Json::Value getModel();
   Json::Value map();
+  Json::Value list(const std::string& search, int page, int pageSize);
   Json::Value get(const std::string& gieId);
   Json::Value create(const Json::Value& modelId,
                      const Json::Value& name,

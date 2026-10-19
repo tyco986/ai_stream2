@@ -8,6 +8,7 @@
 class PipelineAnalyzerService {
  public:
   explicit PipelineAnalyzerService(drogon::orm::DbClientPtr dbClient);
+  Json::Value list(const std::string& search, int page, int pageSize);
   Json::Value get(const std::string& analyzerId);
   Json::Value create(const Json::Value& name,
                      const Json::Value& annotations,

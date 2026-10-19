@@ -10,6 +10,8 @@ inline const char* PATH_ITEM = "/ai_stream2/backend/pipelines/{pipeline_id}";
 inline const char* PATH_START = "/ai_stream2/backend/pipelines/{pipeline_id}/start";
 inline const char* PATH_PROBE = "/ai_stream2/backend/pipelines/{pipeline_id}/probe";
 inline const char* PATH_STOP = "/ai_stream2/backend/pipelines/{pipeline_id}/stop";
+inline const char* PATH_BATCH_STOP = "/ai_stream2/backend/pipelines/batch/stop";
+inline const char* PATH_BATCH_REMOVE = "/ai_stream2/backend/pipelines/batch/remove";
 inline const char* PATH_GENERATE = "/ai_stream2/generator/generate";
 
 inline const char* KEY_ID = "id";
@@ -36,6 +38,13 @@ inline const char* KEY_ITEMS = "items";
 inline const char* KEY_TOTAL = "total";
 inline const char* KEY_PAGE = "page";
 inline const char* KEY_PAGE_SIZE = "page_size";
+inline const char* KEY_IDS = "ids";
+inline const char* KEY_UPDATED_ROWS = "updated_rows";
+inline const char* KEY_FAILED_ROWS = "failed_rows";
+inline const char* KEY_SKIPPED_ROWS = "skipped_rows";
+inline const char* KEY_UPDATED_COUNT = "updated_count";
+inline const char* KEY_FAILED_COUNT = "failed_count";
+inline const char* KEY_SKIPPED_COUNT = "skipped_count";
 
 inline const char* FIELD_INPUT = "input";
 inline const char* CONFIG_FILENAME = "input.yaml";
@@ -105,6 +114,8 @@ inline const char* MSG_START_OK = "Started pipeline";
 inline const char* MSG_START_ERROR = "Failed to start pipeline";
 inline const char* MSG_STOP_OK = "Stopped pipeline";
 inline const char* MSG_STOP_ERROR = "Failed to stop pipeline";
+inline const char* MSG_BATCH_STOP_OK = "Stopped pipelines";
+inline const char* MSG_BATCH_REMOVE_OK = "Removed pipelines";
 inline const char* MSG_PROBE_OK = "Probed pipeline";
 inline const char* MSG_PROBE_ERROR = "Failed to probe pipeline";
 
@@ -124,5 +135,16 @@ inline const char* QUERY_PAGE = "page";
 inline const char* QUERY_PAGE_SIZE = "page_size";
 inline const int DEFAULT_PAGE = 1;
 inline const int DEFAULT_PAGE_SIZE = 20;
+
+inline Json::Value BATCH_DATA() {
+  Json::Value node;
+  node[KEY_UPDATED_ROWS] = Json::Value(Json::arrayValue);
+  node[KEY_FAILED_ROWS] = Json::Value(Json::arrayValue);
+  node[KEY_SKIPPED_ROWS] = Json::Value(Json::arrayValue);
+  node[KEY_UPDATED_COUNT] = Json::UInt64(0);
+  node[KEY_FAILED_COUNT] = Json::UInt64(0);
+  node[KEY_SKIPPED_COUNT] = Json::UInt64(0);
+  return node;
+}
 
 }

@@ -112,7 +112,7 @@ void StreamGroupController::create(
   const auto started = std::chrono::steady_clock::now();
   try {
     const auto body = request->getJsonObject();
-    const std::string name = body ? (*body)[stream_group::KEY_NAME].asString() : "";
+    const Json::Value name = body ? (*body)[stream_group::KEY_NAME] : Json::Value();
     respond(request,
             http::Response::ok(service.create(parent_group_id, name), stream_group::MSG_GROUP_CREATE_OK),
             started,
@@ -133,7 +133,7 @@ void StreamGroupController::rename(
   const auto started = std::chrono::steady_clock::now();
   try {
     const auto body = request->getJsonObject();
-    const std::string name = body ? (*body)[stream_group::KEY_NAME].asString() : "";
+    const Json::Value name = body ? (*body)[stream_group::KEY_NAME] : Json::Value();
     respond(request,
             http::Response::ok(service.rename(group_id, name), stream_group::MSG_GROUP_RENAME_OK),
             started,
@@ -211,12 +211,7 @@ void StreamGroupController::setMembers(
   const auto started = std::chrono::steady_clock::now();
   try {
     const auto body = request->getJsonObject();
-    std::vector<std::string> streamIds;
-    if (body && (*body)[stream_group::KEY_STREAM_IDS].isArray()) {
-      for (const auto& id : (*body)[stream_group::KEY_STREAM_IDS]) {
-        streamIds.push_back(id.asString());
-      }
-    }
+    const Json::Value streamIds = body ? (*body)[stream_group::KEY_STREAM_IDS] : Json::Value(Json::arrayValue);
     respond(request,
             http::Response::ok(service.setMembers(group_id, streamIds), stream_group::MSG_GROUP_SET_MEMBERS_OK),
             started,

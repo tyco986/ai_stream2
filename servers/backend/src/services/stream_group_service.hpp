@@ -12,12 +12,12 @@ class StreamGroupService {
   explicit StreamGroupService(drogon::orm::DbClientPtr dbClient);
   Json::Value tree();
   Json::Value map();
-  Json::Value rename(const std::string& groupId, const std::string& name);
+  Json::Value rename(const std::string& groupId, const Json::Value& name);
   Json::Value remove(const std::string& groupId);
-  Json::Value create(const std::string& parentGroupId, const std::string& name);
+  Json::Value create(const std::string& parentGroupId, const Json::Value& name);
   Json::Value members(const std::string& groupId);
   Json::Value candidates(const std::string& groupId);
-  Json::Value setMembers(const std::string& groupId, const std::vector<std::string>& streamIds);
+  Json::Value setMembers(const std::string& groupId, const Json::Value& streamIds);
   Json::Value importCSV(const std::string& csv);
   std::string exportCSV();
 
