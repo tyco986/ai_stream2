@@ -62,11 +62,15 @@ panel:
   pureMultiTagsCache: 页签持久化
 menus:
   pureHome: 首页
+  pureStream: 视频流
+  pureTool: 工具
+  pureMedia: 媒体
+  purePreview: 预览
+  pureModel: 模型
+  purePipeline: 管道
+  pureEvent: 事件
+  pureService: 服务
   pureLogin: 登录
-  pureAbnormal: 异常页面
-  purePageNotFound: "404"
-  pureAccessDenied: "403"
-  pureServerError: "500"
   purePermission: 权限管理
   purePermissionPage: 页面权限
   purePermissionButton: 按钮权限
@@ -80,12 +84,30 @@ status:
   pureNoMessage: 暂无消息
   pureNoNotify: 暂无通知
   pureNoTodo: 暂无待办
+stream:
+  pureCreate: 新建
+  pureProbe: 探测
+  pureCancel: 取消
+  pureConfirm: 确定
+  pureName: 名称
+  pureUrl: 地址
+  pureGroup: 分组
+  pureWidth: 宽度
+  pureHeight: 高度
+  pureFps: 帧率
+  pureStatus: 状态
+  pureInfo: 信息
+  pureOps: 操作
+  pureAll: 全部
+  pureNewGroup: 新建分组
+  pureEditGroup: 编辑分组
+  pureParent: 父组
+  pureRemove: 删除
+logger:
+  pureTitle: 日志
 login:
   pureUsername: 账号
   purePassword: 密码
   pureLogin: 登录
-  pureLoginSuccess: 登录成功
-  pureLoginFail: 登录失败
   pureUsernameReg: 请输入账号
   purePassWordReg: 请输入密码
-  purePassWordRuleReg: 密码格式应为8-18位数字、字母、符号的任意两种组合

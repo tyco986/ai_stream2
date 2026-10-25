@@ -9,7 +9,7 @@
 class PipelineService {
  public:
   explicit PipelineService(drogon::orm::DbClientPtr dbClient);
-  Json::Value list(const std::string& search, int page, int pageSize);
+  Json::Value list(const std::string& search, int page, long pageSize);
   Json::Value map();
   Json::Value get(const std::string& pipelineId);
   std::string createStart(const Json::Value& input);

@@ -1,12 +1,11 @@
 #pragma once
 
 #include "constants/user_const.hpp"
-#include "log/user_logger.hpp"
+#include "logger/user_logger.hpp"
 #include "services/user_service.hpp"
 
 #include <drogon/HttpController.h>
 
-#include <chrono>
 #include <functional>
 
 class UserBatchController : public drogon::HttpController<UserBatchController> {
@@ -21,12 +20,6 @@ class UserBatchController : public drogon::HttpController<UserBatchController> {
                    std::function<void(const drogon::HttpResponsePtr&)>&& callback);
 
  private:
-  void respond(const drogon::HttpRequestPtr& request,
-               const drogon::HttpResponsePtr& response,
-               std::chrono::steady_clock::time_point started,
-               const std::function<void(const drogon::HttpResponsePtr&)>& callback,
-               const std::string& error = "");
-
   UserService service;
   UserLogger logger;
 };

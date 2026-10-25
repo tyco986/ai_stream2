@@ -103,7 +103,7 @@ CREATE TABLE stream (
   height INT,
   fps NUMERIC(6, 2),
   status VARCHAR(16) NOT NULL,
-  enabled BOOLEAN NOT NULL,
+  mount BOOLEAN NOT NULL,
   record BOOLEAN NOT NULL,
   probed_at TIMESTAMPTZ
 );
@@ -292,3 +292,32 @@ VALUES (
   FALSE,
   FALSE
 );
+
+-- media page
+
+CREATE TABLE media (
+  id UUID PRIMARY KEY,
+  type VARCHAR(16) NOT NULL,
+  name VARCHAR(150) NOT NULL,
+  width INT,
+  height INT,
+  duration NUMERIC(12, 3),
+  fps NUMERIC(6, 2),
+  codec VARCHAR(32),
+  size BIGINT,
+  md5 VARCHAR(32) NOT NULL,
+  folder TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL,
+  user_id UUID NOT NULL REFERENCES "user" (id),
+  stream_id UUID REFERENCES stream (id) ON DELETE SET NULL,
+  pipeline_id UUID REFERENCES pipeline (id) ON DELETE SET NULL,
+  CONSTRAINT media_type_check CHECK (
+    type IN ('image', 'video')
+    AND (type = 'video' OR (duration IS NULL AND fps IS NULL AND codec IS NULL))
+  )
+);
+
+CREATE INDEX media_user_id_idx ON media (user_id);
+CREATE INDEX media_stream_id_idx ON media (stream_id);
+CREATE INDEX media_pipeline_id_idx ON media (pipeline_id);

@@ -2,7 +2,7 @@
 
 #include "constants/stream_group_const.hpp"
 #include "db/database.hpp"
-#include "log/base_logger.hpp"
+#include "logger/base_logger.hpp"
 #include "response/response.hpp"
 
 #include <drogon/MultiPart.h>
@@ -12,30 +12,6 @@
 #include <vector>
 
 StreamGroupController::StreamGroupController() : service(Database::client()) {}
-
-void StreamGroupController::respond(
-    const drogon::HttpRequestPtr& request,
-    const drogon::HttpResponsePtr& response,
-    std::chrono::steady_clock::time_point started,
-    const std::function<void(const drogon::HttpResponsePtr&)>& callback,
-    const std::string& error) {
-  const auto elapsed = std::chrono::steady_clock::now() - started;
-  const std::string query = request->query();
-  LogEntry entry;
-  entry.method = request->methodString();
-  entry.url = request->path();
-  entry.url += query.empty() ? "" : "?" + query;
-  entry.code = static_cast<int>(response->statusCode());
-  entry.input = std::string(request->getBody());
-  entry.output = std::string(response->getBody());
-  entry.latency = std::chrono::duration<double, std::milli>(elapsed).count();
-  entry.ip = request->peerAddr().toIp();
-  entry.inBytes = request->bodyLength();
-  entry.outBytes = response->getBodyLength();
-  entry.error = error;
-  logger.write(entry);
-  callback(response);
-}
 
 void StreamGroupController::importCSV(
     const drogon::HttpRequestPtr& request,
@@ -63,7 +39,7 @@ void StreamGroupController::importCSV(
                                      rejected ? reason.c_str() : stream_group::MSG_IMPORT_ERROR);
     errorText = reason;
   }
-  respond(request, response, started, callback, errorText);
+  logger.respond(request, response, started, callback, errorText);
 }
 
 void StreamGroupController::exportCSV(
@@ -87,7 +63,7 @@ void StreamGroupController::exportCSV(
   } catch (const std::exception& error) {
     errorText = error.what();
   }
-  respond(request, response, started, callback, errorText);
+  logger.respond(request, response, started, callback, errorText);
 }
 
 void StreamGroupController::tree(
@@ -95,9 +71,9 @@ void StreamGroupController::tree(
     std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
   const auto started = std::chrono::steady_clock::now();
   try {
-    respond(request, http::Response::ok(service.tree(), stream_group::MSG_TREE_OK), started, callback);
+    logger.respond(request, http::Response::ok(service.tree(), stream_group::MSG_TREE_OK), started, callback);
   } catch (const std::exception& error) {
-    respond(request,
+    logger.respond(request,
             http::Response::error(drogon::k500InternalServerError, stream_group::MSG_TREE_ERROR),
             started,
             callback,
@@ -113,12 +89,12 @@ void StreamGroupController::create(
   try {
     const auto body = request->getJsonObject();
     const Json::Value name = body ? (*body)[stream_group::KEY_NAME] : Json::Value();
-    respond(request,
+    logger.respond(request,
             http::Response::ok(service.create(parent_group_id, name), stream_group::MSG_GROUP_CREATE_OK),
             started,
             callback);
   } catch (const std::exception& error) {
-    respond(request,
+    logger.respond(request,
             http::Response::error(drogon::k500InternalServerError, stream_group::MSG_GROUP_CREATE_ERROR),
             started,
             callback,
@@ -126,7 +102,7 @@ void StreamGroupController::create(
   }
 }
 
-void StreamGroupController::rename(
+void StreamGroupController::update(
     const drogon::HttpRequestPtr& request,
     std::function<void(const drogon::HttpResponsePtr&)>&& callback,
     const std::string& group_id) {
@@ -134,16 +110,20 @@ void StreamGroupController::rename(
   try {
     const auto body = request->getJsonObject();
     const Json::Value name = body ? (*body)[stream_group::KEY_NAME] : Json::Value();
-    respond(request,
-            http::Response::ok(service.rename(group_id, name), stream_group::MSG_GROUP_RENAME_OK),
+    const Json::Value parentId = body ? (*body)[stream_group::KEY_PARENT_ID] : Json::Value();
+    logger.respond(request,
+            http::Response::ok(service.update(group_id, name, parentId), stream_group::MSG_GROUP_UPDATE_OK),
             started,
             callback);
   } catch (const std::exception& error) {
-    respond(request,
-            http::Response::error(drogon::k500InternalServerError, stream_group::MSG_GROUP_RENAME_ERROR),
+    const std::string reason = error.what();
+    const bool rejected = reason == stream_group::ERR_ALL || reason == stream_group::ERR_PARENT_MISSING;
+    logger.respond(request,
+            http::Response::error(rejected ? drogon::k400BadRequest : drogon::k500InternalServerError,
+                                  rejected ? reason.c_str() : stream_group::MSG_GROUP_UPDATE_ERROR),
             started,
             callback,
-            error.what());
+            reason);
   }
 }
 
@@ -153,12 +133,12 @@ void StreamGroupController::remove(
     const std::string& group_id) {
   const auto started = std::chrono::steady_clock::now();
   try {
-    respond(request,
+    logger.respond(request,
             http::Response::ok(service.remove(group_id), stream_group::MSG_GROUP_DELETE_OK),
             started,
             callback);
   } catch (const std::exception& error) {
-    respond(request,
+    logger.respond(request,
             http::Response::error(drogon::k500InternalServerError, stream_group::MSG_GROUP_DELETE_ERROR),
             started,
             callback,
@@ -172,12 +152,12 @@ void StreamGroupController::members(
     const std::string& group_id) {
   const auto started = std::chrono::steady_clock::now();
   try {
-    respond(request,
+    logger.respond(request,
             http::Response::ok(service.members(group_id), stream_group::MSG_GROUP_MEMBERS_OK),
             started,
             callback);
   } catch (const std::exception& error) {
-    respond(request,
+    logger.respond(request,
             http::Response::error(drogon::k500InternalServerError, stream_group::MSG_GROUP_MEMBERS_ERROR),
             started,
             callback,
@@ -191,12 +171,12 @@ void StreamGroupController::candidates(
     const std::string& group_id) {
   const auto started = std::chrono::steady_clock::now();
   try {
-    respond(request,
+    logger.respond(request,
             http::Response::ok(service.candidates(group_id), stream_group::MSG_GROUP_CANDIDATES_OK),
             started,
             callback);
   } catch (const std::exception& error) {
-    respond(request,
+    logger.respond(request,
             http::Response::error(drogon::k500InternalServerError, stream_group::MSG_GROUP_CANDIDATES_ERROR),
             started,
             callback,
@@ -212,12 +192,12 @@ void StreamGroupController::setMembers(
   try {
     const auto body = request->getJsonObject();
     const Json::Value streamIds = body ? (*body)[stream_group::KEY_STREAM_IDS] : Json::Value(Json::arrayValue);
-    respond(request,
+    logger.respond(request,
             http::Response::ok(service.setMembers(group_id, streamIds), stream_group::MSG_GROUP_SET_MEMBERS_OK),
             started,
             callback);
   } catch (const std::exception& error) {
-    respond(request,
+    logger.respond(request,
             http::Response::error(drogon::k500InternalServerError, stream_group::MSG_GROUP_SET_MEMBERS_ERROR),
             started,
             callback,
@@ -230,9 +210,9 @@ void StreamGroupController::map(
     std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
   const auto started = std::chrono::steady_clock::now();
   try {
-    respond(request, http::Response::ok(service.map(), stream_group::MSG_MAP_OK), started, callback);
+    logger.respond(request, http::Response::ok(service.map(), stream_group::MSG_MAP_OK), started, callback);
   } catch (const std::exception& error) {
-    respond(request,
+    logger.respond(request,
             http::Response::error(drogon::k500InternalServerError, stream_group::MSG_MAP_ERROR),
             started,
             callback,

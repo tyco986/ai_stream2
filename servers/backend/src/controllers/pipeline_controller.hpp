@@ -1,13 +1,12 @@
 #pragma once
 
 #include "constants/pipeline_const.hpp"
-#include "log/pipeline_logger.hpp"
+#include "logger/pipeline_logger.hpp"
 #include "services/pipeline_service.hpp"
 
 #include <drogon/HttpController.h>
 #include <drogon/utils/coroutine.h>
 
-#include <chrono>
 #include <functional>
 #include <string>
 
@@ -34,12 +33,12 @@ class PipelineController : public drogon::HttpController<PipelineController> {
   void get(const drogon::HttpRequestPtr& request,
            std::function<void(const drogon::HttpResponsePtr&)>&& callback,
            const std::string& pipeline_id);
-  drogon::Task<drogon::HttpResponsePtr> create(const drogon::HttpRequestPtr& request);
-  drogon::Task<drogon::HttpResponsePtr> update(const drogon::HttpRequestPtr& request, const std::string& pipeline_id);
-  drogon::Task<drogon::HttpResponsePtr> remove(const drogon::HttpRequestPtr& request, const std::string& pipeline_id);
-  drogon::Task<drogon::HttpResponsePtr> start(const drogon::HttpRequestPtr& request, const std::string& pipeline_id);
-  drogon::Task<drogon::HttpResponsePtr> probe(const drogon::HttpRequestPtr& request, const std::string& pipeline_id);
-  drogon::Task<drogon::HttpResponsePtr> stop(const drogon::HttpRequestPtr& request, const std::string& pipeline_id);
+  drogon::Task<drogon::HttpResponsePtr> create(drogon::HttpRequestPtr request);
+  drogon::Task<drogon::HttpResponsePtr> update(drogon::HttpRequestPtr request, std::string pipeline_id);
+  drogon::Task<drogon::HttpResponsePtr> remove(drogon::HttpRequestPtr request, std::string pipeline_id);
+  drogon::Task<drogon::HttpResponsePtr> start(drogon::HttpRequestPtr request, std::string pipeline_id);
+  drogon::Task<drogon::HttpResponsePtr> probe(drogon::HttpRequestPtr request, std::string pipeline_id);
+  drogon::Task<drogon::HttpResponsePtr> stop(drogon::HttpRequestPtr request, std::string pipeline_id);
 
  private:
   std::string yaml2Multipart(const std::string& yaml);
@@ -47,12 +46,6 @@ class PipelineController : public drogon::HttpController<PipelineController> {
   drogon::Task<Json::Value> postGenerate(const std::string& yaml);
   drogon::Task<bool> runDeepstreamContainer(const std::string& containerName);
   drogon::Task<Json::Value> postDeepstreamStart(const std::string& containerName, const std::string& configPath);
-  void respond(const drogon::HttpRequestPtr& request,
-               const drogon::HttpResponsePtr& response,
-               std::chrono::steady_clock::time_point started,
-               const std::function<void(const drogon::HttpResponsePtr&)>& callback,
-               const std::string& error = "");
-
   PipelineService service;
   PipelineLogger logger;
 };

@@ -14,7 +14,8 @@ admin 用户固定 `id` = `00000000-0000-4000-8000-000000000004`。不可改 `us
 
 | 方法 | 路径 | 入参键 | 出参键（`data`） | 功能 |
 |------|------|--------|------------------|------|
-| `POST` | `/ai_stream2/backend/users/login` | `username`、`passwd` | `token` | 登录，签发 token 并写 `last_login` |
+| `POST` | `/ai_stream2/backend/users/login` | `username`、`passwd` | `token`、`id`、`username`、`active`、`group_id`、`group_name`、`last_login` | 登录，签发 token 并写 `last_login` |
+| `GET` | `/ai_stream2/backend/users/me` | 请求头 `authorization` | 用户对象，不含 `passwd` | 当前登录用户 |
 | `GET` | `/ai_stream2/backend/users` | query：`search`、`page`、`page_size` | `items`、`total`、`page`、`page_size` | 分页列表 |
 | `GET` | `/ai_stream2/backend/users/map` | 无 | `{用户名: id}` | 用户名到 id |
 | `POST` | `/ai_stream2/backend/users` | `username`、`passwd`、`active`、`group_id` | 用户对象 | 新建用户，并建默认预览预设 |
@@ -31,7 +32,13 @@ admin 用户固定 `id` = `00000000-0000-4000-8000-000000000004`。不可改 `us
 
 入参：`username`、`passwd`。
 
-出参 `data`：`token`。`message`：`Logged in`。失败 `401`，`invalid username or password`。
+出参 `data`：`token`，以及 `id`、`username`、`active`、`group_id`、`group_name`、`last_login`。不含 `passwd`。`message`：`Logged in`。失败 `401`，`invalid username or password`。
+
+### GET `/ai_stream2/backend/users/me`
+
+身份取请求头 `authorization` 的 token，不读 path、query、body。任意已登录用户可调，不查用户组 CRUD。
+
+出参 `data`：`id`、`username`、`active`、`group_id`、`group_name`、`last_login`。不含 `passwd`、`token`。`message`：`Loaded user`。token 无效或用户未启用 `401`，`unauthorized`。
 
 ### GET `/ai_stream2/backend/users`
 

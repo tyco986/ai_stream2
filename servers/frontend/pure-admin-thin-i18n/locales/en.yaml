@@ -62,11 +62,15 @@ panel:
   pureMultiTagsCache: MultiTags Cache
 menus:
   pureHome: Home
+  pureStream: Stream
+  pureTool: Tool
+  pureMedia: Media
+  purePreview: Preview
+  pureModel: Model
+  purePipeline: Pipeline
+  pureEvent: Event
+  pureService: Service
   pureLogin: Login
-  pureAbnormal: Abnormal Page
-  purePageNotFound: "404"
-  pureAccessDenied: "403"
-  pureServerError: "500"
   purePermission: Permission Manage
   purePermissionPage: Page Permission
   purePermissionButton: Button Permission
@@ -80,12 +84,30 @@ status:
   pureNoMessage: No Message
   pureNoNotify: No Notify
   pureNoTodo: No Todo
+stream:
+  pureCreate: Create
+  pureProbe: Probe
+  pureCancel: Cancel
+  pureConfirm: Confirm
+  pureName: Name
+  pureUrl: Url
+  pureGroup: Group
+  pureWidth: Width
+  pureHeight: Height
+  pureFps: FPS
+  pureStatus: Status
+  pureInfo: Info
+  pureOps: Ops
+  pureAll: All
+  pureNewGroup: New Group
+  pureEditGroup: Edit Group
+  pureParent: Parent
+  pureRemove: Remove
+logger:
+  pureTitle: Logs
 login:
   pureUsername: Username
   purePassword: Password
   pureLogin: Login
-  pureLoginSuccess: Login Success
-  pureLoginFail: Login Fail
   pureUsernameReg: Please enter username
   purePassWordReg: Please enter password
-  purePassWordRuleReg: The password format should be any combination of 8-18 digits

@@ -1,5 +1,7 @@
 #include "services/preview_service.hpp"
 
+#include "error_tracer/sql.hpp"
+
 #include "constants/preview_const.hpp"
 
 #include <algorithm>
@@ -9,7 +11,7 @@
 PreviewService::PreviewService(drogon::orm::DbClientPtr dbClient) : dbClient(std::move(dbClient)) {}
 
 std::string PreviewService::token2UserId(const std::string& token) {
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       "SELECT id::text AS id FROM \"user\" WHERE token = $1 AND active", token);
   if (rows.empty()) {
     throw std::runtime_error(preview::ERR_NOT_FOUND);
@@ -19,7 +21,7 @@ std::string PreviewService::token2UserId(const std::string& token) {
 }
 
 Json::Value PreviewService::get(const std::string& presetId, const std::string& userId) {
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       std::string("SELECT ") + preview::SQL_COLUMNS +
           " FROM preview_preset WHERE id = $1::uuid AND user_id = $2::uuid",
       presetId,
@@ -32,7 +34,7 @@ Json::Value PreviewService::get(const std::string& presetId, const std::string& 
 }
 
 Json::Value PreviewService::map(const std::string& userId) {
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       "SELECT id::text AS id, name FROM preview_preset WHERE user_id = $1::uuid ORDER BY name", userId);
   Json::Value data(Json::objectValue);
   for (const auto& row : rows) {
@@ -42,10 +44,10 @@ Json::Value PreviewService::map(const std::string& userId) {
 }
 
 Json::Value PreviewService::tree() {
-  const auto groupRows = dbClient->execSqlSync(
+  const auto groupRows = Sql::sync({}, dbClient, 
       "SELECT id::text AS id, name, parent_id::text AS parent_id FROM stream_group ORDER BY name");
-  const auto streamRows = dbClient->execSqlSync(
-      "SELECT id::text AS id, name, group_id::text AS group_id, enabled, status, record FROM stream ORDER BY name");
+  const auto streamRows = Sql::sync({}, dbClient, 
+      "SELECT id::text AS id, name, group_id::text AS group_id, mount, status, record FROM stream ORDER BY name");
   Json::Value root;
   std::unordered_map<std::string, std::vector<Json::Value>> children;
   for (const auto& row : groupRows) {
@@ -66,7 +68,7 @@ Json::Value PreviewService::tree() {
     stream[preview::KEY_ID] = row["id"].as<std::string>();
     stream[preview::KEY_NAME] = row["name"].as<std::string>();
     stream[preview::KEY_TYPE] = preview::TYPE_STREAM;
-    stream[preview::KEY_ENABLED] = row["enabled"].as<bool>();
+    stream[preview::KEY_MOUNT] = row["mount"].as<bool>();
     stream[preview::KEY_STATUS] = row["status"].as<std::string>();
     stream[preview::KEY_RECORD] = row["record"].as<bool>();
     streams[row["group_id"].as<std::string>()].push_back(stream);
@@ -84,10 +86,10 @@ Json::Value PreviewService::create(const std::string& userId,
   const std::string text = slots2Text(layout.asString(), slots);
   auto transaction = dbClient->newTransaction();
   if (active.asBool()) {
-    transaction->execSqlSync(
+    Sql::sync({}, transaction, 
         "UPDATE preview_preset SET active = false WHERE user_id = $1::uuid AND active", userId);
   }
-  const auto rows = transaction->execSqlSync(
+  const auto rows = Sql::sync({}, transaction, 
       std::string("INSERT INTO preview_preset (id, user_id, name, layout, mode, slots, active) "
                   "VALUES (gen_random_uuid(), $1::uuid, $2, $3, $4, $5::jsonb, $6) RETURNING ") +
           preview::SQL_COLUMNS,
@@ -111,10 +113,10 @@ Json::Value PreviewService::update(const std::string& presetId,
   const std::string text = slots2Text(layout.asString(), slots);
   auto transaction = dbClient->newTransaction();
   if (active.asBool()) {
-    transaction->execSqlSync(
+    Sql::sync({}, transaction, 
         "UPDATE preview_preset SET active = false WHERE user_id = $1::uuid AND active", userId);
   }
-  const auto rows = transaction->execSqlSync(
+  const auto rows = Sql::sync({}, transaction, 
       std::string("UPDATE preview_preset SET name = $3, layout = $4, mode = $5, slots = $6::jsonb, active = $7 "
                   "WHERE id = $1::uuid AND user_id = $2::uuid RETURNING ") +
           preview::SQL_COLUMNS,
@@ -133,7 +135,7 @@ Json::Value PreviewService::update(const std::string& presetId,
 }
 
 Json::Value PreviewService::remove(const std::string& presetId, const std::string& userId) {
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       std::string("SELECT ") + preview::SQL_COLUMNS +
           " FROM preview_preset WHERE id = $1::uuid AND user_id = $2::uuid",
       presetId,
@@ -144,13 +146,13 @@ Json::Value PreviewService::remove(const std::string& presetId, const std::strin
   if (rows[0]["name"].as<std::string>() == preview::NAME_DEFAULT) {
     throw std::runtime_error(preview::ERR_DEFAULT);
   }
-  dbClient->execSqlSync("DELETE FROM preview_preset WHERE id = $1::uuid AND user_id = $2::uuid", presetId, userId);
+  Sql::sync({}, dbClient, "DELETE FROM preview_preset WHERE id = $1::uuid AND user_id = $2::uuid", presetId, userId);
   Json::Value data = parseSlots(row2json(rows[0]));
   return data;
 }
 
 Json::Value PreviewService::getActive(const std::string& userId) {
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       std::string("SELECT ") + preview::SQL_COLUMNS +
           " FROM preview_preset WHERE user_id = $1::uuid AND active",
       userId);
@@ -201,7 +203,7 @@ Json::Value PreviewService::parseSlots(Json::Value data) {
       list += list.size() == 1 ? id : "," + id;
     }
     list += "}";
-    const auto rows = dbClient->execSqlSync(
+    const auto rows = Sql::sync({}, dbClient, 
         std::string("SELECT ") + preview::SQL_STREAM +
             "FROM stream INNER JOIN stream_group ON stream_group.id = stream.group_id "
             "WHERE stream.id = ANY($1::uuid[])",
@@ -217,7 +219,7 @@ Json::Value PreviewService::parseSlots(Json::Value data) {
       node[preview::KEY_HEIGHT] = row["height"].isNull() ? Json::Value() : row["height"].as<int>();
       node[preview::KEY_FPS] = row["fps"].isNull() ? Json::Value() : row["fps"].as<double>();
       node[preview::KEY_STATUS] = row["status"].as<std::string>();
-      node[preview::KEY_ENABLED] = row["enabled"].as<bool>();
+      node[preview::KEY_MOUNT] = row["mount"].as<bool>();
       node[preview::KEY_RECORD] = row["record"].as<bool>();
       node[preview::KEY_PROBED_AT] = row["probed_at"].isNull() ? Json::Value() : row["probed_at"].as<std::string>();
       streams[row["id"].as<std::string>()] = node;

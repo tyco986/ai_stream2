@@ -1,13 +1,12 @@
 #pragma once
 
 #include "constants/server_const.hpp"
-#include "log/server_logger.hpp"
+#include "logger/server_logger.hpp"
 #include "services/server_service.hpp"
 
 #include <drogon/HttpController.h>
 #include <drogon/utils/coroutine.h>
 
-#include <chrono>
 #include <functional>
 
 class ServerController : public drogon::HttpController<ServerController> {
@@ -21,15 +20,9 @@ class ServerController : public drogon::HttpController<ServerController> {
 
   void get(const drogon::HttpRequestPtr& request,
            std::function<void(const drogon::HttpResponsePtr&)>&& callback);
-  drogon::Task<drogon::HttpResponsePtr> probe(const drogon::HttpRequestPtr& request);
+  drogon::Task<drogon::HttpResponsePtr> probe(drogon::HttpRequestPtr request);
 
  private:
-  void respond(const drogon::HttpRequestPtr& request,
-               const drogon::HttpResponsePtr& response,
-               std::chrono::steady_clock::time_point started,
-               const std::function<void(const drogon::HttpResponsePtr&)>& callback,
-               const std::string& error = "");
-
   ServerService service;
   ServerLogger logger;
 };

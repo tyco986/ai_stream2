@@ -2,7 +2,7 @@
 
 #include "constants/proxy_const.hpp"
 #include "db/database.hpp"
-#include "log/base_logger.hpp"
+#include "logger/base_logger.hpp"
 #include "response/response.hpp"
 
 #include <drogon/HttpClient.h>
@@ -43,31 +43,7 @@ std::string ModelBatchController::yaml2Multipart(const std::string& yaml) {
   return body;
 }
 
-void ModelBatchController::respond(
-    const drogon::HttpRequestPtr& request,
-    const drogon::HttpResponsePtr& response,
-    std::chrono::steady_clock::time_point started,
-    const std::function<void(const drogon::HttpResponsePtr&)>& callback,
-    const std::string& error) {
-  const auto elapsed = std::chrono::steady_clock::now() - started;
-  const std::string query = request->query();
-  LogEntry entry;
-  entry.method = request->methodString();
-  entry.url = request->path();
-  entry.url += query.empty() ? "" : "?" + query;
-  entry.code = static_cast<int>(response->statusCode());
-  entry.input = std::string(request->getBody());
-  entry.output = std::string(response->getBody());
-  entry.latency = std::chrono::duration<double, std::milli>(elapsed).count();
-  entry.ip = request->peerAddr().toIp();
-  entry.inBytes = request->bodyLength();
-  entry.outBytes = response->getBodyLength();
-  entry.error = error;
-  logger.write(entry);
-  callback(response);
-}
-
-drogon::Task<drogon::HttpResponsePtr> ModelBatchController::batchBuild(const drogon::HttpRequestPtr& request) {
+drogon::Task<drogon::HttpResponsePtr> ModelBatchController::batchBuild(drogon::HttpRequestPtr request) {
   const auto started = std::chrono::steady_clock::now();
   const auto body = request->getJsonObject();
   Json::Value data = model::BATCH_DATA();
@@ -127,7 +103,7 @@ drogon::Task<drogon::HttpResponsePtr> ModelBatchController::batchBuild(const dro
   data[model::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_FAILED_ROWS].size());
   data[model::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_SKIPPED_ROWS].size());
   drogon::HttpResponsePtr response = http::Response::ok(data, model::MSG_BUILD_OK);
-  respond(request, response, started, [](const drogon::HttpResponsePtr&) {});
+  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {});
   co_return response;
 }
 
@@ -160,7 +136,7 @@ void ModelBatchController::batchStatus(
   data[model::KEY_UPDATED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_UPDATED_ROWS].size());
   data[model::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_FAILED_ROWS].size());
   data[model::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_SKIPPED_ROWS].size());
-  respond(request, http::Response::ok(data, model::MSG_STATUS_OK), started, callback);
+  logger.respond(request, http::Response::ok(data, model::MSG_STATUS_OK), started, callback);
 }
 
 void ModelBatchController::batchRemove(
@@ -184,5 +160,5 @@ void ModelBatchController::batchRemove(
   data[model::KEY_UPDATED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_UPDATED_ROWS].size());
   data[model::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_FAILED_ROWS].size());
   data[model::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_SKIPPED_ROWS].size());
-  respond(request, http::Response::ok(data, model::MSG_REMOVE_OK), started, callback);
+  logger.respond(request, http::Response::ok(data, model::MSG_REMOVE_OK), started, callback);
 }

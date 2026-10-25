@@ -21,7 +21,7 @@ class EventService {
                      const Json::Value& visualizationPath,
                      const Json::Value& annotations);
   Json::Value setStatus(const std::string& eventId, const std::string& status);
-  Json::Value list(const std::string& search, int page, int pageSize);
+  Json::Value list(const std::string& search, int page, long pageSize);
 
  private:
   Json::Value row2json(const drogon::orm::Row& row);

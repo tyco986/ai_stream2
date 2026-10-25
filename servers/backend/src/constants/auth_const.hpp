@@ -1,7 +1,8 @@
 #pragma once
 
 #include "constants/event_const.hpp"
-#include "constants/log_const.hpp"
+#include "constants/service_log.hpp"
+#include "constants/media_const.hpp"
 #include "constants/model_const.hpp"
 #include "constants/pipeline_analyzer_const.hpp"
 #include "constants/pipeline_const.hpp"
@@ -20,8 +21,8 @@
 
 namespace auth {
 
-inline const char* ERR_UNAUTHORIZED = "unauthorized";
-inline const char* ERR_FORBIDDEN = "forbidden";
+inline const char* ERR_UNAUTHORIZED = "auth_unauthorized";
+inline const char* ERR_FORBIDDEN = "auth_forbidden";
 
 inline const int CRUD_CREATE = 0;
 inline const int CRUD_READ = 1;
@@ -43,9 +44,10 @@ inline const std::map<std::pair<drogon::HttpMethod, std::string>, CrudGate> CRUD
     {{drogon::Patch, stream::PATH_ITEM}, {user::KEY_STREAM_CRUD, CRUD_UPDATE}},
     {{drogon::Delete, stream::PATH_ITEM}, {user::KEY_STREAM_CRUD, CRUD_DELETE}},
     {{drogon::Post, stream::PATH_PROBE}, {user::KEY_STREAM_CRUD, CRUD_UPDATE}},
+    {{drogon::Post, stream::PATH_BATCH_CREATE}, {user::KEY_STREAM_CRUD, CRUD_CREATE}},
     {{drogon::Post, stream::PATH_BATCH_REMOVE}, {user::KEY_STREAM_CRUD, CRUD_DELETE}},
-    {{drogon::Post, stream::PATH_BATCH_ENABLE}, {user::KEY_STREAM_CRUD, CRUD_UPDATE}},
-    {{drogon::Post, stream::PATH_BATCH_DISABLE}, {user::KEY_STREAM_CRUD, CRUD_UPDATE}},
+    {{drogon::Post, stream::PATH_BATCH_MOUNT}, {user::KEY_STREAM_CRUD, CRUD_UPDATE}},
+    {{drogon::Post, stream::PATH_BATCH_UNMOUNT}, {user::KEY_STREAM_CRUD, CRUD_UPDATE}},
     {{drogon::Post, stream::PATH_BATCH_RECORD}, {user::KEY_STREAM_CRUD, CRUD_UPDATE}},
     {{drogon::Post, stream::PATH_BATCH_UNRECORD}, {user::KEY_STREAM_CRUD, CRUD_UPDATE}},
     {{drogon::Post, stream::PATH_BATCH_PROBE}, {user::KEY_STREAM_CRUD, CRUD_UPDATE}},
@@ -135,8 +137,25 @@ inline const std::map<std::pair<drogon::HttpMethod, std::string>, CrudGate> CRUD
     {{drogon::Get, event::PATH_LIST}, {user::KEY_EVENT_CRUD, CRUD_READ}},
     {{drogon::Post, event::PATH_STATUS}, {user::KEY_EVENT_CRUD, CRUD_UPDATE}},
     // log
-    {{drogon::Get, log::PATH_LIST}, {user::KEY_EVENT_CRUD, CRUD_READ}},
-    {{drogon::Post, log::PATH_ENABLE}, {user::KEY_EVENT_CRUD, CRUD_UPDATE}},
+    {{drogon::Get, service_log::PATH_LIST}, {user::KEY_EVENT_CRUD, CRUD_READ}},
+    {{drogon::Delete, service_log::PATH_LIST}, {user::KEY_EVENT_CRUD, CRUD_DELETE}},
+    {{drogon::Post, service_log::PATH_ENABLE}, {user::KEY_EVENT_CRUD, CRUD_UPDATE}},
+    {{drogon::Post, service_log::PATH_DISABLE}, {user::KEY_EVENT_CRUD, CRUD_UPDATE}},
+    {{drogon::Get, service_log::PATH_STATUS}, {user::KEY_EVENT_CRUD, CRUD_READ}},
+    // media
+    {{drogon::Get, media::PATH_UPLOAD_FILE}, {user::KEY_RECORDING_CRUD, CRUD_READ}},
+    {{drogon::Get, media::PATH_PIPELINE_FILE}, {user::KEY_RECORDING_CRUD, CRUD_READ}},
+    {{drogon::Get, media::PATH_RECORDING_FILE}, {user::KEY_RECORDING_CRUD, CRUD_READ}},
+    {{drogon::Get, media::PATH_UPLOAD_FOLDER}, {user::KEY_RECORDING_CRUD, CRUD_READ}},
+    {{drogon::Get, media::PATH_PIPELINE_FOLDER}, {user::KEY_RECORDING_CRUD, CRUD_READ}},
+    {{drogon::Get, media::PATH_RECORDING_FOLDER}, {user::KEY_RECORDING_CRUD, CRUD_READ}},
+    {{drogon::Get, media::PATH_ITEM}, {user::KEY_RECORDING_CRUD, CRUD_READ}},
+    {{drogon::Get, media::PATH_CONTENT}, {user::KEY_RECORDING_CRUD, CRUD_READ}},
+    {{drogon::Get, media::PATH_DOWNLOAD}, {user::KEY_RECORDING_CRUD, CRUD_READ}},
+    {{drogon::Post, media::PATH_BATCH_CREATE}, {user::KEY_RECORDING_CRUD, CRUD_CREATE}},
+    {{drogon::Post, media::PATH_BATCH_UPLOAD}, {user::KEY_RECORDING_CRUD, CRUD_CREATE}},
+    {{drogon::Post, media::PATH_BATCH_REMOVE}, {user::KEY_RECORDING_CRUD, CRUD_DELETE}},
+    {{drogon::Post, media::PATH_BATCH_DOWNLOAD}, {user::KEY_RECORDING_CRUD, CRUD_READ}},
 };
 
 }

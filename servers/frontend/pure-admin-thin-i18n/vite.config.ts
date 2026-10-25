@@ -1,3 +1,4 @@
+import { PROXY_PREFIX, PROXY_TARGET, PROXY_UPSTREAM_PREFIX } from "./src/constants/proxy";
 import { getPluginsList } from "./build/plugins";
 import { include, exclude } from "./build/optimize";
 import { type UserConfigExport, type ConfigEnv, loadEnv } from "vite";
@@ -23,8 +24,21 @@ export default ({ mode }: ConfigEnv): UserConfigExport => {
       // 端口号
       port: VITE_PORT,
       host: "0.0.0.0",
+      watch: {
+        usePolling: true,
+        interval: 300
+      },
       // 本地跨域代理 https://cn.vitejs.dev/config/server-options.html#server-proxy
-      proxy: {},
+      proxy: {
+        [PROXY_PREFIX]: {
+          target: PROXY_TARGET,
+          changeOrigin: true
+        },
+        [PROXY_UPSTREAM_PREFIX]: {
+          target: PROXY_TARGET,
+          changeOrigin: true
+        }
+      },
       // 预热文件以提前转换和缓存结果，降低启动期间的初始页面加载时长并防止转换瀑布
       warmup: {
         clientFiles: ["./index.html", "./src/{views,components}/*"]

@@ -1,5 +1,7 @@
 #include "services/pipeline_service.hpp"
 
+#include "error_tracer/sql.hpp"
+
 #include "constants/pipeline_const.hpp"
 #include "searcher/searcher.hpp"
 
@@ -10,16 +12,16 @@
 
 PipelineService::PipelineService(drogon::orm::DbClientPtr dbClient) : dbClient(std::move(dbClient)) {}
 
-Json::Value PipelineService::list(const std::string& search, int page, int pageSize) {
-  const int offset = (page - 1) * pageSize;
+Json::Value PipelineService::list(const std::string& search, int page, long pageSize) {
+  const long offset = static_cast<long>(page - 1) * pageSize;
   const std::string columns =
       std::string("id::text AS id, name, type, status, NULL::text AS input, NULL::text AS config_path, ") +
       pipeline::SQL_REF_COLUMNS +
       "start_time, end_time, duration, updated_at ";
   const std::string match = Searcher::clause({"id", "name", "type", "status", "updated_at"}, 1);
   const std::string from = "FROM pipeline WHERE " + match + " ";
-  const auto counted = dbClient->execSqlSync("SELECT count(*) AS total " + from, search);
-  const auto rows = dbClient->execSqlSync(
+  const auto counted = Sql::sync({}, dbClient, "SELECT count(*) AS total " + from, search);
+  const auto rows = Sql::sync({}, dbClient, 
       "SELECT " + columns + from + "ORDER BY name LIMIT $2 OFFSET $3", search, pageSize, offset);
   Json::Value items(Json::arrayValue);
   for (const auto& row : rows) {
@@ -34,7 +36,7 @@ Json::Value PipelineService::list(const std::string& search, int page, int pageS
 }
 
 Json::Value PipelineService::map() {
-  const auto rows = dbClient->execSqlSync("SELECT id::text AS id, name FROM pipeline ORDER BY name");
+  const auto rows = Sql::sync({}, dbClient, "SELECT id::text AS id, name FROM pipeline ORDER BY name");
   Json::Value data(Json::objectValue);
   for (const auto& row : rows) {
     data[row["name"].as<std::string>()] = row["id"].as<std::string>();
@@ -43,7 +45,7 @@ Json::Value PipelineService::map() {
 }
 
 Json::Value PipelineService::get(const std::string& pipelineId) {
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       std::string("SELECT id::text AS id, name, type, status, input::text AS input, config_path, ") +
       pipeline::SQL_REF_COLUMNS +
       "start_time, end_time, duration, updated_at "
@@ -114,7 +116,7 @@ Json::Value PipelineService::createEnd(const Json::Value& status,
   data[pipeline::KEY_ANALYZER_IDS] = analyzerIds.isNull() ? data[pipeline::KEY_ANALYZER_IDS] : analyzerIds;
   Json::StreamWriterBuilder builder;
   builder["indentation"] = "";
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       "INSERT INTO pipeline (id, name, type, status, input, config_path, stream_ids, gie_ids, analyzer_ids, updated_at) "
       "VALUES (gen_random_uuid(), $1, $2, $3, $4::jsonb, $5, "
       "ARRAY(SELECT jsonb_array_elements_text($6::jsonb)::uuid), "
@@ -151,7 +153,7 @@ Json::Value PipelineService::update(const std::string& pipelineId,
   const std::string oldPath = hasPath ? current[pipeline::KEY_CONFIG_PATH].asString() : "";
   Json::StreamWriterBuilder builder;
   builder["indentation"] = "";
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       "UPDATE pipeline SET name = $2, type = $3, status = $4, input = $5::jsonb, config_path = $6, "
       "gie_ids = ARRAY(SELECT jsonb_array_elements_text($7::jsonb)::uuid), "
       "analyzer_ids = ARRAY(SELECT jsonb_array_elements_text($8::jsonb)::uuid), "
@@ -180,7 +182,7 @@ Json::Value PipelineService::update(const std::string& pipelineId,
 }
 
 Json::Value PipelineService::setStatus(const std::string& pipelineId, const std::string& status) {
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       "UPDATE pipeline SET status = $2 "
       "WHERE id = $1::uuid " +
       std::string("RETURNING id::text AS id, name, type, status, input::text AS input, config_path, ") +
@@ -203,7 +205,7 @@ Json::Value PipelineService::probe(const std::string& pipelineId,
   const std::string startText = startTime.isString() ? startTime.asString() : "";
   const std::string endText = endTime.isString() ? endTime.asString() : "";
   const std::string durationText = duration.isNumeric() ? std::to_string(duration.asInt64()) : "";
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       "UPDATE pipeline SET status = $2, "
       "start_time = CASE WHEN $3 = '' THEN NULL ELSE $3::timestamptz END, "
       "end_time = CASE WHEN $4 = '' THEN NULL ELSE $4::timestamptz END, "
@@ -225,7 +227,7 @@ Json::Value PipelineService::probe(const std::string& pipelineId,
 }
 
 Json::Value PipelineService::remove(const std::string& pipelineId) {
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       "DELETE FROM pipeline WHERE id = $1::uuid " +
       std::string("RETURNING id::text AS id, name, type, status, input::text AS input, config_path, ") +
       pipeline::SQL_REF_COLUMNS +

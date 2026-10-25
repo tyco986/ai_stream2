@@ -1,5 +1,7 @@
 #include "services/event_service.hpp"
 
+#include "error_tracer/sql.hpp"
+
 #include "constants/event_const.hpp"
 #include "searcher/searcher.hpp"
 
@@ -18,7 +20,7 @@ const char* SELECT_ROW =
 EventService::EventService(drogon::orm::DbClientPtr dbClient) : dbClient(std::move(dbClient)) {}
 
 Json::Value EventService::get(const std::string& eventId) {
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       std::string("SELECT ") + SELECT_ROW + "FROM event WHERE id = $1::uuid", eventId);
   if (rows.empty()) {
     throw std::runtime_error(event::ERR_NOT_FOUND);
@@ -55,7 +57,7 @@ Json::Value EventService::create(const Json::Value& occurredAt,
   builder["indentation"] = "";
   const std::string annotationsText =
       data[event::KEY_ANNOTATIONS].isNull() ? "" : Json::writeString(builder, data[event::KEY_ANNOTATIONS]);
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       std::string("INSERT INTO event (id, occurred_at, stream_id, stream_name, pipeline_id, pipeline_name, "
                   "event_code, event_label, status, raw_path, visualization_path, annotations) "
                   "VALUES (gen_random_uuid(), $1::timestamptz, $2::uuid, $3, $4::uuid, $5, $6, $7, "
@@ -78,13 +80,13 @@ Json::Value EventService::create(const Json::Value& occurredAt,
 }
 
 Json::Value EventService::setStatus(const std::string& eventId, const std::string& status) {
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       std::string("UPDATE event SET status = $2 WHERE id = $1::uuid RETURNING ") + SELECT_ROW, eventId, status);
   if (rows.empty()) {
     throw std::runtime_error(event::ERR_NOT_FOUND);
   }
   if (status == event::STATUS_HANDLED) {
-    dbClient->execSqlSync(
+    Sql::sync({}, dbClient, 
         "UPDATE notice SET read_at = now() WHERE source = $2 AND ref_id = $1::uuid AND read_at IS NULL",
         eventId,
         event::NOTICE_SOURCE);
@@ -93,13 +95,13 @@ Json::Value EventService::setStatus(const std::string& eventId, const std::strin
   return data;
 }
 
-Json::Value EventService::list(const std::string& search, int page, int pageSize) {
-  const int offset = (page - 1) * pageSize;
+Json::Value EventService::list(const std::string& search, int page, long pageSize) {
+  const long offset = static_cast<long>(page - 1) * pageSize;
   const std::string match = Searcher::clause(
       {"id", "stream_id", "stream_name", "pipeline_id", "pipeline_name", "event_code", "event_label", "status"}, 1);
   const std::string from = "FROM event WHERE " + match + " ";
-  const auto counted = dbClient->execSqlSync("SELECT count(*) AS total " + from, search);
-  const auto rows = dbClient->execSqlSync(
+  const auto counted = Sql::sync({}, dbClient, "SELECT count(*) AS total " + from, search);
+  const auto rows = Sql::sync({}, dbClient, 
       std::string("SELECT ") + SELECT_ROW + from + "ORDER BY occurred_at DESC, id DESC LIMIT $2 OFFSET $3",
       search,
       pageSize,

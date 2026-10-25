@@ -1,0 +1,24 @@
+{
+  "folders": {},
+  "connections": {
+    "ai_stream2": {
+      "provider": "postgresql",
+      "driver": "postgres-jdbc",
+      "name": "ai_stream2",
+      "save-password": true,
+      "configuration": {
+        "host": "ai_stream2_postgresql",
+        "port": "5432",
+        "database": "ai_stream2",
+        "url": "jdbc:postgresql://ai_stream2_postgresql:5432/ai_stream2",
+        "configurationType": "MANUAL",
+        "type": "dev",
+        "auth-model": "native",
+        "auth-properties": {
+          "userName": "ai_stream2",
+          "userPassword": "ai_stream2"
+        }
+      }
+    }
+  }
+}

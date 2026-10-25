@@ -3,8 +3,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
-# shellcheck source=../../../scripts/load_project_env.sh
-source "${ROOT}/scripts/load_project_env.sh"
+PROJECT_NAME=ai_stream2
 
 IMAGE="${PROJECT_NAME}_backend_prod"
 mkdir -p "${ROOT}/logs/backend"

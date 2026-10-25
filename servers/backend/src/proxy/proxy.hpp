@@ -13,6 +13,7 @@ class Proxy {
                       std::function<void(const drogon::HttpResponsePtr&)>&& callback);
 
  private:
+  static std::string upstreamPath(const std::string& path);
   static void complete(const std::function<void(const drogon::HttpResponsePtr&)>& callback,
                        drogon::ReqResult result,
                        const drogon::HttpResponsePtr& upstream);

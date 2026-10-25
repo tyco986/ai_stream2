@@ -2,7 +2,7 @@
 
 namespace ffmpeg_backend {
 
-inline const char* PROBE_PATH = "/puskas/ffmpeg/rtsp/probe";
+inline const char* RTSP_PROBE_PATH = "/rtsp/probe";
 inline const char* KEY_URL = "url";
 inline const char* KEY_STATUS = "status";
 inline const char* KEY_WIDTH = "width";

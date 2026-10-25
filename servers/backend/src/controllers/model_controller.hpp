@@ -1,13 +1,12 @@
 #pragma once
 
 #include "constants/model_const.hpp"
-#include "log/model_logger.hpp"
+#include "logger/model_logger.hpp"
 #include "services/model_service.hpp"
 
 #include <drogon/HttpController.h>
 #include <drogon/utils/coroutine.h>
 
-#include <chrono>
 #include <functional>
 
 class ModelController : public drogon::HttpController<ModelController> {
@@ -45,8 +44,8 @@ class ModelController : public drogon::HttpController<ModelController> {
   void remove(const drogon::HttpRequestPtr& request,
               std::function<void(const drogon::HttpResponsePtr&)>&& callback,
               const std::string& model_id);
-  drogon::Task<drogon::HttpResponsePtr> build(const drogon::HttpRequestPtr& request,
-                                              const std::string& model_id);
+  drogon::Task<drogon::HttpResponsePtr> build(drogon::HttpRequestPtr request,
+                                              std::string model_id);
   void status(const drogon::HttpRequestPtr& request,
               std::function<void(const drogon::HttpResponsePtr&)>&& callback,
               const std::string& model_id);
@@ -57,12 +56,6 @@ class ModelController : public drogon::HttpController<ModelController> {
   std::string zip2Bytes(const std::string& path);
   std::string zip2Multipart(const std::string& filename, const std::string& bytes);
   std::string yaml2Multipart(const std::string& yaml);
-  void respond(const drogon::HttpRequestPtr& request,
-               const drogon::HttpResponsePtr& response,
-               std::chrono::steady_clock::time_point started,
-               const std::function<void(const drogon::HttpResponsePtr&)>& callback,
-               const std::string& error = "");
-
   ModelService service;
   ModelLogger logger;
 };

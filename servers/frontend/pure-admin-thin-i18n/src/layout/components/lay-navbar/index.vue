@@ -1,6 +1,10 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import { useNav } from "@/layout/hooks/useNav";
 import LaySearch from "../lay-search/index.vue";
+import LayLogger from "../lay-logger/index.vue";
+import { DEBUG_USER } from "@/constants/logger";
+import { useUserStoreHook } from "@/store/modules/user";
 import LayNotice from "../lay-notice/index.vue";
 import LayNavMix from "../lay-sidebar/NavMix.vue";
 import { useTranslationLang } from "@/layout/hooks/useTranslationLang";
@@ -28,6 +32,9 @@ const {
 } = useNav();
 
 const { t, locale, translationCh, translationEn } = useTranslationLang();
+const showLogger = computed(
+  () => useUserStoreHook().username === DEBUG_USER
+);
 </script>
 
 <template>
@@ -47,6 +54,7 @@ const { t, locale, translationCh, translationEn } = useTranslationLang();
     <LayNavMix v-if="layout === 'mix'" />
 
     <div v-if="layout === 'vertical'" class="vertical-header-right">
+      <LayLogger v-if="showLogger" />
       <!-- 菜单搜索 -->
       <LaySearch id="header-search" />
       <!-- 国际化 -->

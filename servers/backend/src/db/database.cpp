@@ -1,5 +1,7 @@
 #include "db/database.hpp"
 
+#include "error_tracer/sql.hpp"
+
 #include "constants/database_const.hpp"
 
 #include <algorithm>
@@ -24,7 +26,7 @@ void Database::connect() {
   for (int attempt = 0; attempt < database::CONNECT_ATTEMPTS && !dbClient; ++attempt) {
     try {
       auto client = drogon::orm::DbClient::newPgClient(database::CONNECTION_INFO, 1);
-      client->execSqlSync("SELECT 1");
+      Sql::sync({}, client, "SELECT 1");
       dbClient = std::move(client);
       sharedClient = dbClient;
     } catch (const std::exception&) {
@@ -37,7 +39,7 @@ void Database::connect() {
 }
 
 void Database::applyPending() {
-  dbClient->execSqlSync(
+  Sql::sync({}, dbClient, 
       "CREATE TABLE IF NOT EXISTS schema_migrations (version VARCHAR PRIMARY KEY)");
   std::vector<std::filesystem::path> files;
   for (const auto& entry : std::filesystem::directory_iterator(database::MIGRATIONS_DIR)) {
@@ -53,15 +55,15 @@ void Database::applyPending() {
 
 void Database::applyFile(const std::filesystem::path& path) {
   const auto version = path.filename().string();
-  const auto existing = dbClient->execSqlSync(
+  const auto existing = Sql::sync({}, dbClient, 
       "SELECT version FROM schema_migrations WHERE version = $1", version);
   if (existing.empty()) {
     auto transaction = dbClient->newTransaction();
     try {
       for (const auto& statement : statements(path)) {
-        transaction->execSqlSync(statement);
+        Sql::sync({}, transaction, statement);
       }
-      transaction->execSqlSync("INSERT INTO schema_migrations (version) VALUES ($1)", version);
+      Sql::sync({}, transaction, "INSERT INTO schema_migrations (version) VALUES ($1)", version);
     } catch (...) {
       transaction->rollback();
       throw;

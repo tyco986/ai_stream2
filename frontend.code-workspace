@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "servers/frontend"
+		},
+		{
+			"path": "servers/ffmpeg"
+		},
+		{
+			"path": "servers/backend/docs"
+		}
+	],
+	"settings": {}
+}

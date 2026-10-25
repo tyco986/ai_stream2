@@ -25,8 +25,8 @@ inline const char* PATH_MAP = "/ai_stream2/backend/pipeline/gie/map";
 inline const char* PATH_MODELS = "/ai_stream2/backend/pipeline/gie/models";
 inline const char* PATH_BATCH_REMOVE = "/ai_stream2/backend/pipeline/gie/batch/remove";
 inline const char* PATH_ITEM = "/ai_stream2/backend/pipeline/gie/{gie_id}";
-inline const char* ERR_NOT_FOUND = "gie not found";
-inline const char* ERR_OCCUPIED = "gie is used by a pipeline";
+inline const char* ERR_NOT_FOUND = "pipeline_gie_err_not_found";
+inline const char* ERR_OCCUPIED = "pipeline_gie_err_occupied";
 
 inline Json::Value ROW() {
   Json::Value node;
@@ -61,19 +61,19 @@ inline const char* QUERY_PAGE = "page";
 inline const char* QUERY_PAGE_SIZE = "page_size";
 inline const int DEFAULT_PAGE = 1;
 inline const int DEFAULT_PAGE_SIZE = 20;
-inline const char* MSG_LIST_OK = "Loaded gie list";
-inline const char* MSG_LIST_ERROR = "Failed to load gie list";
-inline const char* MSG_MODELS_OK = "Loaded models";
-inline const char* MSG_MODELS_ERROR = "Failed to load models";
-inline const char* MSG_MAP_OK = "Loaded gie map";
-inline const char* MSG_MAP_ERROR = "Failed to load gie map";
-inline const char* MSG_GET_OK = "Loaded gie";
-inline const char* MSG_GET_ERROR = "Failed to load gie";
-inline const char* MSG_CREATE_OK = "Created gie";
-inline const char* MSG_CREATE_ERROR = "Failed to create gie";
-inline const char* MSG_UPDATE_OK = "Updated gie";
-inline const char* MSG_UPDATE_ERROR = "Failed to update gie";
-inline const char* MSG_REMOVE_OK = "Removed gie";
-inline const char* MSG_REMOVE_ERROR = "Failed to remove gie";
+inline const char* MSG_LIST_OK = "pipeline_gie_list_ok";
+inline const char* MSG_LIST_ERROR = "pipeline_gie_list_error";
+inline const char* MSG_MODELS_OK = "pipeline_gie_models_ok";
+inline const char* MSG_MODELS_ERROR = "pipeline_gie_models_error";
+inline const char* MSG_MAP_OK = "pipeline_gie_map_ok";
+inline const char* MSG_MAP_ERROR = "pipeline_gie_map_error";
+inline const char* MSG_GET_OK = "pipeline_gie_get_ok";
+inline const char* MSG_GET_ERROR = "pipeline_gie_get_error";
+inline const char* MSG_CREATE_OK = "pipeline_gie_create_ok";
+inline const char* MSG_CREATE_ERROR = "pipeline_gie_create_error";
+inline const char* MSG_UPDATE_OK = "pipeline_gie_update_ok";
+inline const char* MSG_UPDATE_ERROR = "pipeline_gie_update_error";
+inline const char* MSG_REMOVE_OK = "pipeline_gie_remove_ok";
+inline const char* MSG_REMOVE_ERROR = "pipeline_gie_remove_error";
 
 }

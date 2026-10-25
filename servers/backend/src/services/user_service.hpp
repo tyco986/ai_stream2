@@ -9,7 +9,8 @@ class UserService {
  public:
   explicit UserService(drogon::orm::DbClientPtr dbClient);
   Json::Value login(const Json::Value& username, const Json::Value& passwd);
-  Json::Value list(const std::string& search, int page, int pageSize);
+  Json::Value me(const std::string& token);
+  Json::Value list(const std::string& search, int page, long pageSize);
   Json::Value get(const std::string& userId);
   Json::Value map();
   Json::Value create(const Json::Value& username,

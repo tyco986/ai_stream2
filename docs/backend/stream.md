@@ -105,7 +105,7 @@ servers/django/pages/streams/
 |----|------|
 | `Group` | id、name、parent（自引用；All 的 parent=null） |
 | `Stream` | id、name、group、url、resolution、fps、status、enabled、recording、last_test_at |
-| `GroupService` | tree / map / list / create / rename / delete（级联+流归 All）/ members / candidates / set_members |
+| `GroupService` | tree / map / list / create / update / delete（级联+流归 All）/ members / candidates / set_members |
 | `StreamService` | list / map / crud / batch enable\|disable\|delete；按 `enabled` 调 `MediaMTXClient` 挂/卸 path |
 | `StreamTestService` | 单条/批量 test：调 `FFmpegClient` → 写 status 等 |
 | `StreamLogService` | `get_logs(stream_id)` → `{content}`（文件/缓冲，**无**日志表） |

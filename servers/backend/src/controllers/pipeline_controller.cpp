@@ -3,7 +3,7 @@
 #include "constants/pipeline_const.hpp"
 #include "constants/proxy_const.hpp"
 #include "db/database.hpp"
-#include "log/base_logger.hpp"
+#include "logger/base_logger.hpp"
 #include "response/response.hpp"
 
 #include <drogon/HttpClient.h>
@@ -27,13 +27,13 @@ void PipelineController::list(
     const auto pageSizeText = request->getParameter(pipeline::QUERY_PAGE_SIZE);
     const int page = pageText.empty() ? pipeline::DEFAULT_PAGE : std::stoi(pageText);
     const int pageSize = pageSizeText.empty() ? pipeline::DEFAULT_PAGE_SIZE : std::stoi(pageSizeText);
-    respond(request,
+    logger.respond(request,
             http::Response::ok(service.list(request->getParameter(pipeline::QUERY_SEARCH), page, pageSize),
                                pipeline::MSG_LIST_OK),
             started,
             callback);
   } catch (const std::exception& error) {
-    respond(request,
+    logger.respond(request,
             http::Response::error(drogon::k500InternalServerError, pipeline::MSG_LIST_ERROR),
             started,
             callback,
@@ -46,9 +46,9 @@ void PipelineController::map(
     std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
   const auto started = std::chrono::steady_clock::now();
   try {
-    respond(request, http::Response::ok(service.map(), pipeline::MSG_MAP_OK), started, callback);
+    logger.respond(request, http::Response::ok(service.map(), pipeline::MSG_MAP_OK), started, callback);
   } catch (const std::exception& error) {
-    respond(request,
+    logger.respond(request,
             http::Response::error(drogon::k500InternalServerError, pipeline::MSG_MAP_ERROR),
             started,
             callback,
@@ -62,9 +62,9 @@ void PipelineController::get(
     const std::string& pipeline_id) {
   const auto started = std::chrono::steady_clock::now();
   try {
-    respond(request, http::Response::ok(service.get(pipeline_id), pipeline::MSG_GET_OK), started, callback);
+    logger.respond(request, http::Response::ok(service.get(pipeline_id), pipeline::MSG_GET_OK), started, callback);
   } catch (const std::exception& error) {
-    respond(request,
+    logger.respond(request,
             http::Response::error(drogon::k500InternalServerError, pipeline::MSG_GET_ERROR),
             started,
             callback,
@@ -143,7 +143,7 @@ drogon::Task<bool> PipelineController::runDeepstreamContainer(const std::string&
   bool healthy = false;
   const std::string baseUrl = "http://" + containerName + ":" + std::to_string(pipeline::DEEPSTREAM_PORT);
   for (int attempt = 0; restarted && attempt < pipeline::HEALTH_ATTEMPTS && !healthy; ++attempt) {
-    co_await drogon::sleepCoro(std::chrono::duration<double>(pipeline::HEALTH_INTERVAL_SECONDS));
+    co_await drogon::sleepCoro(drogon::app().getLoop(), pipeline::HEALTH_INTERVAL_SECONDS);
     try {
       auto healthRequest = drogon::HttpRequest::newHttpRequest();
       healthRequest->setMethod(drogon::Get);
@@ -185,7 +185,7 @@ drogon::Task<Json::Value> PipelineController::postDeepstreamStart(const std::str
   for (int attempt = 0;
        posted && status != pipeline::STATUS_RUNNING && status != pipeline::STATUS_STOPPED && attempt < pipeline::STATUS_ATTEMPTS;
        ++attempt) {
-    co_await drogon::sleepCoro(std::chrono::duration<double>(pipeline::HEALTH_INTERVAL_SECONDS));
+    co_await drogon::sleepCoro(drogon::app().getLoop(), pipeline::HEALTH_INTERVAL_SECONDS);
     try {
       auto statusRequest = drogon::HttpRequest::newHttpRequest();
       statusRequest->setMethod(drogon::Get);
@@ -217,31 +217,7 @@ drogon::Task<Json::Value> PipelineController::postDeepstreamStart(const std::str
   co_return data;
 }
 
-void PipelineController::respond(
-    const drogon::HttpRequestPtr& request,
-    const drogon::HttpResponsePtr& response,
-    std::chrono::steady_clock::time_point started,
-    const std::function<void(const drogon::HttpResponsePtr&)>& callback,
-    const std::string& error) {
-  const auto elapsed = std::chrono::steady_clock::now() - started;
-  const std::string query = request->query();
-  LogEntry entry;
-  entry.method = request->methodString();
-  entry.url = request->path();
-  entry.url += query.empty() ? "" : "?" + query;
-  entry.code = static_cast<int>(response->statusCode());
-  entry.input = std::string(request->getBody());
-  entry.output = std::string(response->getBody());
-  entry.latency = std::chrono::duration<double, std::milli>(elapsed).count();
-  entry.ip = request->peerAddr().toIp();
-  entry.inBytes = request->bodyLength();
-  entry.outBytes = response->getBodyLength();
-  entry.error = error;
-  logger.write(entry);
-  callback(response);
-}
-
-drogon::Task<drogon::HttpResponsePtr> PipelineController::create(const drogon::HttpRequestPtr& request) {
+drogon::Task<drogon::HttpResponsePtr> PipelineController::create(drogon::HttpRequestPtr request) {
   const auto started = std::chrono::steady_clock::now();
   drogon::HttpResponsePtr response = http::Response::error(drogon::k500InternalServerError, pipeline::MSG_CREATE_ERROR);
   std::string errorText;
@@ -265,12 +241,12 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::create(const drogon::H
     response = http::Response::error(drogon::k500InternalServerError, pipeline::MSG_CREATE_ERROR);
     errorText = error.what();
   }
-  respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, errorText);
+  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, errorText);
   co_return response;
 }
 
-drogon::Task<drogon::HttpResponsePtr> PipelineController::update(const drogon::HttpRequestPtr& request,
-                                                                 const std::string& pipeline_id) {
+drogon::Task<drogon::HttpResponsePtr> PipelineController::update(drogon::HttpRequestPtr request,
+                                                                 std::string pipeline_id) {
   const auto started = std::chrono::steady_clock::now();
   drogon::HttpResponsePtr response = http::Response::error(drogon::k500InternalServerError, pipeline::MSG_UPDATE_ERROR);
   std::string errorText;
@@ -319,12 +295,12 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::update(const drogon::H
                                      conflict ? pipeline::ERR_BUSY : pipeline::MSG_UPDATE_ERROR);
     errorText = error.what();
   }
-  respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, errorText);
+  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, errorText);
   co_return response;
 }
 
-drogon::Task<drogon::HttpResponsePtr> PipelineController::start(const drogon::HttpRequestPtr& request,
-                                                                const std::string& pipeline_id) {
+drogon::Task<drogon::HttpResponsePtr> PipelineController::start(drogon::HttpRequestPtr request,
+                                                                std::string pipeline_id) {
   const auto started = std::chrono::steady_clock::now();
   drogon::HttpResponsePtr response = http::Response::error(drogon::k500InternalServerError, pipeline::MSG_START_ERROR);
   std::string errorText;
@@ -386,12 +362,12 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::start(const drogon::Ht
                                      conflict ? pipeline::ERR_BUSY : pipeline::MSG_START_ERROR);
     errorText = error.what();
   }
-  respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, errorText);
+  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, errorText);
   co_return response;
 }
 
-drogon::Task<drogon::HttpResponsePtr> PipelineController::probe(const drogon::HttpRequestPtr& request,
-                                                                const std::string& pipeline_id) {
+drogon::Task<drogon::HttpResponsePtr> PipelineController::probe(drogon::HttpRequestPtr request,
+                                                                std::string pipeline_id) {
   const auto started = std::chrono::steady_clock::now();
   drogon::HttpResponsePtr response = http::Response::error(drogon::k500InternalServerError, pipeline::MSG_PROBE_ERROR);
   std::string errorText;
@@ -421,12 +397,12 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::probe(const drogon::Ht
     response = http::Response::error(drogon::k500InternalServerError, pipeline::MSG_PROBE_ERROR);
     errorText = error.what();
   }
-  respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, errorText);
+  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, errorText);
   co_return response;
 }
 
-drogon::Task<drogon::HttpResponsePtr> PipelineController::stop(const drogon::HttpRequestPtr& request,
-                                                               const std::string& pipeline_id) {
+drogon::Task<drogon::HttpResponsePtr> PipelineController::stop(drogon::HttpRequestPtr request,
+                                                               std::string pipeline_id) {
   const auto started = std::chrono::steady_clock::now();
   drogon::HttpResponsePtr response = http::Response::error(drogon::k500InternalServerError, pipeline::MSG_STOP_ERROR);
   std::string errorText;
@@ -474,12 +450,12 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::stop(const drogon::Htt
     response = http::Response::error(drogon::k500InternalServerError, pipeline::MSG_STOP_ERROR);
     errorText = error.what();
   }
-  respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, errorText);
+  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, errorText);
   co_return response;
 }
 
-drogon::Task<drogon::HttpResponsePtr> PipelineController::remove(const drogon::HttpRequestPtr& request,
-                                                                 const std::string& pipeline_id) {
+drogon::Task<drogon::HttpResponsePtr> PipelineController::remove(drogon::HttpRequestPtr request,
+                                                                 std::string pipeline_id) {
   const auto started = std::chrono::steady_clock::now();
   drogon::HttpResponsePtr response = http::Response::error(drogon::k500InternalServerError, pipeline::MSG_REMOVE_ERROR);
   std::string errorText;
@@ -517,6 +493,6 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::remove(const drogon::H
     response = http::Response::error(drogon::k500InternalServerError, pipeline::MSG_REMOVE_ERROR);
     errorText = error.what();
   }
-  respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, errorText);
+  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, errorText);
   co_return response;
 }

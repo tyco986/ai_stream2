@@ -1,12 +1,11 @@
 #pragma once
 
 #include "constants/user_const.hpp"
-#include "log/user_group_logger.hpp"
+#include "logger/user_group_logger.hpp"
 #include "services/user_group_service.hpp"
 
 #include <drogon/HttpController.h>
 
-#include <chrono>
 
 class UserGroupController : public drogon::HttpController<UserGroupController> {
  public:
@@ -47,12 +46,6 @@ class UserGroupController : public drogon::HttpController<UserGroupController> {
                   const std::string& group_id);
 
  private:
-  void respond(const drogon::HttpRequestPtr& request,
-               const drogon::HttpResponsePtr& response,
-               std::chrono::steady_clock::time_point started,
-               const std::function<void(const drogon::HttpResponsePtr&)>& callback,
-               const std::string& error = "");
-
   UserGroupService service;
   UserGroupLogger logger;
 };

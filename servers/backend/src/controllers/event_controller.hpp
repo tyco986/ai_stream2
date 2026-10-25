@@ -1,12 +1,11 @@
 #pragma once
 
 #include "constants/event_const.hpp"
-#include "log/event_logger.hpp"
+#include "logger/event_logger.hpp"
 #include "services/event_service.hpp"
 
 #include <drogon/HttpController.h>
 
-#include <chrono>
 #include <functional>
 #include <string>
 
@@ -25,12 +24,6 @@ class EventController : public drogon::HttpController<EventController> {
                  const std::string& event_id);
 
  private:
-  void respond(const drogon::HttpRequestPtr& request,
-               const drogon::HttpResponsePtr& response,
-               std::chrono::steady_clock::time_point started,
-               const std::function<void(const drogon::HttpResponsePtr&)>& callback,
-               const std::string& error = "");
-
   EventService service;
   EventLogger logger;
 };

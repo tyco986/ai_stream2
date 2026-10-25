@@ -1,12 +1,11 @@
 #pragma once
 
 #include "constants/preview_const.hpp"
-#include "log/preview_logger.hpp"
+#include "logger/preview_logger.hpp"
 #include "services/preview_service.hpp"
 
 #include <drogon/HttpController.h>
 
-#include <chrono>
 
 class PreviewController : public drogon::HttpController<PreviewController> {
  public:
@@ -38,12 +37,6 @@ class PreviewController : public drogon::HttpController<PreviewController> {
               const std::string& preset_id);
 
  private:
-  void respond(const drogon::HttpRequestPtr& request,
-               const drogon::HttpResponsePtr& response,
-               std::chrono::steady_clock::time_point started,
-               const std::function<void(const drogon::HttpResponsePtr&)>& callback,
-               const std::string& error = "");
-
   PreviewService service;
   PreviewLogger logger;
 };

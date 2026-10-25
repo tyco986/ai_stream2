@@ -13,6 +13,7 @@ venv/
 env/
 
 # Testing
+servers/backend/tests/token
 .pytest_cache/
 .hypothesis/
 .coverage

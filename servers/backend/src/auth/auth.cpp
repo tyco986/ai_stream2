@@ -1,5 +1,7 @@
 #include "auth/auth.hpp"
 
+#include "error_tracer/sql.hpp"
+
 #include "constants/auth_const.hpp"
 #include "db/database.hpp"
 #include "response/response.hpp"
@@ -10,12 +12,14 @@ void AuthFilter::doFilter(const drogon::HttpRequestPtr& request,
                           drogon::FilterCallback&& failed,
                           drogon::FilterChainCallback&& chain) {
   const std::string token = request->getHeader("authorization");
-  const auto route = auth::CRUD.find({request->method(), request->matchedPathPattern()});
+  const std::pair<drogon::HttpMethod, std::string> routeKey(request->method(),
+                                                           request->matchedPathPattern());
+  const auto route = auth::CRUD.find(routeKey);
   const bool open = route == auth::CRUD.end();
   bool authorized = false;
   std::string crud;
   if (!token.empty()) {
-    const auto access = Database::client()->execSqlSync(
+    const auto access = Sql::sync({}, Database::client(), 
         "SELECT user_group.stream_crud, user_group.model_crud, user_group.preview_crud, "
         "user_group.pipeline_crud, user_group.recording_crud, user_group.server_crud, "
         "user_group.user_crud, user_group.event_crud FROM \"user\" "

@@ -1,13 +1,12 @@
 #pragma once
 
 #include "constants/stream_const.hpp"
-#include "log/stream_logger.hpp"
+#include "logger/stream_logger.hpp"
 #include "services/stream_service.hpp"
 
 #include <drogon/HttpController.h>
 #include <drogon/utils/coroutine.h>
 
-#include <chrono>
 
 class StreamController : public drogon::HttpController<StreamController> {
  public:
@@ -26,7 +25,7 @@ class StreamController : public drogon::HttpController<StreamController> {
 
   void list(const drogon::HttpRequestPtr& request,
             std::function<void(const drogon::HttpResponsePtr&)>&& callback);
-  drogon::Task<drogon::HttpResponsePtr> create(const drogon::HttpRequestPtr& request);
+  drogon::Task<drogon::HttpResponsePtr> create(drogon::HttpRequestPtr request);
   void importCSV(const drogon::HttpRequestPtr& request,
               std::function<void(const drogon::HttpResponsePtr&)>&& callback);
   void exportCSV(const drogon::HttpRequestPtr& request,
@@ -34,20 +33,14 @@ class StreamController : public drogon::HttpController<StreamController> {
   void get(const drogon::HttpRequestPtr& request,
            std::function<void(const drogon::HttpResponsePtr&)>&& callback,
            const std::string& stream_id);
-  drogon::Task<drogon::HttpResponsePtr> update(const drogon::HttpRequestPtr& request,
-                                               const std::string& stream_id);
-  drogon::Task<drogon::HttpResponsePtr> remove(const drogon::HttpRequestPtr& request,
-                                               const std::string& stream_id);
-  drogon::Task<drogon::HttpResponsePtr> probe(const drogon::HttpRequestPtr& request,
-                                              const std::string& stream_id);
+  drogon::Task<drogon::HttpResponsePtr> update(drogon::HttpRequestPtr request,
+                                               std::string stream_id);
+  drogon::Task<drogon::HttpResponsePtr> remove(drogon::HttpRequestPtr request,
+                                               std::string stream_id);
+  drogon::Task<drogon::HttpResponsePtr> probe(drogon::HttpRequestPtr request,
+                                              std::string stream_id);
 
  private:
-  void respond(const drogon::HttpRequestPtr& request,
-               const drogon::HttpResponsePtr& response,
-               std::chrono::steady_clock::time_point started,
-               const std::function<void(const drogon::HttpResponsePtr&)>& callback,
-               const std::string& error = "");
-
   StreamService service;
   StreamLogger logger;
 };

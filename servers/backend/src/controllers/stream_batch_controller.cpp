@@ -4,7 +4,7 @@
 #include "ffmpeg/ffmpeg.hpp"
 #include "mediamtx/mediamtx.hpp"
 #include "response/response.hpp"
-#include "log/base_logger.hpp"
+#include "logger/base_logger.hpp"
 
 #include <chrono>
 #include <exception>
@@ -14,31 +14,54 @@
 
 StreamBatchController::StreamBatchController() : service(Database::client()) {}
 
-void StreamBatchController::respond(
-    const drogon::HttpRequestPtr& request,
-    const drogon::HttpResponsePtr& response,
-    std::chrono::steady_clock::time_point started,
-    const std::function<void(const drogon::HttpResponsePtr&)>& callback,
-    const std::string& error) {
-  const auto elapsed = std::chrono::steady_clock::now() - started;
-  const std::string query = request->query();
-  LogEntry entry;
-  entry.method = request->methodString();
-  entry.url = request->path();
-  entry.url += query.empty() ? "" : "?" + query;
-  entry.code = static_cast<int>(response->statusCode());
-  entry.input = std::string(request->getBody());
-  entry.output = std::string(response->getBody());
-  entry.latency = std::chrono::duration<double, std::milli>(elapsed).count();
-  entry.ip = request->peerAddr().toIp();
-  entry.inBytes = request->bodyLength();
-  entry.outBytes = response->getBodyLength();
-  entry.error = error;
-  logger.write(entry);
-  callback(response);
+drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchCreate(drogon::HttpRequestPtr request) {
+  const auto started = std::chrono::steady_clock::now();
+  const auto body = request->getJsonObject();
+  Json::Value items(Json::arrayValue);
+  if (body && (*body).isMember(stream::KEY_ITEMS) && (*body)[stream::KEY_ITEMS].isArray()) {
+    items = (*body)[stream::KEY_ITEMS];
+  }
+  Json::Value data = stream::BATCH_DATA();
+  for (const auto& item : items) {
+    const Json::Value name = item.get(stream::KEY_NAME, Json::Value());
+    const Json::Value groupId = item.get(stream::KEY_GROUP_ID, Json::Value());
+    const Json::Value url = item.get(stream::KEY_URL, Json::Value());
+    const Json::Value mount = item.get(stream::KEY_MOUNT, Json::Value());
+    const Json::Value recording = item.get(stream::KEY_RECORD, Json::Value());
+    const Json::Value status = item.get(stream::KEY_STATUS, Json::Value());
+    const Json::Value width = item.get(stream::KEY_WIDTH, Json::Value());
+    const Json::Value height = item.get(stream::KEY_HEIGHT, Json::Value());
+    const Json::Value fps = item.get(stream::KEY_FPS, Json::Value());
+    const Json::Value probedAt = item.get(stream::KEY_PROBED_AT, Json::Value());
+    bool mounted = mount.isNull() || mount.asBool();
+    if (mounted) {
+      mounted = co_await MediaMtx::replacePath(name.isString() ? name.asString() : "",
+                                                url.isString() ? url.asString() : "",
+                                                recording.isBool() && recording.asBool());
+    }
+    Json::Value createdRow;
+    bool created = false;
+    if (mounted) {
+      try {
+        createdRow = service.create(name, groupId, url, mount, recording, status, width, height, fps, probedAt);
+        created = true;
+      } catch (const std::exception&) {
+        created = false;
+      }
+    }
+    const Json::Value row = created ? createdRow : item;
+    const char* key = created ? stream::KEY_UPDATED_ROWS : stream::KEY_FAILED_ROWS;
+    data[key].append(row);
+  }
+  data[stream::KEY_UPDATED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_UPDATED_ROWS].size());
+  data[stream::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_FAILED_ROWS].size());
+  data[stream::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_SKIPPED_ROWS].size());
+  const drogon::HttpResponsePtr response = http::Response::ok(data, stream::MSG_BATCH_CREATE_OK);
+  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, "");
+  co_return response;
 }
 
-drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchRemove(const drogon::HttpRequestPtr& request) {
+drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchRemove(drogon::HttpRequestPtr request) {
   const auto started = std::chrono::steady_clock::now();
   const auto body = request->getJsonObject();
   std::vector<std::string> ids;
@@ -86,11 +109,11 @@ drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchRemove(const d
   data[stream::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_FAILED_ROWS].size());
   data[stream::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_SKIPPED_ROWS].size());
   const drogon::HttpResponsePtr response = http::Response::ok(data, stream::MSG_BATCH_DELETE_OK);
-  respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, "");
+  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, "");
   co_return response;
 }
 
-drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchEnable(const drogon::HttpRequestPtr& request) {
+drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchMount(drogon::HttpRequestPtr request) {
   const auto started = std::chrono::steady_clock::now();
   const auto body = request->getJsonObject();
   std::vector<std::string> ids;
@@ -109,17 +132,17 @@ drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchEnable(const d
     } catch (const std::exception&) {
       found = false;
     }
-    bool enabled = false;
+    bool mounted = false;
     if (found) {
-      const bool mounted = co_await MediaMtx::replacePath(current[stream::KEY_NAME].asString(),
-                                                           current[stream::KEY_URL].asString(),
-                                                           current[stream::KEY_RECORD].asBool());
-      if (mounted) {
+      const bool pathMounted = co_await MediaMtx::replacePath(current[stream::KEY_NAME].asString(),
+                                                               current[stream::KEY_URL].asString(),
+                                                               current[stream::KEY_RECORD].asBool());
+      if (pathMounted) {
         try {
-          service.setEnabled(id, true);
-          enabled = true;
+          service.setMount(id, true);
+          mounted = true;
         } catch (const std::exception&) {
-          enabled = false;
+          mounted = false;
         }
       }
     }
@@ -127,20 +150,20 @@ drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchEnable(const d
     failed[stream::KEY_ID] = id;
     const Json::Value failedRow = found ? current : failed;
     Json::Value updated = current;
-    updated[stream::KEY_ENABLED] = true;
-    const Json::Value row = enabled ? updated : failedRow;
-    const char* key = enabled ? stream::KEY_UPDATED_ROWS : stream::KEY_FAILED_ROWS;
+    updated[stream::KEY_MOUNT] = true;
+    const Json::Value row = mounted ? updated : failedRow;
+    const char* key = mounted ? stream::KEY_UPDATED_ROWS : stream::KEY_FAILED_ROWS;
     data[key].append(row);
   }
   data[stream::KEY_UPDATED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_UPDATED_ROWS].size());
   data[stream::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_FAILED_ROWS].size());
   data[stream::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_SKIPPED_ROWS].size());
-  const drogon::HttpResponsePtr response = http::Response::ok(data, stream::MSG_BATCH_ENABLE_OK);
-  respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, "");
+  const drogon::HttpResponsePtr response = http::Response::ok(data, stream::MSG_BATCH_MOUNT_OK);
+  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, "");
   co_return response;
 }
 
-drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchDisable(const drogon::HttpRequestPtr& request) {
+drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchUnmount(drogon::HttpRequestPtr request) {
   const auto started = std::chrono::steady_clock::now();
   const auto body = request->getJsonObject();
   std::vector<std::string> ids;
@@ -159,7 +182,7 @@ drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchDisable(const 
     } catch (const std::exception&) {
       found = false;
     }
-    bool disabled = false;
+    bool unmounted = false;
     if (found) {
       const std::string name = current[stream::KEY_NAME].asString();
       const bool mounted = co_await MediaMtx::getPath(name);
@@ -169,10 +192,10 @@ drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchDisable(const 
       }
       if (removed) {
         try {
-          service.setEnabled(id, false);
-          disabled = true;
+          service.setMount(id, false);
+          unmounted = true;
         } catch (const std::exception&) {
-          disabled = false;
+          unmounted = false;
         }
       }
     }
@@ -180,20 +203,20 @@ drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchDisable(const 
     failed[stream::KEY_ID] = id;
     const Json::Value failedRow = found ? current : failed;
     Json::Value updated = current;
-    updated[stream::KEY_ENABLED] = false;
-    const Json::Value row = disabled ? updated : failedRow;
-    const char* key = disabled ? stream::KEY_UPDATED_ROWS : stream::KEY_FAILED_ROWS;
+    updated[stream::KEY_MOUNT] = false;
+    const Json::Value row = unmounted ? updated : failedRow;
+    const char* key = unmounted ? stream::KEY_UPDATED_ROWS : stream::KEY_FAILED_ROWS;
     data[key].append(row);
   }
   data[stream::KEY_UPDATED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_UPDATED_ROWS].size());
   data[stream::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_FAILED_ROWS].size());
   data[stream::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_SKIPPED_ROWS].size());
-  const drogon::HttpResponsePtr response = http::Response::ok(data, stream::MSG_BATCH_DISABLE_OK);
-  respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, "");
+  const drogon::HttpResponsePtr response = http::Response::ok(data, stream::MSG_BATCH_UNMOUNT_OK);
+  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, "");
   co_return response;
 }
 
-drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchRecord(const drogon::HttpRequestPtr& request) {
+drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchRecord(drogon::HttpRequestPtr request) {
   const auto started = std::chrono::steady_clock::now();
   const auto body = request->getJsonObject();
   std::vector<std::string> ids;
@@ -245,11 +268,11 @@ drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchRecord(const d
   data[stream::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_FAILED_ROWS].size());
   data[stream::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_SKIPPED_ROWS].size());
   const drogon::HttpResponsePtr response = http::Response::ok(data, stream::MSG_BATCH_RECORD_OK);
-  respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, "");
+  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, "");
   co_return response;
 }
 
-drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchUnrecord(const drogon::HttpRequestPtr& request) {
+drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchUnrecord(drogon::HttpRequestPtr request) {
   const auto started = std::chrono::steady_clock::now();
   const auto body = request->getJsonObject();
   std::vector<std::string> ids;
@@ -298,11 +321,11 @@ drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchUnrecord(const
   data[stream::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_FAILED_ROWS].size());
   data[stream::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_SKIPPED_ROWS].size());
   const drogon::HttpResponsePtr response = http::Response::ok(data, stream::MSG_BATCH_UNRECORD_OK);
-  respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, "");
+  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, "");
   co_return response;
 }
 
-drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchProbe(const drogon::HttpRequestPtr& request) {
+drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchProbe(drogon::HttpRequestPtr request) {
   const auto started = std::chrono::steady_clock::now();
   const auto body = request->getJsonObject();
   std::vector<std::string> ids;
@@ -324,7 +347,7 @@ drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchProbe(const dr
     Json::Value probedRow;
     bool probed = false;
     if (found) {
-      const ProbeResult result = co_await Ffmpeg::probe(current[stream::KEY_URL].asString());
+      const ProbeResult result = co_await Ffmpeg::rtspProbe(current[stream::KEY_URL].asString());
       if (result.accepted) {
         try {
           probedRow = service.probe(id,
@@ -350,6 +373,6 @@ drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchProbe(const dr
   data[stream::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_FAILED_ROWS].size());
   data[stream::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_SKIPPED_ROWS].size());
   const drogon::HttpResponsePtr response = http::Response::ok(data, stream::MSG_BATCH_PROBE_OK);
-  respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, "");
+  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, "");
   co_return response;
 }

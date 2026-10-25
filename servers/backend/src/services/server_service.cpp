@@ -1,11 +1,13 @@
 #include "services/server_service.hpp"
 
+#include "error_tracer/sql.hpp"
+
 #include "constants/server_const.hpp"
 
 ServerService::ServerService(drogon::orm::DbClientPtr dbClient) : dbClient(std::move(dbClient)) {}
 
 Json::Value ServerService::get() {
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       "SELECT id::text AS id, probed_at::text AS probed_at, deepstream::text AS deepstream, generator, "
       "export_onnx, export_trt, mediamtx, kafka, postgresql, frontend, backend "
       "FROM server WHERE id = $1::uuid",
@@ -48,7 +50,7 @@ Json::Value ServerService::row2json(const drogon::orm::Row& row) {
 }
 
 drogon::Task<Json::Value> ServerService::probe() {
-  const auto pipelines = dbClient->execSqlSync("SELECT id::text AS id, name FROM pipeline ORDER BY name");
+  const auto pipelines = Sql::sync({}, dbClient, "SELECT id::text AS id, name FROM pipeline ORDER BY name");
   Json::Value deepstream(Json::arrayValue);
   for (const auto& pipeline : pipelines) {
     const std::string name = pipeline["name"].as<std::string>();
@@ -69,13 +71,13 @@ drogon::Task<Json::Value> ServerService::probe() {
   const bool backend = co_await healthy(server::BACKEND_BASE_URL, server::BACKEND_HEALTH_PATH);
   bool postgresql = false;
   try {
-    dbClient->execSqlSync(server::POSTGRESQL_HEALTH_SQL);
+    Sql::sync({}, dbClient, server::POSTGRESQL_HEALTH_SQL);
     postgresql = true;
   } catch (const std::exception&) {
     postgresql = false;
   }
   Json::StreamWriterBuilder builder;
-  const auto saved = dbClient->execSqlSync(
+  const auto saved = Sql::sync({}, dbClient, 
       "UPDATE server SET probed_at = now(), deepstream = $2::jsonb, generator = $3, export_onnx = $4, "
       "export_trt = $5, mediamtx = $6, kafka = $7, postgresql = $8, frontend = $9, backend = $10 "
       "WHERE id = $1::uuid "

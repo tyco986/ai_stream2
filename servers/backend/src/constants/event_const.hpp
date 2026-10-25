@@ -23,7 +23,7 @@ inline const char* KEY_PAGE_SIZE = "page_size";
 inline const char* STATUS_NEW = "new";
 inline const char* STATUS_HANDLED = "handled";
 inline const char* NOTICE_SOURCE = "event";
-inline const char* ERR_NOT_FOUND = "event not found";
+inline const char* ERR_NOT_FOUND = "event_err_not_found";
 inline const char* PATH_LIST = "/ai_stream2/backend/events";
 inline const char* PATH_STATUS = "/ai_stream2/backend/events/{event_id}/status";
 inline const char* QUERY_SEARCH = "search";
@@ -31,10 +31,10 @@ inline const char* QUERY_PAGE = "page";
 inline const char* QUERY_PAGE_SIZE = "page_size";
 inline const int DEFAULT_PAGE = 1;
 inline const int DEFAULT_PAGE_SIZE = 20;
-inline const char* MSG_LIST_OK = "Loaded event list";
-inline const char* MSG_LIST_ERROR = "Failed to load event list";
-inline const char* MSG_STATUS_OK = "Updated event status";
-inline const char* MSG_STATUS_ERROR = "Failed to update event status";
+inline const char* MSG_LIST_OK = "event_list_ok";
+inline const char* MSG_LIST_ERROR = "event_list_error";
+inline const char* MSG_STATUS_OK = "event_status_ok";
+inline const char* MSG_STATUS_ERROR = "event_status_error";
 
 inline Json::Value ROW() {
   Json::Value node;

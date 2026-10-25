@@ -1,57 +1,63 @@
 #include "controllers/log_controller.hpp"
 
-#include "log/base_logger.hpp"
 #include "response/response.hpp"
 
-#include <cctype>
-#include <fstream>
-#include <sstream>
-
-bool LogController::dateValid(const std::string& date) {
-  bool valid = date.size() == log::DATE_LENGTH;
-  for (std::size_t index = 0; valid && index < date.size(); ++index) {
-    const bool separator = index == 4 || index == 7;
-    const unsigned char character = static_cast<unsigned char>(date[index]);
-    valid = separator ? date[index] == '-' : std::isdigit(character) != 0;
-  }
-  return valid;
-}
+#include <chrono>
 
 void LogController::get(
     const drogon::HttpRequestPtr& request,
     std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
-  const std::string date = request->getParameter(log::QUERY_DATE);
-  const std::string page = request->getParameter(log::QUERY_PAGE);
-  const bool knownPage =
-      page == log::STREAM_DIR || page == log::STREAM_GROUP_DIR || page == log::MODEL_DIR ||
-      page == log::PIPELINE_DIR || page == log::PIPELINE_GIE_DIR || page == log::PIPELINE_ANALYZER_DIR;
-  const bool accepted = dateValid(date) && knownPage;
-  std::string content;
-  bool found = false;
+  const auto started = std::chrono::steady_clock::now();
+  const std::string date = request->getParameter(service_log::QUERY_DATE);
+  const std::string page = request->getParameter(service_log::QUERY_PAGE);
+  const Json::Value data = BaseLogger::get(page, date);
+  const bool accepted = !data.empty();
+  drogon::HttpResponsePtr response = http::Response::error(drogon::k400BadRequest, service_log::MSG_GET_ERROR);
   if (accepted) {
-    const std::string path = std::string(log::DIR) + "/" + page + "/" + page + "_" + date + log::FILE_SUFFIX;
-    std::ifstream input(path);
-    found = static_cast<bool>(input);
-    std::ostringstream buffer;
-    buffer << input.rdbuf();
-    content = buffer.str();
+    response = http::Response::ok(data, service_log::MSG_GET_OK);
   }
-  Json::Value data;
-  data[log::KEY_CONTENT] = content;
-  drogon::HttpResponsePtr response =
-      http::Response::error(drogon::k400BadRequest, log::MSG_GET_ERROR);
-  if (accepted && found) {
-    response = http::Response::ok(data, log::MSG_GET_OK);
+  logger.respond(request, response, started, callback);
+}
+
+void LogController::remove(
+    const drogon::HttpRequestPtr& request,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
+  const auto started = std::chrono::steady_clock::now();
+  const std::string page = request->getParameter(service_log::QUERY_PAGE);
+  const Json::Value data = BaseLogger::remove(page);
+  const bool accepted = !data.empty();
+  drogon::HttpResponsePtr response = http::Response::error(drogon::k400BadRequest, service_log::MSG_REMOVE_ERROR);
+  if (accepted) {
+    response = http::Response::ok(data, service_log::MSG_REMOVE_OK);
   }
-  if (accepted && !found) {
-    response = http::Response::error(drogon::k404NotFound, log::MSG_GET_ERROR);
-  }
-  callback(std::move(response));
+  logger.respond(request, response, started, callback);
 }
 
 void LogController::enable(
-    const drogon::HttpRequestPtr&,
+    const drogon::HttpRequestPtr& request,
     std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
+  const auto started = std::chrono::steady_clock::now();
   BaseLogger::setEnabled(true);
-  callback(http::Response::ok(Json::Value(Json::objectValue), log::MSG_ENABLE_OK));
+  Json::Value data(Json::objectValue);
+  data[service_log::KEY_ENABLED] = true;
+  logger.respond(request, http::Response::ok(data, service_log::MSG_ENABLE_OK), started, callback);
+}
+
+void LogController::disable(
+    const drogon::HttpRequestPtr& request,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
+  const auto started = std::chrono::steady_clock::now();
+  Json::Value data(Json::objectValue);
+  data[service_log::KEY_ENABLED] = false;
+  logger.respond(request, http::Response::ok(data, service_log::MSG_DISABLE_OK), started, callback);
+  BaseLogger::setEnabled(false);
+}
+
+void LogController::status(
+    const drogon::HttpRequestPtr& request,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
+  const auto started = std::chrono::steady_clock::now();
+  Json::Value data(Json::objectValue);
+  data[service_log::KEY_ENABLED] = BaseLogger::enabledValue();
+  logger.respond(request, http::Response::ok(data, service_log::MSG_STATUS_OK), started, callback);
 }

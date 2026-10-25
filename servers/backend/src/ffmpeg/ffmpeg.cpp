@@ -9,12 +9,12 @@
 
 #include <exception>
 
-drogon::Task<ProbeResult> Ffmpeg::probe(const std::string& url) {
+drogon::Task<ProbeResult> Ffmpeg::rtspProbe(const std::string& url) {
   Json::Value body;
   body[ffmpeg_backend::KEY_URL] = url;
   auto request = drogon::HttpRequest::newHttpJsonRequest(body);
   request->setMethod(drogon::Post);
-  request->setPath(ffmpeg_backend::PROBE_PATH);
+  request->setPath(ffmpeg_backend::RTSP_PROBE_PATH);
   auto client = drogon::HttpClient::newHttpClient(ffmpeg::BASE_URL);
   ProbeResult result;
   result.accepted = false;

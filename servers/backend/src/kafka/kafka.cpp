@@ -3,7 +3,6 @@
 #include "constants/event_const.hpp"
 #include "constants/kafka_const.hpp"
 #include "db/database.hpp"
-#include "services/event_service.hpp"
 
 #include <drogon/drogon.h>
 #include <librdkafka/rdkafkacpp.h>
@@ -34,9 +33,10 @@ class KafkaRebalance : public RdKafka::RebalanceCb {
 
 }
 
+Kafka::Kafka() : service(Database::client()) {}
+
 void Kafka::dispatch(const Json::Value& message) {
   try {
-    EventService service(Database::client());
     service.create(message[event::KEY_OCCURRED_AT],
                    message[event::KEY_STREAM_ID],
                    message[event::KEY_STREAM_NAME],

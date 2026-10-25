@@ -8,7 +8,7 @@
 class UserGroupService {
  public:
   explicit UserGroupService(drogon::orm::DbClientPtr dbClient);
-  Json::Value list(const std::string& search, int page, int pageSize);
+  Json::Value list(const std::string& search, int page, long pageSize);
   Json::Value get(const std::string& groupId);
   Json::Value map();
   Json::Value create(const Json::Value& name,

@@ -1,28 +1,25 @@
 #!/usr/bin/env bash
+# Run from project root. Redpanda dev container on the project network.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
-# shellcheck source=../../../scripts/load_project_env.sh
-source "${ROOT}/scripts/load_project_env.sh"
+PROJECT_NAME=ai_stream2
 
-NAME="${KAFKA_CONTAINER_NAME:-${PROJECT_NAME}_kafka}"
-NET="${KAFKA_NETWORK:-${PROJECT_NAME}_default}"
-IMG="${KAFKA_IMAGE:-docker.redpanda.com/redpandadata/redpanda:v24.1.9}"
-PORT="${KAFKA_HOST_PORT:-19092}"
+IMAGE="docker.redpanda.com/redpandadata/redpanda:v24.1.9"
+HOST_PORT="${KAFKA_HOST_PORT:-19092}"
 
-docker network create "${NET}" 2>/dev/null || true
-docker rm -f "${NAME}" 2>/dev/null || true
+docker network create "${PROJECT_NAME}_default" 2>/dev/null || true
+docker rm -f "${PROJECT_NAME}_kafka" 2>/dev/null || true
 
-docker run -d --name "${NAME}" --network "${NET}" -p "${PORT}:19092" \
+echo "Kafka API: 127.0.0.1:${HOST_PORT}"
+echo "Mode:      dev image=${IMAGE}"
+
+docker run -d \
+  --name "${PROJECT_NAME}_kafka" \
+  --network "${PROJECT_NAME}_default" \
+  -p "${HOST_PORT}:19092" \
   -v /etc/localtime:/etc/localtime:ro \
-  "${IMG}" \
+  "${IMAGE}" \
   redpanda start \
   --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092 \
-  --advertise-kafka-addr "internal://${NAME}:9092,external://localhost:${PORT}" \
+  --advertise-kafka-addr "internal://${PROJECT_NAME}_kafka:9092,external://localhost:${HOST_PORT}" \
   --mode dev-container --smp 1
-
-cat <<EOF
-${NAME} (${NET})
-  9092 -> Kafka API (in-network, e.g. ${NAME}:9092)
-  ${PORT} -> Kafka API (host / WSL, localhost:${PORT})
-EOF

@@ -1,5 +1,7 @@
 #include "services/pipeline_gie_service.hpp"
 
+#include "error_tracer/sql.hpp"
+
 #include "constants/pipeline_gie_const.hpp"
 #include "searcher/searcher.hpp"
 
@@ -8,7 +10,7 @@
 PipelineGieService::PipelineGieService(drogon::orm::DbClientPtr dbClient) : dbClient(std::move(dbClient)) {}
 
 Json::Value PipelineGieService::getModel() {
-  const auto rows = dbClient->execSqlSync("SELECT id::text AS id, name, status FROM model ORDER BY name");
+  const auto rows = Sql::sync({}, dbClient, "SELECT id::text AS id, name, status FROM model ORDER BY name");
   Json::Value data(Json::objectValue);
   for (const auto& row : rows) {
     Json::Value item;
@@ -20,7 +22,7 @@ Json::Value PipelineGieService::getModel() {
 }
 
 Json::Value PipelineGieService::map() {
-  const auto rows = dbClient->execSqlSync("SELECT id::text AS id, name FROM pipeline_gie ORDER BY name");
+  const auto rows = Sql::sync({}, dbClient, "SELECT id::text AS id, name FROM pipeline_gie ORDER BY name");
   Json::Value data(Json::objectValue);
   for (const auto& row : rows) {
     data[row["name"].as<std::string>()] = row["id"].as<std::string>();
@@ -28,13 +30,13 @@ Json::Value PipelineGieService::map() {
   return data;
 }
 
-Json::Value PipelineGieService::list(const std::string& search, int page, int pageSize) {
-  const int offset = (page - 1) * pageSize;
+Json::Value PipelineGieService::list(const std::string& search, int page, long pageSize) {
+  const long offset = static_cast<long>(page - 1) * pageSize;
   const std::string match = Searcher::clause(
       {"g.id", "g.name", "g.model_name", "g.class_attrs", "g.interval", "m.engine_path"}, 1);
   const std::string from = "FROM pipeline_gie g JOIN model m ON m.id = g.model_id WHERE " + match + " ";
-  const auto counted = dbClient->execSqlSync("SELECT count(*) AS total " + from, search);
-  const auto rows = dbClient->execSqlSync(
+  const auto counted = Sql::sync({}, dbClient, "SELECT count(*) AS total " + from, search);
+  const auto rows = Sql::sync({}, dbClient, 
       "SELECT g.id::text AS id, g.name, g.model_id::text AS model_id, g.model_name, "
       "g.class_attrs::text AS class_attrs, g.interval, g.updated_at, m.engine_path " +
           from + "ORDER BY g.name LIMIT $2 OFFSET $3",
@@ -55,7 +57,7 @@ Json::Value PipelineGieService::list(const std::string& search, int page, int pa
 }
 
 Json::Value PipelineGieService::get(const std::string& gieId) {
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       "SELECT g.id::text AS id, g.name, g.model_id::text AS model_id, g.model_name, "
       "g.class_attrs::text AS class_attrs, g.interval, g.updated_at, m.engine_path "
       "FROM pipeline_gie g JOIN model m ON m.id = g.model_id WHERE g.id = $1::uuid",
@@ -71,7 +73,7 @@ Json::Value PipelineGieService::create(const Json::Value& modelId,
                                        const Json::Value& name,
                                        const Json::Value& classAttrs,
                                        const Json::Value& interval) {
-  const auto models = dbClient->execSqlSync(
+  const auto models = Sql::sync({}, dbClient, 
       "SELECT name, engine_path FROM model WHERE id = $1::uuid", modelId.asString());
   if (models.empty()) {
     throw std::runtime_error("model not found");
@@ -84,7 +86,7 @@ Json::Value PipelineGieService::create(const Json::Value& modelId,
   data[pipeline_gie::KEY_INTERVAL] = interval.isNull() ? data[pipeline_gie::KEY_INTERVAL] : interval;
   Json::StreamWriterBuilder builder;
   builder["indentation"] = "";
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       "INSERT INTO pipeline_gie (id, name, model_id, model_name, class_attrs, interval, updated_at) "
       "VALUES (gen_random_uuid(), $1, $2::uuid, $3, $4::jsonb, $5, now()) "
       "RETURNING id::text AS id, name, model_id::text AS model_id, model_name, "
@@ -103,7 +105,7 @@ Json::Value PipelineGieService::update(const std::string& gieId,
                                        const Json::Value& name,
                                        const Json::Value& classAttrs,
                                        const Json::Value& interval) {
-  const auto models = dbClient->execSqlSync(
+  const auto models = Sql::sync({}, dbClient, 
       "SELECT name, engine_path FROM model WHERE id = $1::uuid", modelId.asString());
   if (models.empty()) {
     throw std::runtime_error("model not found");
@@ -116,7 +118,7 @@ Json::Value PipelineGieService::update(const std::string& gieId,
   data[pipeline_gie::KEY_INTERVAL] = interval.isNull() ? data[pipeline_gie::KEY_INTERVAL] : interval;
   Json::StreamWriterBuilder builder;
   builder["indentation"] = "";
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       "UPDATE pipeline_gie SET name = $2, model_id = $3::uuid, model_name = $4, class_attrs = $5::jsonb, "
       "interval = $6, updated_at = now() WHERE id = $1::uuid "
       "RETURNING id::text AS id, name, model_id::text AS model_id, model_name, "
@@ -135,12 +137,12 @@ Json::Value PipelineGieService::update(const std::string& gieId,
 }
 
 Json::Value PipelineGieService::remove(const std::string& gieId) {
-  const auto used = dbClient->execSqlSync(
+  const auto used = Sql::sync({}, dbClient, 
       "SELECT id FROM pipeline WHERE $1::uuid = ANY(gie_ids) LIMIT 1", gieId);
   if (!used.empty()) {
     throw std::runtime_error(pipeline_gie::ERR_OCCUPIED);
   }
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       "DELETE FROM pipeline_gie AS g USING model AS m "
       "WHERE g.id = $1::uuid AND m.id = g.model_id "
       "RETURNING g.id::text AS id, g.name, g.model_id::text AS model_id, g.model_name, "

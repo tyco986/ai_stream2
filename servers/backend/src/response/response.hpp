@@ -18,6 +18,9 @@ class Response {
                                           drogon::HttpStatusCode status,
                                           const char* message,
                                           const Json::Value& data);
+  static Json::StreamWriterBuilder makeWriter();
+
+  static Json::StreamWriterBuilder writer;
 };
 
 }

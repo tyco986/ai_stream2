@@ -1,5 +1,7 @@
 #include "services/notice_service.hpp"
 
+#include "error_tracer/sql.hpp"
+
 #include "constants/notice_const.hpp"
 
 #include <stdexcept>
@@ -30,7 +32,7 @@ Json::Value NoticeService::create(const Json::Value& createdAt,
   data[notice::KEY_SOURCE] = source.isNull() ? data[notice::KEY_SOURCE] : source;
   data[notice::KEY_TEXT] = text.isNull() ? data[notice::KEY_TEXT] : text;
   data[notice::KEY_REF_ID] = refId.isNull() ? data[notice::KEY_REF_ID] : refId;
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       std::string("INSERT INTO notice (id, created_at, user_id, level, source, text, ref_id) "
                   "VALUES (gen_random_uuid(), $1::timestamptz, NULLIF($2, '')::uuid, $3, $4, $5, "
                   "NULLIF($6, '')::uuid) RETURNING ") +
@@ -46,7 +48,7 @@ Json::Value NoticeService::create(const Json::Value& createdAt,
 }
 
 std::string NoticeService::token2UserId(const std::string& token) {
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       "SELECT id::text AS id FROM \"user\" WHERE token = $1 AND active", token);
   if (rows.empty()) {
     throw std::runtime_error(notice::ERR_NOT_FOUND);
@@ -55,11 +57,11 @@ std::string NoticeService::token2UserId(const std::string& token) {
   return id;
 }
 
-Json::Value NoticeService::list(const std::string& userId, int page, int pageSize) {
-  const int offset = (page - 1) * pageSize;
+Json::Value NoticeService::list(const std::string& userId, int page, long pageSize) {
+  const long offset = static_cast<long>(page - 1) * pageSize;
   const std::string from = std::string("FROM notice WHERE ") + OWNED;
-  const auto counted = dbClient->execSqlSync("SELECT count(*) AS total " + from, userId);
-  const auto rows = dbClient->execSqlSync(
+  const auto counted = Sql::sync({}, dbClient, "SELECT count(*) AS total " + from, userId);
+  const auto rows = Sql::sync({}, dbClient, 
       std::string("SELECT ") + SELECT_ROW + from + "ORDER BY created_at DESC, id DESC LIMIT $2 OFFSET $3",
       userId,
       pageSize,
@@ -77,7 +79,7 @@ Json::Value NoticeService::list(const std::string& userId, int page, int pageSiz
 }
 
 Json::Value NoticeService::remove(const std::string& noticeId) {
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       std::string("DELETE FROM notice WHERE id = $1::uuid RETURNING ") + SELECT_ROW, noticeId);
   if (rows.empty()) {
     throw std::runtime_error(notice::ERR_NOT_FOUND);
@@ -87,14 +89,14 @@ Json::Value NoticeService::remove(const std::string& noticeId) {
 }
 
 long NoticeService::countUnread(const std::string& userId) {
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       std::string("SELECT count(*) AS total FROM notice WHERE read_at IS NULL AND ") + OWNED, userId);
   const long total = rows[0]["total"].as<long>();
   return total;
 }
 
 Json::Value NoticeService::setReadAt(const std::string& noticeId, const std::string& readAt) {
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       std::string("UPDATE notice SET read_at = $2::timestamptz WHERE id = $1::uuid RETURNING ") + SELECT_ROW,
       noticeId,
       readAt);

@@ -1,0 +1,15 @@
+export const PATH_USER_LOGIN = "/ai_stream2/backend/users/login";
+export const PATH_USER_ME = "/ai_stream2/backend/users/me";
+export const PATH_STREAM_LIST = "/ai_stream2/backend/streams";
+export const PATH_STREAM_BATCH_CREATE = "/ai_stream2/backend/streams/batch/create";
+export const PATH_FFMPEG_RTSP_PROBE = "/puskas/ffmpeg/rtsp/probe";
+export const PATH_STREAM_GROUP_TREE = "/ai_stream2/backend/streams/groups/tree";
+export const PATH_STREAM_GROUP_MAP = "/ai_stream2/backend/streams/groups/map";
+export const PATH_STREAM_GROUP_CREATE = "/ai_stream2/backend/streams/groups/{parent_group_id}";
+export const PATH_STREAM_GROUP = "/ai_stream2/backend/streams/groups/{group_id}";
+export const PATH_STREAM_GROUP_MEMBERS = "/ai_stream2/backend/streams/groups/{group_id}/members";
+export const PATH_STREAM_GROUP_CANDIDATES = "/ai_stream2/backend/streams/groups/{group_id}/candidates";
+export const PATH_LOGS = "/ai_stream2/backend/logs";
+export const PATH_LOGS_ENABLE = "/ai_stream2/backend/logs/enable";
+export const PATH_LOGS_DISABLE = "/ai_stream2/backend/logs/disable";
+export const PATH_LOGS_STATUS = "/ai_stream2/backend/logs/status";

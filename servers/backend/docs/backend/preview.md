@@ -4,7 +4,7 @@
 
 JSON 成功外壳：`{success, message, data}`。
 
-预设对象键：`id`、`user_id`、`name`、`layout`、`mode`、`slots`、`active`。`layout` 为 `1x1`、`2x2`、`3x3`、`4x4`，槽位数依次为 1、4、9、16。`slots` 的键是从 `"1"` 起的槽号。入库存流 id 或 `null`；出参把能找到的流展开为对象，否则为 `null`。流对象键：`id`、`name`、`group_id`、`group_name`、`url`、`width`、`height`、`fps`、`status`、`enabled`、`record`、`probed_at`。
+预设对象键：`id`、`user_id`、`name`、`layout`、`mode`、`slots`、`active`。`layout` 为 `1x1`、`2x2`、`3x3`、`4x4`，槽位数依次为 1、4、9、16。`slots` 的键是从 `"1"` 起的槽号。入库存流 id 或 `null`；出参把能找到的流展开为对象，否则为 `null`。流对象键：`id`、`name`、`group_id`、`group_name`、`url`、`width`、`height`、`fps`、`status`、`mount`、`record`、`probed_at`。
 
 同一用户同时只有一条 `active=true`。名为 `Default` 的预设不可删。
 
@@ -30,7 +30,7 @@ JSON 成功外壳：`{success, message, data}`。
 
 ### GET `/ai_stream2/backend/preview/tree`
 
-根为 All。`children` 先放直属流再放子组。组节点：`id`、`name`、`type=group`、`children`。流节点：`id`、`name`、`type=stream`、`enabled`、`status`、`record`。
+根为 All。`children` 先放直属流再放子组。组节点：`id`、`name`、`type=group`、`children`。流节点：`id`、`name`、`type=stream`、`mount`、`status`、`record`。
 
 入参：无。
 

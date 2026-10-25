@@ -13,6 +13,7 @@ RUN rm -f /etc/apt/sources.list.d/debian.sources \
       g++ \
       git \
       make \
+      pkg-config \
       libjsoncpp-dev \
       libpq-dev \
       librdkafka-dev \
@@ -21,10 +22,17 @@ RUN rm -f /etc/apt/sources.list.d/debian.sources \
       uuid-dev \
       zip \
       libzip-dev \
+      mediainfo \
+      libmediainfo-dev \
       libyaml-cpp-dev \
       zlib1g-dev \
     && rm -rf /var/lib/apt/lists/* \
     && git config --global url."https://gh-proxy.com/https://github.com/".insteadOf "https://github.com/" \
+    && git clone --depth 1 --branch v1.7.3 https://github.com/nih-at/libzip.git /tmp/libzip \
+    && cmake -S /tmp/libzip -B /tmp/libzip-build -DCMAKE_BUILD_TYPE=Release \
+    && cmake --build /tmp/libzip-build -j"$(nproc)" --target zipcmp zipmerge ziptool \
+    && find /tmp/libzip-build -type f \( -name zipcmp -o -name zipmerge -o -name ziptool \) -exec cp {} /usr/bin/ \; \
+    && rm -rf /tmp/libzip /tmp/libzip-build \
     && git clone --depth 1 --branch v1.9.14 --recursive https://github.com/drogonframework/drogon.git /tmp/drogon \
     && cmake -S /tmp/drogon -B /tmp/drogon-build \
       -DCMAKE_BUILD_TYPE=Release \

@@ -56,7 +56,7 @@ inline const char* SUFFIX_ZIP = ".zip";
 inline const char* STATUS_STOPPED = "stopped";
 inline const char* STATUS_STARTING = "starting";
 inline const char* STATUS_RUNNING = "running";
-inline const char* ERR_BUSY = "pipeline is running";
+inline const char* ERR_BUSY = "pipeline_err_busy";
 
 inline const char* DOCKER_BASE_URL = "http://puskas_docker_socket_proxy:2375";
 inline const char* DOCKER_CREATE_PATH = "/containers/create";
@@ -98,26 +98,26 @@ inline Json::Value ROW() {
   return node;
 }
 
-inline const char* MSG_LIST_OK = "Loaded pipelines";
-inline const char* MSG_LIST_ERROR = "Failed to load pipelines";
-inline const char* MSG_MAP_OK = "Loaded pipeline map";
-inline const char* MSG_MAP_ERROR = "Failed to load pipeline map";
-inline const char* MSG_GET_OK = "Loaded pipeline";
-inline const char* MSG_GET_ERROR = "Failed to load pipeline";
-inline const char* MSG_CREATE_OK = "Created pipeline";
-inline const char* MSG_CREATE_ERROR = "Failed to create pipeline";
-inline const char* MSG_UPDATE_OK = "Updated pipeline";
-inline const char* MSG_UPDATE_ERROR = "Failed to update pipeline";
-inline const char* MSG_REMOVE_OK = "Removed pipeline";
-inline const char* MSG_REMOVE_ERROR = "Failed to remove pipeline";
-inline const char* MSG_START_OK = "Started pipeline";
-inline const char* MSG_START_ERROR = "Failed to start pipeline";
-inline const char* MSG_STOP_OK = "Stopped pipeline";
-inline const char* MSG_STOP_ERROR = "Failed to stop pipeline";
-inline const char* MSG_BATCH_STOP_OK = "Stopped pipelines";
-inline const char* MSG_BATCH_REMOVE_OK = "Removed pipelines";
-inline const char* MSG_PROBE_OK = "Probed pipeline";
-inline const char* MSG_PROBE_ERROR = "Failed to probe pipeline";
+inline const char* MSG_LIST_OK = "pipeline_list_ok";
+inline const char* MSG_LIST_ERROR = "pipeline_list_error";
+inline const char* MSG_MAP_OK = "pipeline_map_ok";
+inline const char* MSG_MAP_ERROR = "pipeline_map_error";
+inline const char* MSG_GET_OK = "pipeline_get_ok";
+inline const char* MSG_GET_ERROR = "pipeline_get_error";
+inline const char* MSG_CREATE_OK = "pipeline_create_ok";
+inline const char* MSG_CREATE_ERROR = "pipeline_create_error";
+inline const char* MSG_UPDATE_OK = "pipeline_update_ok";
+inline const char* MSG_UPDATE_ERROR = "pipeline_update_error";
+inline const char* MSG_REMOVE_OK = "pipeline_remove_ok";
+inline const char* MSG_REMOVE_ERROR = "pipeline_remove_error";
+inline const char* MSG_START_OK = "pipeline_start_ok";
+inline const char* MSG_START_ERROR = "pipeline_start_error";
+inline const char* MSG_STOP_OK = "pipeline_stop_ok";
+inline const char* MSG_STOP_ERROR = "pipeline_stop_error";
+inline const char* MSG_BATCH_STOP_OK = "pipeline_batch_stop_ok";
+inline const char* MSG_BATCH_REMOVE_OK = "pipeline_batch_remove_ok";
+inline const char* MSG_PROBE_OK = "pipeline_probe_ok";
+inline const char* MSG_PROBE_ERROR = "pipeline_probe_error";
 
 inline const char* SQL_REF_COLUMNS =
     "array_to_json(stream_ids)::text AS stream_ids, "

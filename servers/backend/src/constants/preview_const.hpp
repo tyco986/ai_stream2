@@ -14,20 +14,20 @@ inline const char* PATH_TREE = "/ai_stream2/backend/preview/tree";
 inline const char* PATH_ACTIVE = "/ai_stream2/backend/preview/active";
 inline const char* PATH_ITEM = "/ai_stream2/backend/preview/{preset_id}";
 
-inline const char* MSG_GET_OK = "Loaded preset";
-inline const char* MSG_GET_ERROR = "Failed to load preset";
-inline const char* MSG_MAP_OK = "Loaded preset map";
-inline const char* MSG_MAP_ERROR = "Failed to load preset map";
-inline const char* MSG_TREE_OK = "Loaded preview tree";
-inline const char* MSG_TREE_ERROR = "Failed to load preview tree";
-inline const char* MSG_CREATE_OK = "Created preset";
-inline const char* MSG_CREATE_ERROR = "Failed to create preset";
-inline const char* MSG_UPDATE_OK = "Updated preset";
-inline const char* MSG_UPDATE_ERROR = "Failed to update preset";
-inline const char* MSG_REMOVE_OK = "Removed preset";
-inline const char* MSG_REMOVE_ERROR = "Failed to remove preset";
-inline const char* MSG_ACTIVE_OK = "Loaded active preset";
-inline const char* MSG_ACTIVE_ERROR = "Failed to load active preset";
+inline const char* MSG_GET_OK = "preview_get_ok";
+inline const char* MSG_GET_ERROR = "preview_get_error";
+inline const char* MSG_MAP_OK = "preview_map_ok";
+inline const char* MSG_MAP_ERROR = "preview_map_error";
+inline const char* MSG_TREE_OK = "preview_tree_ok";
+inline const char* MSG_TREE_ERROR = "preview_tree_error";
+inline const char* MSG_CREATE_OK = "preview_create_ok";
+inline const char* MSG_CREATE_ERROR = "preview_create_error";
+inline const char* MSG_UPDATE_OK = "preview_update_ok";
+inline const char* MSG_UPDATE_ERROR = "preview_update_error";
+inline const char* MSG_REMOVE_OK = "preview_remove_ok";
+inline const char* MSG_REMOVE_ERROR = "preview_remove_error";
+inline const char* MSG_ACTIVE_OK = "preview_active_ok";
+inline const char* MSG_ACTIVE_ERROR = "preview_active_error";
 
 inline const char* KEY_ID = "id";
 inline const char* KEY_USER_ID = "user_id";
@@ -43,7 +43,7 @@ inline const char* KEY_WIDTH = "width";
 inline const char* KEY_HEIGHT = "height";
 inline const char* KEY_FPS = "fps";
 inline const char* KEY_STATUS = "status";
-inline const char* KEY_ENABLED = "enabled";
+inline const char* KEY_MOUNT = "mount";
 inline const char* KEY_RECORD = "record";
 inline const char* KEY_PROBED_AT = "probed_at";
 inline const char* KEY_TYPE = "type";
@@ -53,10 +53,10 @@ inline const char* TYPE_GROUP = "group";
 inline const char* TYPE_STREAM = "stream";
 
 inline const char* NAME_DEFAULT = "Default";
-inline const char* ERR_NOT_FOUND = "preset not found";
-inline const char* ERR_DEFAULT = "default preset cannot be removed";
-inline const char* ERR_LAYOUT = "invalid layout";
-inline const char* ERR_SLOTS = "invalid slots";
+inline const char* ERR_NOT_FOUND = "preview_err_not_found";
+inline const char* ERR_DEFAULT = "preview_err_default";
+inline const char* ERR_LAYOUT = "preview_err_layout";
+inline const char* ERR_SLOTS = "preview_err_slots";
 
 inline const std::vector<std::string> AVAILABLE_LAYOUT = {"1x1", "2x2", "3x3", "4x4"};
 
@@ -72,7 +72,7 @@ inline const char* SQL_COLUMNS =
 
 inline const char* SQL_STREAM =
     "stream.id::text AS id, stream.name, stream.group_id::text AS group_id, stream_group.name AS group_name, "
-    "stream.url, stream.width, stream.height, stream.fps, stream.status, stream.enabled, stream.record, "
+    "stream.url, stream.width, stream.height, stream.fps, stream.status, stream.mount, stream.record, "
     "stream.probed_at ";
 
 inline Json::Value ROW() {

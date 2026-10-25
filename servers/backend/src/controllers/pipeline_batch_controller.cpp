@@ -1,7 +1,7 @@
 #include "controllers/pipeline_batch_controller.hpp"
 
 #include "db/database.hpp"
-#include "log/base_logger.hpp"
+#include "logger/base_logger.hpp"
 #include "response/response.hpp"
 
 #include <drogon/HttpClient.h>
@@ -14,31 +14,7 @@
 
 PipelineBatchController::PipelineBatchController() : service(Database::client()) {}
 
-void PipelineBatchController::respond(
-    const drogon::HttpRequestPtr& request,
-    const drogon::HttpResponsePtr& response,
-    std::chrono::steady_clock::time_point started,
-    const std::function<void(const drogon::HttpResponsePtr&)>& callback,
-    const std::string& error) {
-  const auto elapsed = std::chrono::steady_clock::now() - started;
-  const std::string query = request->query();
-  LogEntry entry;
-  entry.method = request->methodString();
-  entry.url = request->path();
-  entry.url += query.empty() ? "" : "?" + query;
-  entry.code = static_cast<int>(response->statusCode());
-  entry.input = std::string(request->getBody());
-  entry.output = std::string(response->getBody());
-  entry.latency = std::chrono::duration<double, std::milli>(elapsed).count();
-  entry.ip = request->peerAddr().toIp();
-  entry.inBytes = request->bodyLength();
-  entry.outBytes = response->getBodyLength();
-  entry.error = error;
-  logger.write(entry);
-  callback(response);
-}
-
-drogon::Task<drogon::HttpResponsePtr> PipelineBatchController::batchStop(const drogon::HttpRequestPtr& request) {
+drogon::Task<drogon::HttpResponsePtr> PipelineBatchController::batchStop(drogon::HttpRequestPtr request) {
   const auto started = std::chrono::steady_clock::now();
   const auto body = request->getJsonObject();
   std::vector<std::string> ids;
@@ -116,11 +92,11 @@ drogon::Task<drogon::HttpResponsePtr> PipelineBatchController::batchStop(const d
   data[pipeline::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[pipeline::KEY_FAILED_ROWS].size());
   data[pipeline::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[pipeline::KEY_SKIPPED_ROWS].size());
   const drogon::HttpResponsePtr response = http::Response::ok(data, pipeline::MSG_BATCH_STOP_OK);
-  respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, "");
+  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, "");
   co_return response;
 }
 
-drogon::Task<drogon::HttpResponsePtr> PipelineBatchController::batchRemove(const drogon::HttpRequestPtr& request) {
+drogon::Task<drogon::HttpResponsePtr> PipelineBatchController::batchRemove(drogon::HttpRequestPtr request) {
   const auto started = std::chrono::steady_clock::now();
   const auto body = request->getJsonObject();
   std::vector<std::string> ids;
@@ -188,6 +164,6 @@ drogon::Task<drogon::HttpResponsePtr> PipelineBatchController::batchRemove(const
   data[pipeline::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[pipeline::KEY_FAILED_ROWS].size());
   data[pipeline::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[pipeline::KEY_SKIPPED_ROWS].size());
   const drogon::HttpResponsePtr response = http::Response::ok(data, pipeline::MSG_BATCH_REMOVE_OK);
-  respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, "");
+  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, "");
   co_return response;
 }

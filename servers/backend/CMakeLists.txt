@@ -11,11 +11,15 @@ find_package(libzip REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(RDKAFKA REQUIRED rdkafka++)
+pkg_check_modules(MEDIAINFO REQUIRED libmediainfo)
+find_package(OpenSSL REQUIRED)
 
 add_executable(backend
   main.cpp
   src/auth/auth.cpp
+  src/i18n/i18n.cpp
   src/db/database.cpp
+  src/error_tracer/sql.cpp
   src/controllers/health_controller.cpp
   src/controllers/log_controller.cpp
   src/controllers/stream_group_controller.cpp
@@ -32,11 +36,13 @@ add_executable(backend
   src/controllers/pipeline_analyzer_controller.cpp
   src/controllers/pipeline_analyzer_batch_controller.cpp
   src/controllers/model_batch_controller.cpp
-  src/controllers/proxy_routes_controller.cpp
+  src/controllers/proxy_controller.cpp
   src/controllers/server_controller.cpp
   src/controllers/preview_controller.cpp
   src/controllers/event_controller.cpp
   src/controllers/notice_controller.cpp
+  src/controllers/media_controller.cpp
+  src/controllers/media_batch_controller.cpp
   src/proxy/proxy.cpp
   src/response/response.cpp
   src/searcher/searcher.cpp
@@ -55,18 +61,21 @@ add_executable(backend
   src/services/preview_service.cpp
   src/services/event_service.cpp
   src/services/notice_service.cpp
-  src/log/base_logger.cpp
-  src/log/stream_logger.cpp
-  src/log/stream_group_logger.cpp
-  src/log/user_group_logger.cpp
-  src/log/user_logger.cpp
-  src/log/model_logger.cpp
-  src/log/pipeline_logger.cpp
-  src/log/pipeline_gie_logger.cpp
-  src/log/pipeline_analyzer_logger.cpp
-  src/log/server_logger.cpp
-  src/log/preview_logger.cpp
-  src/log/event_logger.cpp
-  src/log/notice_logger.cpp)
-target_include_directories(backend PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${RDKAFKA_INCLUDE_DIRS})
-target_link_libraries(backend PRIVATE Drogon::Drogon spdlog::spdlog libzip::zip yaml-cpp ${RDKAFKA_LIBRARIES})
+  src/services/media_service.cpp
+  src/logger/base_logger.cpp
+  src/logger/stream_logger.cpp
+  src/logger/stream_group_logger.cpp
+  src/logger/user_group_logger.cpp
+  src/logger/user_logger.cpp
+  src/logger/model_logger.cpp
+  src/logger/pipeline_logger.cpp
+  src/logger/pipeline_gie_logger.cpp
+  src/logger/pipeline_analyzer_logger.cpp
+  src/logger/server_logger.cpp
+  src/logger/preview_logger.cpp
+  src/logger/event_logger.cpp
+  src/logger/notice_logger.cpp
+  src/logger/media_logger.cpp
+  src/logger/log_logger.cpp)
+target_include_directories(backend PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${RDKAFKA_INCLUDE_DIRS} ${MEDIAINFO_INCLUDE_DIRS})
+target_link_libraries(backend PRIVATE Drogon::Drogon spdlog::spdlog libzip::zip yaml-cpp OpenSSL::Crypto ${RDKAFKA_LIBRARIES} ${MEDIAINFO_LIBRARIES})

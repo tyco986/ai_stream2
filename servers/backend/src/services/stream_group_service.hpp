@@ -12,7 +12,7 @@ class StreamGroupService {
   explicit StreamGroupService(drogon::orm::DbClientPtr dbClient);
   Json::Value tree();
   Json::Value map();
-  Json::Value rename(const std::string& groupId, const Json::Value& name);
+  Json::Value update(const std::string& groupId, const Json::Value& name, const Json::Value& parentId);
   Json::Value remove(const std::string& groupId);
   Json::Value create(const std::string& parentGroupId, const Json::Value& name);
   Json::Value members(const std::string& groupId);

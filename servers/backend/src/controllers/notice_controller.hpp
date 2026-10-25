@@ -1,12 +1,11 @@
 #pragma once
 
 #include "constants/notice_const.hpp"
-#include "log/notice_logger.hpp"
+#include "logger/notice_logger.hpp"
 #include "services/notice_service.hpp"
 
 #include <drogon/HttpController.h>
 
-#include <chrono>
 #include <functional>
 #include <string>
 
@@ -31,12 +30,6 @@ class NoticeController : public drogon::HttpController<NoticeController> {
               const std::string& notice_id);
 
  private:
-  void respond(const drogon::HttpRequestPtr& request,
-               const drogon::HttpResponsePtr& response,
-               std::chrono::steady_clock::time_point started,
-               const std::function<void(const drogon::HttpResponsePtr&)>& callback,
-               const std::string& error = "");
-
   NoticeService service;
   NoticeLogger logger;
 };

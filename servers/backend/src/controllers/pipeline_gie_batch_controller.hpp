@@ -1,12 +1,11 @@
 #pragma once
 
 #include "constants/pipeline_gie_const.hpp"
-#include "log/pipeline_gie_logger.hpp"
+#include "logger/pipeline_gie_logger.hpp"
 #include "services/pipeline_gie_service.hpp"
 
 #include <drogon/HttpController.h>
 
-#include <chrono>
 #include <functional>
 
 class PipelineGieBatchController : public drogon::HttpController<PipelineGieBatchController> {
@@ -21,12 +20,6 @@ class PipelineGieBatchController : public drogon::HttpController<PipelineGieBatc
                    std::function<void(const drogon::HttpResponsePtr&)>&& callback);
 
  private:
-  void respond(const drogon::HttpRequestPtr& request,
-               const drogon::HttpResponsePtr& response,
-               std::chrono::steady_clock::time_point started,
-               const std::function<void(const drogon::HttpResponsePtr&)>& callback,
-               const std::string& error = "");
-
   PipelineGieService service;
   PipelineGieLogger logger;
 };

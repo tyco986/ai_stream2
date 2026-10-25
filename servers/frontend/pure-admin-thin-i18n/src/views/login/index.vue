@@ -15,6 +15,7 @@ import { useUserStoreHook } from "@/store/modules/user";
 import { initRouter, getTopMenu } from "@/router/utils";
 import { bg, avatar, illustration } from "./utils/static";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
+import BarButton from "@/components/BarButton/index.vue";
 import { useTranslationLang } from "@/layout/hooks/useTranslationLang";
 import { useDataThemeChange } from "@/layout/hooks/useDataThemeChange";
 
@@ -45,7 +46,7 @@ const { locale, translationCh, translationEn } = useTranslationLang();
 
 const ruleForm = reactive({
   username: "admin",
-  password: "admin123"
+  password: "admin"
 });
 
 const onLogin = async (formEl: FormInstance | undefined) => {
@@ -56,7 +57,7 @@ const onLogin = async (formEl: FormInstance | undefined) => {
       useUserStoreHook()
         .loginByUsername({
           username: ruleForm.username,
-          password: ruleForm.password
+          passwd: ruleForm.password
         })
         .then(res => {
           if (res.success) {
@@ -66,14 +67,15 @@ const onLogin = async (formEl: FormInstance | undefined) => {
               router
                 .push(getTopMenu(true).path)
                 .then(() => {
-                  message(t("login.pureLoginSuccess"), { type: "success" });
+                  message(res.message, { type: "success" });
                 })
                 .finally(() => (disabled.value = false));
             });
           } else {
-            message(t("login.pureLoginFail"), { type: "error" });
+            message(res.message, { type: "error" });
           }
         })
+        .catch(() => undefined)
         .finally(() => (loading.value = false));
     }
   });
@@ -190,16 +192,14 @@ useEventListener(document, "keydown", ({ code }) => {
             </Motion>
 
             <Motion :delay="250">
-              <el-button
-                class="w-full mt-4!"
-                size="default"
-                type="primary"
+              <BarButton
+                class="login-submit"
                 :loading="loading"
                 :disabled="disabled"
                 @click="onLogin(ruleFormRef)"
               >
                 {{ t("login.pureLogin") }}
-              </el-button>
+              </BarButton>
             </Motion>
           </el-form>
         </div>
@@ -210,6 +210,16 @@ useEventListener(document, "keydown", ({ code }) => {
 
 <style scoped>
 @import url("@/style/login.css");
+
+.login-submit {
+  display: block;
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.login-submit :deep(.el-button) {
+  width: 100%;
+}
 </style>
 
 <style lang="scss" scoped>

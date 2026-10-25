@@ -1,8 +1,11 @@
 #include "proxy/proxy.hpp"
 
+#include "constants/proxy_const.hpp"
 #include "response/response.hpp"
 
 #include <drogon/HttpClient.h>
+
+#include <array>
 
 void Proxy::forward(const std::string& upstreamBase,
                     const drogon::HttpRequestPtr& request,
@@ -10,7 +13,7 @@ void Proxy::forward(const std::string& upstreamBase,
   auto client = drogon::HttpClient::newHttpClient(upstreamBase);
   auto upstream = drogon::HttpRequest::newHttpRequest();
   upstream->setMethod(request->method());
-  upstream->setPath(std::string(request->path()));
+  upstream->setPath(Proxy::upstreamPath(std::string(request->path())));
   for (const auto& parameter : request->getParameters()) {
     upstream->setParameter(parameter.first, parameter.second);
   }
@@ -25,6 +28,24 @@ void Proxy::forward(const std::string& upstreamBase,
                                                const drogon::HttpResponsePtr& response) {
         Proxy::complete(callback, result, response);
       });
+}
+
+std::string Proxy::upstreamPath(const std::string& path) {
+  const std::array<const char*, 6> prefixes = {
+      deepstream::PREFIX,
+      generator::PREFIX,
+      ffmpeg::PREFIX,
+      export_trt::PREFIX,
+      export_onnx::PREFIX,
+      mediamtx::PREFIX};
+  std::string stripped = path;
+  for (const char* prefix : prefixes) {
+    const std::string text(prefix);
+    const bool matched = path.rfind(text, 0) == 0;
+    stripped = matched ? path.substr(text.size()) : stripped;
+  }
+  const std::string result = stripped.empty() ? std::string("/") : stripped;
+  return result;
 }
 
 void Proxy::complete(const std::function<void(const drogon::HttpResponsePtr&)>& callback,

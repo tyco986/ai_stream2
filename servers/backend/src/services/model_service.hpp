@@ -25,7 +25,7 @@ struct ImportFile {
 class ModelService {
  public:
   explicit ModelService(drogon::orm::DbClientPtr dbClient);
-  Json::Value list(const std::string& search, int page, int pageSize);
+  Json::Value list(const std::string& search, int page, long pageSize);
   Json::Value get(const std::string& modelId);
   Json::Value remove(const std::string& modelId);
   Json::Value update(const std::string& modelId,

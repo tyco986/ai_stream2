@@ -1,5 +1,7 @@
 #include "services/pipeline_analyzer_service.hpp"
 
+#include "error_tracer/sql.hpp"
+
 #include "constants/pipeline_analyzer_const.hpp"
 #include "searcher/searcher.hpp"
 
@@ -9,12 +11,12 @@
 
 PipelineAnalyzerService::PipelineAnalyzerService(drogon::orm::DbClientPtr dbClient) : dbClient(std::move(dbClient)) {}
 
-Json::Value PipelineAnalyzerService::list(const std::string& search, int page, int pageSize) {
-  const int offset = (page - 1) * pageSize;
+Json::Value PipelineAnalyzerService::list(const std::string& search, int page, long pageSize) {
+  const long offset = static_cast<long>(page - 1) * pageSize;
   const std::string match = Searcher::clause({"id", "name", "source_path", "annotations"}, 1);
   const std::string from = "FROM pipeline_analyzer WHERE " + match + " ";
-  const auto counted = dbClient->execSqlSync("SELECT count(*) AS total " + from, search);
-  const auto rows = dbClient->execSqlSync(
+  const auto counted = Sql::sync({}, dbClient, "SELECT count(*) AS total " + from, search);
+  const auto rows = Sql::sync({}, dbClient, 
       "SELECT id::text AS id, name, source_path, annotations::text AS annotations, updated_at " + from +
           "ORDER BY name LIMIT $2 OFFSET $3",
       search,
@@ -33,7 +35,7 @@ Json::Value PipelineAnalyzerService::list(const std::string& search, int page, i
 }
 
 Json::Value PipelineAnalyzerService::get(const std::string& analyzerId) {
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       "SELECT id::text AS id, name, source_path, annotations::text AS annotations, updated_at "
       "FROM pipeline_analyzer WHERE id = $1::uuid",
       analyzerId);
@@ -56,7 +58,7 @@ Json::Value PipelineAnalyzerService::create(const Json::Value& name,
   Json::StreamWriterBuilder builder;
   builder["indentation"] = "";
   const std::string annotationsText = Json::writeString(builder, data[pipeline_analyzer::KEY_ANNOTATIONS]);
-  auto rows = dbClient->execSqlSync(
+  auto rows = Sql::sync({}, dbClient, 
       "INSERT INTO pipeline_analyzer (id, name, source_path, annotations, updated_at) "
       "VALUES (gen_random_uuid(), $1, NULL, $2::jsonb, now()) "
       "RETURNING id::text AS id, name, source_path, annotations::text AS annotations, updated_at",
@@ -64,7 +66,7 @@ Json::Value PipelineAnalyzerService::create(const Json::Value& name,
       annotationsText);
   const std::string id = rows[0]["id"].as<std::string>();
   if (hasFile) {
-    rows = dbClient->execSqlSync(
+    rows = Sql::sync({}, dbClient, 
         "UPDATE pipeline_analyzer SET source_path = $2 WHERE id = $1::uuid "
         "RETURNING id::text AS id, name, source_path, annotations::text AS annotations, updated_at",
         id,
@@ -87,7 +89,7 @@ Json::Value PipelineAnalyzerService::update(const std::string& analyzerId,
   Json::StreamWriterBuilder builder;
   builder["indentation"] = "";
   const std::string annotationsText = Json::writeString(builder, data[pipeline_analyzer::KEY_ANNOTATIONS]);
-  auto rows = dbClient->execSqlSync(
+  auto rows = Sql::sync({}, dbClient, 
       "UPDATE pipeline_analyzer SET name = $2, annotations = $3::jsonb, updated_at = now() "
       "WHERE id = $1::uuid "
       "RETURNING id::text AS id, name, source_path, annotations::text AS annotations, updated_at",
@@ -104,7 +106,7 @@ Json::Value PipelineAnalyzerService::update(const std::string& analyzerId,
     if (hasSource && oldPath != sourcePath) {
       std::filesystem::remove(oldPath);
     }
-    rows = dbClient->execSqlSync(
+    rows = Sql::sync({}, dbClient, 
         "UPDATE pipeline_analyzer SET source_path = $2 WHERE id = $1::uuid "
         "RETURNING id::text AS id, name, source_path, annotations::text AS annotations, updated_at",
         analyzerId,
@@ -139,12 +141,12 @@ std::string PipelineAnalyzerService::saveFile(const std::string& analyzerId,
 }
 
 Json::Value PipelineAnalyzerService::remove(const std::string& analyzerId) {
-  const auto used = dbClient->execSqlSync(
+  const auto used = Sql::sync({}, dbClient, 
       "SELECT id FROM pipeline WHERE $1::uuid = ANY(analyzer_ids) LIMIT 1", analyzerId);
   if (!used.empty()) {
     throw std::runtime_error(pipeline_analyzer::ERR_OCCUPIED);
   }
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       "DELETE FROM pipeline_analyzer WHERE id = $1::uuid "
       "RETURNING id::text AS id, name, source_path, annotations::text AS annotations, updated_at",
       analyzerId);

@@ -1,5 +1,7 @@
 #include "services/model_service.hpp"
 
+#include "error_tracer/sql.hpp"
+
 #include "constants/model_const.hpp"
 #include "searcher/searcher.hpp"
 
@@ -17,8 +19,8 @@
 
 ModelService::ModelService(drogon::orm::DbClientPtr dbClient) : dbClient(std::move(dbClient)) {}
 
-Json::Value ModelService::list(const std::string& search, int page, int pageSize) {
-  const int offset = (page - 1) * pageSize;
+Json::Value ModelService::list(const std::string& search, int page, long pageSize) {
+  const long offset = static_cast<long>(page - 1) * pageSize;
   const std::string columns =
       "id::text AS id, name, type, version, batch_size, batch_mode, input_tensors::text AS input_tensors, output_tensors::text AS output_tensors, precision, "
       "opt_level, device, workspace, static_plugin, max_det, conf, iou, num_class, "
@@ -48,8 +50,8 @@ Json::Value ModelService::list(const std::string& search, int page, int pageSize
        "trt_version"},
       1);
   const std::string from = "FROM model WHERE " + match + " ";
-  const auto counted = dbClient->execSqlSync("SELECT count(*) AS total " + from, search);
-  const auto rows = dbClient->execSqlSync(
+  const auto counted = Sql::sync({}, dbClient, "SELECT count(*) AS total " + from, search);
+  const auto rows = Sql::sync({}, dbClient, 
       "SELECT " + columns + from + "ORDER BY name LIMIT $2 OFFSET $3", search, pageSize, offset);
   Json::Value items(Json::arrayValue);
   for (const auto& row : rows) {
@@ -64,7 +66,7 @@ Json::Value ModelService::list(const std::string& search, int page, int pageSize
 }
 
 Json::Value ModelService::get(const std::string& modelId) {
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       "SELECT id::text AS id, name, type, version, batch_size, batch_mode, input_tensors::text AS input_tensors, output_tensors::text AS output_tensors, "
       "precision, opt_level, device, workspace, static_plugin, max_det, conf, iou, num_class, "
       "classes::text AS classes, source_path, status, built_at, trt_version, ever_built "
@@ -78,12 +80,12 @@ Json::Value ModelService::get(const std::string& modelId) {
 }
 
 Json::Value ModelService::remove(const std::string& modelId) {
-  const auto used = dbClient->execSqlSync(
+  const auto used = Sql::sync({}, dbClient, 
       "SELECT id FROM pipeline_gie WHERE model_id = $1::uuid LIMIT 1", modelId);
   if (!used.empty()) {
     throw std::runtime_error(model::ERR_OCCUPIED);
   }
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       "DELETE FROM model WHERE id = $1::uuid AND status <> $2 "
       "RETURNING id::text AS id, name, type, version, batch_size, batch_mode, "
       "input_tensors::text AS input_tensors, output_tensors::text AS output_tensors, "
@@ -161,7 +163,7 @@ Json::Value ModelService::update(const std::string& modelId,
       "id::text AS id, name, type, version, batch_size, batch_mode, input_tensors::text AS input_tensors, output_tensors::text AS output_tensors, precision, "
       "opt_level, device, workspace, static_plugin, max_det, conf, iou, num_class, "
       "classes::text AS classes, source_path, status, built_at, trt_version, ever_built";
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       std::string("UPDATE model SET name = $1, type = $2, batch_size = $3, batch_mode = $4, precision = $5, "
                   "source_path = COALESCE(NULLIF($6, ''), source_path), "
                   "version = CASE WHEN $7 THEN NULL ELSE version END, "
@@ -232,7 +234,7 @@ BuildStart ModelService::buildStart(const std::string& modelId) {
       sections[name][model::KEY_IOU] = current[model::KEY_IOU].asString();
     }
   }
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       "UPDATE model SET status = $2 WHERE id = $1::uuid AND status <> $2 AND source_path IS NOT NULL "
       "RETURNING id",
       modelId,
@@ -304,7 +306,7 @@ Json::Value ModelService::buildEnd(const std::string& modelId,
       "conf, iou, num_class, classes::text AS classes, source_path, status, built_at, trt_version, ever_built";
   Json::Value row;
   if (data.isNull()) {
-    const auto rows = dbClient->execSqlSync(
+    const auto rows = Sql::sync({}, dbClient, 
         std::string("UPDATE model SET status = CASE WHEN ever_built THEN $2 ELSE $3 END WHERE id = $1::uuid "
                     "RETURNING ") +
             columns,
@@ -337,7 +339,7 @@ Json::Value ModelService::buildEnd(const std::string& modelId,
     const Json::Value& trtVersion = data[model::KEY_TRT_VERSION];
     Json::StreamWriterBuilder builder;
     builder["indentation"] = "";
-    const auto rows = dbClient->execSqlSync(
+    const auto rows = Sql::sync({}, dbClient, 
         std::string("UPDATE model SET type = $2, batch_size = $3, batch_mode = $4, input_tensors = $5::jsonb, "
                     "output_tensors = $6::jsonb, precision = $7, opt_level = $8, device = $9, workspace = $10, "
                     "static_plugin = $11, max_det = $12, conf = $13, iou = $14, num_class = $15, classes = $16::jsonb, "
@@ -413,7 +415,7 @@ std::string ModelService::json2yaml(const Json::Value& fields) {
 }
 
 Json::Value ModelService::map() {
-  const auto rows = dbClient->execSqlSync("SELECT id::text AS id, name FROM model ORDER BY name");
+  const auto rows = Sql::sync({}, dbClient, "SELECT id::text AS id, name FROM model ORDER BY name");
   Json::Value data(Json::objectValue);
   for (const auto& row : rows) {
     data[row["name"].as<std::string>()] = row["id"].as<std::string>();
@@ -460,7 +462,7 @@ Json::Value ModelService::upload(const std::string& modelId,
       "id::text AS id, name, type, version, batch_size, batch_mode, input_tensors::text AS input_tensors, output_tensors::text AS output_tensors, precision, "
       "opt_level, device, workspace, static_plugin, max_det, conf, iou, num_class, "
       "classes::text AS classes, source_path, status, built_at, trt_version, ever_built";
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       std::string("UPDATE model SET source_path = $2 WHERE id = $1::uuid RETURNING ") + columns,
       modelId,
       source.string());
@@ -494,9 +496,9 @@ Json::Value ModelService::importModel(const std::vector<ImportFile>& files) {
         meta.isMember(model::KEY_DEVICE) && meta[model::KEY_DEVICE].isInt() &&
         meta.isMember(model::KEY_WORKSPACE) && meta[model::KEY_WORKSPACE].isInt();
     const auto existing = complete
-        ? dbClient->execSqlSync(
+        ? Sql::sync({}, dbClient, 
               std::string("SELECT ") + columns + ", engine_path FROM model WHERE name = $1", name)
-        : dbClient->execSqlSync("SELECT 1 WHERE false");
+        : Sql::sync({}, dbClient, "SELECT 1 WHERE false");
     const bool named = complete && !existing.empty();
     Json::Value current = named ? row2json(existing[0]) : Json::Value();
     const std::string engineName = named && !existing[0]["engine_path"].isNull()
@@ -537,7 +539,7 @@ Json::Value ModelService::importModel(const std::vector<ImportFile>& files) {
     const std::string confText = conf.isString() ? conf.asString() : conf.isDouble() ? std::to_string(conf.asDouble()) : "";
     const std::string iouText = iou.isString() ? iou.asString() : iou.isDouble() ? std::to_string(iou.asDouble()) : "";
     if (saved) {
-      const auto rows = dbClient->execSqlSync(
+      const auto rows = Sql::sync({}, dbClient, 
           std::string("INSERT INTO model (id, name, type, batch_size, batch_mode, input_tensors, output_tensors, "
                       "precision, opt_level, device, workspace, static_plugin, max_det, conf, iou, num_class, classes, "
                       "source_path, engine_path, status, built_at, trt_version, ever_built) "
@@ -651,7 +653,7 @@ Json::Value ModelService::create(const Json::Value& name,
       "id::text AS id, name, type, version, batch_size, batch_mode, input_tensors::text AS input_tensors, output_tensors::text AS output_tensors, precision, "
       "opt_level, device, workspace, static_plugin, max_det, conf, iou, num_class, "
       "classes::text AS classes, source_path, status, built_at, trt_version, ever_built";
-  const auto rows = dbClient->execSqlSync(
+  const auto rows = Sql::sync({}, dbClient, 
       std::string("INSERT INTO model (id, name, type, batch_size, batch_mode, precision, status, source_path, "
                   "max_det, conf, iou, input_tensors, output_tensors, opt_level, device, workspace, "
                   "static_plugin, ever_built) "

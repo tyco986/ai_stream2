@@ -12,5 +12,5 @@ struct ProbeResult {
 
 class Ffmpeg {
  public:
-  static drogon::Task<ProbeResult> probe(const std::string& url);
+  static drogon::Task<ProbeResult> rtspProbe(const std::string& url);
 };
