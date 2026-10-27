@@ -1,10 +1,10 @@
 #include "response/response.hpp"
 
-#include "constants/response.hpp"
+#include "constants/response_const.hpp"
 
 #include <string>
 
-void http::Response::ok(httplib::Response& response, const nlohmann::json& data, const char* message, const std::string& fileName, const std::string& fileContent) {
+void Response::ok(httplib::Response& response, const nlohmann::json& data, const char* message, const std::string& fileName, const std::string& fileContent) {
     const bool attached = !fileContent.empty();
     const std::string boundary = ::response::BOUNDARY;
     const std::string body = "--" + boundary + "\r\n"
@@ -27,15 +27,15 @@ void http::Response::ok(httplib::Response& response, const nlohmann::json& data,
         response.set_content(body, ::response::MULTIPART_CONTENT_TYPE);
     }
     if (!attached) {
-        envelope(response, true, 200, message, data);
+        Response::envelope(response, true, 200, message, data);
     }
 }
 
-void http::Response::error(httplib::Response& response, int status, const char* message) {
-    envelope(response, false, status, message, nullptr);
+void Response::error(httplib::Response& response, int status, const char* message) {
+    Response::envelope(response, false, status, message, nullptr);
 }
 
-void http::Response::envelope(httplib::Response& response, bool success, int status, const char* message, const nlohmann::json& data) {
+void Response::envelope(httplib::Response& response, bool success, int status, const char* message, const nlohmann::json& data) {
     const nlohmann::json body = {
         {::response::KEY_SUCCESS, success},
         {::response::KEY_MESSAGE, message},

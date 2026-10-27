@@ -13,7 +13,7 @@ public:
 private:
     static void probe(const httplib::Request& request, httplib::Response& response);
     static void publish(const httplib::Request& request, httplib::Response& response);
-    static nlohmann::json publishOne(const std::string& path);
+    static nlohmann::json publishOne(const std::string& name, const std::string& path);
     static bool pathReady(const std::string& name);
     static bool mediamtxReady();
     static void publishList(const httplib::Request& request, httplib::Response& response);

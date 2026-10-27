@@ -1,5 +1,6 @@
 import shutil
 from pathlib import Path
+from typing import Literal
 
 from ultralytics import YOLO
 
@@ -12,14 +13,15 @@ class YoloDetE2EExporter:
         weights: Path,
         size: int,
         opset: int,
-        batch: int,
-        dynamic: bool,
+        batch_size: int,
+        batch_mode: Literal["dynamic", "static"],
+        device: str | int,
         simplify: bool,
         max_det: int,
         conf: float,
         output_dir: Path,
     ) -> None:
-        validate_export_args(weights, dynamic, batch)
+        validate_export_args(weights, batch_mode, batch_size)
 
         model = YOLO(str(weights))
         write_labels(model.names, output_dir / "labels.txt")
@@ -32,8 +34,8 @@ class YoloDetE2EExporter:
             "max_det": max_det,
             "conf": conf,
         }
-        export_kwargs["batch"] = batch
-        if dynamic:
+        export_kwargs["batch"] = batch_size
+        if batch_mode == "dynamic":
             export_kwargs["dynamic"] = True
 
         model.export(**export_kwargs)
@@ -45,5 +47,5 @@ class YoloDetE2EExporter:
         produced_data = weights.parent / f"{weights.stem}.onnx.data"
         if produced_data.is_file():
             shutil.move(produced_data, output_dir / produced_data.name)
-        if dynamic:
+        if batch_mode == "dynamic":
             fix_batch_only_dynamic(onnx_path, size, max_det)

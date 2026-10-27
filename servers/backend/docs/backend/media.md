@@ -4,6 +4,8 @@
 
 JSON 成功外壳：`{success, message, data}`。`GET /media/{media_id}/download` 与 `POST /media/batch/download` 成功时不套这层外壳，分别直接返回原文件和 zip。
 
+批量结果键：`updated_rows`、`failed_rows`、`skipped_rows`、`updated_count`、`failed_count`、`skipped_count`。
+
 根目录 `/root/media`，其下固定三层：`upload/<用户名>/`、`pipeline/<流水线名>/`、`recording/<流名>/`。只收录图片和视频。图片后缀：`.jpg`、`.jpeg`、`.png`、`.gif`、`.webp`、`.bmp`。视频后缀：`.mp4`、`.mkv`、`.avi`、`.mov`、`.webm`、`.ts`、`.m4v`。比较时后缀转成小写。`type`：`image` | `video`。
 
 媒体对象键：`id`、`type`、`name`、`width`、`height`、`duration`、`fps`、`codec`、`size`、`md5`、`folder`、`created_at`、`updated_at`、`user_id`、`stream_id`、`pipeline_id`。空字段为 `null`。`type=image` 时 `duration`、`fps`、`codec` 为 `null`。库内 `size` 为字节、`duration` 为秒；对外 `size` 是 MB 数字（1024×1024，保留一位小数），`duration` 是 `HH:MM:SS`（秒取整，时分秒都补到两位）。`folder` 是文件所在目录的绝对路径。`created_at`、`updated_at` 为 UTC，格式 `YYYY-MM-DDTHH:MM:SSZ`。
@@ -18,16 +20,16 @@ JSON 成功外壳：`{success, message, data}`。`GET /media/{media_id}/download
 |------|------|--------|------------------|------|
 | `GET` | `/ai_stream2/backend/media/upload/file` | query：`page`、`page_size`、`user_id`、`type`、`search` | `items`、`total`、`page`、`page_size` | 分页列出上传文件 |
 | `GET` | `/ai_stream2/backend/media/pipeline/file` | query：`page`、`page_size`、`pipeline_id`、`type`、`search` | 同上 | 分页列出流水线文件 |
-| `GET` | `/ai_stream2/backend/media/recording/file` | query：`page`、`page_size`、`stream_id`、`type`、`search` | 同上 | 分页列出录像文件 |
+| `GET` | `/ai_stream2/backend/media/recording/file` | query：`page`、`page_size`、`stream_id`、`type`、`search`、`date` | 同上 | 分页列出录像文件 |
 | `GET` | `/ai_stream2/backend/media/upload/folder` | 无 | `{用户名: user_id}` | 列出 `upload` 下能对上用户的子文件夹 |
 | `GET` | `/ai_stream2/backend/media/pipeline/folder` | 无 | `{流水线名: pipeline_id}` | 列出 `pipeline` 下能对上流水线的子文件夹 |
 | `GET` | `/ai_stream2/backend/media/recording/folder` | 无 | `{流名: stream_id}` | 列出 `recording` 下能对上流的子文件夹 |
 | `GET` | `/ai_stream2/backend/media/{media_id}` | path：`media_id` | 媒体对象 | 详情 |
 | `GET` | `/ai_stream2/backend/media/{media_id}/content` | path：`media_id` | 文件字节 | 预览用的原文件 |
 | `GET` | `/ai_stream2/backend/media/{media_id}/download` | path：`media_id` | 文件字节 | 下载单个原文件 |
-| `POST` | `/ai_stream2/backend/media/batch/create` | `items` | `items` | 批量写入记录 |
-| `POST` | `/ai_stream2/backend/media/batch/upload` | multipart：`user_id`、`file`（可多个） | `items` | 上传到该用户的 upload 目录 |
-| `POST` | `/ai_stream2/backend/media/batch/remove` | `ids` | `items` | 删文件并删记录 |
+| `POST` | `/ai_stream2/backend/media/batch/create` | `items` | 批量结果 | 批量写入记录 |
+| `POST` | `/ai_stream2/backend/media/batch/upload` | multipart：`user_id`、`file`（可多个） | 批量结果 | 上传到该用户的 upload 目录 |
+| `POST` | `/ai_stream2/backend/media/batch/remove` | `ids` | 批量结果 | 删文件并删记录 |
 | `POST` | `/ai_stream2/backend/media/batch/download` | `ids` | zip 字节 | 把这些文件打成 zip |
 
 ### GET `/ai_stream2/backend/media/upload/file`
@@ -36,7 +38,7 @@ JSON 成功外壳：`{success, message, data}`。`GET /media/{media_id}/download
 
 ### GET `/ai_stream2/backend/media/recording/file`
 
-`page` 默认 `1`，`page_size` 默认 `20`。归属 id 为空时不过滤：`upload` 用 `user_id`，`pipeline` 用 `pipeline_id`，`recording` 用 `stream_id`。`type` 为空时图片和视频都返回。`search` 对 `name`、`type`、`codec`、`folder`、`md5` 做不区分大小写的包含匹配。按 `created_at` 降序。
+`page` 默认 `1`，`page_size` 默认 `20`。归属 id 为空时不过滤：`upload` 用 `user_id`，`pipeline` 用 `pipeline_id`，`recording` 用 `stream_id`。`type` 为空时图片和视频都返回。`search` 对 `name`、`type`、`codec`、`folder`、`md5`、`width`、`height`、`duration`、`fps`、`size`、`created_at`、`updated_at` 做不区分大小写的包含匹配。按 `created_at` 降序。`date` 只用于录像列表，格式 `YYYY-MM-DD`，按 `created_at` 的 UTC 日历日相等过滤；为空时不按日期过滤。
 
 入参（query）：见上表。
 
@@ -78,7 +80,7 @@ JSON 成功外壳：`{success, message, data}`。`GET /media/{media_id}/download
 
 入参 JSON：`items`，元素字段同媒体对象，不含 `id`。缺的字段按空值写入。`stream_id`、`pipeline_id` 为空则存 `null`。没有 `items` 时当作空数组。
 
-出参 `data`：`items`（新建后的媒体对象）。`message`：`media_batch_create_ok`。失败 `500`，`media_batch_create_error`。
+成功进 `updated_rows`（媒体对象），失败进 `failed_rows`（原请求行）。`message`：`media_batch_create_ok`。
 
 ### POST `/ai_stream2/backend/media/batch/upload`
 
@@ -86,13 +88,13 @@ multipart。表单字段 `user_id`，文件字段可多个。按用户名建 `/r
 
 入参：`user_id`、文件。
 
-出参 `data`：`items`（媒体对象）。`message`：`media_batch_upload_ok`。解析失败或写入失败 `500`，`media_batch_upload_error`。
+成功进 `updated_rows`（媒体对象），单文件失败进 `failed_rows`（`{name}`）。`message`：`media_batch_upload_ok`。multipart 解析失败 `500`，`media_batch_upload_error`。
 
 ### POST `/ai_stream2/backend/media/batch/remove`
 
-入参 JSON：`ids`，媒体 id 数组。没有 `ids` 时当作空数组。每个 id 先删磁盘文件（不存在则跳过删文件），再删记录。任一 id 不存在则整次失败。
+入参 JSON：`ids`，媒体 id 数组。没有 `ids` 时当作空数组。每个 id 先删磁盘文件（不存在则跳过删文件），再删记录。不存在或删除失败的 id 进 `failed_rows`，其余继续。
 
-出参 `data`：`items`（删除前的媒体对象）。`message`：`media_batch_remove_ok`。失败 `500`，`media_batch_remove_error`。
+成功进 `updated_rows`（删除前的媒体对象），失败进 `failed_rows`（`{id}`）。`message`：`media_batch_remove_ok`。
 
 ### POST `/ai_stream2/backend/media/batch/download`
 

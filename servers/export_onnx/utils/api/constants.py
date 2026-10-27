@@ -1,10 +1,20 @@
-import os
 from pathlib import Path
 
-PROJECT_NAME = os.environ.get("PROJECT_NAME", "ai_stream2")
-LOG_FORMAT = "[%(asctime)s] %(levelname)s %(name)s: %(message)s"
-LOGGER_NAME = "export_onnx_api"
-DEFAULT_MODEL_ROOT = Path("/root/models")
-DEFAULT_LOG_ROOT = Path("/root/logs/export_onnx")
-DEFAULT_HOST = os.environ.get("HOST", "0.0.0.0")
-DEFAULT_PORT = int(os.environ.get("PORT", "8090"))
+PROJECT_NAME = "ai_stream2"
+LOG_ROOT = Path("/root/logs/export_onnx")
+LOG_PAGE = "export_onnx"
+LOG_SUFFIX = ".jsonl"
+LOG_MAX_DAYS = 90
+LOG_HEADERS = ("authorization", "accept-language")
+HOST = "0.0.0.0"
+PORT = 8090
+TMP_ROOT = Path("/root/tmp")
+HISTORY_ROOT = Path("/root/history")
+ACCEPTED_SUFFIXES = {".pt", ".onnx"}
+MULTIPART_BOUNDARY = "export-onnx-boundary"
+FIELD_INPUT = "input"
+FIELD_FILENAME = "filename"
+FIELD_CONFIG = "config"
+FIELD_LABEL = "label"
+HISTORY_BOUNDARY = "export-onnx-history"
+LABEL_TYPES = {"STGCNPP", "RTMPOSE"}

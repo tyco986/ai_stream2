@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <ctime>
+#include <vector>
 
 namespace media {
 
@@ -22,6 +23,12 @@ inline const char* TYPE_IMAGE = "image";
 inline const char* TYPE_VIDEO = "video";
 inline const char* KEY_NAME = "name";
 inline const char* KEY_ITEMS = "items";
+inline const char* KEY_UPDATED_COUNT = "updated_count";
+inline const char* KEY_FAILED_COUNT = "failed_count";
+inline const char* KEY_SKIPPED_COUNT = "skipped_count";
+inline const char* KEY_UPDATED_ROWS = "updated_rows";
+inline const char* KEY_FAILED_ROWS = "failed_rows";
+inline const char* KEY_SKIPPED_ROWS = "skipped_rows";
 inline const char* KEY_TOTAL = "total";
 inline const char* KEY_PAGE = "page";
 inline const char* KEY_PAGE_SIZE = "page_size";
@@ -35,11 +42,14 @@ inline const char* MEDIA_DIR = "/root/media";
 inline const char* UPLOAD_DIR = "upload";
 inline const char* PIPELINE_DIR = "pipeline";
 inline const char* RECORDING_DIR = "recording";
+inline const char* LOCALE_CTYPE = "C.UTF-8";
 inline const char* MEDIAINFO_WIDTH = "Width";
 inline const char* MEDIAINFO_HEIGHT = "Height";
 inline const char* MEDIAINFO_FPS = "FrameRate";
 inline const char* MEDIAINFO_CODEC = "Format";
 inline const char* MEDIAINFO_DURATION = "Duration";
+inline const std::vector<const char*> SEARCH_COLUMNS{
+    "name", "type", "width", "height", "duration", "fps", "size", "updated_at"};
 inline const char* KEY_WIDTH = "width";
 inline const char* KEY_HEIGHT = "height";
 inline const char* KEY_DURATION = "duration";
@@ -77,16 +87,14 @@ inline const char* MSG_LIST_ERROR = "media_list_error";
 inline const char* MSG_GET_OK = "media_get_ok";
 inline const char* MSG_GET_ERROR = "media_get_error";
 inline const char* MSG_BATCH_CREATE_OK = "media_batch_create_ok";
-inline const char* MSG_BATCH_CREATE_ERROR = "media_batch_create_error";
 inline const char* MSG_BATCH_UPLOAD_OK = "media_batch_upload_ok";
 inline const char* MSG_BATCH_UPLOAD_ERROR = "media_batch_upload_error";
 inline const char* MSG_BATCH_REMOVE_OK = "media_batch_remove_ok";
-inline const char* MSG_BATCH_REMOVE_ERROR = "media_batch_remove_error";
 inline const char* MSG_BATCH_DOWNLOAD_ERROR = "media_batch_download_error";
 inline const char* MSG_DOWNLOAD_ERROR = "media_download_error";
 
-inline const char* IMAGE_SUFFIXES[] = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"};
-inline const char* VIDEO_SUFFIXES[] = {".mp4", ".mkv", ".avi", ".mov", ".webm", ".ts", ".m4v"};
+inline const char* IMAGE_SUFFIXES[] = {".jpg", ".jpeg", ".png"};
+inline const char* VIDEO_SUFFIXES[] = {".mp4"};
 
 inline const char* QUERY_PAGE = "page";
 inline const char* QUERY_PAGE_SIZE = "page_size";
@@ -95,8 +103,20 @@ inline const char* QUERY_STREAM_ID = "stream_id";
 inline const char* QUERY_PIPELINE_ID = "pipeline_id";
 inline const char* QUERY_TYPE = "type";
 inline const char* QUERY_SEARCH = "search";
+inline const char* QUERY_DATE = "date";
 inline const int DEFAULT_PAGE = 1;
 inline const int DEFAULT_PAGE_SIZE = 20;
+
+inline Json::Value BATCH_DATA() {
+  Json::Value node;
+  node[KEY_UPDATED_ROWS] = Json::Value(Json::arrayValue);
+  node[KEY_FAILED_ROWS] = Json::Value(Json::arrayValue);
+  node[KEY_SKIPPED_ROWS] = Json::Value(Json::arrayValue);
+  node[KEY_UPDATED_COUNT] = Json::UInt64(0);
+  node[KEY_FAILED_COUNT] = Json::UInt64(0);
+  node[KEY_SKIPPED_COUNT] = Json::UInt64(0);
+  return node;
+}
 
 inline Json::Value MEDIA_ROW() {
   Json::Value node;

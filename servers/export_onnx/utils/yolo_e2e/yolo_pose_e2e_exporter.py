@@ -1,5 +1,6 @@
 import shutil
 from pathlib import Path
+from typing import Literal
 
 from ultralytics import YOLO
 
@@ -7,7 +8,6 @@ from utils.yolo_e2e.common import (
     fix_pose_batch_only_dynamic,
     pose_output_channels,
     validate_export_args,
-    write_bundle_meta,
     write_labels,
 )
 
@@ -18,14 +18,15 @@ class YoloPoseE2EExporter:
         weights: Path,
         size: int,
         opset: int,
-        batch: int,
-        dynamic: bool,
+        batch_size: int,
+        batch_mode: Literal["dynamic", "static"],
         simplify: bool,
         max_det: int,
         conf: float,
+        iou: float,
         output_dir: Path,
     ) -> None:
-        validate_export_args(weights, dynamic, batch)
+        validate_export_args(weights, batch_mode, batch_size)
 
         model = YOLO(str(weights))
         write_labels(model.names, output_dir / "labels.txt")
@@ -38,8 +39,8 @@ class YoloPoseE2EExporter:
             "max_det": max_det,
             "conf": conf,
         }
-        export_kwargs["batch"] = batch
-        if dynamic:
+        export_kwargs["batch"] = batch_size
+        if batch_mode == "dynamic":
             export_kwargs["dynamic"] = True
 
         model.export(**export_kwargs)
@@ -54,17 +55,5 @@ class YoloPoseE2EExporter:
         kpt_shape = getattr(model.model, "kpt_shape", None)
         num_keypoints = int(kpt_shape[0]) if kpt_shape else 17
         channels = pose_output_channels(num_keypoints)
-        if dynamic:
+        if batch_mode == "dynamic":
             fix_pose_batch_only_dynamic(onnx_path, size, max_det, channels)
-        write_bundle_meta(
-            output_dir,
-            onnx_path,
-            output_dir / "labels.txt",
-            version="yolo26",
-            task="pose",
-            yolo_export="e2e",
-            max_det=max_det,
-            conf=conf,
-            dynamic=dynamic,
-            batch=batch,
-        )

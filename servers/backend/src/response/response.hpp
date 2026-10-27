@@ -9,6 +9,7 @@ class Response {
  public:
   static drogon::HttpResponsePtr ok(const Json::Value& data = Json::Value(Json::objectValue),
                                     const char* message = "");
+  static drogon::HttpResponsePtr partial(const Json::Value& data, const char* message);
   static drogon::HttpResponsePtr error(drogon::HttpStatusCode status,
                                       const char* message,
                                       const Json::Value& data = Json::Value(Json::nullValue));

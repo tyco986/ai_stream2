@@ -25,6 +25,7 @@ class UserService {
   Json::Value remove(const std::string& userId);
 
  private:
+  void initPreset(const std::string& userId);
   Json::Value row2json(const drogon::orm::Row& row);
 
   drogon::orm::DbClientPtr dbClient;

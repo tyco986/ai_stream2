@@ -10,9 +10,9 @@ JSON 成功外壳：`{success, message, data}`。
 |------|------|--------|------------------|------|
 | `GET` | `/health` | 无 | `{}` | 健康检查 |
 | `POST` | `/rtsp/probe` | `urls` | `{url: {status, width, height, fps, probed_at}}` | 探测多路 RTSP，只返回在线的 |
-| `POST` | `/rtsp/publish` | `paths` | `{name: {url_docker, url_host, width, height, fps, codec, bitrate, loop, created_at, duration, status, probed_at}}` | 把本地视频循环发布为 RTSP，只返回本次成功的 |
-| `GET` | `/rtsp/publish` | `name` 可选 | 同上，按 `name` 筛选 | 列出已发布的 RTSP |
-| `DELETE` | `/rtsp/publish` | `name` 可选 | 删除后剩余的发布字典 | 停止对应推流并删除记录 |
+| `POST` | `/rtsp/publish` | `paths` | `{name: {path, url_docker, url_host, width, height, fps, codec, bitrate, loop, created_at, duration, status, probed_at}}` | 把本地视频循环发布为 RTSP，只返回本次成功的 |
+| `GET` | `/rtsp/publish` | `names` 可重复、可省略 | 同上，按 `names` 筛选 | 列出已发布的 RTSP |
+| `DELETE` | `/rtsp/publish` | `names` 可重复、可省略 | 删除后剩余的发布字典 | 停止对应推流并删除记录 |
 | `POST` | `/video/probe` | `path` | `width`、`height`、`fps`、`duration`、`codec`、`bitrate` | 探测本地视频文件 |
 
 ### GET `/health`
@@ -31,23 +31,23 @@ JSON 成功外壳：`{success, message, data}`。
 
 ### POST `/rtsp/publish`
 
-对 `paths` 逐条发布。`name` 取该路径的文件名。先用 3 秒超时请求 MediaMTX `GET /v3/info`，不可达时 `503`，`MediaMTX unreachable`。可达后探测该文件，再以循环方式推到 `rtsp://puskas_mediamtx:8554/{name}`。`publishStart` 的记录里 `status` 为 `offline`，`probed_at` 为空字符串。随后每 1 秒请求 MediaMTX `GET /v3/paths/get/{name}`，最多 5 秒。`ready` 为 `true` 时再 `probe` 这条 RTSP，由 `publishEnd` 写入 `status` 和 `probed_at`。超时则停掉推流并删除记录。同名已存在或文件探测失败时不发布，该条不进入返回。
+对 `paths` 逐条发布。键 `name` 原样作为 RTSP 地址的一段。先用 3 秒超时请求 MediaMTX `GET /v3/info`，不可达时 `503`，`MediaMTX unreachable`。可达后探测该文件，再以循环方式推到 `rtsp://ai_stream2_mediamtx:8554/{name}`。`publishStart` 的记录里 `status` 为 `offline`，`probed_at` 为空字符串。随后每 1 秒请求 MediaMTX `GET /v3/paths/get/{name}`，最多 5 秒。`ready` 为 `true` 时再 `probe` 这条 RTSP，由 `publishEnd` 写入 `status` 和 `probed_at`。超时则停掉推流并删除记录。同名已存在或文件探测失败时不发布，该条不进入返回。
 
-入参：`paths`，字符串数组，容器内视频文件路径。缺省或不是数组时按空数组处理。
+入参：`paths`，对象，键为 `name`，值为容器内视频文件路径。缺省或不是对象时按空对象处理。
 
-出参 `data`：本次发布成功的 `{name: {url_docker, url_host, width, height, fps, codec, bitrate, loop, created_at, duration, status, probed_at}}`。`loop` 恒为 `true`。`created_at` 为发布时刻的 UTC 时间。`duration` 为这条 RTSP 已运行的秒数。`url_host` 为 `rtsp://127.0.0.1:8554/{name}`。一条都没成功时 `400`，`Failed to publish rtsp`。
+出参 `data`：本次发布成功的 `{name: {path, url_docker, url_host, width, height, fps, codec, bitrate, loop, created_at, duration, status, probed_at}}`。`path` 为传入的容器内文件路径。`loop` 恒为 `true`。`created_at` 为发布时刻的 UTC 时间。`duration` 为这条 RTSP 已运行的秒数。`url_host` 为 `rtsp://127.0.0.1:8554/{name}`。一条都没成功时 `400`，`Failed to publish rtsp`。
 
 ### GET `/rtsp/publish`
 
-入参：查询参数 `name`，可省略。省略时返回全部。
+入参：查询参数 `names`，可重复、可省略，如 `names=a&names=b`。省略或为空时返回全部。
 
 出参 `data`：与 POST 相同形状的字典。`duration` 按当前时间减去 `created_at` 计算。没有匹配项时为 `{}`。
 
 ### DELETE `/rtsp/publish`
 
-按查询参数 `name` 结束对应 `ffmpeg` 进程并删除记录。`name` 省略或为空时删除全部。
+按查询参数 `names` 结束对应 `ffmpeg` 进程并删除记录。可重复，如 `names=a&names=b`。省略或为空时删除全部。
 
-入参：`name`，可省略。
+入参：`names`，可重复、可省略。
 
 出参 `data`：删除后剩余的发布字典，形状与 `GET` 相同。
 

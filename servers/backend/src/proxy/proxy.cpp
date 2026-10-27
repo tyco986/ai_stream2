@@ -6,10 +6,14 @@
 #include <drogon/HttpClient.h>
 
 #include <array>
+#include <chrono>
+
+ProxyLogger Proxy::logger;
 
 void Proxy::forward(const std::string& upstreamBase,
                     const drogon::HttpRequestPtr& request,
                     std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
+  const auto started = std::chrono::steady_clock::now();
   auto client = drogon::HttpClient::newHttpClient(upstreamBase);
   auto upstream = drogon::HttpRequest::newHttpRequest();
   upstream->setMethod(request->method());
@@ -24,9 +28,9 @@ void Proxy::forward(const std::string& upstreamBase,
   }
   client->sendRequest(
       upstream,
-      [callback = std::move(callback), client](drogon::ReqResult result,
-                                               const drogon::HttpResponsePtr& response) {
-        Proxy::complete(callback, result, response);
+      [request, started, callback = std::move(callback), client](drogon::ReqResult result,
+                                                                const drogon::HttpResponsePtr& response) {
+        Proxy::complete(request, started, callback, result, response);
       });
 }
 
@@ -48,12 +52,15 @@ std::string Proxy::upstreamPath(const std::string& path) {
   return result;
 }
 
-void Proxy::complete(const std::function<void(const drogon::HttpResponsePtr&)>& callback,
+void Proxy::complete(const drogon::HttpRequestPtr& request,
+                     std::chrono::steady_clock::time_point started,
+                     const std::function<void(const drogon::HttpResponsePtr&)>& callback,
                      drogon::ReqResult result,
                      const drogon::HttpResponsePtr& upstream) {
+  const bool ok = result == drogon::ReqResult::Ok && upstream;
   drogon::HttpResponsePtr response =
-      http::Response::error(drogon::k502BadGateway, "upstream unreachable");
-  if (result == drogon::ReqResult::Ok && upstream) {
+      http::Response::error(drogon::k502BadGateway, proxy::MSG_UPSTREAM_UNREACHABLE);
+  if (ok) {
     response = drogon::HttpResponse::newHttpResponse();
     response->setStatusCode(upstream->statusCode());
     response->setBody(std::string(upstream->body()));
@@ -62,5 +69,6 @@ void Proxy::complete(const std::function<void(const drogon::HttpResponsePtr&)>& 
       response->addHeader("content-type", contentType);
     }
   }
-  callback(response);
+  const std::string error = ok ? "" : proxy::MSG_UPSTREAM_UNREACHABLE;
+  logger.respond(request, response, started, callback, error);
 }

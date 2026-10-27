@@ -1,5 +1,11 @@
 import { http } from "@/utils/http";
-import { PATH_FFMPEG_RTSP_PROBE, PATH_STREAM_BATCH_CREATE, PATH_STREAM_LIST } from "@/constants/path";
+import {
+  PATH_FFMPEG_RTSP_PROBE,
+  PATH_STREAM,
+  PATH_STREAM_BATCH_CREATE,
+  PATH_STREAM_LIST,
+  PATH_STREAM_PROBE
+} from "@/constants/path";
 
 export type StreamItem = {
   id: string;
@@ -11,7 +17,7 @@ export type StreamItem = {
   height: number | null;
   fps: number | null;
   status: "online" | "offline";
-  enabled: boolean;
+  mount: boolean;
   record: boolean;
   probed_at: string | null;
 };
@@ -35,6 +41,8 @@ export type StreamDraft = {
   fps?: number | null;
   status?: string | null;
   probed_at?: string | null;
+  mount?: boolean;
+  record?: boolean;
 };
 
 export type RtspProbeResult = {
@@ -55,9 +63,32 @@ export const getStreams = (params?: object) => {
 };
 
 export const createStreams = (items: StreamDraft[]) => {
-  return http.request<StreamListResult>("post", PATH_STREAM_BATCH_CREATE, {
+  return http.request<{ success: boolean; message: string }>("post", PATH_STREAM_BATCH_CREATE, {
     data: { items }
   });
+};
+
+export const batchStreams = (path: string, ids: string[]) => {
+  return http.request<{ success: boolean; message: string }>("post", path, {
+    data: { ids }
+  });
+};
+
+const streamPath = (id: string) => PATH_STREAM.replace("{stream_id}", id);
+
+export const patchStream = (id: string, data: Partial<StreamDraft>) => {
+  return http.request<{ success: boolean; message: string }>("patch", streamPath(id), { data });
+};
+
+export const probeStream = (id: string) => {
+  return http.request<{ success: boolean; message: string }>(
+    "post",
+    PATH_STREAM_PROBE.replace("{stream_id}", id)
+  );
+};
+
+export const removeStream = (id: string) => {
+  return http.request<{ success: boolean; message: string }>("delete", streamPath(id));
 };
 
 export const probeRtsp = (url: string) => {

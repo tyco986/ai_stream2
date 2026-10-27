@@ -13,5 +13,7 @@ export const LOG_PAGES = [
   { page: "user", label: "User" },
   { page: "event", label: "Event" },
   { page: "notice", label: "Notice" },
+  { page: "media", label: "Media" },
+  { page: "proxy", label: "Proxy" },
   { page: "log", label: "Log" }
 ];

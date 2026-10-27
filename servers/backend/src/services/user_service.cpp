@@ -2,6 +2,7 @@
 
 #include "error_tracer/sql.hpp"
 
+#include "constants/preview_const.hpp"
 #include "constants/user_const.hpp"
 #include "searcher/searcher.hpp"
 
@@ -24,6 +25,18 @@ Json::Value UserService::row2json(const drogon::orm::Row& row) {
   data[user::KEY_LAST_LOGIN] =
       row["last_login"].isNull() ? Json::Value() : Json::Value(row["last_login"].as<std::string>());
   return data;
+}
+
+void UserService::initPreset(const std::string& userId) {
+  Sql::sync({}, dbClient,
+      "INSERT INTO preview_preset (id, user_id, name, layout, mode, slots, active) "
+      "SELECT gen_random_uuid(), $1::uuid, $2, $3, $4, $5::jsonb, TRUE "
+      "WHERE NOT EXISTS (SELECT 1 FROM preview_preset WHERE user_id = $1::uuid)",
+      userId,
+      std::string(preview::NAME_DEFAULT),
+      std::string(preview::LAYOUT_DEFAULT),
+      std::string(preview::MODE_DEFAULT),
+      std::string(preview::SLOTS_DEFAULT));
 }
 
 Json::Value UserService::login(const Json::Value& username, const Json::Value& passwd) {
@@ -105,24 +118,15 @@ Json::Value UserService::create(const Json::Value& username,
                                 const Json::Value& active,
                                 const Json::Value& groupId) {
   const std::string group = groupId.isString() ? groupId.asString() : "";
-  std::string id;
-  {
-    auto transaction = dbClient->newTransaction();
-    const auto rows = Sql::sync({}, transaction, 
-        "INSERT INTO \"user\" (id, username, passwd, active, group_id) "
-        "VALUES (gen_random_uuid(), $1, $2, $3, NULLIF($4, '')::uuid) RETURNING id::text AS id",
-        username.asString(),
-        passwd.asString(),
-        active.asBool(),
-        group);
-    id = rows[0]["id"].as<std::string>();
-    Sql::sync({}, transaction, 
-        "INSERT INTO preview_preset (id, user_id, name, layout, mode, slots, active) "
-        "VALUES (gen_random_uuid(), $1::uuid, $2, '2x2', 'grid', "
-        "'{\"1\":null,\"2\":null,\"3\":null,\"4\":null}'::jsonb, TRUE)",
-        id,
-        std::string(user::PRESET_NAME_DEFAULT));
-  }
+  const auto rows = Sql::sync({}, dbClient,
+      "INSERT INTO \"user\" (id, username, passwd, active, group_id) "
+      "VALUES (gen_random_uuid(), $1, $2, $3, NULLIF($4, '')::uuid) RETURNING id::text AS id",
+      username.asString(),
+      passwd.asString(),
+      active.asBool(),
+      group);
+  const std::string id = rows[0]["id"].as<std::string>();
+  initPreset(id);
   Json::Value data = get(id);
   return data;
 }

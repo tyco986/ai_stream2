@@ -1,7 +1,6 @@
-from pathlib import Path
-
-import hashlib
 import json
+from pathlib import Path
+from typing import Literal
 
 import onnx
 
@@ -11,7 +10,7 @@ def write_labels(names, labels_path: Path) -> None:
     labels_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def validate_export_args(weights: Path, dynamic: bool, batch: int) -> None:
+def validate_export_args(weights: Path, batch_mode: Literal["dynamic", "static"], batch_size: int) -> None:
     if not weights.is_file():
         raise ValueError(f"invalid weights file: {weights}")
 
@@ -31,58 +30,40 @@ def onnx_shape(value_info) -> list:
     return dims
 
 
-def file_sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def write_bundle_meta(
     output_dir: Path,
     onnx_path: Path,
     labels_path: Path,
     version: str,
-    task: str,
-    yolo_export: str,
     max_det: int,
     conf: float,
-    dynamic: bool,
-    batch: int,
+    iou: float,
+    batch_mode: Literal["dynamic", "static"],
+    batch_size: int,
 ) -> None:
     model = onnx.load(str(onnx_path))
-    inp = model.graph.input[0]
-    out0 = model.graph.output[0]
     classes = [
         line.strip()
         for line in labels_path.read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
-    bundle_files = {
-        path.name: file_sha256(path)
-        for path in sorted(output_dir.iterdir())
-        if path.is_file() and path.name != "meta.json"
-    }
-    hasher = hashlib.sha256()
-    for name in sorted(bundle_files):
-        hasher.update(f"{name}:{bundle_files[name]}\n".encode("utf-8"))
     meta = {
-        "batch_mode": "dynamic" if dynamic else "static",
-        "input_tensor_name": inp.name,
-        "output_tensor_name": out0.name,
+        "batch_mode": batch_mode,
+        "input_tensors": {
+            value.name: onnx_shape(value) for value in model.graph.input
+        },
+        "output_tensors": {
+            value.name: onnx_shape(value) for value in model.graph.output
+        },
         "classes": classes,
-        "input_tensor_shape": onnx_shape(inp),
-        "output_tensor_shape": onnx_shape(out0),
-        "batch_size": None if dynamic else batch,
+        "num_class": len(classes),
+        "source_path": str(onnx_path),
+        "batch_size": None if batch_mode == "dynamic" else batch_size,
         "precision": "fp32",
         "version": version,
-        "task": task,
-        "yolo_export": yolo_export,
         "max_det": max_det,
         "conf": conf,
-        "bundle_sha256": hasher.hexdigest(),
-        "bundle_files": bundle_files,
+        "iou": iou,
     }
     (output_dir / "meta.json").write_text(
         json.dumps(meta, ensure_ascii=False, indent=2) + "\n",
@@ -159,7 +140,7 @@ def write_labels(names, labels_path: Path) -> None:
     labels_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def validate_export_args(weights: Path, dynamic: bool, batch: int) -> None:
+def validate_export_args(weights: Path, batch_mode: Literal["dynamic", "static"], batch_size: int) -> None:
     if not weights.is_file():
         raise ValueError(f"invalid weights file: {weights}")
 

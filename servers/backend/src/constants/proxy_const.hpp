@@ -17,7 +17,7 @@ inline const char* BASE_URL = "http://puskas_generator:8091";
 namespace ffmpeg {
 
 inline const char* PREFIX = "/puskas/ffmpeg";
-inline const char* BASE_URL = "http://puskas_ffmpeg:8080";
+inline const char* BASE_URL = "http://ai_stream2_ffmpeg:8080";
 
 }
 
@@ -37,9 +37,15 @@ inline const double REQUEST_TIMEOUT_SECONDS = 180;
 
 }
 
+namespace proxy {
+
+inline const char* MSG_UPSTREAM_UNREACHABLE = "upstream unreachable";
+
+}
+
 namespace mediamtx {
 
 inline const char* PREFIX = "/puskas/mediamtx";
-inline const char* BASE_URL = "http://puskas_mediamtx:9997";
+inline const char* BASE_URL = "http://ai_stream2_mediamtx:9997";
 
 }

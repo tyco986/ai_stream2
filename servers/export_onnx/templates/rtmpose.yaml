@@ -1,0 +1,5 @@
+# bash servers/export_onnx/scripts/3_export.sh --input models/onnx/rtmpose.onnx --config servers/export_onnx/templates/rtmpose.yaml --label servers/export_onnx/labels/rtmpose.txt
+type: RTMPOSE
+batch_size: null
+batch_mode: dynamic
+simplify: false

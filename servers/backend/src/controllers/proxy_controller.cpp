@@ -6,13 +6,13 @@
 #include <string>
 
 void registerUpstream(const std::string& prefix, const std::string& baseUrl) {
-  drogon::app().registerHandler(
+  drogon::app().registerHandlerViaRegex(
       prefix + "/.*",
       [baseUrl](const drogon::HttpRequestPtr& request,
                 std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
         Proxy::forward(baseUrl, request, std::move(callback));
       },
-      {drogon::Get, drogon::Post},
+      {drogon::Get, drogon::Post, drogon::Patch, drogon::Delete},
       {"AuthFilter"});
 }
 

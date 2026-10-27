@@ -24,35 +24,26 @@ void MediaBatchController::batchCreate(const drogon::HttpRequestPtr& request,
   if (hasItems) {
     items = (*body)[media::KEY_ITEMS];
   }
-  drogon::HttpResponsePtr response;
-  std::string errorText;
-  try {
-    Json::Value created(Json::arrayValue);
-    for (const auto& item : items) {
-      created.append(service.create(item.get(media::KEY_TYPE, Json::Value()),
-                                     item.get(media::KEY_NAME, Json::Value()),
-                                     item.get(media::KEY_WIDTH, Json::Value()),
-                                     item.get(media::KEY_HEIGHT, Json::Value()),
-                                     item.get(media::KEY_DURATION, Json::Value()),
-                                     item.get(media::KEY_FPS, Json::Value()),
-                                     item.get(media::KEY_CODEC, Json::Value()),
-                                     item.get(media::KEY_SIZE, Json::Value()),
-                                     item.get(media::KEY_MD5, Json::Value()),
-                                     item.get(media::KEY_FOLDER, Json::Value()),
-                                     item.get(media::KEY_CREATED_AT, Json::Value()),
-                                     item.get(media::KEY_UPDATED_AT, Json::Value()),
-                                     item.get(media::KEY_USER_ID, Json::Value()),
-                                     item.get(media::KEY_STREAM_ID, Json::Value()),
-                                     item.get(media::KEY_PIPELINE_ID, Json::Value())));
+  Json::Value data = media::BATCH_DATA();
+  for (const auto& item : items) {
+    try {
+      data[media::KEY_UPDATED_ROWS].append(service.create(
+          item.get(media::KEY_TYPE, Json::Value()), item.get(media::KEY_NAME, Json::Value()),
+          item.get(media::KEY_WIDTH, Json::Value()), item.get(media::KEY_HEIGHT, Json::Value()),
+          item.get(media::KEY_DURATION, Json::Value()), item.get(media::KEY_FPS, Json::Value()),
+          item.get(media::KEY_CODEC, Json::Value()), item.get(media::KEY_SIZE, Json::Value()),
+          item.get(media::KEY_MD5, Json::Value()), item.get(media::KEY_FOLDER, Json::Value()),
+          item.get(media::KEY_CREATED_AT, Json::Value()), item.get(media::KEY_UPDATED_AT, Json::Value()),
+          item.get(media::KEY_USER_ID, Json::Value()), item.get(media::KEY_STREAM_ID, Json::Value()),
+          item.get(media::KEY_PIPELINE_ID, Json::Value())));
+    } catch (const std::exception&) {
+      data[media::KEY_FAILED_ROWS].append(item);
     }
-    Json::Value data;
-    data[media::KEY_ITEMS] = created;
-    response = http::Response::ok(data, media::MSG_BATCH_CREATE_OK);
-  } catch (const std::exception& error) {
-    response = http::Response::error(drogon::k500InternalServerError, media::MSG_BATCH_CREATE_ERROR);
-    errorText = error.what();
   }
-  logger.respond(request, response, started, callback, errorText);
+  data[media::KEY_UPDATED_COUNT] = static_cast<Json::UInt64>(data[media::KEY_UPDATED_ROWS].size());
+  data[media::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[media::KEY_FAILED_ROWS].size());
+  data[media::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[media::KEY_SKIPPED_ROWS].size());
+  logger.respond(request, http::Response::ok(data, media::MSG_BATCH_CREATE_OK), started, callback);
 }
 
 void MediaBatchController::batchUpload(const drogon::HttpRequestPtr& request,
@@ -68,13 +59,20 @@ void MediaBatchController::batchUpload(const drogon::HttpRequestPtr& request,
     }
     const auto& fields = parser.getParameters();
     const std::string userId = fields.count(media::KEY_USER_ID) ? fields.at(media::KEY_USER_ID) : "";
-    Json::Value created(Json::arrayValue);
+    Json::Value data = media::BATCH_DATA();
     for (const auto& file : parser.getFiles()) {
-      const std::string content(file.fileData(), file.fileLength());
-      created.append(service.upload(userId, file.getFileName(), content));
+      try {
+        const std::string content(file.fileData(), file.fileLength());
+        data[media::KEY_UPDATED_ROWS].append(service.upload(userId, file.getFileName(), content));
+      } catch (const std::exception&) {
+        Json::Value failed;
+        failed[media::KEY_NAME] = file.getFileName();
+        data[media::KEY_FAILED_ROWS].append(failed);
+      }
     }
-    Json::Value data;
-    data[media::KEY_ITEMS] = created;
+    data[media::KEY_UPDATED_COUNT] = static_cast<Json::UInt64>(data[media::KEY_UPDATED_ROWS].size());
+    data[media::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[media::KEY_FAILED_ROWS].size());
+    data[media::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[media::KEY_SKIPPED_ROWS].size());
     response = http::Response::ok(data, media::MSG_BATCH_UPLOAD_OK);
   } catch (const std::exception& error) {
     response = http::Response::error(drogon::k500InternalServerError, media::MSG_BATCH_UPLOAD_ERROR);
@@ -92,22 +90,21 @@ void MediaBatchController::batchRemove(const drogon::HttpRequestPtr& request,
   if (hasIds) {
     ids = (*body)[media::KEY_IDS];
   }
-  drogon::HttpResponsePtr response;
-  std::string errorText;
-  try {
-    Json::Value removed(Json::arrayValue);
-    for (const auto& id : ids) {
+  Json::Value data = media::BATCH_DATA();
+  for (const auto& id : ids) {
+    try {
       service.removeFile(id.asString());
-      removed.append(service.remove(id.asString()));
+      data[media::KEY_UPDATED_ROWS].append(service.remove(id.asString()));
+    } catch (const std::exception&) {
+      Json::Value failed;
+      failed[media::KEY_ID] = id.asString();
+      data[media::KEY_FAILED_ROWS].append(failed);
     }
-    Json::Value data;
-    data[media::KEY_ITEMS] = removed;
-    response = http::Response::ok(data, media::MSG_BATCH_REMOVE_OK);
-  } catch (const std::exception& error) {
-    response = http::Response::error(drogon::k500InternalServerError, media::MSG_BATCH_REMOVE_ERROR);
-    errorText = error.what();
   }
-  logger.respond(request, response, started, callback, errorText);
+  data[media::KEY_UPDATED_COUNT] = static_cast<Json::UInt64>(data[media::KEY_UPDATED_ROWS].size());
+  data[media::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[media::KEY_FAILED_ROWS].size());
+  data[media::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[media::KEY_SKIPPED_ROWS].size());
+  logger.respond(request, http::Response::ok(data, media::MSG_BATCH_REMOVE_OK), started, callback);
 }
 
 std::filesystem::path MediaBatchController::zipPaths(

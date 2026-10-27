@@ -93,7 +93,13 @@ onMounted(() => {
     >
       <IconifyIconOffline :icon="FileList" />
     </div>
-    <el-dialog v-model="visible" :title="transformI18n($t('logger.pureTitle'))" width="880px">
+    <el-dialog
+      v-model="visible"
+      :title="transformI18n($t('logger.pureTitle'))"
+      width="880px"
+      align-center
+      append-to-body
+    >
       <div class="log-body">
         <ul class="log-pages">
           <li

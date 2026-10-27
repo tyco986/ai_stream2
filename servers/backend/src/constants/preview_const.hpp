@@ -53,6 +53,9 @@ inline const char* TYPE_GROUP = "group";
 inline const char* TYPE_STREAM = "stream";
 
 inline const char* NAME_DEFAULT = "Default";
+inline const char* LAYOUT_DEFAULT = "2x2";
+inline const char* MODE_DEFAULT = "grid";
+inline const char* SLOTS_DEFAULT = "{\"1\":null,\"2\":null,\"3\":null,\"4\":null}";
 inline const char* ERR_NOT_FOUND = "preview_err_not_found";
 inline const char* ERR_DEFAULT = "preview_err_default";
 inline const char* ERR_LAYOUT = "preview_err_layout";

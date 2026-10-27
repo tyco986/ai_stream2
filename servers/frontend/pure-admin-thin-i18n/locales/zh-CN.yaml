@@ -84,9 +84,34 @@ status:
   pureNoMessage: 暂无消息
   pureNoNotify: 暂无通知
   pureNoTodo: 暂无待办
+media:
+  pureRecording: 录制
+  purePipeline: 管道
+  pureUpload: 上传
+  pureSearch: 搜索
+  purePublish: 发布
+  pureUnpublish: 取消发布
+  pureDownload: 下载
+  pureRemove: 移除
+  pureOps: 操作
+  purePreview: 预览
+  pureName: 名称
+  pureWidth: 宽度
+  pureHeight: 高度
+  pureDuration: 时长
+  pureFps: 帧率
+  pureSize: 大小 (MB)
+  pureUpdatedAt: 更新时间
 stream:
   pureCreate: 新建
+  pureSearch: 搜索
   pureProbe: 探测
+  pureRemove: 移除
+  pureMount: 挂载
+  pureUnmount: 卸载
+  pureRecord: 录制
+  pureUnrecord: 停止录制
+  pureEdit: 编辑
   pureCancel: 取消
   pureConfirm: 确定
   pureName: 名称
@@ -96,13 +121,24 @@ stream:
   pureHeight: 高度
   pureFps: 帧率
   pureStatus: 状态
+  pureProbedAt: 探测时间
   pureInfo: 信息
   pureOps: 操作
   pureAll: 全部
   pureNewGroup: 新建分组
   pureEditGroup: 编辑分组
   pureParent: 父组
-  pureRemove: 删除
+  pureRemoveGroup: 移除
+preview:
+  purePreset: Preset
+  pureSave: 保存
+  pureSaveAs: 另存为
+  pureClear: 清除
+  purePlay: 播放
+  purePause: 暂停
+  pureShot: 截图
+  pureFullscreen: 全屏
+  pureUnbind: 取消绑定
 logger:
   pureTitle: 日志
 login:

@@ -111,13 +111,14 @@ CREATE TABLE stream (
 CREATE INDEX stream_group_id_idx ON stream (group_id);
 
 INSERT INTO stream_group (id, name, parent_id)
-VALUES ('00000000-0000-4000-8000-000000000001', 'All', NULL);
+VALUES
+  ('00000000-0000-4000-8000-000000000001', 'All', NULL);
 
 CREATE FUNCTION stream_group_reject_delete() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
   IF OLD.id = '00000000-0000-4000-8000-000000000001' THEN
-    RAISE EXCEPTION 'All group cannot be deleted';
+    RAISE EXCEPTION 'system group cannot be deleted';
   END IF;
   RETURN OLD;
 END;
@@ -173,6 +174,32 @@ CREATE TABLE preview_preset (
 CREATE UNIQUE INDEX preview_preset_one_active_idx
 ON preview_preset (user_id)
 WHERE active;
+
+INSERT INTO preview_preset (id, user_id, name, layout, mode, slots, active)
+VALUES (
+  '00000000-0000-4000-8000-000000000006',
+  '00000000-0000-4000-8000-000000000004',
+  'Default',
+  '2x2',
+  'grid',
+  '{"1":null,"2":null,"3":null,"4":null}'::jsonb,
+  TRUE
+);
+
+CREATE FUNCTION preview_preset_reject_delete() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  IF OLD.id = '00000000-0000-4000-8000-000000000006' THEN
+    RAISE EXCEPTION 'admin preset cannot be deleted';
+  END IF;
+  RETURN OLD;
+END;
+$$;
+
+CREATE TRIGGER preview_preset_reject_delete
+BEFORE DELETE ON preview_preset
+FOR EACH ROW
+EXECUTE FUNCTION preview_preset_reject_delete();
 
 -- pipeline page
 

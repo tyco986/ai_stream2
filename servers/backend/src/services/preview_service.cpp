@@ -117,7 +117,8 @@ Json::Value PreviewService::update(const std::string& presetId,
         "UPDATE preview_preset SET active = false WHERE user_id = $1::uuid AND active", userId);
   }
   const auto rows = Sql::sync({}, transaction, 
-      std::string("UPDATE preview_preset SET name = $3, layout = $4, mode = $5, slots = $6::jsonb, active = $7 "
+      std::string("UPDATE preview_preset SET name = CASE WHEN name = $8 THEN name ELSE $3 END, "
+                  "layout = $4, mode = $5, slots = $6::jsonb, active = $7 "
                   "WHERE id = $1::uuid AND user_id = $2::uuid RETURNING ") +
           preview::SQL_COLUMNS,
       presetId,
@@ -126,7 +127,8 @@ Json::Value PreviewService::update(const std::string& presetId,
       layout.asString(),
       mode.asString(),
       text,
-      active.asBool());
+      active.asBool(),
+      std::string(preview::NAME_DEFAULT));
   if (rows.empty()) {
     throw std::runtime_error(preview::ERR_NOT_FOUND);
   }

@@ -11,5 +11,6 @@ inline constexpr const char* KEY_FPS = "fps";
 inline constexpr const char* KEY_DURATION = "duration";
 inline constexpr const char* KEY_CODEC = "codec";
 inline constexpr const char* KEY_BITRATE = "bitrate";
+inline constexpr const char* MSG_PROBE_OK = "Probed video";
 
 }

@@ -1,40 +1,36 @@
-import argparse
-import logging
-from logging.handlers import RotatingFileHandler
-from pathlib import Path
+import time
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
+from starlette.responses import Response
 
-from utils.api.constants import (
-    DEFAULT_HOST,
-    DEFAULT_LOG_ROOT,
-    DEFAULT_PORT,
-    LOG_FORMAT,
-    LOGGER_NAME,
-)
+from utils.api.constants import HOST, PORT
+from utils.api.logger import RequestLogger
 from utils.api.routes import router
 from utils.api.schemas import ApiEnvelope, AppError
 
 
-def configure_logging(log_root: Path = DEFAULT_LOG_ROOT) -> None:
-    log_root.mkdir(parents=True, exist_ok=True)
-    logger = logging.getLogger(LOGGER_NAME)
-    logger.setLevel(logging.DEBUG)
-    logger.handlers.clear()
-    logger.propagate = False
-    handler = RotatingFileHandler(
-        log_root / "app.log",
-        maxBytes=1024 * 1024,
-        backupCount=10,
-        encoding="utf-8",
-    )
-    handler.setFormatter(logging.Formatter(LOG_FORMAT))
-    logger.addHandler(handler)
+class RequestLogMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next) -> Response:
+        started = time.perf_counter()
+        response = await call_next(request)
+        chunks = [chunk async for chunk in response.body_iterator]
+        body = b"".join(chunks)
+        latency_ms = (time.perf_counter() - started) * 1000
+        content_length = request.headers.get("content-length")
+        in_bytes = int(content_length) if content_length and content_length.isdigit() else 0
+        RequestLogger().write(request, response.status_code, body, latency_ms, "", in_bytes)
+        return Response(
+            content=body,
+            status_code=response.status_code,
+            headers=dict(response.headers),
+            media_type=response.media_type,
+        )
 
 
 def fail_json(status_code: int, message: str) -> JSONResponse:
@@ -68,13 +64,12 @@ async def handle_pydantic_error(request: Request, exc: ValidationError) -> JSONR
 
 
 async def handle_unhandled(request: Request, exc: Exception) -> JSONResponse:
-    logging.getLogger(LOGGER_NAME).exception("unhandled error path=%s", request.url.path)
     return fail_json(500, "internal error")
 
 
 def create_app() -> FastAPI:
-    configure_logging()
     app = FastAPI(title="Export ONNX API", version="1.0.0")
+    app.add_middleware(RequestLogMiddleware)
     app.add_exception_handler(AppError, handle_app_error)
     app.add_exception_handler(ValueError, handle_value_error)
     app.add_exception_handler(HTTPException, handle_http_exception)
@@ -86,11 +81,7 @@ def create_app() -> FastAPI:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Export ONNX API")
-    parser.add_argument("--host", default=DEFAULT_HOST)
-    parser.add_argument("--port", type=int, default=DEFAULT_PORT)
-    args = parser.parse_args()
-    uvicorn.run(create_app(), host=args.host, port=args.port)
+    uvicorn.run(create_app(), host=HOST, port=PORT)
 
 
 if __name__ == "__main__":

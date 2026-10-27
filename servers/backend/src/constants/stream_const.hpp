@@ -2,6 +2,8 @@
 
 #include <json/json.h>
 
+#include <vector>
+
 namespace stream {
 
 // paths
@@ -87,6 +89,16 @@ inline Json::Value BATCH_DATA() {
 inline const char* QUERY_GROUP_ID = "group_id";
 inline const char* QUERY_STREAM_ID = "stream_id";
 inline const char* QUERY_SEARCH = "search";
+inline const std::vector<const char*> SEARCH_COLUMNS{
+    "stream.name",
+    "stream_group.name",
+    "stream.width",
+    "stream.height",
+    "stream.fps",
+    "stream.status",
+    "stream.probed_at",
+    "stream.mount",
+    "stream.record"};
 inline const char* QUERY_PAGE = "page";
 inline const char* QUERY_PAGE_SIZE = "page_size";
 inline const int DEFAULT_PAGE = 1;
@@ -107,6 +119,8 @@ inline const char* MSG_UPDATE_ERROR = "stream_update_error";
 inline const char* MSG_DELETE_OK = "stream_delete_ok";
 inline const char* MSG_DELETE_ERROR = "stream_delete_error";
 inline const char* MSG_BATCH_CREATE_OK = "stream_batch_create_ok";
+inline const char* MSG_BATCH_CREATE_PARTIAL = "stream_batch_create_partial";
+inline const char* MSG_BATCH_CREATE_REJECTED = "stream_batch_create_rejected";
 inline const char* MSG_BATCH_CREATE_ERROR = "stream_batch_create_error";
 inline const char* MSG_BATCH_DELETE_OK = "stream_batch_delete_ok";
 inline const char* MSG_BATCH_DELETE_ERROR = "stream_batch_delete_error";

@@ -1,5 +1,6 @@
 from copy import deepcopy
 from pathlib import Path
+from typing import Literal
 
 import onnx
 import onnxslim
@@ -119,14 +120,14 @@ class YoloSegE2EExporter:
         weights: Path,
         size: int,
         opset: int,
-        batch: int,
-        dynamic: bool,
+        batch_size: int,
+        batch_mode: Literal["dynamic", "static"],
         simplify: bool,
         max_det: int,
         conf: float,
         output_dir: Path,
     ) -> None:
-        validate_export_args(weights, dynamic, batch)
+        validate_export_args(weights, batch_mode, batch_size)
 
         yolo = YOLO(str(weights))
         write_labels(yolo.names, output_dir / "labels.txt")
@@ -139,10 +140,10 @@ class YoloSegE2EExporter:
             E2eSegMaskDecode(max_det, conf, spatial_scale),
         )
         onnx_path = output_dir / f"{weights.stem}.onnx"
-        onnx_input = torch.zeros(batch, 3, size, size, device=device)
+        onnx_input = torch.zeros(batch_size, 3, size, size, device=device)
         output_names = ["num_dets", "det_boxes", "det_scores", "det_classes", "det_masks"]
         dynamic_axes = None
-        if dynamic:
+        if batch_mode == "dynamic":
             dynamic_axes = {name: {0: "batch"} for name in ["images", *output_names]}
 
         torch.onnx.export(
@@ -159,5 +160,5 @@ class YoloSegE2EExporter:
         )
         if simplify:
             onnx.save(onnxslim.slim(onnx.load(str(onnx_path))), str(onnx_path))
-        if dynamic:
+        if batch_mode == "dynamic":
             self.fix_batch_only_dynamic(onnx_path, size, max_det)

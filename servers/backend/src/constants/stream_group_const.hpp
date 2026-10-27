@@ -20,6 +20,7 @@ inline const char* KEY_CHILDREN = "children";
 inline const char* KEY_MOUNT = "mount";
 inline const char* KEY_STATUS = "status";
 inline const char* KEY_RECORD = "record";
+inline const char* KEY_FPS = "fps";
 inline const char* KEY_PARENT_ID = "parent_id";
 inline const char* KEY_GROUP_ID = "group_id";
 inline const char* KEY_GROUP_NAME = "group_name";

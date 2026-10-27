@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+HOST_PORT="${EXPORT_TRT_HOST_PORT:-8080}"
+ENDPOINT="http://127.0.0.1:${HOST_PORT}/ai_stream2/export_trt/history"
+PATH_ARG=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --filename) PATH_ARG="$2"; shift 2 ;;
+    *) echo "usage: $0 [--filename file.zip]" >&2; exit 1 ;;
+  esac
+done
+
+ARGS=()
+PATH_JSON="null"
+if [[ -n "${PATH_ARG}" ]]; then
+  ARGS+=(--data-urlencode "filename=${PATH_ARG}")
+  PATH_JSON="\"${PATH_ARG}\""
+fi
+
+RESPONSE_BODY="$(mktemp)"
+trap 'rm -f "${RESPONSE_BODY}"' EXIT
+
+HTTP_CODE="$(curl -sS --connect-timeout 2 -o "${RESPONSE_BODY}" -w "%{http_code}" \
+  -G "${ENDPOINT}" \
+  -H "Accept-Language: en" \
+  "${ARGS[@]+"${ARGS[@]}"}")"
+CONTENT="$(cat "${RESPONSE_BODY}")"
+CONTENT="${CONTENT:-null}"
+printf '{"request":{"method":"GET","url":"%s","headers":{"Accept-Language":"en"},"content":{"filename":%s}},"response":{"code":%s,"content":%s}}\n' "${ENDPOINT}" "${PATH_JSON}" "${HTTP_CODE}" "${CONTENT}"
+[[ "${HTTP_CODE}" == "200" ]]

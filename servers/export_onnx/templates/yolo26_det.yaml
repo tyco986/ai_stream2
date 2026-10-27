@@ -2,8 +2,8 @@
 type: YOLO26-DET
 size: 640
 opset: 18
-batch: null
-dynamic: true
+batch_size: null
+batch_mode: dynamic
 simplify: false
 max_det: 30
 conf: 0.25

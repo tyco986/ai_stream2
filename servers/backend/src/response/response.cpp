@@ -17,6 +17,11 @@ drogon::HttpResponsePtr http::Response::ok(const Json::Value& data, const char* 
   return response;
 }
 
+drogon::HttpResponsePtr http::Response::partial(const Json::Value& data, const char* message) {
+  auto response = envelope(true, drogon::k207MultiStatus, message, data);
+  return response;
+}
+
 drogon::HttpResponsePtr http::Response::error(drogon::HttpStatusCode status,
                                               const char* message,
                                               const Json::Value& data) {

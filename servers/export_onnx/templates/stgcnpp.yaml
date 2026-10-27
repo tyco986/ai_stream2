@@ -1,6 +1,6 @@
-# bash servers/export_onnx/scripts/3_export.sh --input models/pt/stgcnpp-ntu60.pth --config servers/export_onnx/templates/stgcnpp.yaml
+# bash servers/export_onnx/scripts/3_export.sh --input models/pt/stgcnpp-ntu60.pth --config servers/export_onnx/templates/stgcnpp.yaml --label servers/export_onnx/labels/stgcnpp.txt
 type: STGCNPP
 opset: 18
-batch: null
-dynamic: true
+batch_size: null
+batch_mode: dynamic
 simplify: false

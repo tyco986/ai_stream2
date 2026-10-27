@@ -93,7 +93,6 @@ inline const char* ERR_GROUP_LOCKED = "user_err_group_locked";
 inline const char* ERR_USER_LOCKED = "user_err_user_locked";
 inline const char* ADMIN_GROUP_ID = "00000000-0000-4000-8000-000000000003";
 inline const char* ADMIN_USER_ID = "00000000-0000-4000-8000-000000000004";
-inline const char* PRESET_NAME_DEFAULT = "Default";
 
 inline const char* SQL_USER =
     "\"user\".id::text AS id, \"user\".username, \"user\".passwd, \"user\".active, "

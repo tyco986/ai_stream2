@@ -5,8 +5,6 @@
 #include <nlohmann/json.hpp>
 #include <string>
 
-namespace http {
-
 class Response {
 public:
     static void ok(httplib::Response& response, const nlohmann::json& data = nlohmann::json::object(), const char* message = "", const std::string& fileName = "", const std::string& fileContent = "");
@@ -15,5 +13,3 @@ public:
 private:
     static void envelope(httplib::Response& response, bool success, int status, const char* message, const nlohmann::json& data);
 };
-
-}

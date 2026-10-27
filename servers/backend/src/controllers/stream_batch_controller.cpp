@@ -22,6 +22,7 @@ drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchCreate(drogon:
     items = (*body)[stream::KEY_ITEMS];
   }
   Json::Value data = stream::BATCH_DATA();
+  int outcome = 0;
   for (const auto& item : items) {
     const Json::Value name = item.get(stream::KEY_NAME, Json::Value());
     const Json::Value groupId = item.get(stream::KEY_GROUP_ID, Json::Value());
@@ -33,22 +34,27 @@ drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchCreate(drogon:
     const Json::Value height = item.get(stream::KEY_HEIGHT, Json::Value());
     const Json::Value fps = item.get(stream::KEY_FPS, Json::Value());
     const Json::Value probedAt = item.get(stream::KEY_PROBED_AT, Json::Value());
-    bool mounted = mount.isNull() || mount.asBool();
-    if (mounted) {
-      mounted = co_await MediaMtx::replacePath(name.isString() ? name.asString() : "",
-                                                url.isString() ? url.asString() : "",
-                                                recording.isBool() && recording.asBool());
+    const bool wantMount = mount.isNull() || mount.asBool();
+    const std::string pathName = name.isString() ? name.asString() : std::string();
+    const std::string pathSource = url.isString() ? url.asString() : std::string();
+    const bool recordFlag = recording.isBool() && recording.asBool();
+    PathReplace pathResult = PathReplace::mounted;
+    if (wantMount) {
+      pathResult = co_await MediaMtx::replacePath(pathName, pathSource, recordFlag);
     }
+    const int rankByResult[] = {0, 2, 1};
+    const bool mounted = pathResult == PathReplace::mounted;
+    const Json::Value storedMount = mounted ? mount : Json::Value(false);
     Json::Value createdRow;
     bool created = false;
-    if (mounted) {
-      try {
-        createdRow = service.create(name, groupId, url, mount, recording, status, width, height, fps, probedAt);
-        created = true;
-      } catch (const std::exception&) {
-        created = false;
-      }
+    try {
+      createdRow = service.create(name, groupId, url, storedMount, recording, status, width, height, fps, probedAt);
+      created = true;
+    } catch (const std::exception&) {
+      created = false;
     }
+    const int rowOutcome = created ? rankByResult[static_cast<int>(pathResult)] : 0;
+    outcome = rowOutcome > outcome ? rowOutcome : outcome;
     const Json::Value row = created ? createdRow : item;
     const char* key = created ? stream::KEY_UPDATED_ROWS : stream::KEY_FAILED_ROWS;
     data[key].append(row);
@@ -56,7 +62,12 @@ drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchCreate(drogon:
   data[stream::KEY_UPDATED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_UPDATED_ROWS].size());
   data[stream::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_FAILED_ROWS].size());
   data[stream::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_SKIPPED_ROWS].size());
-  const drogon::HttpResponsePtr response = http::Response::ok(data, stream::MSG_BATCH_CREATE_OK);
+  const char* messages[] = {
+      stream::MSG_BATCH_CREATE_OK,
+      stream::MSG_BATCH_CREATE_REJECTED,
+      stream::MSG_BATCH_CREATE_PARTIAL};
+  const char* message = messages[outcome];
+  const drogon::HttpResponsePtr response = outcome == 0 ? http::Response::ok(data, message) : http::Response::partial(data, message);
   logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, "");
   co_return response;
 }
@@ -136,7 +147,7 @@ drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchMount(drogon::
     if (found) {
       const bool pathMounted = co_await MediaMtx::replacePath(current[stream::KEY_NAME].asString(),
                                                                current[stream::KEY_URL].asString(),
-                                                               current[stream::KEY_RECORD].asBool());
+                                                               current[stream::KEY_RECORD].asBool()) == PathReplace::mounted;
       if (pathMounted) {
         try {
           service.setMount(id, true);
@@ -193,6 +204,7 @@ drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchUnmount(drogon
       if (removed) {
         try {
           service.setMount(id, false);
+          service.setRecord(id, false);
           unmounted = true;
         } catch (const std::exception&) {
           unmounted = false;
@@ -204,6 +216,7 @@ drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchUnmount(drogon
     const Json::Value failedRow = found ? current : failed;
     Json::Value updated = current;
     updated[stream::KEY_MOUNT] = false;
+    updated[stream::KEY_RECORD] = false;
     const Json::Value row = unmounted ? updated : failedRow;
     const char* key = unmounted ? stream::KEY_UPDATED_ROWS : stream::KEY_FAILED_ROWS;
     data[key].append(row);
@@ -243,11 +256,12 @@ drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchRecord(drogon:
       if (mounted) {
         replaced = co_await MediaMtx::replacePath(current[stream::KEY_NAME].asString(),
                                                    current[stream::KEY_URL].asString(),
-                                                   true);
+                                                   true) == PathReplace::mounted;
       }
       if (replaced) {
         try {
           service.setRecord(id, true);
+          service.setMount(id, true);
           recorded = true;
         } catch (const std::exception&) {
           recorded = false;
@@ -258,6 +272,7 @@ drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchRecord(drogon:
     failed[stream::KEY_ID] = id;
     Json::Value updated = current;
     updated[stream::KEY_RECORD] = true;
+    updated[stream::KEY_MOUNT] = true;
     const bool skipped = found && !mounted;
     const char* key = recorded ? stream::KEY_UPDATED_ROWS
                                : skipped ? stream::KEY_SKIPPED_ROWS : stream::KEY_FAILED_ROWS;
@@ -291,17 +306,19 @@ drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchUnrecord(drogo
     } catch (const std::exception&) {
       found = false;
     }
+    bool mounted = false;
     bool unrecorded = false;
     if (found) {
       const std::string name = current[stream::KEY_NAME].asString();
-      const bool mounted = co_await MediaMtx::getPath(name);
+      mounted = co_await MediaMtx::getPath(name);
       bool replaced = true;
       if (mounted) {
-        replaced = co_await MediaMtx::replacePath(name, current[stream::KEY_URL].asString(), false);
+        replaced = co_await MediaMtx::replacePath(name, current[stream::KEY_URL].asString(), false) == PathReplace::mounted;
       }
       if (replaced) {
         try {
           service.setRecord(id, false);
+          service.setMount(id, mounted);
           unrecorded = true;
         } catch (const std::exception&) {
           unrecorded = false;
@@ -313,6 +330,7 @@ drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchUnrecord(drogo
     const Json::Value failedRow = found ? current : failed;
     Json::Value updated = current;
     updated[stream::KEY_RECORD] = false;
+    updated[stream::KEY_MOUNT] = mounted;
     const Json::Value row = unrecorded ? updated : failedRow;
     const char* key = unrecorded ? stream::KEY_UPDATED_ROWS : stream::KEY_FAILED_ROWS;
     data[key].append(row);

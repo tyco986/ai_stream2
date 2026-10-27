@@ -23,7 +23,7 @@ JSON 成功外壳：`{success, message, data}`。`export` 例外，直接返回 
 | `POST` | `/ai_stream2/backend/streams/batch/create` | `items` | 批量结果 | 批量新建；每条 `mount` 为真时先挂 MediaMTX |
 | `POST` | `/ai_stream2/backend/streams/batch/remove` | `ids` | 批量结果 | 批量删除并卸 path |
 | `POST` | `/ai_stream2/backend/streams/batch/mount` | `ids` | 批量结果 | 批量启用并挂 path |
-| `POST` | `/ai_stream2/backend/streams/batch/unmount` | `ids` | 批量结果 | 批量停用并卸 path |
+| `POST` | `/ai_stream2/backend/streams/batch/unmount` | `ids` | 批量结果 | 批量停用、卸 path 并停录 |
 | `POST` | `/ai_stream2/backend/streams/batch/record` | `ids` | 批量结果 | 仅已挂载流开录 |
 | `POST` | `/ai_stream2/backend/streams/batch/unrecord` | `ids` | 批量结果 | 批量停录 |
 | `POST` | `/ai_stream2/backend/streams/batch/probe` | `ids` | 批量结果 | 批量探测 |
@@ -32,7 +32,7 @@ JSON 成功外壳：`{success, message, data}`。`export` 例外，直接返回 
 
 ### GET `/ai_stream2/backend/streams`
 
-按组子树分页。`group_id` 空则用 All（`00000000-0000-4000-8000-000000000001`）。`stream_id` 非空时只查该流，不再按组。`page` 默认 `1`，`page_size` 默认 `20`。`search` 匹配 id、name、组、url、宽高、fps、status、mount、record、probed_at。
+按组子树分页。`group_id` 空则用 All（`00000000-0000-4000-8000-000000000001`）。`stream_id` 非空时只查该流，不再按组。`page` 默认 `1`，`page_size` 默认 `20`。`search` 匹配 name、组、width、height、fps、status、probed_at、mount、record。
 
 入参（query）：`group_id`、`stream_id`、`search`、`page`、`page_size`。
 
@@ -54,7 +54,7 @@ JSON 成功外壳：`{success, message, data}`。`export` 例外，直接返回 
 
 ### PATCH `/ai_stream2/backend/streams/{stream_id}`
 
-未传字段保持原值。已挂载且将停用或改名时先卸旧 path；目标为启用且未挂载或 name / url / record 变化时再挂新 path。
+未传字段保持原值。已挂载且将停用或改名时先卸旧 path；目标停用时 `record` 写 `false`。目标为启用且未挂载或 name / url / record 变化时再挂新 path。
 
 入参：与新建相同，字段均可省略。
 
@@ -92,7 +92,7 @@ multipart，字段名 `file`。首行必须是 `name,url,group`。组名须已�
 
 入参：`items`（流对象数组）。每条字段与单条新建相同，均可省略。
 
-逐条：`mount` 为空或为真时先 `MediaMTX replacePath`（source 规则同单条新建），成功后再 `service.create`。入库成功进 `updated_rows`（流对象）；挂载失败或入库失败进 `failed_rows`（原请求行）。`message`：`Created streams`。
+逐条：`mount` 为空或为真时先 `MediaMTX replacePath`。挂载成功后按原 `mount` 入库。MediaMTX 不可达或返回拒绝时仍入库，`mount` 写 `false`，该行进 `updated_rows`。入库失败进 `failed_rows`（原请求行）。全部挂载成功时 `200`，`message` 为 `stream_batch_create_ok`。有降级写入时 `207`，`success` 仍为真：存在不可达时 `message` 为 `stream_batch_create_partial`；只有拒绝时为 `stream_batch_create_rejected`。
 
 ### POST `/ai_stream2/backend/streams/batch/remove`
 
@@ -110,19 +110,19 @@ multipart，字段名 `file`。首行必须是 `name,url,group`。组名须已�
 
 入参：`ids`。
 
-卸 path 并 `mount=false` 成功进 `updated_rows`；否则 `failed_rows`。`message`：`Unmounted streams`。
+卸 path 并 `mount=false`、`record=false` 成功进 `updated_rows`；否则 `failed_rows`。`message`：`Unmounted streams`。
 
 ### POST `/ai_stream2/backend/streams/batch/record`
 
 入参：`ids`。
 
-未挂载进 `skipped_rows`（保持原 `record`）。已挂载且改录成功进 `updated_rows`（`record=true`）。找不到或改 path / 写库失败进 `failed_rows`。`message`：`Recording enabled`。
+未挂载进 `skipped_rows`（保持原 `record`）。已挂载且改录成功进 `updated_rows`（`record=true`、`mount=true`）。找不到或改 path / 写库失败进 `failed_rows`。`message`：`Recording enabled`。
 
 ### POST `/ai_stream2/backend/streams/batch/unrecord`
 
 入参：`ids`。
 
-已挂载则 path 的 record 置假，再写 `record=false`。成功 `updated_rows`，否则 `failed_rows`。`message`：`Recording disabled`。
+已挂载则 path 的 record 置假，再写 `record=false`，并按 path 是否存在写 `mount`。成功 `updated_rows`，否则 `failed_rows`。`message`：`Recording disabled`。
 
 ### POST `/ai_stream2/backend/streams/batch/probe`
 

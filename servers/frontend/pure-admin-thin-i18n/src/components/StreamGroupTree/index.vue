@@ -225,7 +225,7 @@ onMounted(load);
                 {{ transformI18n($t("stream.pureEditGroup")) }}
               </el-dropdown-item>
               <el-dropdown-item command="remove" :disabled="node.id === ALL_GROUP_ID">
-                {{ transformI18n($t("stream.pureRemove")) }}
+                {{ transformI18n($t("stream.pureRemoveGroup")) }}
               </el-dropdown-item>
             </el-dropdown-menu>
           </template>

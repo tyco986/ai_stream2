@@ -76,6 +76,7 @@ add_executable(backend
   src/logger/event_logger.cpp
   src/logger/notice_logger.cpp
   src/logger/media_logger.cpp
+  src/logger/proxy_logger.cpp
   src/logger/log_logger.cpp)
 target_include_directories(backend PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${RDKAFKA_INCLUDE_DIRS} ${MEDIAINFO_INCLUDE_DIRS})
 target_link_libraries(backend PRIVATE Drogon::Drogon spdlog::spdlog libzip::zip yaml-cpp OpenSSL::Crypto ${RDKAFKA_LIBRARIES} ${MEDIAINFO_LIBRARIES})

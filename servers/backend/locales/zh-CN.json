@@ -125,6 +125,8 @@
   "server_probe_ok": "已探测服务器",
   "stream_batch_create_error": "创建流失败",
   "stream_batch_create_ok": "已创建流",
+  "stream_batch_create_partial": "MediaMTX 不可达",
+  "stream_batch_create_rejected": "MediaMTX 拒绝挂载",
   "stream_batch_delete_error": "删除流失败",
   "stream_batch_delete_ok": "已删除流",
   "stream_batch_mount_error": "挂载流失败",

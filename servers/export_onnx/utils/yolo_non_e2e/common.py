@@ -2,6 +2,7 @@ import sys
 import warnings
 from copy import deepcopy
 from pathlib import Path
+from typing import Literal
 
 import onnx
 import torch
@@ -39,7 +40,7 @@ def write_labels(names, labels_path: Path) -> None:
     labels_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def validate_export_args(weights: Path, dynamic: bool, batch: int) -> None:
+def validate_export_args(weights: Path, batch_mode: Literal["dynamic", "static"], batch_size: int) -> None:
     if not weights.is_file():
         raise ValueError(f"invalid weights file: {weights}")
 

@@ -30,20 +30,7 @@ Json::Value StreamService::list(const std::string& groupId,
       "stream.id::text AS id, stream.name, stream.group_id::text AS group_id, "
       "stream_group.name AS group_name, stream.url, stream.width, stream.height, stream.fps, "
       "stream.status, stream.mount, stream.record, stream.probed_at ";
-  const std::string match = Searcher::clause(
-      {"stream.id",
-       "stream.name",
-       "stream.group_id",
-       "stream_group.name",
-       "stream.url",
-       "stream.width",
-       "stream.height",
-       "stream.fps",
-       "stream.status",
-       "stream.mount",
-       "stream.record",
-       "stream.probed_at"},
-      2);
+  const std::string match = Searcher::clause(stream::SEARCH_COLUMNS, 2);
   const std::string byStreamFrom =
       "FROM stream INNER JOIN stream_group ON stream_group.id = stream.group_id "
       "WHERE stream.id = $1::uuid AND " +
@@ -250,7 +237,7 @@ Json::Value StreamService::probe(const std::string& streamId,
 }
 
 void StreamService::setMount(const std::string& streamId, bool mount) {
-  const auto rows = Sql::sync({}, dbClient, 
+  const auto rows = Sql::sync({}, dbClient,
       "UPDATE stream SET mount = $1 WHERE id = $2::uuid RETURNING id", mount, streamId);
   if (rows.empty()) {
     throw std::runtime_error("stream mount not set");

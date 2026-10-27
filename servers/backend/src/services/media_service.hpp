@@ -14,7 +14,7 @@ class MediaService {
   explicit MediaService(drogon::orm::DbClientPtr dbClient);
   Json::Value listUploadFile(int page, long pageSize, const std::string& userId, const std::string& type, const std::string& search);
   Json::Value listPipelineFile(int page, long pageSize, const std::string& type, const std::string& search, const std::string& pipelineId);
-  Json::Value listRecordingFile(int page, long pageSize, const std::string& type, const std::string& search, const std::string& streamId);
+  Json::Value listRecordingFile(int page, long pageSize, const std::string& type, const std::string& search, const std::string& streamId, const std::string& date);
   Json::Value listUploadFolder();
   Json::Value listPipelineFolder();
   Json::Value listRecordingFolder();
@@ -70,7 +70,8 @@ class MediaService {
                      const std::string& type,
                      int page,
                      long pageSize,
-                     const std::string& search);
+                     const std::string& search,
+                     const std::string& date);
   std::optional<std::string> uuidOrEmpty(const Json::Value& value);
   std::filesystem::path createUploadFolder(const std::string& userName);
   void probeFile(const std::filesystem::path& path,

@@ -69,7 +69,8 @@ void MediaController::listRecordingFile(const drogon::HttpRequestPtr& request,
                                                         pageSize,
                                                         request->getParameter(media::QUERY_TYPE),
                                                         request->getParameter(media::QUERY_SEARCH),
-                                                        request->getParameter(media::QUERY_STREAM_ID)),
+                                                        request->getParameter(media::QUERY_STREAM_ID),
+                                                        request->getParameter(media::QUERY_DATE)),
                                   media::MSG_LIST_OK);
   } catch (const std::exception& error) {
     response = http::Response::error(drogon::k500InternalServerError, media::MSG_LIST_ERROR);

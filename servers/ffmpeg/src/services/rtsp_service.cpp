@@ -8,7 +8,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <time.h>
-#include <filesystem>
+#include <set>
 #include <string>
 #include <thread>
 #include <vector>
@@ -56,9 +56,8 @@ nlohmann::json FFmpegRTSP::probe(const std::string& url) const {
     return result;
 }
 
-nlohmann::json FFmpegRTSP::publishStart(const std::string& path) {
+nlohmann::json FFmpegRTSP::publishStart(const std::string& name, const std::string& path) {
     const nlohmann::json probed = FFmpegVideo().probe(path);
-    const std::string name = std::filesystem::path(path).filename().string();
     const bool ready = !name.empty() && name != "." && name != ".." && !probed[rtsp::KEY_WIDTH].is_null();
     nlohmann::json data = nlohmann::json::object();
     std::lock_guard<std::mutex> guard(publishersMutex);
@@ -77,6 +76,7 @@ nlohmann::json FFmpegRTSP::publishStart(const std::string& path) {
     if (spawned == 0) {
         const std::time_t now = std::time(nullptr);
         nlohmann::json record = {
+            {rtsp::KEY_PATH, path},
             {rtsp::KEY_URL_DOCKER, std::string(rtsp::URL_DOCKER_PREFIX) + name},
             {rtsp::KEY_URL_HOST, std::string(rtsp::URL_HOST_PREFIX) + name},
             {rtsp::KEY_WIDTH, probed[rtsp::KEY_WIDTH]},
@@ -109,11 +109,13 @@ nlohmann::json FFmpegRTSP::publishEnd(const std::string& name, const std::string
     return data;
 }
 
-nlohmann::json FFmpegRTSP::publishList(const std::string& name) {
+nlohmann::json FFmpegRTSP::publishList(const std::vector<std::string>& names) {
+    const std::set<std::string> selected(names.begin(), names.end());
+    const bool listAll = selected.empty();
     std::lock_guard<std::mutex> guard(publishersMutex);
     nlohmann::json data = nlohmann::json::object();
     for (const auto& [key, record] : publishers) {
-        const bool matched = name.empty() || key == name;
+        const bool matched = listAll || selected.contains(key);
         if (matched) {
             data[key] = formatPublishResult(record);
         }
@@ -121,12 +123,14 @@ nlohmann::json FFmpegRTSP::publishList(const std::string& name) {
     return data;
 }
 
-nlohmann::json FFmpegRTSP::publishRemove(const std::string& name) {
+nlohmann::json FFmpegRTSP::publishRemove(const std::vector<std::string>& names) {
+    const std::set<std::string> selected(names.begin(), names.end());
+    const bool removeAll = selected.empty();
     std::vector<int> pids;
     {
         std::lock_guard<std::mutex> guard(publishersMutex);
         for (auto found = publishers.begin(); found != publishers.end();) {
-            const bool matched = name.empty() || found->first == name;
+            const bool matched = removeAll || selected.contains(found->first);
             if (matched) {
                 pids.push_back(found->second[rtsp::KEY_PID].get<int>());
                 found = publishers.erase(found);
@@ -139,7 +143,7 @@ nlohmann::json FFmpegRTSP::publishRemove(const std::string& name) {
     for (const int pid : pids) {
         stop(pid);
     }
-    const nlohmann::json data = publishList("");
+    const nlohmann::json data = publishList({});
     return data;
 }
 

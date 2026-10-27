@@ -17,7 +17,7 @@ Json::Value StreamGroupService::tree() {
   const auto groupRows = Sql::sync({}, dbClient, 
       "SELECT id::text AS id, name, parent_id::text AS parent_id FROM stream_group ORDER BY name");
   const auto streamRows = Sql::sync({}, dbClient, 
-      "SELECT id::text AS id, name, group_id::text AS group_id, mount, status, record "
+      "SELECT id::text AS id, name, group_id::text AS group_id, mount, status, record, fps "
       "FROM stream ORDER BY name");
 
   Json::Value root;
@@ -44,6 +44,7 @@ Json::Value StreamGroupService::tree() {
     stream[stream_group::KEY_MOUNT] = row["mount"].as<bool>();
     stream[stream_group::KEY_STATUS] = row["status"].as<std::string>();
     stream[stream_group::KEY_RECORD] = row["record"].as<bool>();
+    stream[stream_group::KEY_FPS] = row["fps"].isNull() ? Json::Value() : row["fps"].as<double>();
     streams[row["group_id"].as<std::string>()].push_back(stream);
   }
 

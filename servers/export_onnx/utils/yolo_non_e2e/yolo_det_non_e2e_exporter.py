@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Literal
 
 import onnx
 import onnxslim
@@ -6,6 +7,7 @@ import torch
 import torch.nn as nn
 from ultralytics import YOLO
 
+from utils.yolo_e2e.common import trace_device
 from utils.yolo_non_e2e.common import (
     fix_batch_only_dynamic,
     prepare_yolo_core,
@@ -87,8 +89,8 @@ class YoloDetNonE2EExporter:
         weights: Path,
         size: int,
         opset: int,
-        batch: int,
-        dynamic: bool,
+        batch_size: int,
+        batch_mode: Literal["dynamic", "static"],
         simplify: bool,
         conf: float,
         iou: float,
@@ -96,7 +98,7 @@ class YoloDetNonE2EExporter:
         output_dir: Path,
     ) -> None:
         suppress_export_warnings()
-        validate_export_args(weights, dynamic, batch)
+        validate_export_args(weights, batch_mode, batch_size)
         yolo = YOLO(str(weights))
         write_labels(yolo.names, output_dir / "labels.txt")
 
@@ -107,9 +109,9 @@ class YoloDetNonE2EExporter:
             DetNmsOutput(conf, iou, max_det),
         )
         onnx_path = output_dir / f"{weights.stem}.onnx"
-        onnx_input = torch.zeros(batch, 3, size, size, device=device)
+        onnx_input = torch.zeros(batch_size, 3, size, size, device=device)
         dynamic_axes = None
-        if dynamic:
+        if batch_mode == "dynamic":
             dynamic_axes = {"images": {0: "batch"}, "output0": {0: "batch"}}
 
         torch.onnx.export(
@@ -126,5 +128,5 @@ class YoloDetNonE2EExporter:
         )
         if simplify:
             onnx.save(onnxslim.slim(onnx.load(str(onnx_path))), str(onnx_path))
-        if dynamic:
+        if batch_mode == "dynamic":
             fix_batch_only_dynamic(onnx_path, size, max_det)

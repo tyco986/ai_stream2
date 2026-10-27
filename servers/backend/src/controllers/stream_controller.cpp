@@ -60,10 +60,11 @@ drogon::Task<drogon::HttpResponsePtr> StreamController::create(drogon::HttpReque
       http::Response::error(drogon::k500InternalServerError, stream::MSG_CREATE_ERROR);
   std::string errorText;
   bool mounted = mount.isNull() || mount.asBool();
+  const std::string pathName = name.isString() ? name.asString() : std::string();
+  const std::string pathSource = url.isString() ? url.asString() : std::string();
+  const bool recordFlag = recording.isBool() && recording.asBool();
   if (mounted) {
-    mounted = co_await MediaMtx::replacePath(name.isString() ? name.asString() : "",
-                                              url.isString() ? url.asString() : "",
-                                              recording.isBool() && recording.asBool());
+    mounted = co_await MediaMtx::replacePath(pathName, pathSource, recordFlag) == PathReplace::mounted;
   }
   if (mounted) {
     try {
@@ -87,7 +88,7 @@ drogon::Task<drogon::HttpResponsePtr> StreamController::update(drogon::HttpReque
   const Json::Value groupId = payload.get(stream::KEY_GROUP_ID, Json::Value());
   const Json::Value url = payload.get(stream::KEY_URL, Json::Value());
   const Json::Value mount = payload.get(stream::KEY_MOUNT, Json::Value());
-  const Json::Value recording = payload.get(stream::KEY_RECORD, Json::Value());
+  Json::Value recording = payload.get(stream::KEY_RECORD, Json::Value());
   const Json::Value status = payload.get(stream::KEY_STATUS, Json::Value());
   const Json::Value width = payload.get(stream::KEY_WIDTH, Json::Value());
   const Json::Value height = payload.get(stream::KEY_HEIGHT, Json::Value());
@@ -111,6 +112,10 @@ drogon::Task<drogon::HttpResponsePtr> StreamController::update(drogon::HttpReque
     urlText = url.isNull() ? current[stream::KEY_URL].asString() : url.asString();
     mounted = mount.isNull() ? current[stream::KEY_MOUNT].asBool() : mount.asBool();
     recordingFlag = recording.isNull() ? current[stream::KEY_RECORD].asBool() : recording.asBool();
+    if (!mounted) {
+      recordingFlag = false;
+      recording = false;
+    }
     rename = nameText != oldName;
     pathChanged = rename || urlText != current[stream::KEY_URL].asString() ||
         recordingFlag != current[stream::KEY_RECORD].asBool();
@@ -126,7 +131,7 @@ drogon::Task<drogon::HttpResponsePtr> StreamController::update(drogon::HttpReque
     removed = co_await MediaMtx::deletePath(oldName);
   }
   if (removed && mountNow) {
-    removed = co_await MediaMtx::replacePath(nameText, urlText, recordingFlag);
+    removed = co_await MediaMtx::replacePath(nameText, urlText, recordingFlag) == PathReplace::mounted;
   }
   if (removed) {
     try {

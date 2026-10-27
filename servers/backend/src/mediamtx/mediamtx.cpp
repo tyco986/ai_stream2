@@ -39,7 +39,7 @@ std::string MediaMtx::selfPublishSource(const std::string& name, const std::stri
   return resolved;
 }
 
-drogon::Task<bool> MediaMtx::replacePath(const std::string& name, const std::string& source, bool record) {
+drogon::Task<PathReplace> MediaMtx::replacePath(const std::string& name, const std::string& source, bool record) {
   Json::Value body;
   body[mediamtx_backend::KEY_SOURCE] = selfPublishSource(name, source);
   body[mediamtx_backend::KEY_RECORD] = record;
@@ -47,14 +47,15 @@ drogon::Task<bool> MediaMtx::replacePath(const std::string& name, const std::str
   request->setMethod(drogon::Post);
   request->setPath(std::string(mediamtx_backend::REPLACE_PATH) + name);
   auto client = drogon::HttpClient::newHttpClient(mediamtx::BASE_URL);
-  bool mounted = false;
+  PathReplace result = PathReplace::unreachable;
   try {
     const auto response = co_await client->sendRequestCoro(request, mediamtx_backend::REQUEST_TIMEOUT_SECONDS);
-    mounted = response->statusCode() >= drogon::k200OK && response->statusCode() < drogon::k300MultipleChoices;
+    const bool accepted = response->statusCode() >= drogon::k200OK && response->statusCode() < drogon::k300MultipleChoices;
+    result = accepted ? PathReplace::mounted : PathReplace::rejected;
   } catch (const std::exception&) {
-    mounted = false;
+    result = PathReplace::unreachable;
   }
-  co_return mounted;
+  co_return result;
 }
 
 drogon::Task<bool> MediaMtx::getPath(const std::string& name) {

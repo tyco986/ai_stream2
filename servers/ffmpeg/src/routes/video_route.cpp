@@ -15,5 +15,5 @@ void VideoRoute::bind(httplib::Server& server) {
 void VideoRoute::probe(const httplib::Request& request, httplib::Response& response) {
     const auto body = nlohmann::json::parse(request.body, nullptr, false);
     const std::string path = body.is_object() ? body.value(video::KEY_PATH, "") : "";
-    http::Response::ok(response, FFmpegVideo().probe(path));
+    http::Response::ok(response, FFmpegVideo().probe(path), video::MSG_PROBE_OK);
 }

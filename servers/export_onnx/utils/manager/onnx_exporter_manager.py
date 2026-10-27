@@ -1,5 +1,7 @@
 from pathlib import Path
+from typing import Literal
 
+from utils.rtmpose.rtmpose_exporter import RtmposeExporter
 from utils.stgcnpp.stgcnpp_exporter import StgcnppExporter
 from utils.yolo_e2e.yolo_det_e2e_exporter import YoloDetE2EExporter
 from utils.yolo_e2e.yolo_pose_e2e_exporter import YoloPoseE2EExporter
@@ -7,7 +9,7 @@ from utils.yolo_e2e.yolo_seg_e2e_exporter import YoloSegE2EExporter
 from utils.yolo_non_e2e.yolo_det_non_e2e_exporter import YoloDetNonE2EExporter
 from utils.yolo_non_e2e.yolo_seg_non_e2e_exporter import YoloSegNonE2EExporter
 
-IOU_EXPORTERS = {YoloDetNonE2EExporter, YoloSegNonE2EExporter}
+IOU_EXPORTERS = {YoloDetNonE2EExporter, YoloSegNonE2EExporter, YoloPoseE2EExporter}
 
 
 class OnnxExporterManager:
@@ -19,6 +21,7 @@ class OnnxExporterManager:
         "YOLO26-POSE": YoloPoseE2EExporter,
         "YOLO26-SEG": YoloSegE2EExporter,
         "STGCNPP": StgcnppExporter,
+        "RTMPOSE": RtmposeExporter,
     }
 
     @classmethod
@@ -32,8 +35,8 @@ class OnnxExporterManager:
         weights: Path,
         size: int,
         opset: int,
-        batch: int | None,
-        dynamic: bool,
+        batch_size: int | None,
+        batch_mode: Literal["dynamic", "static"],
         simplify: bool,
         max_det: int,
         conf: float,
@@ -45,8 +48,9 @@ class OnnxExporterManager:
             "weights": weights,
             "size": size,
             "opset": opset,
-            "batch": batch,
-            "dynamic": dynamic,
+            "batch_size": batch_size,
+            "batch_mode": batch_mode,
+            "device": device,
             "simplify": simplify,
             "max_det": max_det,
             "conf": conf,

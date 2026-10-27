@@ -7,6 +7,7 @@
 #include <chrono>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
@@ -26,40 +27,36 @@ void RtspRoute::probe(const httplib::Request& request, httplib::Response& respon
     for (const auto& item : urls) {
         const std::string url = item.is_string() ? item.get<std::string>() : "";
         const nlohmann::json probed = item.is_string() ? FFmpegRTSP().probe(url) : nlohmann::json::object();
-        const bool online = probed.value(rtsp::KEY_STATUS, rtsp::STATUS_OFFLINE) != rtsp::STATUS_OFFLINE;
-        if (online) {
-            data[url] = probed;
-        }
+        data[url] = probed;
     }
-    http::Response::ok(response, data);
+    http::Response::ok(response, data, rtsp::MSG_PROBE_OK);
 }
 
 void RtspRoute::publish(const httplib::Request& request, httplib::Response& response) {
     const bool alive = mediamtxReady();
     const auto body = nlohmann::json::parse(request.body, nullptr, false);
-    const nlohmann::json paths = body.is_object() && body.contains(rtsp::KEY_PATHS) && body[rtsp::KEY_PATHS].is_array()
+    const nlohmann::json paths = body.is_object() && body.contains(rtsp::KEY_PATHS) && body[rtsp::KEY_PATHS].is_object()
         ? body[rtsp::KEY_PATHS]
-        : nlohmann::json::array();
+        : nlohmann::json::object();
     nlohmann::json data = nlohmann::json::object();
-    for (const auto& item : paths) {
-        const nlohmann::json published = alive && item.is_string() ? publishOne(item.get<std::string>()) : nlohmann::json::object();
+    for (const auto& [name, path] : paths.items()) {
+        const nlohmann::json published = alive && path.is_string() ? publishOne(name, path.get<std::string>()) : nlohmann::json::object();
         data.update(published);
     }
     if (!alive) {
         http::Response::error(response, 503, rtsp::MSG_MEDIAMTX_UNREACHABLE);
     }
     if (alive && !data.empty()) {
-        http::Response::ok(response, data);
+        http::Response::ok(response, data, rtsp::MSG_PUBLISH_OK);
     }
     if (alive && data.empty()) {
         http::Response::error(response, 400, rtsp::MSG_PUBLISH_ERROR);
     }
 }
 
-nlohmann::json RtspRoute::publishOne(const std::string& path) {
-    const nlohmann::json started = FFmpegRTSP().publishStart(path);
+nlohmann::json RtspRoute::publishOne(const std::string& name, const std::string& path) {
+    const nlohmann::json started = FFmpegRTSP().publishStart(name, path);
     const bool startedOk = !started.empty();
-    const std::string name = startedOk ? started.begin().key() : "";
     const std::string url = startedOk ? started.begin().value().value(rtsp::KEY_URL_DOCKER, "") : "";
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(rtsp::PUBLISH_TIMEOUT_SECONDS);
     bool ready = false;
@@ -73,7 +70,7 @@ nlohmann::json RtspRoute::publishOne(const std::string& path) {
         data = FFmpegRTSP().publishEnd(name, probed.value(rtsp::KEY_STATUS, rtsp::STATUS_OFFLINE), probed.value(rtsp::KEY_PROBED_AT, ""));
     }
     if (startedOk && !ready) {
-        FFmpegRTSP().publishRemove(name);
+        FFmpegRTSP().publishRemove({name});
     }
     return data;
 }
@@ -98,9 +95,23 @@ bool RtspRoute::pathReady(const std::string& name) {
 }
 
 void RtspRoute::publishList(const httplib::Request& request, httplib::Response& response) {
-    http::Response::ok(response, FFmpegRTSP().publishList(request.get_param_value(rtsp::KEY_NAME)));
+    const std::vector<std::string> raw = request.get_param_values(rtsp::KEY_NAMES);
+    std::vector<std::string> names;
+    for (const std::string& item : raw) {
+        if (!item.empty()) {
+            names.push_back(item);
+        }
+    }
+    http::Response::ok(response, FFmpegRTSP().publishList(names));
 }
 
 void RtspRoute::publishRemove(const httplib::Request& request, httplib::Response& response) {
-    http::Response::ok(response, FFmpegRTSP().publishRemove(request.get_param_value(rtsp::KEY_NAME)));
+    const std::vector<std::string> raw = request.get_param_values(rtsp::KEY_NAMES);
+    std::vector<std::string> names;
+    for (const std::string& item : raw) {
+        if (!item.empty()) {
+            names.push_back(item);
+        }
+    }
+    http::Response::ok(response, FFmpegRTSP().publishRemove(names), rtsp::MSG_PUBLISH_REMOVE_OK);
 }

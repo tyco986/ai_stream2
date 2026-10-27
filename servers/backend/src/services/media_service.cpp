@@ -13,6 +13,7 @@
 
 #include <cctype>
 #include <charconv>
+#include <clocale>
 #include <cmath>
 #include <cstdio>
 #include <ctime>
@@ -69,7 +70,7 @@ Json::Value MediaService::listUploadFile(int page,
                                      const std::string& userId,
                                      const std::string& type,
                                      const std::string& search) {
-  const Json::Value data = listFile(media::UPLOAD_DIR, "user_id", userId, type, page, pageSize, search);
+  const Json::Value data = listFile(media::UPLOAD_DIR, "user_id", userId, type, page, pageSize, search, "");
   return data;
 }
 
@@ -78,7 +79,7 @@ Json::Value MediaService::listPipelineFile(int page,
                                        const std::string& type,
                                        const std::string& search,
                                        const std::string& pipelineId) {
-  const Json::Value data = listFile(media::PIPELINE_DIR, "pipeline_id", pipelineId, type, page, pageSize, search);
+  const Json::Value data = listFile(media::PIPELINE_DIR, "pipeline_id", pipelineId, type, page, pageSize, search, "");
   return data;
 }
 
@@ -86,8 +87,9 @@ Json::Value MediaService::listRecordingFile(int page,
                                         long pageSize,
                                         const std::string& type,
                                         const std::string& search,
-                                        const std::string& streamId) {
-  const Json::Value data = listFile(media::RECORDING_DIR, "stream_id", streamId, type, page, pageSize, search);
+                                        const std::string& streamId,
+                                        const std::string& date) {
+  const Json::Value data = listFile(media::RECORDING_DIR, "stream_id", streamId, type, page, pageSize, search, date);
   return data;
 }
 
@@ -332,20 +334,23 @@ Json::Value MediaService::listFile(const std::string& folder,
                                  const std::string& type,
                                  int page,
                                  long pageSize,
-                                 const std::string& search) {
+                                 const std::string& search,
+                                 const std::string& date) {
   reloadFile(folder, ownerColumn, ownerId);
   const long offset = static_cast<long>(page - 1) * pageSize;
   const std::string prefix = (std::filesystem::path(root) / folder).lexically_normal().string();
-  const std::string match = Searcher::clause({"name", "type", "codec", "folder", "md5"}, 4);
+  const std::string match = Searcher::clause(media::SEARCH_COLUMNS, 4);
   const std::string from = "FROM media WHERE (folder = $1 OR folder LIKE $1 || '/%') AND (" + ownerColumn +
-      "::text = $2 OR $2 = '') AND (type = $3 OR $3 = '') AND " + match + " ";
-  const auto counted = Sql::sync({}, dbClient, "SELECT count(*) AS total " + from, prefix, ownerId, type, search);
+      "::text = $2 OR $2 = '') AND (type = $3 OR $3 = '') AND " + match +
+      " AND ($5 = '' OR to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') = $5) ";
+  const auto counted = Sql::sync({}, dbClient, "SELECT count(*) AS total " + from, prefix, ownerId, type, search, date);
   const auto rows = Sql::sync({}, dbClient,
-      std::string("SELECT ") + SELECT_MEDIA + from + "ORDER BY created_at DESC LIMIT $5 OFFSET $6",
+      std::string("SELECT ") + SELECT_MEDIA + from + "ORDER BY created_at DESC LIMIT $6 OFFSET $7",
       prefix,
       ownerId,
       type,
       search,
+      date,
       pageSize,
       offset);
   Json::Value items(Json::arrayValue);
@@ -730,9 +735,13 @@ void MediaService::probeFile(const std::filesystem::path& path,
                              std::optional<double>& duration,
                              std::optional<double>& fps,
                              std::optional<std::string>& codec) {
+  const bool localeReady = std::setlocale(LC_CTYPE, media::LOCALE_CTYPE) != nullptr;
   MediaInfoBuffer info;
   void* handle = info.require();
-  MediaInfo_Open(handle, path.c_str());
+  const std::size_t opened = localeReady ? MediaInfo_Open(handle, path.c_str()) : 0;
+  if (!localeReady || opened == 0) {
+    throw std::runtime_error(media::ERR_MEDIAINFO);
+  }
   readProbe(handle, image, width, height, duration, fps, codec);
 }
 

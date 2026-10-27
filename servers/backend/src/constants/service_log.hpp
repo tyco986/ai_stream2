@@ -39,6 +39,7 @@ inline const char* USER_DIR = "user";
 inline const char* EVENT_DIR = "event";
 inline const char* NOTICE_DIR = "notice";
 inline const char* MEDIA_DIR = "media";
+inline const char* PROXY_DIR = "proxy";
 inline const char* LOG_DIR = "log";
 inline const char* PAGES[] = {
     STREAM_DIR,
@@ -54,6 +55,7 @@ inline const char* PAGES[] = {
     EVENT_DIR,
     NOTICE_DIR,
     MEDIA_DIR,
+    PROXY_DIR,
     LOG_DIR,
 };
 inline const char* FILE_SUFFIX = ".jsonl";

@@ -125,6 +125,8 @@
   "server_probe_ok": "Probed server",
   "stream_batch_create_error": "Failed to create streams",
   "stream_batch_create_ok": "Created streams",
+  "stream_batch_create_partial": "MediaMTX unreachable",
+  "stream_batch_create_rejected": "MediaMTX rejected the mount",
   "stream_batch_delete_error": "Failed to delete streams",
   "stream_batch_delete_ok": "Deleted streams",
   "stream_batch_mount_error": "Failed to mount streams",

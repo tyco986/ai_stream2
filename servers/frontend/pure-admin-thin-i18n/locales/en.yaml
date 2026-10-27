@@ -84,9 +84,34 @@ status:
   pureNoMessage: No Message
   pureNoNotify: No Notify
   pureNoTodo: No Todo
+media:
+  pureRecording: Recording
+  purePipeline: Pipeline
+  pureUpload: Upload
+  pureSearch: Search
+  purePublish: Publish
+  pureUnpublish: Unpublish
+  pureDownload: Download
+  pureRemove: Remove
+  pureOps: Ops
+  purePreview: Preview
+  pureName: Name
+  pureWidth: Width
+  pureHeight: Height
+  pureDuration: Duration
+  pureFps: FPS
+  pureSize: Size (MB)
+  pureUpdatedAt: Updated At
 stream:
   pureCreate: Create
+  pureSearch: Search
   pureProbe: Probe
+  pureRemove: Remove
+  pureMount: Mount
+  pureUnmount: Unmount
+  pureRecord: Record
+  pureUnrecord: Unrecord
+  pureEdit: Edit
   pureCancel: Cancel
   pureConfirm: Confirm
   pureName: Name
@@ -96,13 +121,24 @@ stream:
   pureHeight: Height
   pureFps: FPS
   pureStatus: Status
+  pureProbedAt: Probed at
   pureInfo: Info
   pureOps: Ops
   pureAll: All
   pureNewGroup: New Group
   pureEditGroup: Edit Group
   pureParent: Parent
-  pureRemove: Remove
+  pureRemoveGroup: Remove
+preview:
+  purePreset: Preset
+  pureSave: Save
+  pureSaveAs: Save As
+  pureClear: Clear
+  purePlay: Play
+  purePause: Pause
+  pureShot: Screenshot
+  pureFullscreen: Fullscreen
+  pureUnbind: Unbind
 logger:
   pureTitle: Logs
 login:
