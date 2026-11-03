@@ -129,10 +129,36 @@ stream:
   pureEditGroup: Edit Group
   pureParent: Parent
   pureRemoveGroup: Remove
+model:
+  pureCreate: Create
+  pureRemove: Remove
+  pureSearch: Search
+  pureName: Name
+  pureSource: Source
+  pureType: Type
+  pureBatchSize: Batch Size
+  pureBatchMode: Batch Mode
+  purePrecision: Precision
+  pureDevice: Device
+  pureMaxDet: Max Det
+  pureConf: Conf
+  pureIou: IOU
+  pureClasses: Classes
+  pureClassId: Class ID
+  pureClassName: Class Name
+  pureStatus: Status
+  pureBuiltAt: Built At
+  pureOps: Ops
+  pureBuild: Build
+  pureUpload: Upload
+  pureEdit: Edit
+  pureCancel: Cancel
+  pureConfirm: Confirm
 preview:
   purePreset: Preset
   pureSave: Save
   pureSaveAs: Save As
+  pureName: Name
   pureClear: Clear
   purePlay: Play
   purePause: Pause

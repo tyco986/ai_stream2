@@ -6,16 +6,15 @@
 
 generator: TopdownPoseSahiVisVideoGenerator
 pipeline_name: topdown_pose_sahi_vis_video_no_interval_tracker
-config_save_dir: /root/configs/generator/topdown_pose_sahi_vis_video_no_interval_tracker
 pgie:
   interval: 1
-  model_dir: /root/models/trt/yolo26n
+  model_zip: /root/history/export_trt/yolo26n.zip
   class_attrs:
     0:
       conf: 0.25
 sgie:
   interval: 1
-  model_dir: /root/models/trt/rtmpose-t-body8
+  model_zip: /root/history/export_trt/rtmpose-t-body8.zip
 tracker:
   class_id: 0
 analyzer: null
@@ -28,7 +27,8 @@ drawer:
   show_pose: true
   pose_threshold: 0.5
   mode: coco17
-input: /root/attachments/videos/video1.mp4
+videos:
+  - /root/attachments/videos/video1.mp4
 output: /root/outputs/deepstream/topdown_pose_sahi_vis_video_no_interval_tracker.mp4
 sahi:
   nvsahipreprocess:

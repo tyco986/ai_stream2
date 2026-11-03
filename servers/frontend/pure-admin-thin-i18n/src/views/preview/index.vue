@@ -3,11 +3,12 @@ import { computed, onBeforeUnmount, onMounted, provide, reactive, ref, watch } f
 import Brush from "~icons/ri/brush-line";
 import Save from "~icons/ri/save-line";
 import SaveAs from "~icons/ri/save-3-line";
-import { getActivePreset } from "@/api/preview";
+import { createPreset, getActivePreset, getPreset, getPresetMap, updatePreset } from "@/api/preview";
+import type { Preset, PresetDraft } from "@/api/preview";
 import type { StreamItem } from "@/api/stream";
 import type { TreeNode } from "@/api/streamGroup";
 import StreamGroupTree from "@/components/StreamGroupTree/index.vue";
-import { LAYOUTS, SLOT_COUNT, whepUrl } from "@/constants/preview";
+import { LAYOUTS, MODE_GRID, SLOT_COUNT, whepUrl } from "@/constants/preview";
 import { $t, transformI18n } from "@/plugins/i18n";
 import PreviewCell from "./cell.vue";
 import { StreamPlayers, streamPlayersKey } from "./players";
@@ -33,7 +34,13 @@ const emptySlot = (): SlotState => ({
 const players = new StreamPlayers();
 provide(streamPlayersKey, players);
 
+const presetId = ref("");
 const preset = ref("");
+const saveAsVisible = ref(false);
+const saveAsName = ref("");
+const presetMap = ref<Record<string, string>>({});
+const mode = ref(MODE_GRID);
+const saved = ref("");
 const layout = ref("1x1");
 const picked = ref<number | null>(null);
 const slots = reactive<Record<number, SlotState>>(
@@ -46,6 +53,11 @@ watch(liveIds, ids => players.retain(ids));
 
 const count = computed(() => Number(layout.value[0]));
 const visible = computed(() => count.value * count.value);
+const fingerprint = computed(() =>
+  [layout.value, ...Array.from({ length: SLOT_COUNT }, (_, index) => slots[index].id)].join("\n")
+);
+const optionLabel = (name: string) =>
+  name + (name === preset.value && saved.value && saved.value !== fingerprint.value ? " *" : "");
 
 const clearSlot = (index: number) => {
   slots[index] = emptySlot();
@@ -98,6 +110,52 @@ const onClear = () => {
   picked.value = null;
 };
 
+const slotCount = () => Number(layout.value[0]) ** 2;
+
+const draft = (name: string): PresetDraft => ({
+  name,
+  layout: layout.value,
+  mode: mode.value,
+  active: true,
+  slots: Object.fromEntries(
+    Array.from({ length: slotCount() }, (_, index) => [String(index + 1), slots[index].id || null])
+  )
+});
+
+const applySaved = (data: Preset) => {
+  Array.from({ length: SLOT_COUNT - slotCount() }, (_, index) => clearSlot(slotCount() + index));
+  presetId.value = data.id;
+  preset.value = data.name;
+  mode.value = data.mode;
+  saved.value = fingerprint.value;
+};
+
+const onSave = () => {
+  updatePreset(presetId.value, draft(preset.value)).then(res => applySaved(res.data));
+};
+
+const loadMap = () => {
+  getPresetMap().then(res => {
+    presetMap.value = res.data;
+  });
+};
+
+const onSaveAs = () => {
+  saveAsName.value = preset.value;
+  saveAsVisible.value = true;
+};
+
+const onSaveAsConfirm = () => {
+  const name = saveAsName.value.trim();
+  if (name) {
+    createPreset(draft(name)).then(res => {
+      applySaved(res.data);
+      loadMap();
+      saveAsVisible.value = false;
+    });
+  }
+};
+
 const fillPreset = (items: Record<string, StreamItem | null>) => {
   Object.keys(slots).forEach(key => clearSlot(Number(key)));
   Object.entries(items).forEach(([key, stream]) => {
@@ -110,12 +168,22 @@ const fillPreset = (items: Record<string, StreamItem | null>) => {
 
 onBeforeUnmount(() => players.retain([]));
 
+const show = (data: Preset) => {
+  presetId.value = data.id;
+  preset.value = data.name;
+  mode.value = data.mode;
+  layout.value = data.layout;
+  fillPreset(data.slots);
+  saved.value = fingerprint.value;
+};
+
+const onPreset = (id: string) => {
+  getPreset(id).then(res => show(res.data));
+};
+
 onMounted(() => {
-  getActivePreset().then(res => {
-    preset.value = res.data.name;
-    layout.value = res.data.layout;
-    fillPreset(res.data.slots);
-  });
+  getActivePreset().then(res => show(res.data));
+  loadMap();
 });
 </script>
 
@@ -127,14 +195,17 @@ onMounted(() => {
     <div class="preview-main">
       <div class="preview-toolbar">
         <el-select
-          v-model="preset"
+          :model-value="presetId"
           class="preview-preset"
           :placeholder="transformI18n($t('preview.purePreset'))"
-        />
-        <el-button link :title="transformI18n($t('preview.pureSave'))">
+          @change="onPreset"
+        >
+          <el-option v-for="(id, name) in presetMap" :key="id" :label="optionLabel(name)" :value="id" />
+        </el-select>
+        <el-button link :title="transformI18n($t('preview.pureSave'))" @click="onSave">
           <IconifyIconOffline :icon="Save" />
         </el-button>
-        <el-button link :title="transformI18n($t('preview.pureSaveAs'))">
+        <el-button link :title="transformI18n($t('preview.pureSaveAs'))" @click="onSaveAs">
           <IconifyIconOffline :icon="SaveAs" />
         </el-button>
         <el-select v-model="layout" class="preview-layout">
@@ -157,12 +228,12 @@ onMounted(() => {
               v-for="index in visible"
               :key="index - 1"
               class="preview-cell"
-              :class="{ picked: picked === index - 1 }"
+              :class="{ picked: picked === index - 1, empty: !slots[index - 1].id }"
               @click="onPick(index - 1)"
             >
+              <span v-if="!slots[index - 1].id" class="preview-index">{{ index }}</span>
               <PreviewCell
-                v-if="slots[index - 1].status === 'playing'"
-                :key="slots[index - 1].id"
+                :key="slots[index - 1].id || `empty-${index}`"
                 :stream-id="slots[index - 1].id"
                 :url="slots[index - 1].url"
                 @clear="clearSlot(index - 1)"
@@ -172,6 +243,21 @@ onMounted(() => {
         </div>
       </div>
     </div>
+    <el-dialog v-model="saveAsVisible" :title="transformI18n($t('preview.pureSaveAs'))" width="420px">
+      <el-form label-width="72px" label-position="left" @submit.prevent="onSaveAsConfirm">
+        <el-form-item :label="transformI18n($t('preview.pureName'))">
+          <el-input v-model="saveAsName" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="saveAsVisible = false">
+          {{ transformI18n($t("stream.pureCancel")) }}
+        </el-button>
+        <el-button type="primary" @click="onSaveAsConfirm">
+          {{ transformI18n($t("stream.pureConfirm")) }}
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -254,6 +340,24 @@ onMounted(() => {
   min-height: 0;
   overflow: hidden;
   background: #111;
+  container-type: size;
+}
+
+.preview-cell.empty {
+  background: #3a3a3a;
+}
+
+.preview-index {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28cqmin;
+  line-height: 1;
+  color: rgb(255 255 255 / 45%);
+  pointer-events: none;
 }
 
 .preview-cell.picked::after {

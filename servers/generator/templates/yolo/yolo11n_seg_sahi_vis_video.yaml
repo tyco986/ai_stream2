@@ -5,10 +5,9 @@
 
 generator: SegSahiVisVideoGenerator
 pipeline_name: yolo11n_seg_sahi_vis_video
-config_save_dir: /root/configs/generator/yolo11n_seg_sahi_vis_video
 pgie:
   interval: 50
-  model_dir: /root/models/trt/yolo11n-seg
+  model_zip: /root/history/export_trt/yolo11n-seg.zip
   class_attrs:
     all:
       conf: 0.25
@@ -21,7 +20,8 @@ drawer:
   fade_time: 1
   show_label: true
   show_mask: true
-input: /root/attachments/videos/video1.mp4
+videos:
+  - /root/attachments/videos/video1.mp4
 output: /root/outputs/deepstream/yolo11n_seg_sahi_vis_video.mp4
 sahi:
   nvsahipreprocess:

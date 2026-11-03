@@ -38,6 +38,7 @@ add_executable(backend
   src/controllers/model_batch_controller.cpp
   src/controllers/proxy_controller.cpp
   src/controllers/server_controller.cpp
+  src/controllers/device_controller.cpp
   src/controllers/preview_controller.cpp
   src/controllers/event_controller.cpp
   src/controllers/notice_controller.cpp
@@ -62,6 +63,7 @@ add_executable(backend
   src/services/event_service.cpp
   src/services/notice_service.cpp
   src/services/media_service.cpp
+  src/services/device_service.cpp
   src/logger/base_logger.cpp
   src/logger/stream_logger.cpp
   src/logger/stream_group_logger.cpp
@@ -72,11 +74,14 @@ add_executable(backend
   src/logger/pipeline_gie_logger.cpp
   src/logger/pipeline_analyzer_logger.cpp
   src/logger/server_logger.cpp
+  src/logger/device_logger.cpp
   src/logger/preview_logger.cpp
   src/logger/event_logger.cpp
   src/logger/notice_logger.cpp
   src/logger/media_logger.cpp
   src/logger/proxy_logger.cpp
   src/logger/log_logger.cpp)
-target_include_directories(backend PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${RDKAFKA_INCLUDE_DIRS} ${MEDIAINFO_INCLUDE_DIRS})
-target_link_libraries(backend PRIVATE Drogon::Drogon spdlog::spdlog libzip::zip yaml-cpp OpenSSL::Crypto ${RDKAFKA_LIBRARIES} ${MEDIAINFO_LIBRARIES})
+target_include_directories(backend PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${RDKAFKA_INCLUDE_DIRS} ${MEDIAINFO_INCLUDE_DIRS}
+  /usr/local/cuda-13.4/targets/x86_64-linux/include)
+target_link_directories(backend PRIVATE /usr/local/cuda-13.4/targets/x86_64-linux/lib/stubs)
+target_link_libraries(backend PRIVATE Drogon::Drogon spdlog::spdlog libzip::zip yaml-cpp OpenSSL::Crypto ${RDKAFKA_LIBRARIES} ${MEDIAINFO_LIBRARIES} nvidia-ml)

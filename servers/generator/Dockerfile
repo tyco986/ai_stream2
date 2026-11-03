@@ -1,35 +1,37 @@
-FROM python:3.12-slim AS base
+FROM debian:bookworm-slim AS base
 
-RUN sed -i 's|deb.debian.org|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list.d/debian.sources \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends ripgrep \
+RUN printf '%s\n' \
+        'deb http://mirrors.aliyun.com/debian bookworm main' \
+        'deb http://mirrors.aliyun.com/debian bookworm-updates main' \
+        'deb http://mirrors.aliyun.com/debian-security bookworm-security main' \
+        > /etc/apt/sources.list \
+    && rm -f /etc/apt/sources.list.d/debian.sources
+
+
+FROM base AS build
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        g++ make cmake \
+        nlohmann-json3-dev libyaml-cpp-dev libzip-dev zipcmp zipmerge ziptool libspdlog-dev libcpp-httplib-dev \
+        libopencv-core-dev libopencv-imgproc-dev libopencv-imgcodecs-dev libopencv-videoio-dev \
     && rm -rf /var/lib/apt/lists/*
-RUN pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+COPY CMakeLists.txt main.cpp /src/
+COPY src /src/src
+RUN cmake -S /src -B /tmp/build -DCMAKE_BUILD_TYPE=Release \
+    && cmake --build /tmp/build -j"$(nproc)" \
+    && mkdir -p /app \
+    && cp /tmp/build/generator /app/generator
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-ENV HOST=0.0.0.0
-ENV PORT=8091
-ENV LOG_ROOT=/root/logs/generator
 
+FROM base
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libyaml-cpp0.7 libzip4 libspdlog1.10 libfmt9 \
+        libopencv-core406 libopencv-imgproc406 libopencv-imgcodecs406 libopencv-videoio406 \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-
-COPY servers/generator/requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
-
-
-FROM base AS dev
-
-RUN mkdir -p /root/logs/generator
-
+COPY --from=build /app/generator ./generator
 EXPOSE 8091
-CMD ["python", "main.py"]
-
-
-FROM dev AS prod
-
-COPY servers/generator /app
-WORKDIR /app
-
-EXPOSE 8091
-CMD ["python", "main.py"]
+CMD ["./generator"]

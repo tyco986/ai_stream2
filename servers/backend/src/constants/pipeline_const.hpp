@@ -4,14 +4,14 @@
 
 namespace pipeline {
 
-inline const char* PATH_LIST = "/ai_stream2/backend/pipelines";
-inline const char* PATH_MAP = "/ai_stream2/backend/pipelines/map";
-inline const char* PATH_ITEM = "/ai_stream2/backend/pipelines/{pipeline_id}";
-inline const char* PATH_START = "/ai_stream2/backend/pipelines/{pipeline_id}/start";
-inline const char* PATH_PROBE = "/ai_stream2/backend/pipelines/{pipeline_id}/probe";
-inline const char* PATH_STOP = "/ai_stream2/backend/pipelines/{pipeline_id}/stop";
-inline const char* PATH_BATCH_STOP = "/ai_stream2/backend/pipelines/batch/stop";
-inline const char* PATH_BATCH_REMOVE = "/ai_stream2/backend/pipelines/batch/remove";
+inline const char* PATH_LIST = "/backend/pipelines";
+inline const char* PATH_MAP = "/backend/pipelines/map";
+inline const char* PATH_ITEM = "/backend/pipelines/{pipeline_id}";
+inline const char* PATH_START = "/backend/pipelines/{pipeline_id}/start";
+inline const char* PATH_PROBE = "/backend/pipelines/{pipeline_id}/probe";
+inline const char* PATH_STOP = "/backend/pipelines/{pipeline_id}/stop";
+inline const char* PATH_BATCH_STOP = "/backend/pipelines/batch/stop";
+inline const char* PATH_BATCH_REMOVE = "/backend/pipelines/batch/remove";
 inline const char* PATH_GENERATE = "/ai_stream2/generator/generate";
 
 inline const char* KEY_ID = "id";

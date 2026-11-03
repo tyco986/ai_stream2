@@ -5,12 +5,12 @@
 
 #include <string>
 
-void registerUpstream(const std::string& prefix, const std::string& baseUrl) {
+void registerUpstream(const std::string& srcPrefix, const std::string& desBaseUrl) {
   drogon::app().registerHandlerViaRegex(
-      prefix + "/.*",
-      [baseUrl](const drogon::HttpRequestPtr& request,
-                std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
-        Proxy::forward(baseUrl, request, std::move(callback));
+      srcPrefix + "/.*",
+      [desBaseUrl](const drogon::HttpRequestPtr& request,
+                   std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
+        Proxy::forward(desBaseUrl, request, std::move(callback));
       },
       {drogon::Get, drogon::Post, drogon::Patch, drogon::Delete},
       {"AuthFilter"});
@@ -19,12 +19,12 @@ void registerUpstream(const std::string& prefix, const std::string& baseUrl) {
 class ProxyRoutes {
  public:
   ProxyRoutes() {
-    registerUpstream(deepstream::PREFIX, deepstream::BASE_URL);
-    registerUpstream(generator::PREFIX, generator::BASE_URL);
-    registerUpstream(ffmpeg::PREFIX, ffmpeg::BASE_URL);
-    registerUpstream(export_trt::PREFIX, export_trt::BASE_URL);
-    registerUpstream(export_onnx::PREFIX, export_onnx::BASE_URL);
-    registerUpstream(mediamtx::PREFIX, mediamtx::BASE_URL);
+    registerUpstream(deepstream::SRC_PREFIX, deepstream::DES_BASE_URL);
+    registerUpstream(generator::SRC_PREFIX, generator::DES_BASE_URL);
+    registerUpstream(ffmpeg::SRC_PREFIX, ffmpeg::DES_BASE_URL);
+    registerUpstream(export_trt::SRC_PREFIX, export_trt::DES_BASE_URL);
+    registerUpstream(export_onnx::SRC_PREFIX, export_onnx::DES_BASE_URL);
+    registerUpstream(mediamtx::SRC_PREFIX, mediamtx::DES_BASE_URL);
   }
 };
 

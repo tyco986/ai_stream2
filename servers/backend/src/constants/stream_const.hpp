@@ -7,18 +7,18 @@
 namespace stream {
 
 // paths
-inline const char* PATH_LIST = "/ai_stream2/backend/streams";
-inline const char* PATH_IMPORT = "/ai_stream2/backend/streams/import";
-inline const char* PATH_EXPORT = "/ai_stream2/backend/streams/export";
-inline const char* PATH_ITEM = "/ai_stream2/backend/streams/{stream_id}";
-inline const char* PATH_PROBE = "/ai_stream2/backend/streams/{stream_id}/probe";
-inline const char* PATH_BATCH_CREATE = "/ai_stream2/backend/streams/batch/create";
-inline const char* PATH_BATCH_REMOVE = "/ai_stream2/backend/streams/batch/remove";
-inline const char* PATH_BATCH_MOUNT = "/ai_stream2/backend/streams/batch/mount";
-inline const char* PATH_BATCH_UNMOUNT = "/ai_stream2/backend/streams/batch/unmount";
-inline const char* PATH_BATCH_RECORD = "/ai_stream2/backend/streams/batch/record";
-inline const char* PATH_BATCH_UNRECORD = "/ai_stream2/backend/streams/batch/unrecord";
-inline const char* PATH_BATCH_PROBE = "/ai_stream2/backend/streams/batch/probe";
+inline const char* PATH_LIST = "/backend/streams";
+inline const char* PATH_IMPORT = "/backend/streams/import";
+inline const char* PATH_EXPORT = "/backend/streams/export";
+inline const char* PATH_ITEM = "/backend/streams/{stream_id}";
+inline const char* PATH_PROBE = "/backend/streams/{stream_id}/probe";
+inline const char* PATH_BATCH_CREATE = "/backend/streams/batch/create";
+inline const char* PATH_BATCH_REMOVE = "/backend/streams/batch/remove";
+inline const char* PATH_BATCH_MOUNT = "/backend/streams/batch/mount";
+inline const char* PATH_BATCH_UNMOUNT = "/backend/streams/batch/unmount";
+inline const char* PATH_BATCH_RECORD = "/backend/streams/batch/record";
+inline const char* PATH_BATCH_UNRECORD = "/backend/streams/batch/unrecord";
+inline const char* PATH_BATCH_PROBE = "/backend/streams/batch/probe";
 
 // keys
 inline const char* KEY_ITEMS = "items";

@@ -2,22 +2,23 @@
 
 #include <json/json.h>
 
-#include <map>
 #include <string>
 
 namespace model {
 
 // paths
-inline const char* PATH_LIST = "/ai_stream2/backend/models";
-inline const char* PATH_IMPORT = "/ai_stream2/backend/models/import";
-inline const char* PATH_BATCH_BUILD = "/ai_stream2/backend/models/batch/build";
-inline const char* PATH_BATCH_STATUS = "/ai_stream2/backend/models/batch/status";
-inline const char* PATH_BATCH_REMOVE = "/ai_stream2/backend/models/batch/remove";
-inline const char* PATH_ITEM = "/ai_stream2/backend/models/{model_id}";
-inline const char* PATH_BUILD = "/ai_stream2/backend/models/{model_id}/build";
-inline const char* PATH_STATUS = "/ai_stream2/backend/models/{model_id}/status";
-inline const char* PATH_UPLOAD = "/ai_stream2/backend/models/{model_id}/upload";
-inline const char* PATH_MAP = "/ai_stream2/backend/models/map";
+inline const char* PATH_LIST = "/backend/models";
+inline const char* PATH_IMPORT = "/backend/models/import";
+inline const char* PATH_BATCH_CREATE = "/backend/models/batch/create";
+inline const char* PATH_BATCH_BUILD = "/backend/models/batch/build";
+inline const char* PATH_BATCH_STATUS = "/backend/models/batch/status";
+inline const char* PATH_BATCH_REMOVE = "/backend/models/batch/remove";
+inline const char* PATH_ITEM = "/backend/models/{model_id}";
+inline const char* PATH_BUILD = "/backend/models/{model_id}/build";
+inline const char* PATH_STATUS = "/backend/models/{model_id}/status";
+inline const char* PATH_UPLOAD = "/backend/models/{model_id}/upload";
+inline const char* PATH_MAP = "/backend/models/map";
+inline const char* PATH_TYPES = "/backend/models/types";
 inline const char* PATH_EXPORT_ONNX = "/ai_stream2/export_onnx/export";
 inline const char* PATH_EXPORT_TRT = "/ai_stream2/export_trt/export";
 
@@ -51,8 +52,11 @@ inline const char* KEY_CONF = "conf";
 inline const char* KEY_IOU = "iou";
 inline const char* KEY_NUM_CLASS = "num_class";
 inline const char* KEY_CLASSES = "classes";
+inline const char* KEY_SOURCE_SUFFIXES = "source_suffixes";
 inline const char* KEY_SOURCE_PATH = "source_path";
+inline const char* KEY_SOURCE_NAME = "source_name";
 inline const char* KEY_ENGINE_PATH = "engine_path";
+inline const char* KEY_ENGINE_NAME = "engine_name";
 inline const char* KEY_STATUS = "status";
 inline const char* KEY_BUILT_AT = "built_at";
 inline const char* KEY_TRT_VERSION = "trt_version";
@@ -77,7 +81,6 @@ inline const char* FILE_META = "meta.json";
 inline const char* UPLOAD_DIR = "/root/tmp";
 
 // types
-inline const char* AVAILABLE_TYPES[] = {"YOLO10-DET", "YOLO26-SEG", "YOLO26-DET", "YOLO26-POSE", "STGCNPP", "RTMPOSE"};
 inline const char* AVAILABLE_BATCH_MODES[] = {"static", "dynamic"};
 inline const char* AVAILABLE_PRECISIONS[] = {"fp16"};
 inline const int AVAILABLE_BATCH_RANGE[] = {1, 128};
@@ -91,6 +94,7 @@ inline const char* ERR_BUILT = "model_err_built";
 inline const char* ERR_OCCUPIED = "model_err_occupied";
 inline const char* SECTION_EXPORT_ONNX = "export_onnx";
 inline const char* SECTION_EXPORT_TRT = "export_trt";
+inline const char* SECTION_SOURCE_SUFFIXES = "source_suffixes";
 
 inline Json::Value ROW() {
   Json::Value node;
@@ -113,6 +117,8 @@ inline Json::Value ROW() {
   node[KEY_NUM_CLASS] = Json::Value();
   node[KEY_CLASSES] = Json::Value();
   node[KEY_SOURCE_PATH] = Json::Value();
+  node[KEY_SOURCE_NAME] = Json::Value();
+  node[KEY_ENGINE_NAME] = Json::Value();
   node[KEY_STATUS] = STATUS_NOT_BUILT;
   node[KEY_BUILT_AT] = Json::Value();
   node[KEY_TRT_VERSION] = Json::Value();
@@ -132,16 +138,56 @@ inline Json::Value BATCH_DATA() {
 }
 
 // recipes
-inline const std::map<std::string, std::map<std::string, std::map<std::string, std::string>>> RECIPES = {
-    {"YOLO10-DET", {{"export_onnx", {{"size", "640"}, {"opset", "18"}, {"batch", "null"}, {"dynamic", "true"}, {"simplify", "false"}, {"max_det", "30"}, {"conf", "0.25"}, {"iou", "null"}}}, {"export_trt", {{"batch_size", "18"}, {"gpu_id", "0"}, {"precision", "fp16"}, {"opt_level", "0"}}}}},
-    {"YOLO11-DET", {{"export_onnx", {{"size", "640"}, {"opset", "18"}, {"batch", "null"}, {"dynamic", "true"}, {"simplify", "false"}, {"max_det", "30"}, {"conf", "0.25"}, {"iou", "0.45"}}}, {"export_trt", {{"batch_size", "18"}, {"gpu_id", "0"}, {"precision", "fp16"}, {"opt_level", "3"}}}}},
-    {"YOLO11-SEG", {{"export_onnx", {{"size", "640"}, {"opset", "18"}, {"batch", "null"}, {"dynamic", "true"}, {"simplify", "false"}, {"max_det", "30"}, {"conf", "0.25"}, {"iou", "0.45"}}}, {"export_trt", {{"batch_size", "18"}, {"gpu_id", "0"}, {"precision", "fp16"}, {"opt_level", "3"}}}}},
-    {"YOLO26-DET", {{"export_onnx", {{"size", "640"}, {"opset", "18"}, {"batch", "null"}, {"dynamic", "true"}, {"simplify", "false"}, {"max_det", "30"}, {"conf", "0.25"}, {"iou", "null"}}}, {"export_trt", {{"batch_size", "18"}, {"gpu_id", "0"}, {"precision", "fp16"}, {"opt_level", "3"}}}}},
-    {"YOLO26-SEG", {{"export_onnx", {{"size", "640"}, {"opset", "18"}, {"batch", "null"}, {"dynamic", "true"}, {"simplify", "false"}, {"max_det", "30"}, {"conf", "0.25"}, {"iou", "null"}}}, {"export_trt", {{"batch_size", "18"}, {"gpu_id", "0"}, {"precision", "fp16"}, {"opt_level", "3"}}}}},
-    {"YOLO26-POSE", {{"export_onnx", {{"size", "640"}, {"opset", "18"}, {"batch", "null"}, {"dynamic", "true"}, {"simplify", "false"}, {"max_det", "30"}, {"conf", "0.25"}, {"iou", "null"}}}, {"export_trt", {{"batch_size", "18"}, {"gpu_id", "0"}, {"precision", "fp16"}, {"opt_level", "3"}}}}},
-    {"STGCNPP", {{"export_onnx", {{"size", "null"}, {"opset", "18"}, {"batch", "null"}, {"dynamic", "true"}, {"simplify", "false"}, {"max_det", "null"}, {"conf", "null"}, {"iou", "null"}}}, {"export_trt", {{"batch_size", "64"}, {"gpu_id", "0"}, {"precision", "fp16"}, {"opt_level", "null"}}}}},
-    {"RTMPOSE", {{"export_trt", {{"batch_size", "64"}, {"gpu_id", "0"}, {"precision", "fp32"}, {"opt_level", "null"}}}}},
-};
+inline const char* RECIPE_TEXT = R"({
+  "YOLO10-DET": {
+    "source_suffixes": [".pt", ".pth"],
+    "export_onnx": {"size": "640", "opset": "18", "batch_size": "null", "batch_mode": "dynamic", "simplify": "false", "max_det": "30", "conf": "0.25", "iou": "null"},
+    "export_trt": {"batch_size": "18", "device": "0", "precision": "fp16", "opt_level": "0"}
+  },
+  "YOLO11-DET": {
+    "source_suffixes": [".pt", ".pth"],
+    "export_onnx": {"size": "640", "opset": "18", "batch_size": "null", "batch_mode": "dynamic", "simplify": "false", "max_det": "30", "conf": "0.25", "iou": "0.45"},
+    "export_trt": {"batch_size": "18", "device": "0", "precision": "fp16", "opt_level": "3"}
+  },
+  "YOLO11-SEG": {
+    "source_suffixes": [".pt", ".pth"],
+    "export_onnx": {"size": "640", "opset": "18", "batch_size": "null", "batch_mode": "dynamic", "simplify": "false", "max_det": "30", "conf": "0.25", "iou": "0.45"},
+    "export_trt": {"batch_size": "18", "device": "0", "precision": "fp16", "opt_level": "3"}
+  },
+  "YOLO26-DET": {
+    "source_suffixes": [".pt", ".pth"],
+    "export_onnx": {"size": "640", "opset": "18", "batch_size": "null", "batch_mode": "dynamic", "simplify": "false", "max_det": "30", "conf": "0.25", "iou": "null"},
+    "export_trt": {"batch_size": "18", "device": "0", "precision": "fp16", "opt_level": "3"}
+  },
+  "YOLO26-SEG": {
+    "source_suffixes": [".pt", ".pth"],
+    "export_onnx": {"size": "640", "opset": "18", "batch_size": "null", "batch_mode": "dynamic", "simplify": "false", "max_det": "30", "conf": "0.25", "iou": "null"},
+    "export_trt": {"batch_size": "18", "device": "0", "precision": "fp16", "opt_level": "3"}
+  },
+  "YOLO26-POSE": {
+    "source_suffixes": [".pt", ".pth"],
+    "export_onnx": {"size": "640", "opset": "18", "batch_size": "null", "batch_mode": "dynamic", "simplify": "false", "max_det": "30", "conf": "0.25", "iou": "null"},
+    "export_trt": {"batch_size": "18", "device": "0", "precision": "fp16", "opt_level": "3"}
+  },
+  "STGCNPP": {
+    "source_suffixes": [".pt", ".pth"],
+    "export_onnx": {"size": "null", "opset": "18", "batch_size": "null", "batch_mode": "dynamic", "simplify": "false", "max_det": "null", "conf": "null", "iou": "null"},
+    "export_trt": {"batch_size": "64", "device": "0", "precision": "fp16", "opt_level": "null"}
+  },
+  "RTMPOSE": {
+    "source_suffixes": [".onnx"],
+    "export_onnx": {"size": "null", "opset": "18", "batch_size": "null", "batch_mode": "dynamic", "simplify": "false", "max_det": "null", "conf": "null", "iou": "null"},
+    "export_trt": {"batch_size": "64", "device": "0", "precision": "fp16", "opt_level": "null"}
+  }
+})";
+
+inline Json::Value recipeValue() {
+  Json::Value recipes;
+  Json::Reader().parse(RECIPE_TEXT, recipes);
+  return recipes;
+}
+
+inline const Json::Value RECIPES = recipeValue();
 
 // query
 inline const char* QUERY_SEARCH = "search";
@@ -155,6 +201,8 @@ inline const char* MSG_LIST_OK = "model_list_ok";
 inline const char* MSG_LIST_ERROR = "model_list_error";
 inline const char* MSG_MAP_OK = "model_map_ok";
 inline const char* MSG_MAP_ERROR = "model_map_error";
+inline const char* MSG_TYPES_OK = "model_types_ok";
+inline const char* MSG_TYPES_ERROR = "model_types_error";
 inline const char* MSG_CREATE_OK = "model_create_ok";
 inline const char* MSG_CREATE_ERROR = "model_create_error";
 inline const char* MSG_GET_OK = "model_get_ok";

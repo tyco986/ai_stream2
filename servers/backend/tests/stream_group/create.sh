@@ -3,7 +3,7 @@ set -euo pipefail
 
 HOST_PORT="${BACKEND_HOST_PORT:-8001}"
 PARENT_GROUP_ID="00000000-0000-4000-8000-000000000001"
-ENDPOINT="http://127.0.0.1:${HOST_PORT}/ai_stream2/backend/streams/groups/${PARENT_GROUP_ID}"
+ENDPOINT="http://127.0.0.1:${HOST_PORT}/backend/streams/groups/${PARENT_GROUP_ID}"
 BODY='{"name":"probe"}'
 USER_INFO="$(cd "$(dirname "$0")/.." && pwd)/user_info"
 TOKEN="$(sed -n 's/.*"token":"\([^"]*\)".*/\1/p' "${USER_INFO}")"

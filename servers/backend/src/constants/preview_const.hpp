@@ -8,11 +8,11 @@
 
 namespace preview {
 
-inline const char* PATH_LIST = "/ai_stream2/backend/preview";
-inline const char* PATH_MAP = "/ai_stream2/backend/preview/map";
-inline const char* PATH_TREE = "/ai_stream2/backend/preview/tree";
-inline const char* PATH_ACTIVE = "/ai_stream2/backend/preview/active";
-inline const char* PATH_ITEM = "/ai_stream2/backend/preview/{preset_id}";
+inline const char* PATH_LIST = "/backend/preview";
+inline const char* PATH_MAP = "/backend/preview/map";
+inline const char* PATH_TREE = "/backend/preview/tree";
+inline const char* PATH_ACTIVE = "/backend/preview/active";
+inline const char* PATH_ITEM = "/backend/preview/{preset_id}";
 
 inline const char* MSG_GET_OK = "preview_get_ok";
 inline const char* MSG_GET_ERROR = "preview_get_error";

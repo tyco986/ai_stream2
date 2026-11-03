@@ -2,7 +2,7 @@
 set -euo pipefail
 
 HOST_PORT="${BACKEND_HOST_PORT:-8001}"
-ENDPOINT="http://127.0.0.1:${HOST_PORT}/ai_stream2/backend/users/login"
+ENDPOINT="http://127.0.0.1:${HOST_PORT}/backend/users/login"
 BODY='{"username":"admin","passwd":"admin"}'
 RESPONSE_BODY="$(mktemp)"
 trap 'rm -f "${RESPONSE_BODY}"' EXIT

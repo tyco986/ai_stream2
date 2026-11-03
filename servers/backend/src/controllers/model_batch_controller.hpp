@@ -14,11 +14,14 @@ class ModelBatchController : public drogon::HttpController<ModelBatchController>
   ModelBatchController();
 
   METHOD_LIST_BEGIN
+  ADD_METHOD_TO(ModelBatchController::batchCreate, model::PATH_BATCH_CREATE, drogon::Post, "AuthFilter");
   ADD_METHOD_TO(ModelBatchController::batchBuild, model::PATH_BATCH_BUILD, drogon::Post, "AuthFilter");
   ADD_METHOD_TO(ModelBatchController::batchStatus, model::PATH_BATCH_STATUS, drogon::Post, "AuthFilter");
   ADD_METHOD_TO(ModelBatchController::batchRemove, model::PATH_BATCH_REMOVE, drogon::Post, "AuthFilter");
   METHOD_LIST_END
 
+  void batchCreate(const drogon::HttpRequestPtr& request,
+                   std::function<void(const drogon::HttpResponsePtr&)>&& callback);
   drogon::Task<drogon::HttpResponsePtr> batchBuild(drogon::HttpRequestPtr request);
   void batchStatus(const drogon::HttpRequestPtr& request,
                    std::function<void(const drogon::HttpResponsePtr&)>&& callback);

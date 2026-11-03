@@ -5,10 +5,9 @@
 
 generator: DetSahiVisVideoGenerator
 pipeline_name: yolo26n_det_sahi_vis_video_no_interval_tracker
-config_save_dir: /root/configs/generator/yolo26n_det_sahi_vis_video_no_interval_tracker
 pgie:
   interval: 1
-  model_dir: /root/models/trt/yolo26n
+  model_zip: /root/history/export_trt/yolo26n.zip
   class_attrs:
     all:
       conf: 0.25
@@ -22,7 +21,8 @@ drawer:
   fade_time: 1
   show_label: true
   show_snap: false
-input: /root/attachments/videos/video1.mp4
+videos:
+  - /root/attachments/videos/video1.mp4
 output: /root/outputs/deepstream/yolo26n_det_sahi_vis_video_no_interval_tracker.mp4
 sahi:
   nvsahipreprocess:

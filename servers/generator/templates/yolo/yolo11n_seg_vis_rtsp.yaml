@@ -2,10 +2,9 @@
 
 generator: SegVisRTSPGenerator
 pipeline_name: yolo11n_seg_vis_rtsp
-config_save_dir: /root/configs/generator/yolo11n_seg_vis_rtsp
 pgie:
   interval: 50
-  model_dir: /root/models/trt/yolo11n-seg
+  model_zip: /root/history/export_trt/yolo11n-seg.zip
   class_attrs:
     all:
       conf: 0.25

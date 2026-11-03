@@ -2,7 +2,7 @@
 set -euo pipefail
 
 HOST_PORT="${BACKEND_HOST_PORT:-8001}"
-ENDPOINT="http://127.0.0.1:${HOST_PORT}/ai_stream2/backend/logs/enable"
+ENDPOINT="http://127.0.0.1:${HOST_PORT}/backend/logs/enable"
 USER_INFO="$(cd "$(dirname "$0")/.." && pwd)/user_info"
 TOKEN="$(sed -n 's/.*"token":"\([^"]*\)".*/\1/p' "${USER_INFO}")"
 [[ -n "${TOKEN}" ]]

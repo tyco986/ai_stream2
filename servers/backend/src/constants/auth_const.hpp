@@ -1,5 +1,6 @@
 #pragma once
 
+#include "constants/device_const.hpp"
 #include "constants/event_const.hpp"
 #include "constants/service_log.hpp"
 #include "constants/media_const.hpp"
@@ -73,6 +74,8 @@ inline const std::map<std::pair<drogon::HttpMethod, std::string>, CrudGate> CRUD
     {{drogon::Post, model::PATH_BUILD}, {user::KEY_MODEL_CRUD, CRUD_UPDATE}},
     {{drogon::Get, model::PATH_STATUS}, {user::KEY_MODEL_CRUD, CRUD_READ}},
     {{drogon::Get, model::PATH_MAP}, {user::KEY_MODEL_CRUD, CRUD_READ}},
+    {{drogon::Get, model::PATH_TYPES}, {user::KEY_MODEL_CRUD, CRUD_READ}},
+    {{drogon::Post, model::PATH_BATCH_CREATE}, {user::KEY_MODEL_CRUD, CRUD_CREATE}},
     {{drogon::Post, model::PATH_BATCH_BUILD}, {user::KEY_MODEL_CRUD, CRUD_UPDATE}},
     {{drogon::Post, model::PATH_BATCH_STATUS}, {user::KEY_MODEL_CRUD, CRUD_READ}},
     {{drogon::Post, model::PATH_BATCH_REMOVE}, {user::KEY_MODEL_CRUD, CRUD_DELETE}},
@@ -112,6 +115,8 @@ inline const std::map<std::pair<drogon::HttpMethod, std::string>, CrudGate> CRUD
     {{drogon::Put, pipeline_analyzer::PATH_ITEM}, {user::KEY_PIPELINE_CRUD, CRUD_UPDATE}},
     {{drogon::Delete, pipeline_analyzer::PATH_ITEM}, {user::KEY_PIPELINE_CRUD, CRUD_DELETE}},
     {{drogon::Post, pipeline_analyzer::PATH_BATCH_REMOVE}, {user::KEY_PIPELINE_CRUD, CRUD_DELETE}},
+    // device
+    {{drogon::Get, device::PATH_LIST}, {user::KEY_SERVER_CRUD, CRUD_READ}},
     // server
     {{drogon::Get, server::PATH_ITEM}, {user::KEY_SERVER_CRUD, CRUD_READ}},
     {{drogon::Post, server::PATH_PROBE}, {user::KEY_SERVER_CRUD, CRUD_UPDATE}},

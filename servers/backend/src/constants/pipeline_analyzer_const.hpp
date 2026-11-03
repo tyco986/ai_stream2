@@ -24,9 +24,9 @@ inline const char* KEY_UPDATED_COUNT = "updated_count";
 inline const char* KEY_FAILED_COUNT = "failed_count";
 inline const char* KEY_SKIPPED_COUNT = "skipped_count";
 inline const char* FIELD_FILE = "file";
-inline const char* PATH_LIST = "/ai_stream2/backend/pipeline/analyzer";
-inline const char* PATH_ITEM = "/ai_stream2/backend/pipeline/analyzer/{analyzer_id}";
-inline const char* PATH_BATCH_REMOVE = "/ai_stream2/backend/pipeline/analyzer/batch/remove";
+inline const char* PATH_LIST = "/backend/pipeline/analyzer";
+inline const char* PATH_ITEM = "/backend/pipeline/analyzer/{analyzer_id}";
+inline const char* PATH_BATCH_REMOVE = "/backend/pipeline/analyzer/batch/remove";
 
 inline Json::Value ROW() {
   Json::Value node;

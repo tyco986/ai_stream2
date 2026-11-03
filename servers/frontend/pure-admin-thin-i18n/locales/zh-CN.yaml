@@ -129,10 +129,36 @@ stream:
   pureEditGroup: 编辑分组
   pureParent: 父组
   pureRemoveGroup: 移除
+model:
+  pureCreate: 新建
+  pureRemove: 移除
+  pureSearch: 搜索
+  pureName: 名称
+  pureSource: 源文件
+  pureType: 类型
+  pureBatchSize: 批大小
+  pureBatchMode: 批模式
+  purePrecision: 精度
+  pureDevice: 设备
+  pureMaxDet: 最大检测
+  pureConf: 置信度
+  pureIou: IOU
+  pureClasses: 类别
+  pureClassId: Class ID
+  pureClassName: Class Name
+  pureStatus: 状态
+  pureBuiltAt: 构建时间
+  pureOps: 操作
+  pureBuild: 构建
+  pureUpload: 上传
+  pureEdit: 编辑
+  pureCancel: 取消
+  pureConfirm: 确定
 preview:
   purePreset: Preset
   pureSave: 保存
   pureSaveAs: 另存为
+  pureName: 名称
   pureClear: 清除
   purePlay: 播放
   purePause: 暂停

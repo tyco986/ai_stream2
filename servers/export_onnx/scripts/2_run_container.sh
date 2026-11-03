@@ -5,7 +5,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 PROJECT_NAME="ai_stream2"
 
-mkdir -p "${ROOT}/history" "${ROOT}/logs"
+mkdir -p "${ROOT}/history/export_onnx" "${ROOT}/logs"
 
 NAME="${PROJECT_NAME}_export_onnx"
 

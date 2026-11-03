@@ -7,6 +7,7 @@ export const LOG_PAGES = [
   { page: "pipeline", label: "Pipeline" },
   { page: "pipeline_gie", label: "Pipeline Gie" },
   { page: "pipeline_analyzer", label: "Pipeline Analyzer" },
+  { page: "device", label: "Device" },
   { page: "server", label: "Server" },
   { page: "preview", label: "Preview" },
   { page: "user_group", label: "User Group" },

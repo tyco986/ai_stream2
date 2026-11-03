@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import HardDrive from "~icons/ri/hard-drive-2-line";
 import RecordCircle from "~icons/ri/record-circle-line";
 import Search from "~icons/ri/search-line";
@@ -28,9 +28,11 @@ import {
   PATH_STREAM_BATCH_UNMOUNT,
   PATH_STREAM_BATCH_UNRECORD
 } from "@/constants/path";
+import { STREAM_CREATE_COLUMN_PERCENTS, STREAM_LIST_COLUMN_PERCENTS } from "@/constants/stream";
 import { ALL_GROUP_ID } from "@/constants/streamGroup";
 import { $t, transformI18n } from "@/plugins/i18n";
 import { message } from "@/utils/message";
+import { columnPixels } from "@/utils/columnWidth";
 import { formatLocalTime } from "@/utils/time";
 
 defineOptions({
@@ -44,6 +46,26 @@ const blankRow = (): DraftRow => ({
   url: "",
   group_id: ALL_GROUP_ID
 });
+
+const listRef = ref();
+const listWidth = ref(0);
+const listObserver = new ResizeObserver(entries => {
+  listWidth.value = Math.floor(entries[0].contentRect.width);
+});
+const createRef = ref();
+const createWidth = ref(0);
+const createObserver = new ResizeObserver(entries => {
+  createWidth.value = Math.floor(entries[0].contentRect.width);
+});
+
+const listWidths = computed(() => columnPixels(listWidth.value, STREAM_LIST_COLUMN_PERCENTS));
+
+const createWidths = computed(() => columnPixels(createWidth.value, STREAM_CREATE_COLUMN_PERCENTS));
+
+const observeCreate = () => {
+  const el = createRef.value?.$el as HTMLElement | undefined;
+  el && createObserver.observe(el);
+};
 
 const keyword = ref("");
 const searched = ref("");
@@ -211,7 +233,20 @@ const onConfirm = () => {
   });
 };
 
-onMounted(loadStreams);
+watch(visible, value => {
+  value && nextTick(observeCreate);
+});
+
+onMounted(() => {
+  loadStreams();
+  const el = listRef.value?.$el as HTMLElement | undefined;
+  el && listObserver.observe(el);
+});
+
+onUnmounted(() => {
+  listObserver.disconnect();
+  createObserver.disconnect();
+});
 </script>
 
 <template>
@@ -269,41 +304,41 @@ onMounted(loadStreams);
           {{ transformI18n($t("stream.pureRemove")) }}
         </el-button>
       </div>
-      <el-table class="create-table" :data="rows" table-layout="fixed" border @selection-change="onSelect">
-        <el-table-column type="selection" width="48" />
-        <el-table-column :label="transformI18n($t('stream.pureName'))">
+      <el-table ref="createRef" class="create-table" :data="rows" table-layout="fixed" border @selection-change="onSelect">
+        <el-table-column type="selection" :width="createWidths.selection" />
+        <el-table-column :label="transformI18n($t('stream.pureName'))" :width="createWidths.name">
           <template #default="{ row }">
             <el-input v-model="row.name" />
           </template>
         </el-table-column>
-        <el-table-column :label="transformI18n($t('stream.pureUrl'))">
+        <el-table-column :label="transformI18n($t('stream.pureUrl'))" :width="createWidths.url">
           <template #default="{ row }">
             <el-input v-model="row.url" />
           </template>
         </el-table-column>
-        <el-table-column :label="transformI18n($t('stream.pureGroup'))" width="100">
+        <el-table-column :label="transformI18n($t('stream.pureGroup'))" :width="createWidths.group">
           <template #default="{ row }">
             <el-select v-model="row.group_id">
               <el-option v-for="(id, name) in groups" :key="id" :label="name" :value="id" />
             </el-select>
           </template>
         </el-table-column>
-        <el-table-column :label="transformI18n($t('stream.pureWidth'))" width="72">
+        <el-table-column :label="transformI18n($t('stream.pureWidth'))" :width="createWidths.width">
           <template #default="{ row }">{{ row.width ?? "" }}</template>
         </el-table-column>
-        <el-table-column :label="transformI18n($t('stream.pureHeight'))" width="72">
+        <el-table-column :label="transformI18n($t('stream.pureHeight'))" :width="createWidths.height">
           <template #default="{ row }">{{ row.height ?? "" }}</template>
         </el-table-column>
-        <el-table-column :label="transformI18n($t('stream.pureFps'))" width="72">
+        <el-table-column :label="transformI18n($t('stream.pureFps'))" :width="createWidths.fps">
           <template #default="{ row }">{{ row.fps ?? "" }}</template>
         </el-table-column>
-        <el-table-column :label="transformI18n($t('stream.pureStatus'))" width="88">
+        <el-table-column :label="transformI18n($t('stream.pureStatus'))" :width="createWidths.status">
           <template #default="{ row }">{{ row.status ?? "" }}</template>
         </el-table-column>
-        <el-table-column :label="transformI18n($t('stream.pureProbedAt'))" min-width="160">
+        <el-table-column :label="transformI18n($t('stream.pureProbedAt'))" :width="createWidths.probedAt">
           <template #default="{ row }">{{ formatLocalTime(row.probed_at) }}</template>
         </el-table-column>
-        <el-table-column :label="transformI18n($t('stream.pureOps'))" width="72" :show-overflow-tooltip="false">
+        <el-table-column :label="transformI18n($t('stream.pureOps'))" :width="createWidths.ops" :show-overflow-tooltip="false">
           <template #default="{ row, $index }">
             <el-button link type="primary" :disabled="probingRows.includes(row)" :title="transformI18n($t('stream.pureProbe'))" @click="onProbe(row)">
               <IconifyIconOffline :icon="Search" />
@@ -373,33 +408,33 @@ onMounted(loadStreams);
         </el-button>
       </template>
     </el-dialog>
-    <el-table class="stream-list" :data="items" table-layout="fixed" border show-overflow-tooltip @selection-change="onSelectStreams">
-      <el-table-column type="selection" width="48" />
-      <el-table-column :label="transformI18n($t('stream.pureName'))">
+    <el-table ref="listRef" class="stream-list" :data="items" table-layout="fixed" border show-overflow-tooltip @selection-change="onSelectStreams">
+      <el-table-column type="selection" :width="listWidths.selection" />
+      <el-table-column :label="transformI18n($t('stream.pureName'))" :width="listWidths.name">
         <template #default="{ row }"><SearchHighlight :text="row.name" :query="searched" /></template>
       </el-table-column>
-      <el-table-column :label="transformI18n($t('stream.pureUrl'))">
+      <el-table-column :label="transformI18n($t('stream.pureUrl'))" :width="listWidths.url">
         <template #default="{ row }"><SearchHighlight :text="row.url" :query="searched" /></template>
       </el-table-column>
-      <el-table-column :label="transformI18n($t('stream.pureGroup'))" width="100">
+      <el-table-column :label="transformI18n($t('stream.pureGroup'))" :width="listWidths.group">
         <template #default="{ row }"><SearchHighlight :text="row.group_name" :query="searched" /></template>
       </el-table-column>
-      <el-table-column :label="transformI18n($t('stream.pureWidth'))" width="72">
+      <el-table-column :label="transformI18n($t('stream.pureWidth'))" :width="listWidths.width">
         <template #default="{ row }"><SearchHighlight :text="String(row.width ?? '')" :query="searched" /></template>
       </el-table-column>
-      <el-table-column :label="transformI18n($t('stream.pureHeight'))" width="72">
+      <el-table-column :label="transformI18n($t('stream.pureHeight'))" :width="listWidths.height">
         <template #default="{ row }"><SearchHighlight :text="String(row.height ?? '')" :query="searched" /></template>
       </el-table-column>
-      <el-table-column :label="transformI18n($t('stream.pureFps'))" width="72">
+      <el-table-column :label="transformI18n($t('stream.pureFps'))" :width="listWidths.fps">
         <template #default="{ row }"><SearchHighlight :text="String(row.fps ?? '')" :query="searched" /></template>
       </el-table-column>
-      <el-table-column :label="transformI18n($t('stream.pureStatus'))" width="88">
+      <el-table-column :label="transformI18n($t('stream.pureStatus'))" :width="listWidths.status">
         <template #default="{ row }"><SearchHighlight :text="row.status ?? ''" :query="searched" /></template>
       </el-table-column>
-      <el-table-column :label="transformI18n($t('stream.pureProbedAt'))" min-width="168">
+      <el-table-column :label="transformI18n($t('stream.pureProbedAt'))" :width="listWidths.probedAt">
         <template #default="{ row }"><SearchHighlight :text="formatLocalTime(row.probed_at)" :query="searched" /></template>
       </el-table-column>
-      <el-table-column :label="transformI18n($t('stream.pureOps'))" width="160" :show-overflow-tooltip="false">
+      <el-table-column :label="transformI18n($t('stream.pureOps'))" :width="listWidths.ops" :show-overflow-tooltip="false">
         <template #default="{ row }">
           <el-button
             link

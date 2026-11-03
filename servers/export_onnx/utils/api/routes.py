@@ -1,7 +1,15 @@
-from fastapi import APIRouter, File, Form, Query, UploadFile
+from pathlib import Path
+
+from fastapi import APIRouter, File, Query, Request, UploadFile
 from fastapi.responses import Response
 
-from utils.api.constants import FIELD_CONFIG, FIELD_FILENAME, FIELD_INPUT, FIELD_LABEL, PROJECT_NAME
+from utils.api.constants import (
+    FIELD_CONFIG,
+    FIELD_FILENAME,
+    FIELD_INPUT,
+    PROJECT_NAME,
+    STATE_INPUT,
+)
 from utils.api.schemas import ApiEnvelope
 from utils.api.services import ExportOnnxService
 from utils.manager.onnx_exporter_manager import OnnxExporterManager
@@ -16,6 +24,16 @@ router = APIRouter(prefix=f"/{PROJECT_NAME}/export_onnx", tags=["export_onnx"])
 )
 def health() -> ApiEnvelope:
     payload = ApiEnvelope.ok()
+    return payload
+
+
+@router.get(
+    "/recipe",
+    response_model=ApiEnvelope,
+    summary="Model build recipes",
+)
+def recipe() -> ApiEnvelope:
+    payload = ApiEnvelope.ok(data=ExportOnnxService().recipe())
     return payload
 
 
@@ -59,14 +77,26 @@ def remove_history(filename: str = Query(default="", alias=FIELD_FILENAME)) -> A
     return payload
 
 
+@router.delete(
+    "/logs",
+    response_model=ApiEnvelope,
+    summary="Remove request logs",
+)
+def remove_logs() -> ApiEnvelope:
+    ExportOnnxService().remove_logs()
+    payload = ApiEnvelope.ok()
+    return payload
+
+
 @router.post(
     "/export",
     summary="Export ONNX",
 )
 def export(
+    request: Request,
     input: UploadFile = File(..., alias=FIELD_INPUT),
     config: UploadFile = File(..., alias=FIELD_CONFIG),
-    label: UploadFile | None = File(None, alias=FIELD_LABEL),
 ) -> Response:
-    payload = ExportOnnxService().export(input, config, label)
+    setattr(request.state, STATE_INPUT, Path(input.filename or "").name)
+    payload = ExportOnnxService().export(input, config)
     return payload

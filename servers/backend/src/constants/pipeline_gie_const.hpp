@@ -20,11 +20,11 @@ inline const char* KEY_SKIPPED_ROWS = "skipped_rows";
 inline const char* KEY_UPDATED_COUNT = "updated_count";
 inline const char* KEY_FAILED_COUNT = "failed_count";
 inline const char* KEY_SKIPPED_COUNT = "skipped_count";
-inline const char* PATH_LIST = "/ai_stream2/backend/pipeline/gie";
-inline const char* PATH_MAP = "/ai_stream2/backend/pipeline/gie/map";
-inline const char* PATH_MODELS = "/ai_stream2/backend/pipeline/gie/models";
-inline const char* PATH_BATCH_REMOVE = "/ai_stream2/backend/pipeline/gie/batch/remove";
-inline const char* PATH_ITEM = "/ai_stream2/backend/pipeline/gie/{gie_id}";
+inline const char* PATH_LIST = "/backend/pipeline/gie";
+inline const char* PATH_MAP = "/backend/pipeline/gie/map";
+inline const char* PATH_MODELS = "/backend/pipeline/gie/models";
+inline const char* PATH_BATCH_REMOVE = "/backend/pipeline/gie/batch/remove";
+inline const char* PATH_ITEM = "/backend/pipeline/gie/{gie_id}";
 inline const char* ERR_NOT_FOUND = "pipeline_gie_err_not_found";
 inline const char* ERR_OCCUPIED = "pipeline_gie_err_occupied";
 

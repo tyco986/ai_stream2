@@ -1,6 +1,8 @@
 {
   "auth_forbidden": "Forbidden",
   "auth_unauthorized": "Unauthorized",
+  "device_list_error": "Failed to load devices",
+  "device_list_ok": "Loaded devices",
   "event_err_not_found": "Event not found",
   "event_list_error": "Failed to load event list",
   "event_list_ok": "Loaded event list",
@@ -39,6 +41,8 @@
   "model_remove_ok": "Removed model",
   "model_status_error": "Failed to load model status",
   "model_status_ok": "Loaded model status",
+  "model_types_error": "Failed to load model types",
+  "model_types_ok": "Loaded model types",
   "model_update_error": "Failed to update model",
   "model_update_ok": "Updated model",
   "model_upload_error": "Failed to upload model file",

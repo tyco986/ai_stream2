@@ -2,16 +2,15 @@
 
 generator: TopdownPoseSahiRTSPGenerator
 pipeline_name: topdown_pose_sahi_rtsp
-config_save_dir: /root/configs/generator/topdown_pose_sahi_rtsp
 pgie:
   interval: 50
-  model_dir: /root/models/trt/yolo26n
+  model_zip: /root/history/export_trt/yolo26n.zip
   class_attrs:
     0:
       conf: 0.25
 sgie:
   interval: 50
-  model_dir: /root/models/trt/rtmpose-t-body8
+  model_zip: /root/history/export_trt/rtmpose-t-body8.zip
 tracker: null
 analyzer: null
 logger:

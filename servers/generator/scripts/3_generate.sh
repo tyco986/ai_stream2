@@ -1,78 +1,27 @@
 #!/usr/bin/env bash
-# Run from project root.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
-# shellcheck source=../../../scripts/load_project_env.sh
-source "${ROOT}/scripts/load_project_env.sh"
-API_URL="http://127.0.0.1:8091"
-ENDPOINT="${API_URL}/${PROJECT_NAME}/generator/generate"
-TEMPLATES_DIR="${ROOT}/servers/generator/templates"
-
-usage() {
-  cat <<EOF
-usage: $0 --config PATH
-
-Generate DeepStream pipeline configs via Generator API.
-
-Options:
-  --config PATH   Generator YAML (e.g. yolo26n_det_vis_rtsp or servers/generator/templates/...)
-
-Prerequisites: 1_build_dev_image.sh or 1_build_prod_image.sh, 2_run_dev_container.sh or 2_run_prod_container.sh
-EOF
-}
-
-CONFIG=""
+HOST_PORT="${GENERATOR_HOST_PORT:-8091}"
+ENDPOINT="http://127.0.0.1:${HOST_PORT}/ai_stream2/generator/generate"
+YAML=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --config)
-      CONFIG="$2"
-      shift 2
-      ;;
-    -h|--help)
-      usage
-      exit 0
-      ;;
-    *)
-      echo "unknown option: $1" >&2
-      usage
-      exit 1
-      ;;
+    --yaml) YAML="$2"; shift 2 ;;
+    *) echo "usage: $0 --yaml path/to/config.yaml" >&2; exit 1 ;;
   esac
 done
 
-[[ -n "$CONFIG" ]] || { echo "--config is required" >&2; usage; exit 1; }
+[[ -n "${YAML}" ]]
+YAML="$(realpath "${YAML}")"
+[[ -f "${YAML}" ]]
 
-resolve_config_path() {
-  local path="$1"
-  local candidate
-  if [[ -f "$path" ]]; then
-    realpath "$path"
-    return
-  fi
-  for candidate in \
-    "${TEMPLATES_DIR}/${path}.yaml" \
-    "${TEMPLATES_DIR}/${path}" \
-    "${TEMPLATES_DIR}"/*/"${path}.yaml" \
-    "${TEMPLATES_DIR}"/*/"${path}"
-  do
-    if [[ -f "$candidate" ]]; then
-      realpath "$candidate"
-      return
-    fi
-  done
-  echo ""
-}
+RESPONSE_BODY="$(mktemp)"
+trap 'rm -f "${RESPONSE_BODY}"' EXIT
 
-CONFIG_PATH="$(resolve_config_path "$CONFIG")"
-[[ -n "$CONFIG_PATH" ]] || { echo "config not found: $CONFIG" >&2; exit 1; }
-
-HTTP_CODE="$(curl -sS -w "%{http_code}" -o /tmp/generator_response.json \
+HTTP_CODE="$(curl -sS --connect-timeout 2 -o "${RESPONSE_BODY}" -w "%{http_code}" \
   -X POST "${ENDPOINT}" \
-  -F "input=@${CONFIG_PATH}")"
-
-cat /tmp/generator_response.json
-echo
-
-[[ "${HTTP_CODE}" == "200" ]] || exit 1
+  -H "Accept-Language: en" \
+  -F "yaml=@${YAML}")"
+printf '{"request":{"method":"POST","url":"%s","headers":{"Accept-Language":"en"},"content":{"yaml":"%s"}},"response":{"code":%s,"content":"multipart(zip)"}}\n' "${ENDPOINT}" "${YAML}" "${HTTP_CODE}"
+[[ "${HTTP_CODE}" == "200" ]]

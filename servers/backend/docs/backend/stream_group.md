@@ -1,6 +1,6 @@
 # Stream Group
 
-前缀：`/ai_stream2/backend/streams/groups`。全部接口经 `AuthFilter`。
+前缀：`/backend/streams/groups`。全部接口经 `AuthFilter`。
 
 JSON 成功外壳：`{success, message, data}`。`export` 例外，直接返回 multipart。
 
@@ -14,18 +14,18 @@ All 组固定 `id` = `00000000-0000-4000-8000-000000000001`，`parent_id` 为空
 
 | 方法 | 路径 | 入参键 | 出参键（`data`） | 功能 |
 |------|------|--------|------------------|------|
-| `GET` | `/ai_stream2/backend/streams/groups/tree` | 无 | 根节点 `id`、`name`、`type`、`children` | 组树，子节点含组与直属流 |
-| `GET` | `/ai_stream2/backend/streams/groups/map` | 无 | `{组名: id}` | 组名到 id |
-| `POST` | `/ai_stream2/backend/streams/groups/import` | multipart 字段 `file`（CSV） | 树（同 tree） | 按 CSV 新建组或改父级 |
-| `GET` | `/ai_stream2/backend/streams/groups/export` | 无 | multipart 字段 `file`，文件名 `groups.csv` | 导出 CSV |
-| `POST` | `/ai_stream2/backend/streams/groups/{parent_group_id}` | `name` | `id`、`name`、`parent_id` | 在父组下新建 |
-| `PATCH` | `/ai_stream2/backend/streams/groups/{group_id}` | `name`、`parent_id` | `id`、`name`、`parent_id` | 改名并改父级（不可改 All） |
-| `DELETE` | `/ai_stream2/backend/streams/groups/{group_id}` | path：`group_id` | 树 | 删组及子组；其下流归 All |
-| `GET` | `/ai_stream2/backend/streams/groups/{group_id}/members` | path：`group_id` | `id`、`name`、`group_id`、`group_name` 数组 | 直属该组的流 |
-| `GET` | `/ai_stream2/backend/streams/groups/{group_id}/candidates` | path：`group_id` | `id`、`name`、`group_id`、`group_name` 数组 | 不在该组的流 |
-| `PUT` | `/ai_stream2/backend/streams/groups/{group_id}/members` | `stream_ids` | 树 | 设置直属成员；移出的流归 All |
+| `GET` | `/backend/streams/groups/tree` | 无 | 根节点 `id`、`name`、`type`、`children` | 组树，子节点含组与直属流 |
+| `GET` | `/backend/streams/groups/map` | 无 | `{组名: id}` | 组名到 id |
+| `POST` | `/backend/streams/groups/import` | multipart 字段 `file`（CSV） | 树（同 tree） | 按 CSV 新建组或改父级 |
+| `GET` | `/backend/streams/groups/export` | 无 | multipart 字段 `file`，文件名 `groups.csv` | 导出 CSV |
+| `POST` | `/backend/streams/groups/{parent_group_id}` | `name` | `id`、`name`、`parent_id` | 在父组下新建 |
+| `PATCH` | `/backend/streams/groups/{group_id}` | `name`、`parent_id` | `id`、`name`、`parent_id` | 改名并改父级（不可改 All） |
+| `DELETE` | `/backend/streams/groups/{group_id}` | path：`group_id` | 树 | 删组及子组；其下流归 All |
+| `GET` | `/backend/streams/groups/{group_id}/members` | path：`group_id` | `id`、`name`、`group_id`、`group_name` 数组 | 直属该组的流 |
+| `GET` | `/backend/streams/groups/{group_id}/candidates` | path：`group_id` | `id`、`name`、`group_id`、`group_name` 数组 | 不在该组的流 |
+| `PUT` | `/backend/streams/groups/{group_id}/members` | `stream_ids` | 树 | 设置直属成员；移出的流归 All |
 
-### GET `/ai_stream2/backend/streams/groups/tree`
+### GET `/backend/streams/groups/tree`
 
 根为 All。`children` 先放直属流再放子组。组节点：`id`、`name`、`type=group`、`children`。流节点：`id`、`name`、`type=stream`、`mount`、`status`、`record`。
 
@@ -33,13 +33,13 @@ All 组固定 `id` = `00000000-0000-4000-8000-000000000001`，`parent_id` 为空
 
 出参 `data`：根节点。`message`：`Loaded group tree`。失败 `500`，`Failed to load group tree`。
 
-### GET `/ai_stream2/backend/streams/groups/map`
+### GET `/backend/streams/groups/map`
 
 入参：无。
 
 出参 `data`：对象，键为组名，值为组 id，按组名排序。`message`：`Loaded group map`。失败 `500`，`Failed to load group map`。
 
-### POST `/ai_stream2/backend/streams/groups/import`
+### POST `/backend/streams/groups/import`
 
 multipart，字段名 `file`。首行必须是 `group,parent`。父组名须已存在（含本文件中尚未写出、但库里已有的组；新建行的父级须先于该行已在库中）。`All` 的 parent 必须为空，否则 `400`，`cannot move All`。非 All 的 parent 为空或找不到，或会把组挂到自身子树下：`400`，`parent not found`。文件内组名重复：`400`，`group name exists`。列数不对或表头非法：`400`，`invalid csv`。已存在的组只改 `parent_id`；新组插入。
 
@@ -47,11 +47,11 @@ multipart，字段名 `file`。首行必须是 `group,parent`。父组名须已�
 
 出参 `data`：导入后的树。`message`：`Imported groups`。文件无法解析时 `400`，`Failed to import groups`。
 
-### GET `/ai_stream2/backend/streams/groups/export`
+### GET `/backend/streams/groups/export`
 
 `200`，`Content-Type: multipart/form-data; boundary=ai_stream2_group_export`。字段 `file`，文件名 `groups.csv`，正文 `group,parent` 加数据行，按组名排序。All 的 parent 为空。失败 JSON `500`，`Failed to export groups`。
 
-### POST `/ai_stream2/backend/streams/groups/{parent_group_id}`
+### POST `/backend/streams/groups/{parent_group_id}`
 
 父组必须存在。
 
@@ -59,7 +59,7 @@ multipart，字段名 `file`。首行必须是 `group,parent`。父组名须已�
 
 出参 `data`：`id`、`name`、`parent_id`。`message`：`Created group`。失败 `500`，`Failed to create group`。
 
-### PATCH `/ai_stream2/backend/streams/groups/{group_id}`
+### PATCH `/backend/streams/groups/{group_id}`
 
 同时更新 `name` 与 `parent_id`。All 返回 `400`，`cannot move All`。`parent_id` 为空、不存在，或指向该组自身及其子组：`400`，`parent not found`。
 
@@ -67,7 +67,7 @@ multipart，字段名 `file`。首行必须是 `group,parent`。父组名须已�
 
 出参 `data`：`id`、`name`、`parent_id`。`message`：`Updated group`。失败 `500`，`Failed to update group`。
 
-### DELETE `/ai_stream2/backend/streams/groups/{group_id}`
+### DELETE `/backend/streams/groups/{group_id}`
 
 删该组及全部子组。这些组下的流先改到 All。All 删除返回 `500`，message 为 `cannot delete All`。
 
@@ -75,19 +75,19 @@ multipart，字段名 `file`。首行必须是 `group,parent`。父组名须已�
 
 出参 `data`：删除后的树。`message`：`Deleted group`。失败 `500`，`Failed to delete group`。
 
-### GET `/ai_stream2/backend/streams/groups/{group_id}/members`
+### GET `/backend/streams/groups/{group_id}/members`
 
 入参：path `group_id`。
 
 出参 `data`：数组，元素为 `id`、`name`、`group_id`、`group_name`，仅直属该组，按流名排序。`message`：`Loaded group members`。组不存在 `500`，`Failed to load group members`。
 
-### GET `/ai_stream2/backend/streams/groups/{group_id}/candidates`
+### GET `/backend/streams/groups/{group_id}/candidates`
 
 入参：path `group_id`。
 
 出参 `data`：数组，元素为 `id`、`name`、`group_id`、`group_name`，`group_id` 不是该组的流。`message`：`Loaded group candidates`。组不存在 `500`，`Failed to load group candidates`。
 
-### PUT `/ai_stream2/backend/streams/groups/{group_id}/members`
+### PUT `/backend/streams/groups/{group_id}/members`
 
 `stream_ids` 中的流改入该组。原先直属该组但不在列表中的流改到 All。
 

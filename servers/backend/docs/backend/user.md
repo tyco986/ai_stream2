@@ -1,6 +1,6 @@
 # User
 
-前缀：`/ai_stream2/backend/users`。除 `login` 外全部经 `AuthFilter`。
+前缀：`/backend/users`。除 `login` 外全部经 `AuthFilter`。
 
 JSON 成功外壳：`{success, message, data}`。
 
@@ -14,19 +14,19 @@ admin 用户固定 `id` = `00000000-0000-4000-8000-000000000004`。不可改 `us
 
 | 方法 | 路径 | 入参键 | 出参键（`data`） | 功能 |
 |------|------|--------|------------------|------|
-| `POST` | `/ai_stream2/backend/users/login` | `username`、`passwd` | `token`、`id`、`username`、`active`、`group_id`、`group_name`、`last_login` | 登录，签发 token 并写 `last_login` |
-| `GET` | `/ai_stream2/backend/users/me` | 请求头 `authorization` | 用户对象，不含 `passwd` | 当前登录用户 |
-| `GET` | `/ai_stream2/backend/users` | query：`search`、`page`、`page_size` | `items`、`total`、`page`、`page_size` | 分页列表 |
-| `GET` | `/ai_stream2/backend/users/map` | 无 | `{用户名: id}` | 用户名到 id |
-| `POST` | `/ai_stream2/backend/users` | `username`、`passwd`、`active`、`group_id` | 用户对象 | 新建用户，并建默认预览预设 |
-| `GET` | `/ai_stream2/backend/users/{user_id}` | path：`user_id` | 用户对象 | 详情 |
-| `PATCH` | `/ai_stream2/backend/users/{user_id}` | `username`、`passwd`、`active`、`group_id` | 用户对象 | 更新 |
-| `DELETE` | `/ai_stream2/backend/users/{user_id}` | path：`user_id` | 用户对象 | 删除用户及其预览预设 |
-| `POST` | `/ai_stream2/backend/users/batch/remove` | `ids` | 批量结果 | 批量删除 |
+| `POST` | `/backend/users/login` | `username`、`passwd` | `token`、`id`、`username`、`active`、`group_id`、`group_name`、`last_login` | 登录，签发 token 并写 `last_login` |
+| `GET` | `/backend/users/me` | 请求头 `authorization` | 用户对象，不含 `passwd` | 当前登录用户 |
+| `GET` | `/backend/users` | query：`search`、`page`、`page_size` | `items`、`total`、`page`、`page_size` | 分页列表 |
+| `GET` | `/backend/users/map` | 无 | `{用户名: id}` | 用户名到 id |
+| `POST` | `/backend/users` | `username`、`passwd`、`active`、`group_id` | 用户对象 | 新建用户，并建默认预览预设 |
+| `GET` | `/backend/users/{user_id}` | path：`user_id` | 用户对象 | 详情 |
+| `PATCH` | `/backend/users/{user_id}` | `username`、`passwd`、`active`、`group_id` | 用户对象 | 更新 |
+| `DELETE` | `/backend/users/{user_id}` | path：`user_id` | 用户对象 | 删除用户及其预览预设 |
+| `POST` | `/backend/users/batch/remove` | `ids` | 批量结果 | 批量删除 |
 
 批量结果键：`updated_rows`、`failed_rows`、`skipped_rows`、`updated_count`、`failed_count`、`skipped_count`。
 
-### POST `/ai_stream2/backend/users/login`
+### POST `/backend/users/login`
 
 `active` 为真且用户名、密码匹配时，写入新 `token`（UUID 文本）和 `last_login`。不校验已有 token。
 
@@ -34,13 +34,13 @@ admin 用户固定 `id` = `00000000-0000-4000-8000-000000000004`。不可改 `us
 
 出参 `data`：`token`，以及 `id`、`username`、`active`、`group_id`、`group_name`、`last_login`。不含 `passwd`。`message`：`Logged in`。失败 `401`，`invalid username or password`。
 
-### GET `/ai_stream2/backend/users/me`
+### GET `/backend/users/me`
 
 身份取请求头 `authorization` 的 token，不读 path、query、body。任意已登录用户可调，不查用户组 CRUD。
 
 出参 `data`：`id`、`username`、`active`、`group_id`、`group_name`、`last_login`。不含 `passwd`、`token`。`message`：`Loaded user`。token 无效或用户未启用 `401`，`unauthorized`。
 
-### GET `/ai_stream2/backend/users`
+### GET `/backend/users`
 
 `page` 默认 `1`，`page_size` 默认 `20`。`search` 匹配 id、username、active、group_id、组名。按 username 排序。
 
@@ -48,13 +48,13 @@ admin 用户固定 `id` = `00000000-0000-4000-8000-000000000004`。不可改 `us
 
 出参 `data`：`items`（用户对象数组）、`total`、`page`、`page_size`。`message`：`Loaded users`。失败 `500`，`Failed to load users`。
 
-### GET `/ai_stream2/backend/users/map`
+### GET `/backend/users/map`
 
 入参：无。
 
 出参 `data`：键为 username，值为 id，按 username 排序。`message`：`Loaded user map`。失败 `500`，`Failed to load user map`。
 
-### POST `/ai_stream2/backend/users`
+### POST `/backend/users`
 
 `group_id` 省略或非字符串时写入 `NULL`。同时插入 `preview_preset`：`name=Default`，`layout=2x2`，`mode=grid`，四个空槽，`active=true`。
 
@@ -62,13 +62,13 @@ admin 用户固定 `id` = `00000000-0000-4000-8000-000000000004`。不可改 `us
 
 出参 `data`：用户对象。`message`：`Created user`。失败 `500`，`Failed to create user`。
 
-### GET `/ai_stream2/backend/users/{user_id}`
+### GET `/backend/users/{user_id}`
 
 入参：path `user_id`。
 
 出参 `data`：用户对象。`message`：`Loaded user`。不存在 `404`，`user not found`。
 
-### PATCH `/ai_stream2/backend/users/{user_id}`
+### PATCH `/backend/users/{user_id}`
 
 `username`、`passwd`、`active` 都会写入。`group_id` 不是字符串时置为 `NULL`。admin 若改用户名、启用状态或组，返回 `409`，`admin user cannot be changed`；只改密码可以。
 
@@ -76,7 +76,7 @@ admin 用户固定 `id` = `00000000-0000-4000-8000-000000000004`。不可改 `us
 
 出参 `data`：用户对象。`message`：`Updated user`。不存在 `404`，`user not found`。
 
-### DELETE `/ai_stream2/backend/users/{user_id}`
+### DELETE `/backend/users/{user_id}`
 
 先删该用户的 `preview_preset`，再删用户。admin 返回 `409`，`admin user cannot be changed`。
 
@@ -84,7 +84,7 @@ admin 用户固定 `id` = `00000000-0000-4000-8000-000000000004`。不可改 `us
 
 出参 `data`：删除前的用户对象。`message`：`Deleted user`。不存在 `404`，`user not found`。
 
-### POST `/ai_stream2/backend/users/batch/remove`
+### POST `/backend/users/batch/remove`
 
 入参：`ids`。
 

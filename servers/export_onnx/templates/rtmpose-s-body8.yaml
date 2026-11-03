@@ -1,0 +1,5 @@
+# bash servers/export_onnx/scripts/3_export.sh --input models/source/rtmpose-s-body8.onnx --config servers/export_onnx/templates/rtmpose-s-body8.yaml
+type: RTMPOSE
+batch_size: null
+batch_mode: dynamic
+simplify: false

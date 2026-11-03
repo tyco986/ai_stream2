@@ -9,7 +9,7 @@ JSON 成功外壳：`{success, message, data}`。
 | 方法 | 路径 | 入参键 | 出参键（`data`） | 功能 |
 |------|------|--------|------------------|------|
 | `GET` | `/health` | 无 | `{}` | 健康检查 |
-| `POST` | `/rtsp/probe` | `urls` | `{url: {status, width, height, fps, probed_at}}` | 探测多路 RTSP，只返回在线的 |
+| `POST` | `/rtsp/probe` | `urls` | `{url: {status, width, height, fps, probed_at}}` | 探测多路 RTSP，离线也返回 |
 | `POST` | `/rtsp/publish` | `paths` | `{name: {path, url_docker, url_host, width, height, fps, codec, bitrate, loop, created_at, duration, status, probed_at}}` | 把本地视频循环发布为 RTSP，只返回本次成功的 |
 | `GET` | `/rtsp/publish` | `names` 可重复、可省略 | 同上，按 `names` 筛选 | 列出已发布的 RTSP |
 | `DELETE` | `/rtsp/publish` | `names` 可重复、可省略 | 删除后剩余的发布字典 | 停止对应推流并删除记录 |
@@ -23,11 +23,11 @@ JSON 成功外壳：`{success, message, data}`。
 
 ### POST `/rtsp/probe`
 
-对 `urls` 逐条用 `ffprobe` 探测第一路视频流，超时 5 秒。在线时 `status` 为 `online`，`width`、`height` 为整数，`fps` 由 `r_frame_rate` 算出。`probed_at` 为 UTC 时间，格式 `YYYY-MM-DDTHH:MM:SSZ`。`status` 为 `offline` 的 URL 不进入返回。
+对 `urls` 逐条用 `ffprobe` 探测第一路视频流，超时 5 秒。在线时 `status` 为 `online`，`width`、`height` 为整数，`fps` 由 `r_frame_rate` 算出。离线时 `status` 为 `offline`，`width`、`height`、`fps` 为 `null`。`probed_at` 为 UTC 时间，格式 `YYYY-MM-DDTHH:MM:SSZ`。
 
 入参：`urls`，字符串数组，RTSP 地址。缺省或不是数组时按空数组处理。
 
-出参 `data`：`{url: {status, width, height, fps, probed_at}}`。全部离线时为 `{}`。`message`：空字符串。
+出参 `data`：`{url: {status, width, height, fps, probed_at}}`，每条 URL 都在。`message`：`Probed rtsp`。
 
 ### POST `/rtsp/publish`
 

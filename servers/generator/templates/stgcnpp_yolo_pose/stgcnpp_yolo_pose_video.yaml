@@ -4,20 +4,20 @@
 
 generator: StgcnppYoloPoseVideoGenerator
 pipeline_name: stgcnpp_yolo_pose_video
-config_save_dir: /root/configs/generator/stgcnpp_yolo_pose_video
 pgie:
   interval: 1
-  model_dir: /root/models/trt/yolo26n-pose
+  model_zip: /root/history/export_trt/yolo26n-pose.zip
   class_attrs:
     all:
       conf: 0.25
 stgcnpp:
   interval: 1
-  model_dir: /root/models/trt/stgcnpp-ntu60-j
+  model_zip: /root/history/export_trt/stgcnpp-ntu60-j.zip
 tracker:
   class_id: 0
 analyzer: null
 logger:
   interval: 1
 drawer: null
-input: /root/attachments/videos/video1.mp4
+videos:
+  - /root/attachments/videos/video1.mp4

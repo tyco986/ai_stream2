@@ -3,6 +3,7 @@
 #include "logger/trt_logger.hpp"
 
 #include <filesystem>
+#include <mutex>
 #include <string>
 
 #include <nlohmann/json.hpp>
@@ -25,6 +26,7 @@ public:
     ExportResult exportModel(const std::string& fileName, const std::string& fileContent, const nlohmann::json& config);
 
 private:
+    static std::mutex buildMutex;
     TrtLogger trtLogger;
     ExportInput exportStart(const std::string& fileContent);
     std::string exportEnd(const std::string& engineName, const std::string& engine, const std::string& labels, const std::string& meta);

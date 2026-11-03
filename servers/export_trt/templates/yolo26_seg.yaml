@@ -3,4 +3,4 @@ type: YOLO26-SEG
 batch_size: 18
 device: 0
 precision: fp16
-opt_level: 3
+opt_level: 0

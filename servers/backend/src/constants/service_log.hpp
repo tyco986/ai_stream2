@@ -5,10 +5,10 @@
 namespace service_log {
 
 // paths
-inline const char* PATH_LIST = "/ai_stream2/backend/logs";
-inline const char* PATH_ENABLE = "/ai_stream2/backend/logs/enable";
-inline const char* PATH_DISABLE = "/ai_stream2/backend/logs/disable";
-inline const char* PATH_STATUS = "/ai_stream2/backend/logs/status";
+inline const char* PATH_LIST = "/backend/logs";
+inline const char* PATH_ENABLE = "/backend/logs/enable";
+inline const char* PATH_DISABLE = "/backend/logs/disable";
+inline const char* PATH_STATUS = "/backend/logs/status";
 
 // messages
 inline const char* MSG_ENABLE_OK = "log_enable_ok";
@@ -32,6 +32,7 @@ inline const char* MODEL_DIR = "model";
 inline const char* PIPELINE_DIR = "pipeline";
 inline const char* PIPELINE_GIE_DIR = "pipeline_gie";
 inline const char* PIPELINE_ANALYZER_DIR = "pipeline_analyzer";
+inline const char* DEVICE_DIR = "device";
 inline const char* SERVER_DIR = "server";
 inline const char* PREVIEW_DIR = "preview";
 inline const char* USER_GROUP_DIR = "user_group";
@@ -48,6 +49,7 @@ inline const char* PAGES[] = {
     PIPELINE_DIR,
     PIPELINE_GIE_DIR,
     PIPELINE_ANALYZER_DIR,
+    DEVICE_DIR,
     SERVER_DIR,
     PREVIEW_DIR,
     USER_GROUP_DIR,

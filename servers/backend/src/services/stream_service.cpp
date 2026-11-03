@@ -217,8 +217,13 @@ Json::Value StreamService::probe(const std::string& streamId,
   const std::optional<double> fpsValue = fps.isNull() ? std::nullopt : std::optional<double>(fps.asDouble());
   const std::optional<std::string> probedAtValue =
       probedAt.isNull() ? std::nullopt : std::optional<std::string>(probedAt.asString());
+  const std::string offline(stream::STATUS_OFFLINE);
   const auto rows = Sql::sync({}, dbClient, 
-      "UPDATE stream SET status = $1, width = $2, height = $3, fps = $4, probed_at = $5::timestamptz "
+      "UPDATE stream SET status = $1, "
+      "width = CASE WHEN $1 = '" + offline + "' THEN width ELSE $2 END, "
+      "height = CASE WHEN $1 = '" + offline + "' THEN height ELSE $3 END, "
+      "fps = CASE WHEN $1 = '" + offline + "' THEN fps ELSE $4 END, "
+      "probed_at = $5::timestamptz "
       "WHERE id = $6::uuid "
       "RETURNING id::text AS id, name, group_id::text AS group_id, "
       "(SELECT name FROM stream_group WHERE id = group_id) AS group_name, "

@@ -15,7 +15,6 @@ class YoloDetE2EExporter:
         opset: int,
         batch_size: int,
         batch_mode: Literal["dynamic", "static"],
-        device: str | int,
         simplify: bool,
         max_det: int,
         conf: float,

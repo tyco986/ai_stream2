@@ -5,10 +5,9 @@
 
 generator: PoseSahiVideoGenerator
 pipeline_name: yolo26n_pose_sahi_video_no_interval
-config_save_dir: /root/configs/generator/yolo26n_pose_sahi_video_no_interval
 pgie:
   interval: 1
-  model_dir: /root/models/trt/yolo26n-pose
+  model_zip: /root/history/export_trt/yolo26n-pose.zip
   class_attrs:
     all:
       conf: 0.25
@@ -17,7 +16,8 @@ analyzer: null
 logger:
   interval: 1
 drawer: null
-input: /root/attachments/videos/video1.mp4
+videos:
+  - /root/attachments/videos/video1.mp4
 sahi:
   nvsahipreprocess:
     slice_width: 640

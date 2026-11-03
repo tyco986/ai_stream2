@@ -7,7 +7,6 @@ import torch
 import torch.nn as nn
 from ultralytics import YOLO
 
-from utils.yolo_e2e.common import trace_device
 from utils.yolo_non_e2e.common import (
     fix_batch_only_dynamic,
     prepare_yolo_core,

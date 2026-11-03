@@ -1,6 +1,6 @@
 # Stream
 
-前缀：`/ai_stream2/backend/streams`。全部接口经 `AuthFilter`。
+前缀：`/backend/streams`。全部接口经 `AuthFilter`。
 
 JSON 成功外壳：`{success, message, data}`。`export` 例外，直接返回 multipart。
 
@@ -12,25 +12,25 @@ JSON 成功外壳：`{success, message, data}`。`export` 例外，直接返回 
 
 | 方法 | 路径 | 入参键 | 出参键（`data`） | 功能 |
 |------|------|--------|------------------|------|
-| `GET` | `/ai_stream2/backend/streams` | query：`group_id`、`stream_id`、`search`、`page`、`page_size` | `items`、`total`、`page`、`page_size` | 分页列表 |
-| `POST` | `/ai_stream2/backend/streams` | `name`、`group_id`、`url`、`mount`、`record`、`status`、`width`、`height`、`fps`、`probed_at` | 流对象 | 新建；`mount` 为真时挂 MediaMTX |
-| `GET` | `/ai_stream2/backend/streams/{stream_id}` | path：`stream_id` | 流对象 | 详情 |
-| `PATCH` | `/ai_stream2/backend/streams/{stream_id}` | 同新建（均可省略） | 流对象 | 更新；按 `mount` / 改名 / `url` / `record` 挂或卸 MediaMTX |
-| `DELETE` | `/ai_stream2/backend/streams/{stream_id}` | path：`stream_id` | 流对象 | 删除；已挂载则先卸 path |
-| `POST` | `/ai_stream2/backend/streams/{stream_id}/probe` | path：`stream_id` | 流对象 | ffmpeg 探测并写回宽高、fps、status、`probed_at` |
-| `POST` | `/ai_stream2/backend/streams/import` | multipart 字段 `file`（CSV） | `updated_rows`、`failed_rows`、`skipped_rows`、`updated_count`、`failed_count`、`skipped_count` | 按 CSV 新建或改组 |
-| `GET` | `/ai_stream2/backend/streams/export` | 无 | multipart 字段 `file`，文件名 `streams.csv` | 导出 CSV |
-| `POST` | `/ai_stream2/backend/streams/batch/create` | `items` | 批量结果 | 批量新建；每条 `mount` 为真时先挂 MediaMTX |
-| `POST` | `/ai_stream2/backend/streams/batch/remove` | `ids` | 批量结果 | 批量删除并卸 path |
-| `POST` | `/ai_stream2/backend/streams/batch/mount` | `ids` | 批量结果 | 批量启用并挂 path |
-| `POST` | `/ai_stream2/backend/streams/batch/unmount` | `ids` | 批量结果 | 批量停用、卸 path 并停录 |
-| `POST` | `/ai_stream2/backend/streams/batch/record` | `ids` | 批量结果 | 仅已挂载流开录 |
-| `POST` | `/ai_stream2/backend/streams/batch/unrecord` | `ids` | 批量结果 | 批量停录 |
-| `POST` | `/ai_stream2/backend/streams/batch/probe` | `ids` | 批量结果 | 批量探测 |
+| `GET` | `/backend/streams` | query：`group_id`、`stream_id`、`search`、`page`、`page_size` | `items`、`total`、`page`、`page_size` | 分页列表 |
+| `POST` | `/backend/streams` | `name`、`group_id`、`url`、`mount`、`record`、`status`、`width`、`height`、`fps`、`probed_at` | 流对象 | 新建；`mount` 为真时挂 MediaMTX |
+| `GET` | `/backend/streams/{stream_id}` | path：`stream_id` | 流对象 | 详情 |
+| `PATCH` | `/backend/streams/{stream_id}` | 同新建（均可省略） | 流对象 | 更新；按 `mount` / 改名 / `url` / `record` 挂或卸 MediaMTX |
+| `DELETE` | `/backend/streams/{stream_id}` | path：`stream_id` | 流对象 | 删除；已挂载则先卸 path |
+| `POST` | `/backend/streams/{stream_id}/probe` | path：`stream_id` | 流对象 | ffmpeg 探测并写回宽高、fps、status、`probed_at` |
+| `POST` | `/backend/streams/import` | multipart 字段 `file`（CSV） | `updated_rows`、`failed_rows`、`skipped_rows`、`updated_count`、`failed_count`、`skipped_count` | 按 CSV 新建或改组 |
+| `GET` | `/backend/streams/export` | 无 | multipart 字段 `file`，文件名 `streams.csv` | 导出 CSV |
+| `POST` | `/backend/streams/batch/create` | `items` | 批量结果 | 批量新建；每条 `mount` 为真时先挂 MediaMTX |
+| `POST` | `/backend/streams/batch/remove` | `ids` | 批量结果 | 批量删除并卸 path |
+| `POST` | `/backend/streams/batch/mount` | `ids` | 批量结果 | 批量启用并挂 path |
+| `POST` | `/backend/streams/batch/unmount` | `ids` | 批量结果 | 批量停用、卸 path 并停录 |
+| `POST` | `/backend/streams/batch/record` | `ids` | 批量结果 | 仅已挂载流开录 |
+| `POST` | `/backend/streams/batch/unrecord` | `ids` | 批量结果 | 批量停录 |
+| `POST` | `/backend/streams/batch/probe` | `ids` | 批量结果 | 批量探测 |
 
 批量结果键：`updated_rows`、`failed_rows`、`skipped_rows`（流对象或仅 `{id}`）、`updated_count`、`failed_count`、`skipped_count`。
 
-### GET `/ai_stream2/backend/streams`
+### GET `/backend/streams`
 
 按组子树分页。`group_id` 空则用 All（`00000000-0000-4000-8000-000000000001`）。`stream_id` 非空时只查该流，不再按组。`page` 默认 `1`，`page_size` 默认 `20`。`search` 匹配 name、组、width、height、fps、status、probed_at、mount、record。
 
@@ -38,7 +38,7 @@ JSON 成功外壳：`{success, message, data}`。`export` 例外，直接返回 
 
 出参 `data`：`items`（流对象数组）、`total`、`page`、`page_size`。`message`：`Loaded streams`。
 
-### POST `/ai_stream2/backend/streams`
+### POST `/backend/streams`
 
 省略时：`group_id` = All，`mount` = `true`，`record` = `false`，`status` = `offline`，宽高 / fps / `probed_at` = `null`。`mount` 为真时先 `MediaMTX replacePath`（path = `name`，record = `record`）。`url` 的路径等于 `name` 且主机为 `puskas_mediamtx`、`127.0.0.1` 或 `localhost` 时，source 为 `publisher`，否则 source 为 `url`。成功后再入库。
 
@@ -46,13 +46,13 @@ JSON 成功外壳：`{success, message, data}`。`export` 例外，直接返回 
 
 出参 `data`：流对象。`message`：`Created stream`。失败 `500`，`Failed to create stream`。
 
-### GET `/ai_stream2/backend/streams/{stream_id}`
+### GET `/backend/streams/{stream_id}`
 
 入参：path `stream_id`。
 
 出参 `data`：流对象。`message`：`Loaded stream`。不存在 `500`，`Failed to load stream`。
 
-### PATCH `/ai_stream2/backend/streams/{stream_id}`
+### PATCH `/backend/streams/{stream_id}`
 
 未传字段保持原值。已挂载且将停用或改名时先卸旧 path；目标停用时 `record` 写 `false`。目标为启用且未挂载或 name / url / record 变化时再挂新 path。
 
@@ -60,7 +60,7 @@ JSON 成功外壳：`{success, message, data}`。`export` 例外，直接返回 
 
 出参 `data`：更新后的流对象。`message`：`Updated stream`。失败 `500`，`Failed to update stream`。
 
-### DELETE `/ai_stream2/backend/streams/{stream_id}`
+### DELETE `/backend/streams/{stream_id}`
 
 已挂载则先卸 path，再删库。
 
@@ -68,15 +68,15 @@ JSON 成功外壳：`{success, message, data}`。`export` 例外，直接返回 
 
 出参 `data`：删除前的流对象。`message`：`Deleted stream`。失败 `500`，`Failed to delete stream`。
 
-### POST `/ai_stream2/backend/streams/{stream_id}/probe`
+### POST `/backend/streams/{stream_id}/probe`
 
-用库内 `url` 调 ffmpeg。探测被接受后写入 `status`、`width`、`height`、`fps`、`probed_at`。
+用库内 `url` 调 ffmpeg。探测被接受后写入 `status`、`probed_at`。`status` 为 `online` 时同时写入 `width`、`height`、`fps`；为 `offline` 时这三列保持原值。
 
 入参：path `stream_id`。
 
 出参 `data`：探测后的流对象。`message`：`Probed stream`。失败 `500`，`Failed to probe stream`。
 
-### POST `/ai_stream2/backend/streams/import`
+### POST `/backend/streams/import`
 
 multipart，字段名 `file`。首行必须是 `name,url,group`。组名须已存在。同名且同 url 只改 `group_id`；name 与 url 都是新的则插入，`status=offline`、`mount=false`、`record=false`。完全未变进 `skipped_rows`。组不存在、name/url 交叉冲突、列数不对进 `failed_rows`（`name`、`url`、`group_name`）。文件无法解析时 `400`，`Failed to import streams`。CSV 头非法 `400`，`invalid csv`。
 
@@ -84,47 +84,47 @@ multipart，字段名 `file`。首行必须是 `name,url,group`。组名须已�
 
 出参 `data`：批量结果；`updated_rows` / `skipped_rows` 为流对象。`message`：`Imported streams`。
 
-### GET `/ai_stream2/backend/streams/export`
+### GET `/backend/streams/export`
 
 `200`，`Content-Type: multipart/form-data; boundary=ai_stream2_stream_export`。字段 `file`，文件名 `streams.csv`，正文 `name,url,group` 加数据行，按 name 排序。失败 JSON `500`，`Failed to export streams`。
 
-### POST `/ai_stream2/backend/streams/batch/create`
+### POST `/backend/streams/batch/create`
 
 入参：`items`（流对象数组）。每条字段与单条新建相同，均可省略。
 
 逐条：`mount` 为空或为真时先 `MediaMTX replacePath`。挂载成功后按原 `mount` 入库。MediaMTX 不可达或返回拒绝时仍入库，`mount` 写 `false`，该行进 `updated_rows`。入库失败进 `failed_rows`（原请求行）。全部挂载成功时 `200`，`message` 为 `stream_batch_create_ok`。有降级写入时 `207`，`success` 仍为真：存在不可达时 `message` 为 `stream_batch_create_partial`；只有拒绝时为 `stream_batch_create_rejected`。
 
-### POST `/ai_stream2/backend/streams/batch/remove`
+### POST `/backend/streams/batch/remove`
 
 入参：`ids`（字符串数组）。
 
 逐条：找不到或卸 path / 删库失败进 `failed_rows`；成功进 `updated_rows`（删除前的流对象）。`message`：`Deleted streams`。
 
-### POST `/ai_stream2/backend/streams/batch/mount`
+### POST `/backend/streams/batch/mount`
 
 入参：`ids`。
 
 挂 path 并 `mount=true` 成功进 `updated_rows`；否则 `failed_rows`。`message`：`Mounted streams`。
 
-### POST `/ai_stream2/backend/streams/batch/unmount`
+### POST `/backend/streams/batch/unmount`
 
 入参：`ids`。
 
 卸 path 并 `mount=false`、`record=false` 成功进 `updated_rows`；否则 `failed_rows`。`message`：`Unmounted streams`。
 
-### POST `/ai_stream2/backend/streams/batch/record`
+### POST `/backend/streams/batch/record`
 
 入参：`ids`。
 
 未挂载进 `skipped_rows`（保持原 `record`）。已挂载且改录成功进 `updated_rows`（`record=true`、`mount=true`）。找不到或改 path / 写库失败进 `failed_rows`。`message`：`Recording enabled`。
 
-### POST `/ai_stream2/backend/streams/batch/unrecord`
+### POST `/backend/streams/batch/unrecord`
 
 入参：`ids`。
 
 已挂载则 path 的 record 置假，再写 `record=false`，并按 path 是否存在写 `mount`。成功 `updated_rows`，否则 `failed_rows`。`message`：`Recording disabled`。
 
-### POST `/ai_stream2/backend/streams/batch/probe`
+### POST `/backend/streams/batch/probe`
 
 入参：`ids`。
 
@@ -145,7 +145,7 @@ multipart，字段名 `file`。首行必须是 `name,url,group`。组名须已�
 | `width` | INT | `NULL` | 可空 |
 | `height` | INT | `NULL` | 可空 |
 | `fps` | NUMERIC(6, 2) | `NULL` | 可空 |
-| `status` | VARCHAR(16) | 无 | NOT NULL |
+| `status` | TEXT | 无 | NOT NULL |
 | `mount` | BOOLEAN | 无 | NOT NULL |
 | `record` | BOOLEAN | 无 | NOT NULL |
 | `probed_at` | TIMESTAMPTZ | `NULL` | 可空 |

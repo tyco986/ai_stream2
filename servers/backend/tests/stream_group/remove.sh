@@ -4,7 +4,7 @@ set -euo pipefail
 HOST_PORT="${BACKEND_HOST_PORT:-8001}"
 GROUP_ID="$(cat "$(cd "$(dirname "$0")" && pwd)/group_id")"
 [[ -n "${GROUP_ID}" ]]
-ENDPOINT="http://127.0.0.1:${HOST_PORT}/ai_stream2/backend/streams/groups/${GROUP_ID}"
+ENDPOINT="http://127.0.0.1:${HOST_PORT}/backend/streams/groups/${GROUP_ID}"
 USER_INFO="$(cd "$(dirname "$0")/.." && pwd)/user_info"
 TOKEN="$(sed -n 's/.*"token":"\([^"]*\)".*/\1/p' "${USER_INFO}")"
 [[ -n "${TOKEN}" ]]

@@ -91,7 +91,7 @@ const toggleFullscreen = () => {
 onMounted(() => {
   document.addEventListener("fullscreenchange", syncFullscreen);
   const element = host.value;
-  if (element) {
+  if (element && props.streamId) {
     players.attach(element, props.streamId, props.url);
     bindVideo(videoOf(element));
     syncSize();
@@ -117,6 +117,7 @@ onBeforeUnmount(() => {
         <button
           type="button"
           class="preview-ctl"
+          :disabled="!streamId"
           :title="transformI18n($t(paused ? 'preview.purePlay' : 'preview.purePause'))"
           @click="toggle"
         >
@@ -125,6 +126,7 @@ onBeforeUnmount(() => {
         <button
           type="button"
           class="preview-ctl"
+          :disabled="!streamId"
           :title="transformI18n($t('preview.pureShot'))"
           @click="capture"
         >
@@ -133,6 +135,7 @@ onBeforeUnmount(() => {
         <button
           type="button"
           class="preview-ctl"
+          :disabled="!streamId"
           :title="transformI18n($t('preview.pureFullscreen'))"
           @click="toggleFullscreen"
         >
@@ -143,6 +146,7 @@ onBeforeUnmount(() => {
       <button
         type="button"
         class="preview-ctl"
+        :disabled="!streamId"
         :title="transformI18n($t('preview.pureUnbind'))"
         @click="emit('clear')"
       >
@@ -155,6 +159,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .preview-shell {
   position: relative;
+  z-index: 2;
   width: 100%;
   height: 100%;
 }
@@ -215,5 +220,10 @@ onBeforeUnmount(() => {
   cursor: pointer;
   background: transparent;
   border: 0;
+}
+
+.preview-ctl:disabled {
+  cursor: default;
+  opacity: 0.35;
 }
 </style>

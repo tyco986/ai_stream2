@@ -1,6 +1,6 @@
 # Preview
 
-前缀：`/ai_stream2/backend/preview`。全部接口经 `AuthFilter`。当前用户由请求头 `authorization` 的 token 解析。
+前缀：`/backend/preview`。全部接口经 `AuthFilter`。当前用户由请求头 `authorization` 的 token 解析。
 
 JSON 成功外壳：`{success, message, data}`。
 
@@ -14,21 +14,21 @@ JSON 成功外壳：`{success, message, data}`。
 
 | 方法 | 路径 | 入参键 | 出参键（`data`） | 功能 |
 |------|------|--------|------------------|------|
-| `GET` | `/ai_stream2/backend/preview/map` | 无 | `{预设名: id}` | 当前用户的预设名到 id |
-| `GET` | `/ai_stream2/backend/preview/tree` | 无 | 根节点 `id`、`name`、`type`、`children` | 流组树，供选槽 |
-| `GET` | `/ai_stream2/backend/preview/active` | 无 | 预设对象 | 当前用户的激活预设 |
-| `GET` | `/ai_stream2/backend/preview/{preset_id}` | path：`preset_id` | 预设对象 | 当前用户的一条预设 |
-| `POST` | `/ai_stream2/backend/preview` | `name`、`layout`、`mode`、`slots`、`active` | 预设对象 | 新建预设 |
-| `PATCH` | `/ai_stream2/backend/preview/{preset_id}` | 同新建 | 预设对象 | 全量更新 |
-| `DELETE` | `/ai_stream2/backend/preview/{preset_id}` | path：`preset_id` | 预设对象 | 删除，不可删 Default |
+| `GET` | `/backend/preview/map` | 无 | `{预设名: id}` | 当前用户的预设名到 id |
+| `GET` | `/backend/preview/tree` | 无 | 根节点 `id`、`name`、`type`、`children` | 流组树，供选槽 |
+| `GET` | `/backend/preview/active` | 无 | 预设对象 | 当前用户的激活预设 |
+| `GET` | `/backend/preview/{preset_id}` | path：`preset_id` | 预设对象 | 当前用户的一条预设 |
+| `POST` | `/backend/preview` | `name`、`layout`、`mode`、`slots`、`active` | 预设对象 | 新建预设 |
+| `PATCH` | `/backend/preview/{preset_id}` | 同新建 | 预设对象 | 全量更新 |
+| `DELETE` | `/backend/preview/{preset_id}` | path：`preset_id` | 预设对象 | 删除，不可删 Default |
 
-### GET `/ai_stream2/backend/preview/map`
+### GET `/backend/preview/map`
 
 入参：无。
 
 出参 `data`：键为预设名，值为 id，只含当前用户，按名排序。`message`：`Loaded preset map`。失败 `500`，`Failed to load preset map`。
 
-### GET `/ai_stream2/backend/preview/tree`
+### GET `/backend/preview/tree`
 
 根为 All。`children` 先放直属流再放子组。组节点：`id`、`name`、`type=group`、`children`。流节点：`id`、`name`、`type=stream`、`mount`、`status`、`record`。
 
@@ -36,13 +36,13 @@ JSON 成功外壳：`{success, message, data}`。
 
 出参 `data`：根节点。`message`：`Loaded preview tree`。失败 `500`，`Failed to load preview tree`。
 
-### GET `/ai_stream2/backend/preview/active`
+### GET `/backend/preview/active`
 
 入参：无。
 
 出参 `data`：当前用户 `active=true` 的预设，`slots` 已展开。`message`：`Loaded active preset`。没有激活预设 `500`，`Failed to load active preset`。
 
-### GET `/ai_stream2/backend/preview/{preset_id}`
+### GET `/backend/preview/{preset_id}`
 
 只返回属于当前用户的预设。
 
@@ -50,7 +50,7 @@ JSON 成功外壳：`{success, message, data}`。
 
 出参 `data`：预设对象。`message`：`Loaded preset`。不存在或不属于当前用户 `500`，`Failed to load preset`。
 
-### POST `/ai_stream2/backend/preview`
+### POST `/backend/preview`
 
 `user_id` 取当前用户。`slots` 必须是对象，键恰好为 `"1"` 到槽位数，值为流 id 字符串或 `null`。`active=true` 时先把该用户其它预设的 `active` 置为 `false`。
 
@@ -58,7 +58,7 @@ JSON 成功外壳：`{success, message, data}`。
 
 出参 `data`：预设对象。`message`：`Created preset`。布局或槽非法 `500`，`Failed to create preset`。
 
-### PATCH `/ai_stream2/backend/preview/{preset_id}`
+### PATCH `/backend/preview/{preset_id}`
 
 一次写入 `name`、`layout`、`mode`、`slots`、`active`。槽校验同新建。`active=true` 时取消该用户其它预设的激活。只改当前用户自己的行。
 
@@ -66,7 +66,7 @@ JSON 成功外壳：`{success, message, data}`。
 
 出参 `data`：预设对象。`message`：`Updated preset`。失败 `500`，`Failed to update preset`。
 
-### DELETE `/ai_stream2/backend/preview/{preset_id}`
+### DELETE `/backend/preview/{preset_id}`
 
 `name=Default` 不可删。只删当前用户的预设。
 

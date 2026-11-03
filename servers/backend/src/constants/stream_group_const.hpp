@@ -3,14 +3,14 @@
 namespace stream_group {
 
 // paths
-inline const char* PATH_TREE = "/ai_stream2/backend/streams/groups/tree";
-inline const char* PATH_MAP = "/ai_stream2/backend/streams/groups/map";
-inline const char* PATH_IMPORT = "/ai_stream2/backend/streams/groups/import";
-inline const char* PATH_EXPORT = "/ai_stream2/backend/streams/groups/export";
-inline const char* PATH_GROUP_CREATE = "/ai_stream2/backend/streams/groups/{parent_group_id}";
-inline const char* PATH_GROUP = "/ai_stream2/backend/streams/groups/{group_id}";
-inline const char* PATH_GROUP_MEMBERS = "/ai_stream2/backend/streams/groups/{group_id}/members";
-inline const char* PATH_GROUP_CANDIDATES = "/ai_stream2/backend/streams/groups/{group_id}/candidates";
+inline const char* PATH_TREE = "/backend/streams/groups/tree";
+inline const char* PATH_MAP = "/backend/streams/groups/map";
+inline const char* PATH_IMPORT = "/backend/streams/groups/import";
+inline const char* PATH_EXPORT = "/backend/streams/groups/export";
+inline const char* PATH_GROUP_CREATE = "/backend/streams/groups/{parent_group_id}";
+inline const char* PATH_GROUP = "/backend/streams/groups/{group_id}";
+inline const char* PATH_GROUP_MEMBERS = "/backend/streams/groups/{group_id}/members";
+inline const char* PATH_GROUP_CANDIDATES = "/backend/streams/groups/{group_id}/candidates";
 
 // keys
 inline const char* KEY_ID = "id";

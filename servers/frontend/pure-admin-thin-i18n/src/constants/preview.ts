@@ -1,4 +1,9 @@
-export const PATH_PREVIEW_ACTIVE = "/ai_stream2/backend/preview/active";
+export const PATH_PREVIEW = "/backend/preview";
+export const PATH_PREVIEW_ITEM = "/backend/preview/{preset_id}";
+export const PATH_PREVIEW_MAP = "/backend/preview/map";
+export const PATH_PREVIEW_ACTIVE = "/backend/preview/active";
+
+export const MODE_GRID = "grid";
 
 export const WEBRTC_ORIGIN = "http://127.0.0.1:8889";
 

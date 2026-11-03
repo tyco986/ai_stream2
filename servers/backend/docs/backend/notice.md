@@ -1,6 +1,6 @@
 # Notice
 
-前缀：`/ai_stream2/backend/notices`。全部接口经 `AuthFilter`。当前用户由请求头 `authorization` 的 token 解析。
+前缀：`/backend/notices`。全部接口经 `AuthFilter`。当前用户由请求头 `authorization` 的 token 解析。
 
 JSON 成功外壳：`{success, message, data}`。
 
@@ -14,12 +14,12 @@ JSON 成功外壳：`{success, message, data}`。
 
 | 方法 | 路径 | 入参键 | 出参键（`data`） | 功能 |
 |------|------|--------|------------------|------|
-| `GET` | `/ai_stream2/backend/notices` | query：`page`、`page_size` | `items`、`total`、`page`、`page_size` | 分页列表 |
-| `GET` | `/ai_stream2/backend/notices/unread` | 无 | `total` | 未读条数 |
-| `POST` | `/ai_stream2/backend/notices/{notice_id}/read_at` | `read_at` | 通知对象 | 写入已读时间 |
-| `DELETE` | `/ai_stream2/backend/notices/{notice_id}` | path：`notice_id` | 通知对象 | 删除 |
+| `GET` | `/backend/notices` | query：`page`、`page_size` | `items`、`total`、`page`、`page_size` | 分页列表 |
+| `GET` | `/backend/notices/unread` | 无 | `total` | 未读条数 |
+| `POST` | `/backend/notices/{notice_id}/read_at` | `read_at` | 通知对象 | 写入已读时间 |
+| `DELETE` | `/backend/notices/{notice_id}` | path：`notice_id` | 通知对象 | 删除 |
 
-### GET `/ai_stream2/backend/notices`
+### GET `/backend/notices`
 
 `page` 默认 `1`，`page_size` 默认 `20`。按 `created_at` 降序，再按 `id` 降序。
 
@@ -27,7 +27,7 @@ JSON 成功外壳：`{success, message, data}`。
 
 出参 `data`：`items`（通知对象数组）、`total`、`page`、`page_size`。`message`：`Loaded notice list`。失败 `500`，`Failed to load notice list`。
 
-### GET `/ai_stream2/backend/notices/unread`
+### GET `/backend/notices/unread`
 
 统计 `read_at` 为空、且属于当前用户或 `user_id` 为空的行。
 
@@ -35,13 +35,13 @@ JSON 成功外壳：`{success, message, data}`。
 
 出参 `data`：`total`。`message`：`Loaded unread notice count`。失败 `500`，`Failed to load unread notice count`。
 
-### POST `/ai_stream2/backend/notices/{notice_id}/read_at`
+### POST `/backend/notices/{notice_id}/read_at`
 
 入参：path `notice_id`；body `read_at`（时间戳文本）。
 
 出参 `data`：更新后的通知对象。`message`：`Updated notice read time`。不存在 `500`，`Failed to update notice read time`。
 
-### DELETE `/ai_stream2/backend/notices/{notice_id}`
+### DELETE `/backend/notices/{notice_id}`
 
 入参：path `notice_id`。
 

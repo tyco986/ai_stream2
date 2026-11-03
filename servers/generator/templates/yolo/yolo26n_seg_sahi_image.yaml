@@ -5,10 +5,9 @@
 
 generator: SegSahiImageGenerator
 pipeline_name: yolo26n_seg_sahi_image
-config_save_dir: /root/configs/generator/yolo26n_seg_sahi_image
 pgie:
   interval: 50
-  model_dir: /root/models/trt/yolo26n-seg
+  model_zip: /root/history/export_trt/yolo26n-seg.zip
   class_attrs:
     all:
       conf: 0.25
@@ -20,7 +19,8 @@ drawer:
   fade_time: 1
   show_label: true
   show_mask: true
-input: /root/attachments/images/video1.png
+images:
+  - /root/attachments/images/video1.png
 output: /root/outputs/deepstream/yolo26n_seg_sahi_image.jpg
 sahi:
   nvsahipreprocess:

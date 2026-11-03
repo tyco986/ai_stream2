@@ -2,19 +2,18 @@
 
 generator: StgcnppRtmposeSahiRTSPGenerator
 pipeline_name: stgcnpp_rtmpose_sahi_rtsp
-config_save_dir: /root/configs/generator/stgcnpp_rtmpose_sahi_rtsp
 pgie:
   interval: 50
-  model_dir: /root/models/trt/yolo26n
+  model_zip: /root/history/export_trt/yolo26n.zip
   class_attrs:
     0:
       conf: 0.4
 sgie:
   interval: 1
-  model_dir: /root/models/trt/rtmpose-t-body8
+  model_zip: /root/history/export_trt/rtmpose-t-body8.zip
 stgcnpp:
   interval: 1
-  model_dir: /root/models/trt/stgcnpp-ntu60-j
+  model_zip: /root/history/export_trt/stgcnpp-ntu60-j.zip
 tracker:
   class_id: 0
 analyzer: null

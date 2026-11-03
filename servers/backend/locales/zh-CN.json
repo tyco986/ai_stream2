@@ -1,6 +1,8 @@
 {
   "auth_forbidden": "无权限",
   "auth_unauthorized": "未登录",
+  "device_list_error": "加载设备失败",
+  "device_list_ok": "已加载设备",
   "event_err_not_found": "事件不存在",
   "event_list_error": "加载事件列表失败",
   "event_list_ok": "已加载事件列表",
@@ -39,6 +41,8 @@
   "model_remove_ok": "已删除模型",
   "model_status_error": "加载模型状态失败",
   "model_status_ok": "已加载模型状态",
+  "model_types_error": "加载模型类型失败",
+  "model_types_ok": "已加载模型类型",
   "model_update_error": "更新模型失败",
   "model_update_ok": "已更新模型",
   "model_upload_error": "上传模型文件失败",

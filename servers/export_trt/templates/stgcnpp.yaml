@@ -3,4 +3,4 @@ type: STGCNPP
 batch_size: 64
 device: 0
 precision: fp16
-opt_level: null
+opt_level: 0

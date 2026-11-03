@@ -102,7 +102,7 @@ CREATE TABLE stream (
   width INT,
   height INT,
   fps NUMERIC(6, 2),
-  status VARCHAR(16) NOT NULL,
+  status TEXT NOT NULL,
   mount BOOLEAN NOT NULL,
   record BOOLEAN NOT NULL,
   probed_at TIMESTAMPTZ
@@ -151,8 +151,10 @@ CREATE TABLE model (
   num_class INT,
   classes JSONB,
   source_path TEXT,
+  source_name TEXT,
   engine_path TEXT,
-  status VARCHAR(16) NOT NULL,
+  engine_name TEXT,
+  status TEXT NOT NULL,
   built_at TIMESTAMPTZ,
   trt_version VARCHAR(64),
   ever_built BOOLEAN NOT NULL
@@ -207,7 +209,7 @@ CREATE TABLE pipeline (
   id UUID PRIMARY KEY,
   name VARCHAR(150) NOT NULL UNIQUE,
   type VARCHAR(64) NOT NULL,
-  status VARCHAR(16) NOT NULL,
+  status TEXT NOT NULL,
   input JSONB,
   config_path TEXT,
   stream_ids UUID[] NOT NULL,
@@ -252,7 +254,7 @@ CREATE TABLE event (
   pipeline_name VARCHAR(150) NOT NULL,
   event_code VARCHAR(64) NOT NULL,
   event_label VARCHAR(150) NOT NULL,
-  status VARCHAR(16) NOT NULL,
+  status TEXT NOT NULL,
   raw_path TEXT,
   visualization_path TEXT,
   annotations JSONB

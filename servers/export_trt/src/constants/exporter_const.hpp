@@ -45,6 +45,10 @@ inline constexpr const char* KEY_CONF = "conf";
 inline constexpr const char* KEY_IOU = "iou";
 inline constexpr const char* KEY_NUM_CLASS = "num_class";
 inline constexpr const char* KEY_CLASSES = "classes";
+inline constexpr const char* KEY_SOURCE_PATH = "source_path";
+inline constexpr const char* KEY_SOURCE_NAME = "source_name";
+inline constexpr const char* KEY_ENGINE_PATH = "engine_path";
+inline constexpr const char* KEY_ENGINE_NAME = "engine_name";
 inline constexpr const char* KEY_STATUS = "status";
 inline constexpr const char* KEY_BUILT_AT = "built_at";
 inline constexpr const char* KEY_TRT_VERSION = "trt_version";
@@ -65,6 +69,10 @@ inline const nlohmann::json RESULT = {
     {KEY_IOU, nullptr},
     {KEY_NUM_CLASS, nullptr},
     {KEY_CLASSES, nullptr},
+    {KEY_SOURCE_PATH, nullptr},
+    {KEY_SOURCE_NAME, nullptr},
+    {KEY_ENGINE_PATH, nullptr},
+    {KEY_ENGINE_NAME, nullptr},
     {KEY_STATUS, STATUS_NOT_BUILT},
     {KEY_BUILT_AT, nullptr},
     {KEY_TRT_VERSION, nullptr},

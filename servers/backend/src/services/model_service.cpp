@@ -5,16 +5,12 @@
 #include "constants/model_const.hpp"
 #include "searcher/searcher.hpp"
 
-#include <cstdio>
-#include <cstdlib>
 #include <filesystem>
-#include <sstream>
 #include <fstream>
 #include <optional>
 #include <stdexcept>
 #include <string>
 
-#include <sys/wait.h>
 #include <zip.h>
 
 ModelService::ModelService(drogon::orm::DbClientPtr dbClient) : dbClient(std::move(dbClient)) {}
@@ -24,7 +20,7 @@ Json::Value ModelService::list(const std::string& search, int page, long pageSiz
   const std::string columns =
       "id::text AS id, name, type, version, batch_size, batch_mode, input_tensors::text AS input_tensors, output_tensors::text AS output_tensors, precision, "
       "opt_level, device, workspace, static_plugin, max_det, conf, iou, num_class, "
-      "classes::text AS classes, source_path, status, built_at, trt_version, ever_built ";
+      "classes::text AS classes, source_path, source_name, engine_name, status, built_at, trt_version, ever_built ";
   const std::string match = Searcher::clause(
       {"id",
        "name",
@@ -45,6 +41,7 @@ Json::Value ModelService::list(const std::string& search, int page, long pageSiz
        "num_class",
        "classes",
        "source_path",
+       "source_name",
        "status",
        "built_at",
        "trt_version"},
@@ -69,7 +66,7 @@ Json::Value ModelService::get(const std::string& modelId) {
   const auto rows = Sql::sync({}, dbClient, 
       "SELECT id::text AS id, name, type, version, batch_size, batch_mode, input_tensors::text AS input_tensors, output_tensors::text AS output_tensors, "
       "precision, opt_level, device, workspace, static_plugin, max_det, conf, iou, num_class, "
-      "classes::text AS classes, source_path, status, built_at, trt_version, ever_built "
+      "classes::text AS classes, source_path, source_name, engine_name, status, built_at, trt_version, ever_built "
       "FROM model WHERE id = $1::uuid",
       modelId);
   if (rows.empty()) {
@@ -90,7 +87,7 @@ Json::Value ModelService::remove(const std::string& modelId) {
       "RETURNING id::text AS id, name, type, version, batch_size, batch_mode, "
       "input_tensors::text AS input_tensors, output_tensors::text AS output_tensors, "
       "precision, opt_level, device, workspace, static_plugin, max_det, conf, iou, num_class, "
-      "classes::text AS classes, source_path, engine_path, status, built_at, trt_version, ever_built",
+      "classes::text AS classes, source_path, source_name, engine_path, engine_name, status, built_at, trt_version, ever_built",
       modelId,
       model::STATUS_BUILDING);
   if (rows.empty()) {
@@ -162,7 +159,7 @@ Json::Value ModelService::update(const std::string& modelId,
   const char* columns =
       "id::text AS id, name, type, version, batch_size, batch_mode, input_tensors::text AS input_tensors, output_tensors::text AS output_tensors, precision, "
       "opt_level, device, workspace, static_plugin, max_det, conf, iou, num_class, "
-      "classes::text AS classes, source_path, status, built_at, trt_version, ever_built";
+      "classes::text AS classes, source_path, source_name, engine_name, status, built_at, trt_version, ever_built";
   const auto rows = Sql::sync({}, dbClient, 
       std::string("UPDATE model SET name = $1, type = $2, batch_size = $3, batch_mode = $4, precision = $5, "
                   "source_path = COALESCE(NULLIF($6, ''), source_path), "
@@ -171,6 +168,7 @@ Json::Value ModelService::update(const std::string& modelId,
                   "classes = CASE WHEN $7 THEN NULL ELSE classes END, "
                   "built_at = CASE WHEN $7 THEN NULL ELSE built_at END, "
                   "engine_path = CASE WHEN $7 THEN NULL ELSE engine_path END, "
+                  "engine_name = CASE WHEN $7 THEN NULL ELSE engine_name END, "
                   "trt_version = CASE WHEN $7 THEN NULL ELSE trt_version END, "
                   "status = $8, max_det = NULLIF($10, '')::int, conf = NULLIF($11, '')::numeric(4, 2), "
                   "iou = NULLIF($12, '')::numeric(4, 2), "
@@ -205,25 +203,27 @@ Json::Value ModelService::update(const std::string& modelId,
 
 BuildStart ModelService::buildStart(const std::string& modelId) {
   const Json::Value current = get(modelId);
-  const auto recipe = model::RECIPES.find(current[model::KEY_TYPE].asString());
-  if (recipe == model::RECIPES.end()) {
+  const Json::Value& recipe = model::RECIPES[current[model::KEY_TYPE].asString()];
+  if (!recipe.isObject()) {
     throw std::runtime_error("model recipe missing");
   }
-  Json::Value sections;
-  for (const auto& section : recipe->second) {
-    Json::Value fields;
-    for (const auto& field : section.second) {
-      fields[field.first] = field.second;
+  Json::Value sections(Json::objectValue);
+  for (const auto& name : recipe.getMemberNames()) {
+    if (recipe[name].isObject()) {
+      sections[name] = recipe[name];
     }
-    sections[section.first] = fields;
   }
   const std::string batchSize = std::to_string(current[model::KEY_BATCH_SIZE].asInt());
   const std::string batchMode = current[model::KEY_BATCH_MODE].asString();
   const std::string precision = current[model::KEY_PRECISION].asString();
+  const std::string type = current[model::KEY_TYPE].asString();
   for (const auto& name : sections.getMemberNames()) {
+    sections[name][model::KEY_TYPE] = type;
     sections[name][model::KEY_BATCH_SIZE] = batchSize;
     sections[name][model::KEY_BATCH_MODE] = batchMode;
-    sections[name][model::KEY_PRECISION] = precision;
+    if (name == model::SECTION_EXPORT_TRT) {
+      sections[name][model::KEY_PRECISION] = precision;
+    }
     if (!current[model::KEY_MAX_DET].isNull()) {
       sections[name][model::KEY_MAX_DET] = std::to_string(current[model::KEY_MAX_DET].asInt());
     }
@@ -303,7 +303,7 @@ Json::Value ModelService::buildEnd(const std::string& modelId,
   const char* columns =
       "id::text AS id, name, type, version, batch_size, batch_mode, input_tensors::text AS input_tensors, "
       "output_tensors::text AS output_tensors, precision, opt_level, device, workspace, static_plugin, max_det, "
-      "conf, iou, num_class, classes::text AS classes, source_path, status, built_at, trt_version, ever_built";
+      "conf, iou, num_class, classes::text AS classes, source_path, source_name, engine_name, status, built_at, trt_version, ever_built";
   Json::Value row;
   if (data.isNull()) {
     const auto rows = Sql::sync({}, dbClient, 
@@ -343,7 +343,8 @@ Json::Value ModelService::buildEnd(const std::string& modelId,
         std::string("UPDATE model SET type = $2, batch_size = $3, batch_mode = $4, input_tensors = $5::jsonb, "
                     "output_tensors = $6::jsonb, precision = $7, opt_level = $8, device = $9, workspace = $10, "
                     "static_plugin = $11, max_det = $12, conf = $13, iou = $14, num_class = $15, classes = $16::jsonb, "
-                    "engine_path = $17, status = $18, built_at = $19::timestamptz, trt_version = $20, "
+                    "engine_path = $17, source_path = $18, engine_name = $19, source_name = NULLIF($23, ''), status = $20, "
+                    "built_at = $21::timestamptz, trt_version = $22, "
                     "ever_built = TRUE WHERE id = $1::uuid RETURNING ") +
             columns,
         modelId,
@@ -363,9 +364,12 @@ Json::Value ModelService::buildEnd(const std::string& modelId,
         numClass.isNull() ? std::nullopt : std::optional<int>(numClass.asInt()),
         classes.isNull() ? std::nullopt : std::optional<std::string>(Json::writeString(builder, classes)),
         engine.string(),
+        data[model::KEY_SOURCE_PATH].asString(),
+        data[model::KEY_ENGINE_NAME].asString(),
         data[model::KEY_STATUS].asString(),
         builtAt.isNull() ? std::nullopt : std::optional<std::string>(builtAt.asString()),
-        trtVersion.isNull() ? std::nullopt : std::optional<std::string>(std::to_string(trtVersion.asInt())));
+        trtVersion.isNull() ? std::nullopt : std::optional<std::string>(std::to_string(trtVersion.asInt())),
+        data[model::KEY_SOURCE_NAME].isString() ? data[model::KEY_SOURCE_NAME].asString() : "");
     if (rows.empty()) {
       throw std::runtime_error("model not ended");
     }
@@ -375,43 +379,70 @@ Json::Value ModelService::buildEnd(const std::string& modelId,
 }
 
 bool ModelService::uploadCheck(const std::string& path) {
-  const std::string command = "unzip -Z -1 '" + path + "'";
-  FILE* pipe = popen(command.c_str(), "r");
-  std::string listing;
-  char buffer[256];
-  while (pipe && std::fgets(buffer, sizeof(buffer), pipe)) {
-    listing += buffer;
-  }
-  const int status = pipe ? pclose(pipe) : -1;
-  const bool listed = status != -1 && WIFEXITED(status) && WEXITSTATUS(status) == 0;
+  int error = 0;
+  zip_t* zip = zip_open(path.c_str(), ZIP_RDONLY, &error);
   std::string onnx;
   std::string data;
   int files = 0;
-  std::istringstream lines(listing);
-  std::string entry;
-  while (listed && std::getline(lines, entry)) {
-    if (!entry.empty() && entry.back() == '\r') {
-      entry.pop_back();
-    }
-    const bool directory = !entry.empty() && entry.back() == '/';
-    const std::string filename = std::filesystem::path(entry).filename().string();
+  const zip_int64_t count = zip ? zip_get_num_entries(zip, 0) : 0;
+  for (zip_int64_t index = 0; index < count; ++index) {
+    const std::string entryName = zip_get_name(zip, index, 0);
+    const bool directory = !entryName.empty() && entryName.back() == '/';
+    const std::string filename = std::filesystem::path(entryName).filename().string();
     const bool dataFile = filename.ends_with(model::SUFFIX_ONNX_DATA);
     const bool onnxFile = !dataFile && filename.ends_with(model::SUFFIX_ONNX);
     files += directory ? 0 : 1;
     onnx = onnxFile ? filename : onnx;
     data = dataFile ? filename : data;
   }
+  if (zip) {
+    zip_close(zip);
+  }
   const bool paired = !onnx.empty() && data == onnx + ".data";
-  const bool accepted = listed && files == 2 && paired;
+  const bool accepted = zip && files == 2 && paired;
   return accepted;
 }
 
 std::string ModelService::json2yaml(const Json::Value& fields) {
   std::string text;
   for (const auto& name : fields.getMemberNames()) {
-    text += name + ": " + fields[name].asString() + "\n";
+    const std::string value = fields[name].asString();
+    text += value == "null" ? "" : name + ": " + value + "\n";
   }
   return text;
+}
+
+std::string ModelService::recipeField(const std::string& type, const char* section, const char* key) {
+  const Json::Value& field = model::RECIPES[type][section][key];
+  const std::string text = field.isString() ? field.asString() : "null";
+  return text;
+}
+
+Json::Value ModelService::recipeNumber(const std::string& text) {
+  Json::Value value;
+  if (text != "null" && !text.empty()) {
+    value = text.find('.') == std::string::npos ? Json::Value(std::stoi(text)) : Json::Value(std::stod(text));
+  }
+  return value;
+}
+
+Json::Value ModelService::types() {
+  Json::Value data(Json::objectValue);
+  for (const auto& name : model::RECIPES.getMemberNames()) {
+    const std::string precision = recipeField(name, model::SECTION_EXPORT_TRT, model::KEY_PRECISION);
+    Json::Value row;
+    row[model::KEY_BATCH_SIZE] = recipeNumber(recipeField(name, model::SECTION_EXPORT_TRT, model::KEY_BATCH_SIZE));
+    row[model::KEY_BATCH_MODE] = "dynamic";
+    row[model::KEY_PRECISION] = precision == "null" ? Json::Value() : Json::Value(precision);
+    row[model::KEY_DEVICE] = recipeNumber(recipeField(name, model::SECTION_EXPORT_TRT, model::KEY_DEVICE));
+    row[model::KEY_OPT_LEVEL] = recipeNumber(recipeField(name, model::SECTION_EXPORT_TRT, model::KEY_OPT_LEVEL));
+    row[model::KEY_MAX_DET] = recipeNumber(recipeField(name, model::SECTION_EXPORT_ONNX, model::KEY_MAX_DET));
+    row[model::KEY_CONF] = recipeNumber(recipeField(name, model::SECTION_EXPORT_ONNX, model::KEY_CONF));
+    row[model::KEY_IOU] = recipeNumber(recipeField(name, model::SECTION_EXPORT_ONNX, model::KEY_IOU));
+    row[model::KEY_SOURCE_SUFFIXES] = model::RECIPES[name][model::SECTION_SOURCE_SUFFIXES];
+    data[name] = row;
+  }
+  return data;
 }
 
 Json::Value ModelService::map() {
@@ -430,13 +461,16 @@ Json::Value ModelService::upload(const std::string& modelId,
   const std::string name = file.string();
   const bool plain = name.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-") ==
       std::string::npos;
-  const bool pt = file.extension() == model::SUFFIX_PT;
-  const bool onnx = file.extension() == model::SUFFIX_ONNX;
   const bool zip = file.extension() == model::SUFFIX_ZIP;
-  if (!plain || (!pt && !onnx && !zip)) {
+  const Json::Value current = get(modelId);
+  const Json::Value& suffixes = model::RECIPES[current[model::KEY_TYPE].asString()][model::SECTION_SOURCE_SUFFIXES];
+  bool listed = false;
+  for (const Json::Value& suffix : suffixes) {
+    listed = listed || suffix.asString() == file.extension().string();
+  }
+  if (!plain || !listed) {
     throw std::runtime_error("invalid model file");
   }
-  const Json::Value current = get(modelId);
   if (current[model::KEY_STATUS].asString() == model::STATUS_BUILDING) {
     throw std::runtime_error(model::ERR_BUILDING);
   }
@@ -461,11 +495,12 @@ Json::Value ModelService::upload(const std::string& modelId,
   const char* columns =
       "id::text AS id, name, type, version, batch_size, batch_mode, input_tensors::text AS input_tensors, output_tensors::text AS output_tensors, precision, "
       "opt_level, device, workspace, static_plugin, max_det, conf, iou, num_class, "
-      "classes::text AS classes, source_path, status, built_at, trt_version, ever_built";
+      "classes::text AS classes, source_path, source_name, engine_name, status, built_at, trt_version, ever_built";
   const auto rows = Sql::sync({}, dbClient, 
-      std::string("UPDATE model SET source_path = $2 WHERE id = $1::uuid RETURNING ") + columns,
+      std::string("UPDATE model SET source_path = $2, source_name = $3 WHERE id = $1::uuid RETURNING ") + columns,
       modelId,
-      source.string());
+      source.string(),
+      name);
   if (rows.empty()) {
     throw std::runtime_error("model not updated");
   }
@@ -478,7 +513,7 @@ Json::Value ModelService::importModel(const std::vector<ImportFile>& files) {
   const char* columns =
       "id::text AS id, name, type, version, batch_size, batch_mode, input_tensors::text AS input_tensors, output_tensors::text AS output_tensors, precision, "
       "opt_level, device, workspace, static_plugin, max_det, conf, iou, num_class, "
-      "classes::text AS classes, source_path, status, built_at, trt_version, ever_built";
+      "classes::text AS classes, source_path, source_name, engine_name, status, built_at, trt_version, ever_built";
   std::filesystem::create_directories(model::ENGINE_DIR);
   for (const ImportFile& file : files) {
     const std::filesystem::path path(std::filesystem::path(file.fileName).filename());
@@ -542,10 +577,10 @@ Json::Value ModelService::importModel(const std::vector<ImportFile>& files) {
       const auto rows = Sql::sync({}, dbClient, 
           std::string("INSERT INTO model (id, name, type, batch_size, batch_mode, input_tensors, output_tensors, "
                       "precision, opt_level, device, workspace, static_plugin, max_det, conf, iou, num_class, classes, "
-                      "source_path, engine_path, status, built_at, trt_version, ever_built) "
+                      "source_path, source_name, engine_path, status, built_at, trt_version, ever_built) "
                       "VALUES (gen_random_uuid(), $1, $2, $3, $4, NULLIF($5, '')::jsonb, NULLIF($6, '')::jsonb, $7, NULLIF($8, '')::int, "
                       "$9, $10, NULLIF($11, ''), NULLIF($12, '')::int, NULLIF($13, '')::numeric(4, 2), "
-                      "NULLIF($14, '')::numeric(4, 2), NULLIF($15, '')::int, NULLIF($16, '')::jsonb, NULL, $17, $18, "
+                      "NULLIF($14, '')::numeric(4, 2), NULLIF($15, '')::int, NULLIF($16, '')::jsonb, NULL, NULLIF($21, ''), $17, $18, "
                       "NULLIF($19, '')::timestamptz, NULLIF($20, ''), TRUE) RETURNING ") +
               columns,
           name,
@@ -575,7 +610,10 @@ Json::Value ModelService::importModel(const std::vector<ImportFile>& files) {
           meta.isMember(model::KEY_STATUS) && meta[model::KEY_STATUS].isString() ? meta[model::KEY_STATUS].asString()
                                                                                  : std::string(model::STATUS_BUILT),
           meta.isMember(model::KEY_BUILT_AT) && meta[model::KEY_BUILT_AT].isString() ? meta[model::KEY_BUILT_AT].asString() : "",
-          trtText);
+          trtText,
+          meta.isMember(model::KEY_SOURCE_NAME) && meta[model::KEY_SOURCE_NAME].isString()
+              ? meta[model::KEY_SOURCE_NAME].asString()
+              : "");
       if (!rows.empty()) {
         data[model::KEY_UPDATED_ROWS].append(row2json(rows[0]));
       }
@@ -652,7 +690,7 @@ Json::Value ModelService::create(const Json::Value& name,
   const char* columns =
       "id::text AS id, name, type, version, batch_size, batch_mode, input_tensors::text AS input_tensors, output_tensors::text AS output_tensors, precision, "
       "opt_level, device, workspace, static_plugin, max_det, conf, iou, num_class, "
-      "classes::text AS classes, source_path, status, built_at, trt_version, ever_built";
+      "classes::text AS classes, source_path, source_name, engine_name, status, built_at, trt_version, ever_built";
   const auto rows = Sql::sync({}, dbClient, 
       std::string("INSERT INTO model (id, name, type, batch_size, batch_mode, precision, status, source_path, "
                   "max_det, conf, iou, input_tensors, output_tensors, opt_level, device, workspace, "
@@ -691,10 +729,7 @@ bool ModelService::createCheck(const std::string& name,
                             int batchSize,
                             const std::string& batchMode,
                             const std::string& precision) {
-  bool knownType = false;
-  for (const auto* item : model::AVAILABLE_TYPES) {
-    knownType = knownType || type == item;
-  }
+  const bool knownType = model::RECIPES.isMember(type);
   bool knownMode = false;
   for (const auto* item : model::AVAILABLE_BATCH_MODES) {
     knownMode = knownMode || batchMode == item;
@@ -740,6 +775,10 @@ Json::Value ModelService::row2json(const drogon::orm::Row& row) {
   node[model::KEY_CLASSES] = parsed ? classes : Json::Value();
   node[model::KEY_SOURCE_PATH] =
       row["source_path"].isNull() ? Json::Value() : row["source_path"].as<std::string>();
+  node[model::KEY_SOURCE_NAME] =
+      row["source_name"].isNull() ? Json::Value() : row["source_name"].as<std::string>();
+  node[model::KEY_ENGINE_NAME] =
+      row["engine_name"].isNull() ? Json::Value() : row["engine_name"].as<std::string>();
   node[model::KEY_STATUS] = row["status"].as<std::string>();
   node[model::KEY_BUILT_AT] = row["built_at"].isNull() ? Json::Value() : row["built_at"].as<std::string>();
   node[model::KEY_TRT_VERSION] = row["trt_version"].isNull() ? Json::Value() : row["trt_version"].as<std::string>();

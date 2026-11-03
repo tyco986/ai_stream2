@@ -9,13 +9,18 @@ from fastapi import UploadFile
 from fastapi.responses import Response
 
 from utils.api.constants import (
-    ACCEPTED_SUFFIXES,
-    LABEL_TYPES,
+    FILE_LABELS,
     HISTORY_BOUNDARY,
+    LOG_ROOT,
     MULTIPART_BOUNDARY,
     HISTORY_ROOT,
+    RECIPES,
+    SOURCE_DIR,
     TMP_ROOT,
+    TYPE_STGCNPP,
+    WEIGHT_SUFFIXES,
 )
+from utils.api.logger import RequestLogger
 from utils.api.schemas import AppError, OnnxExportConfig
 from utils.manager.onnx_exporter_manager import OnnxExporterManager
 from utils.yolo_e2e.common import write_bundle_meta
@@ -67,14 +72,32 @@ class ExportOnnxService:
         config = OnnxExportConfig.model_validate(payload)
         return config
 
-    def save_upload(self, upload: UploadFile, work_dir: Path) -> Path:
+    def save_upload(self, upload: UploadFile, work_dir: Path, model_type: str) -> Path:
         filename = Path(upload.filename or "").name
         suffix = Path(filename).suffix.lower()
-        if suffix not in ACCEPTED_SUFFIXES:
-            raise AppError(f"file must be .pt or .onnx: {filename}")
-        weights = work_dir / filename
-        with weights.open("wb") as handle:
+        allowed = RECIPES[model_type]["source_suffixes"]
+        if suffix not in allowed:
+            raise AppError(f"file must be {' or '.join(allowed)}: {filename}")
+        stored = work_dir / filename
+        with stored.open("wb") as handle:
             shutil.copyfileobj(upload.file, handle)
+        weights = self.unpack_stgcn(stored, work_dir) if model_type == TYPE_STGCNPP else stored
+        return weights
+
+    def unpack_stgcn(self, zip_path: Path, work_dir: Path) -> Path:
+        with zipfile.ZipFile(zip_path) as archive:
+            names = [info.filename for info in archive.infolist() if not info.is_dir()]
+            bases = [Path(name).name for name in names]
+            weight_names = [name for name in bases if Path(name).suffix.lower() in WEIGHT_SUFFIXES]
+            accepted = len(names) == 2 and len(weight_names) == 1 and bases.count(FILE_LABELS) == 1
+            if not accepted:
+                raise AppError(f"stgcnpp zip must contain one .pt or .pth and {FILE_LABELS}")
+            for info in archive.infolist():
+                target = work_dir / Path(info.filename).name
+                extracted = archive.read(info) if not info.is_dir() else b""
+                target.write_bytes(extracted) if not info.is_dir() else None
+        zip_path.unlink()
+        weights = work_dir / weight_names[0]
         return weights
 
     def pack(self, work_dir: Path, stem: str) -> tuple[Path, dict]:
@@ -97,16 +120,7 @@ class ExportOnnxService:
         shutil.rmtree(work_dir)
         return zip_path, meta
 
-    def save_labels(self, upload: UploadFile | None, work_dir: Path) -> None:
-        if upload is None:
-            raise AppError("label file is required")
-        text = upload.file.read().decode("utf-8")
-        lines = [line.strip() for line in text.splitlines() if line.strip()]
-        if not lines:
-            raise AppError("label file is empty")
-        (work_dir / "labels.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-    def export(self, upload: UploadFile, config_file: UploadFile, label: UploadFile | None) -> Response:
+    def export(self, upload: UploadFile, config_file: UploadFile) -> Response:
         config = self.parse_config(config_file)
         if config.type not in OnnxExporterManager.EXPORTERS:
             raise AppError(f"unknown type {config.type!r}")
@@ -118,9 +132,7 @@ class ExportOnnxService:
         if work_dir.exists():
             shutil.rmtree(work_dir)
         work_dir.mkdir(parents=True)
-        weights = self.save_upload(upload, work_dir)
-        if config.type in LABEL_TYPES:
-            self.save_labels(label, work_dir)
+        weights = self.save_upload(upload, work_dir, config.type)
         OnnxExporterManager().export(
             config.type,
             weights,
@@ -138,6 +150,7 @@ class ExportOnnxService:
             work_dir,
             work_dir / f"{stem}.onnx",
             work_dir / "labels.txt",
+            SOURCE_DIR / weights.name,
             version=config.type,
             max_det=config.max_det,
             conf=config.conf,
@@ -151,6 +164,10 @@ class ExportOnnxService:
             content=body,
             media_type=f"multipart/form-data; boundary={MULTIPART_BOUNDARY}",
         )
+        return payload
+
+    def recipe(self) -> dict:
+        payload = RECIPES
         return payload
 
     def get_history(self, filename: str) -> dict:
@@ -204,3 +221,13 @@ class ExportOnnxService:
     def remove_history(self, filename: str) -> None:
         for zip_path in self.history_paths(filename):
             zip_path.unlink()
+
+    def remove_logs(self) -> None:
+        logger = RequestLogger.logger
+        for handler in list(logger.handlers):
+            handler.close()
+        logger.handlers.clear()
+        LOG_ROOT.mkdir(parents=True, exist_ok=True)
+        for path in LOG_ROOT.rglob("*"):
+            if path.is_file():
+                path.unlink()

@@ -1,0 +1,6 @@
+# bash servers/export_trt/scripts/3_export.sh --input models/onnx/rtmpose-t-body8 --config servers/export_trt/templates/rtmpose-t-body8.yaml
+type: RTMPOSE
+batch_size: 64
+device: 0
+precision: fp32
+opt_level: 0

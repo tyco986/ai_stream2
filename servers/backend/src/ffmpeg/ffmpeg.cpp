@@ -17,7 +17,7 @@ drogon::Task<ProbeResult> Ffmpeg::rtspProbe(const std::string& url) {
   auto request = drogon::HttpRequest::newHttpJsonRequest(body);
   request->setMethod(drogon::Post);
   request->setPath(ffmpeg_backend::RTSP_PROBE_PATH);
-  auto client = drogon::HttpClient::newHttpClient(ffmpeg::BASE_URL);
+  auto client = drogon::HttpClient::newHttpClient(ffmpeg::DES_BASE_URL);
   ProbeResult result;
   result.accepted = false;
   try {

@@ -43,6 +43,40 @@ std::string ModelBatchController::yaml2Multipart(const std::string& yaml) {
   return body;
 }
 
+void ModelBatchController::batchCreate(
+    const drogon::HttpRequestPtr& request,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
+  const auto started = std::chrono::steady_clock::now();
+  const auto body = request->getJsonObject();
+  Json::Value items(Json::arrayValue);
+  const bool hasItems = body && body->isMember(model::KEY_ITEMS) && (*body)[model::KEY_ITEMS].isArray();
+  if (hasItems) {
+    items = (*body)[model::KEY_ITEMS];
+  }
+  Json::Value data = model::BATCH_DATA();
+  for (const auto& item : items) {
+    try {
+      data[model::KEY_UPDATED_ROWS].append(service.create(
+          item.get(model::KEY_NAME, Json::Value()),
+          item.get(model::KEY_TYPE, Json::Value()),
+          item.get(model::KEY_BATCH_SIZE, Json::Value()),
+          item.get(model::KEY_BATCH_MODE, Json::Value()),
+          item.get(model::KEY_PRECISION, Json::Value()),
+          item.get(model::KEY_OPT_LEVEL, Json::Value()),
+          item.get(model::KEY_DEVICE, Json::Value()),
+          item.get(model::KEY_MAX_DET, Json::Value()),
+          item.get(model::KEY_CONF, Json::Value()),
+          item.get(model::KEY_IOU, Json::Value())));
+    } catch (const std::exception&) {
+      data[model::KEY_FAILED_ROWS].append(item);
+    }
+  }
+  data[model::KEY_UPDATED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_UPDATED_ROWS].size());
+  data[model::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_FAILED_ROWS].size());
+  data[model::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_SKIPPED_ROWS].size());
+  logger.respond(request, http::Response::ok(data, model::MSG_CREATE_OK), started, callback);
+}
+
 drogon::Task<drogon::HttpResponsePtr> ModelBatchController::batchBuild(drogon::HttpRequestPtr request) {
   const auto started = std::chrono::steady_clock::now();
   const auto body = request->getJsonObject();
@@ -60,10 +94,10 @@ drogon::Task<drogon::HttpResponsePtr> ModelBatchController::batchBuild(drogon::H
         auto onnxRequest = drogon::HttpRequest::newHttpRequest();
         onnxRequest->setMethod(drogon::Post);
         onnxRequest->setPath(model::PATH_EXPORT_ONNX);
-        onnxRequest->addHeader("content-type", model::MULTIPART_CONTENT_TYPE);
+        onnxRequest->setContentTypeString(model::MULTIPART_CONTENT_TYPE);
         onnxRequest->setBody(zip2Multipart(source.filename().string(), zip2Bytes(sourcePath)) +
                               yaml2Multipart(recipes.exportOnnx));
-        auto onnxClient = drogon::HttpClient::newHttpClient(export_onnx::BASE_URL);
+        auto onnxClient = drogon::HttpClient::newHttpClient(export_onnx::DES_BASE_URL);
         const auto onnxResponse = co_await onnxClient->sendRequestCoro(onnxRequest, export_onnx::REQUEST_TIMEOUT_SECONDS);
         const bool onnxOk = onnxResponse->statusCode() >= drogon::k200OK && onnxResponse->statusCode() < drogon::k300MultipleChoices;
         if (!onnxOk) {
@@ -73,9 +107,9 @@ drogon::Task<drogon::HttpResponsePtr> ModelBatchController::batchBuild(drogon::H
         auto trtRequest = drogon::HttpRequest::newHttpRequest();
         trtRequest->setMethod(drogon::Post);
         trtRequest->setPath(model::PATH_EXPORT_TRT);
-        trtRequest->addHeader("content-type", model::MULTIPART_CONTENT_TYPE);
+        trtRequest->setContentTypeString(model::MULTIPART_CONTENT_TYPE);
         trtRequest->setBody(zip2Multipart(onnx.fileName, onnx.fileContent) + yaml2Multipart(recipes.exportTrt));
-        auto trtClient = drogon::HttpClient::newHttpClient(export_trt::BASE_URL);
+        auto trtClient = drogon::HttpClient::newHttpClient(export_trt::DES_BASE_URL);
         const auto trtResponse = co_await trtClient->sendRequestCoro(trtRequest, export_trt::REQUEST_TIMEOUT_SECONDS);
         const bool trtOk = trtResponse->statusCode() >= drogon::k200OK && trtResponse->statusCode() < drogon::k300MultipleChoices;
         if (!trtOk) {

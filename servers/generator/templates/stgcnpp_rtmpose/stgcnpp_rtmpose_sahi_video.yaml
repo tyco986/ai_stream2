@@ -5,26 +5,26 @@
 
 generator: StgcnppRtmposeSahiVideoGenerator
 pipeline_name: stgcnpp_rtmpose_sahi_video
-config_save_dir: /root/configs/generator/stgcnpp_rtmpose_sahi_video
 pgie:
   interval: 50
-  model_dir: /root/models/trt/yolo26n
+  model_zip: /root/history/export_trt/yolo26n.zip
   class_attrs:
     0:
       conf: 0.25
 sgie:
   interval: 1
-  model_dir: /root/models/trt/rtmpose-t-body8
+  model_zip: /root/history/export_trt/rtmpose-t-body8.zip
 stgcnpp:
   interval: 1
-  model_dir: /root/models/trt/stgcnpp-ntu60-j
+  model_zip: /root/history/export_trt/stgcnpp-ntu60-j.zip
 tracker:
   class_id: 0
 analyzer: null
 logger:
   interval: 1
 drawer: null
-input: /root/attachments/videos/video1.mp4
+videos:
+  - /root/attachments/videos/video1.mp4
 sahi:
   nvsahipreprocess:
     slice_width: 640

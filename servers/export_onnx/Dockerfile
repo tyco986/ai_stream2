@@ -26,7 +26,7 @@ RUN --mount=type=bind,source=servers/export_onnx/requirements.txt,target=/tmp/re
     && pip install --no-cache-dir -r /tmp/requirements.txt
 
 COPY --from=build /app/export_onnx ./export_onnx
-RUN mkdir -p /root/history /root/logs/export_onnx
+RUN mkdir -p /root/history/export_onnx /root/logs/export_onnx
 
 EXPOSE 8090
 CMD ["./export_onnx"]

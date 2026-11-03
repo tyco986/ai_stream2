@@ -40,6 +40,7 @@ class ModelService {
                      const Json::Value& conf,
                      const Json::Value& iou);
   Json::Value map();
+  Json::Value types();
   BuildStart buildStart(const std::string& modelId);
   ExportResponse buildParse(const std::string& contentType, const std::string& body);
   Json::Value buildEnd(const std::string& modelId,
@@ -67,6 +68,8 @@ class ModelService {
                 const std::string& precision);
   Json::Value row2json(const drogon::orm::Row& row);
   std::string json2yaml(const Json::Value& fields);
+  std::string recipeField(const std::string& type, const char* section, const char* key);
+  Json::Value recipeNumber(const std::string& text);
   bool uploadCheck(const std::string& path);
   bool importCheck(const std::string& bytes, Json::Value& meta);
 

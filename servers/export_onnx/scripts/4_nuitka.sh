@@ -4,6 +4,11 @@ set -euo pipefail
 
 cd /app
 
+mapfile -t APT_SOURCES < <(find /etc/apt -type f \( -name 'sources.list' -o -name '*.list' -o -name '*.sources' \))
+sed -i \
+  -e 's|http://archive.ubuntu.com|https://mirrors.tuna.tsinghua.edu.cn|g' \
+  -e 's|http://security.ubuntu.com|https://mirrors.tuna.tsinghua.edu.cn|g' \
+  "${APT_SOURCES[@]}"
 apt-get update
 apt-get install -y --no-install-recommends gcc g++ patchelf python3-dev
 

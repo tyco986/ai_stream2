@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 import ultralytics.models.yolo
 import ultralytics.utils
+import ultralytics.nn.modules.head as head
 import ultralytics.utils.tal as tal
 from ultralytics import YOLO
 from ultralytics.nn.modules import C2f, Detect, RTDETRDecoder
@@ -24,7 +25,8 @@ def dist2bbox_xyxy(distance, anchor_points, xywh=False, dim=-1):
     return torch.cat([x1y1, x2y2], dim)
 
 
-tal.dist2bbox.__code__ = dist2bbox_xyxy.__code__
+head.dist2bbox = dist2bbox_xyxy
+tal.dist2bbox = dist2bbox_xyxy
 
 
 def suppress_export_warnings() -> None:

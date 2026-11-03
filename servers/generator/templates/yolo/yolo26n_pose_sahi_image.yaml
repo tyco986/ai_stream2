@@ -5,10 +5,9 @@
 
 generator: PoseSahiImageGenerator
 pipeline_name: yolo26n_pose_sahi_image
-config_save_dir: /root/configs/generator/yolo26n_pose_sahi_image
 pgie:
   interval: 50
-  model_dir: /root/models/trt/yolo26n-pose
+  model_zip: /root/history/export_trt/yolo26n-pose.zip
   class_attrs:
     all:
       conf: 0.25
@@ -22,7 +21,8 @@ drawer:
   show_pose: true
   pose_threshold: 0.5
   mode: coco17
-input: /root/attachments/images/video1.png
+images:
+  - /root/attachments/images/video1.png
 output: /root/outputs/deepstream/yolo26n_pose_sahi_image.jpg
 sahi:
   nvsahipreprocess:

@@ -60,6 +60,7 @@ media/
 
 
 models/
+history/
 outputs/
 logs/
 recordings/

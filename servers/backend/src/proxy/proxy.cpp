@@ -7,6 +7,7 @@
 
 #include <array>
 #include <chrono>
+#include <utility>
 
 ProxyLogger Proxy::logger;
 
@@ -35,20 +36,20 @@ void Proxy::forward(const std::string& upstreamBase,
 }
 
 std::string Proxy::upstreamPath(const std::string& path) {
-  const std::array<const char*, 6> prefixes = {
-      deepstream::PREFIX,
-      generator::PREFIX,
-      ffmpeg::PREFIX,
-      export_trt::PREFIX,
-      export_onnx::PREFIX,
-      mediamtx::PREFIX};
-  std::string stripped = path;
-  for (const char* prefix : prefixes) {
-    const std::string text(prefix);
-    const bool matched = path.rfind(text, 0) == 0;
-    stripped = matched ? path.substr(text.size()) : stripped;
+  const std::array<std::pair<const char*, const char*>, 6> rewrites = {{
+      {deepstream::SRC_PREFIX, deepstream::DES_PREFIX},
+      {generator::SRC_PREFIX, generator::DES_PREFIX},
+      {ffmpeg::SRC_PREFIX, ffmpeg::DES_PREFIX},
+      {export_trt::SRC_PREFIX, export_trt::DES_PREFIX},
+      {export_onnx::SRC_PREFIX, export_onnx::DES_PREFIX},
+      {mediamtx::SRC_PREFIX, mediamtx::DES_PREFIX}}};
+  std::string rewritten = path;
+  for (const auto& rewrite : rewrites) {
+    const std::string srcPrefix(rewrite.first);
+    const bool matched = path.rfind(srcPrefix, 0) == 0;
+    rewritten = matched ? std::string(rewrite.second) + path.substr(srcPrefix.size()) : rewritten;
   }
-  const std::string result = stripped.empty() ? std::string("/") : stripped;
+  const std::string result = rewritten.empty() ? std::string("/") : rewritten;
   return result;
 }
 

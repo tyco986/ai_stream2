@@ -24,6 +24,7 @@ class ModelController : public drogon::HttpController<ModelController> {
   ADD_METHOD_TO(ModelController::build, model::PATH_BUILD, drogon::Post, "AuthFilter");
   ADD_METHOD_TO(ModelController::status, model::PATH_STATUS, drogon::Get, "AuthFilter");
   ADD_METHOD_TO(ModelController::map, model::PATH_MAP, drogon::Get, "AuthFilter");
+  ADD_METHOD_TO(ModelController::types, model::PATH_TYPES, drogon::Get, "AuthFilter");
   METHOD_LIST_END
 
   void list(const drogon::HttpRequestPtr& request,
@@ -51,6 +52,8 @@ class ModelController : public drogon::HttpController<ModelController> {
               const std::string& model_id);
   void map(const drogon::HttpRequestPtr& request,
            std::function<void(const drogon::HttpResponsePtr&)>&& callback);
+  void types(const drogon::HttpRequestPtr& request,
+             std::function<void(const drogon::HttpResponsePtr&)>&& callback);
 
  private:
   std::string zip2Bytes(const std::string& path);

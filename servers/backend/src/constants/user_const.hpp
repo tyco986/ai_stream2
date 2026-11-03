@@ -4,17 +4,17 @@
 
 namespace user {
 
-inline const char* PATH_USER_LOGIN = "/ai_stream2/backend/users/login";
-inline const char* PATH_USER_LIST = "/ai_stream2/backend/users";
-inline const char* PATH_USER_MAP = "/ai_stream2/backend/users/map";
-inline const char* PATH_USER_ME = "/ai_stream2/backend/users/me";
-inline const char* PATH_USER_ITEM = "/ai_stream2/backend/users/{user_id}";
-inline const char* PATH_BATCH_REMOVE = "/ai_stream2/backend/users/batch/remove";
-inline const char* PATH_MAP = "/ai_stream2/backend/users/groups/map";
-inline const char* PATH_LIST = "/ai_stream2/backend/users/groups";
-inline const char* PATH_ITEM = "/ai_stream2/backend/users/groups/{group_id}";
-inline const char* PATH_MEMBERS = "/ai_stream2/backend/users/groups/{group_id}/members";
-inline const char* PATH_CANDIDATES = "/ai_stream2/backend/users/groups/{group_id}/candidates";
+inline const char* PATH_USER_LOGIN = "/backend/users/login";
+inline const char* PATH_USER_LIST = "/backend/users";
+inline const char* PATH_USER_MAP = "/backend/users/map";
+inline const char* PATH_USER_ME = "/backend/users/me";
+inline const char* PATH_USER_ITEM = "/backend/users/{user_id}";
+inline const char* PATH_BATCH_REMOVE = "/backend/users/batch/remove";
+inline const char* PATH_MAP = "/backend/users/groups/map";
+inline const char* PATH_LIST = "/backend/users/groups";
+inline const char* PATH_ITEM = "/backend/users/groups/{group_id}";
+inline const char* PATH_MEMBERS = "/backend/users/groups/{group_id}/members";
+inline const char* PATH_CANDIDATES = "/backend/users/groups/{group_id}/candidates";
 
 inline const char* QUERY_SEARCH = "search";
 inline const char* QUERY_PAGE = "page";

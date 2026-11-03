@@ -1,7 +1,8 @@
 {
   "app": {
     "client_max_body_size": "300M",
-    "client_max_memory_body_size": "300M"
+    "client_max_memory_body_size": "300M",
+    "upload_path": "/root/tmp"
   },
   "plugins": [
     {

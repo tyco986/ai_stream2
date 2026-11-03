@@ -2,37 +2,42 @@
 
 namespace deepstream {
 
-inline const char* PREFIX = "/puskas/deepstream";
-inline const char* BASE_URL = "http://puskas_deepstream:8000";
+inline const char* SRC_PREFIX = "/deepstream";
+inline const char* DES_PREFIX = "/ai_stream2/deepstream";
+inline const char* DES_BASE_URL = "http://ai_stream2_deepstream:8000";
 
 }
 
 namespace generator {
 
-inline const char* PREFIX = "/puskas/generator";
-inline const char* BASE_URL = "http://puskas_generator:8091";
+inline const char* SRC_PREFIX = "/generator";
+inline const char* DES_PREFIX = "/ai_stream2/generator";
+inline const char* DES_BASE_URL = "http://ai_stream2_generator:8091";
 
 }
 
 namespace ffmpeg {
 
-inline const char* PREFIX = "/puskas/ffmpeg";
-inline const char* BASE_URL = "http://ai_stream2_ffmpeg:8080";
+inline const char* SRC_PREFIX = "/ffmpeg";
+inline const char* DES_PREFIX = "";
+inline const char* DES_BASE_URL = "http://ai_stream2_ffmpeg:8080";
 
 }
 
 namespace export_trt {
 
-inline const char* PREFIX = "/puskas/export_trt";
-inline const char* BASE_URL = "http://puskas_export_trt:9000";
+inline const char* SRC_PREFIX = "/export_trt";
+inline const char* DES_PREFIX = "/ai_stream2/export_trt";
+inline const char* DES_BASE_URL = "http://ai_stream2_export_trt:8092";
 inline const double REQUEST_TIMEOUT_SECONDS = 180;
 
 }
 
 namespace export_onnx {
 
-inline const char* PREFIX = "/puskas/export_onnx";
-inline const char* BASE_URL = "http://puskas_export_onnx:8090";
+inline const char* SRC_PREFIX = "/export_onnx";
+inline const char* DES_PREFIX = "/ai_stream2/export_onnx";
+inline const char* DES_BASE_URL = "http://ai_stream2_export_onnx:8090";
 inline const double REQUEST_TIMEOUT_SECONDS = 180;
 
 }
@@ -45,7 +50,8 @@ inline const char* MSG_UPSTREAM_UNREACHABLE = "upstream unreachable";
 
 namespace mediamtx {
 
-inline const char* PREFIX = "/puskas/mediamtx";
-inline const char* BASE_URL = "http://ai_stream2_mediamtx:9997";
+inline const char* SRC_PREFIX = "/mediamtx";
+inline const char* DES_PREFIX = "";
+inline const char* DES_BASE_URL = "http://ai_stream2_mediamtx:9997";
 
 }

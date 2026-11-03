@@ -5,10 +5,9 @@
 
 generator: PoseSahiVisVideoGenerator
 pipeline_name: yolo26n_pose_sahi_vis_video_with_tracker
-config_save_dir: /root/configs/generator/yolo26n_pose_sahi_vis_video_with_tracker
 pgie:
   interval: 50
-  model_dir: /root/models/trt/yolo26n-pose
+  model_zip: /root/history/export_trt/yolo26n-pose.zip
   class_attrs:
     all:
       conf: 0.25
@@ -24,7 +23,8 @@ drawer:
   show_pose: true
   pose_threshold: 0.5
   mode: coco17
-input: /root/attachments/videos/video1.mp4
+videos:
+  - /root/attachments/videos/video1.mp4
 output: /root/outputs/deepstream/yolo26n_pose_sahi_vis_video_with_tracker.mp4
 sahi:
   nvsahipreprocess:

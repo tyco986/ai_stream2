@@ -46,7 +46,7 @@ drogon::Task<PathReplace> MediaMtx::replacePath(const std::string& name, const s
   auto request = drogon::HttpRequest::newHttpJsonRequest(body);
   request->setMethod(drogon::Post);
   request->setPath(std::string(mediamtx_backend::REPLACE_PATH) + name);
-  auto client = drogon::HttpClient::newHttpClient(mediamtx::BASE_URL);
+  auto client = drogon::HttpClient::newHttpClient(mediamtx::DES_BASE_URL);
   PathReplace result = PathReplace::unreachable;
   try {
     const auto response = co_await client->sendRequestCoro(request, mediamtx_backend::REQUEST_TIMEOUT_SECONDS);
@@ -62,7 +62,7 @@ drogon::Task<bool> MediaMtx::getPath(const std::string& name) {
   auto request = drogon::HttpRequest::newHttpRequest();
   request->setMethod(drogon::Get);
   request->setPath(std::string(mediamtx_backend::GET_PATH) + name);
-  auto client = drogon::HttpClient::newHttpClient(mediamtx::BASE_URL);
+  auto client = drogon::HttpClient::newHttpClient(mediamtx::DES_BASE_URL);
   bool found = false;
   try {
     const auto response = co_await client->sendRequestCoro(request, mediamtx_backend::REQUEST_TIMEOUT_SECONDS);
@@ -77,7 +77,7 @@ drogon::Task<bool> MediaMtx::deletePath(const std::string& name) {
   auto request = drogon::HttpRequest::newHttpRequest();
   request->setMethod(drogon::Delete);
   request->setPath(std::string(mediamtx_backend::DELETE_PATH) + name);
-  auto client = drogon::HttpClient::newHttpClient(mediamtx::BASE_URL);
+  auto client = drogon::HttpClient::newHttpClient(mediamtx::DES_BASE_URL);
   bool removed = false;
   try {
     const auto response = co_await client->sendRequestCoro(request, mediamtx_backend::REQUEST_TIMEOUT_SECONDS);

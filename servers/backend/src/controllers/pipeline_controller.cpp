@@ -98,7 +98,7 @@ drogon::Task<Json::Value> PipelineController::postGenerate(const std::string& ya
   generateRequest->setPath(pipeline::PATH_GENERATE);
   generateRequest->addHeader("content-type", pipeline::MULTIPART_CONTENT_TYPE);
   generateRequest->setBody(yaml2Multipart(yaml));
-  auto client = drogon::HttpClient::newHttpClient(generator::BASE_URL);
+  auto client = drogon::HttpClient::newHttpClient(generator::DES_BASE_URL);
   const auto generated = co_await client->sendRequestCoro(generateRequest, pipeline::GENERATE_TIMEOUT_SECONDS);
   const bool accepted = generated->statusCode() >= drogon::k200OK && generated->statusCode() < drogon::k300MultipleChoices;
   if (!accepted) {

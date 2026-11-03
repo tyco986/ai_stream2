@@ -1,6 +1,7 @@
 #include "services/exporter_service.hpp"
 
 #include "constants/exporter_const.hpp"
+#include "constants/history_const.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -8,10 +9,14 @@
 #include <stdexcept>
 
 #include <NvInfer.h>
+#include <NvInferPlugin.h>
 #include <NvOnnxParser.h>
 #include <cuda_runtime_api.h>
 #include <dlfcn.h>
+#include <malloc.h>
 #include <zip.h>
+
+std::mutex Exporter::buildMutex;
 
 Exporter::Exporter() : trtLogger() {}
 
@@ -36,8 +41,12 @@ ExportResult Exporter::exportModel(const std::string& fileName, const std::strin
     result[exporter::KEY_IOU] = meta[exporter::KEY_IOU];
     result[exporter::KEY_NUM_CLASS] = meta[exporter::KEY_NUM_CLASS];
     result[exporter::KEY_CLASSES] = meta[exporter::KEY_CLASSES];
-    const std::filesystem::path source(meta["source_path"].get<std::string>());
+    const std::filesystem::path source(meta[exporter::KEY_SOURCE_PATH].get<std::string>());
     const std::string engineName = source.stem().string() + exporter::ENGINE_SUFFIX;
+    result[exporter::KEY_SOURCE_PATH] = source.string();
+    result[exporter::KEY_SOURCE_NAME] = source.filename().string();
+    result[exporter::KEY_ENGINE_PATH] = (std::filesystem::path(history::ROOT) / fileNameOut).string();
+    result[exporter::KEY_ENGINE_NAME] = engineName;
     result[exporter::KEY_STATIC_PLUGIN] = exporter::STATIC_PLUGIN[result[exporter::KEY_TYPE].get<std::string>()];
     const std::string built = exportBuild(input, result);
     const std::chrono::zoned_time built_at{std::chrono::current_zone(), std::chrono::system_clock::now()};
@@ -135,12 +144,14 @@ std::string Exporter::exportEnd(const std::string& engineName, const std::string
 }
 
 std::string Exporter::exportBuild(const ExportInput& input, const nlohmann::json& result) {
+    const std::lock_guard<std::mutex> buildLock(buildMutex);
     const cudaError_t device = cudaSetDevice(result[exporter::KEY_DEVICE].get<int>());
     const bool pluginRequested = !result[exporter::KEY_STATIC_PLUGIN].is_null();
     void* plugin = pluginRequested ? dlopen(result[exporter::KEY_STATIC_PLUGIN].get<std::string>().c_str(), RTLD_NOW | RTLD_GLOBAL) : nullptr;
     nvinfer1::IBuilder* builder = device == cudaSuccess ? nvinfer1::createInferBuilder(trtLogger) : nullptr;
     nvinfer1::INetworkDefinition* network = builder ? builder->createNetworkV2(0) : nullptr;
-    nvonnxparser::IParser* parser = network ? nvonnxparser::createParser(*network, trtLogger) : nullptr;
+    const bool plugins = network && initLibNvInferPlugins(&trtLogger, "");
+    nvonnxparser::IParser* parser = plugins ? nvonnxparser::createParser(*network, trtLogger) : nullptr;
     const bool parsed = parser && parser->parse(input.onnx.data(), input.onnx.size());
     nvinfer1::IBuilderConfig* config = parsed ? builder->createBuilderConfig() : nullptr;
     if (config) {
@@ -170,7 +181,7 @@ std::string Exporter::exportBuild(const ExportInput& input, const nlohmann::json
         minDims.nbDims = static_cast<int32_t>(shape.size());
         optDims.nbDims = minDims.nbDims;
         for (std::size_t index = 0; tensor && index < shape.size(); ++index) {
-            const int dim = shape[index].get<int>();
+            const int dim = index == 0 ? 0 : shape[index].get<int>();
             minDims.d[index] = index == 0 ? exporter::MIN_SHAPE : dim;
             optDims.d[index] = index == 0 ? result[exporter::KEY_BATCH_SIZE].get<int>() : dim;
         }
@@ -195,8 +206,14 @@ std::string Exporter::exportBuild(const ExportInput& input, const nlohmann::json
     delete parser;
     delete network;
     delete builder;
+    if (plugin) {
+        dlclose(plugin);
+    }
+    cudaDeviceReset();
+    malloc_trim(0);
+    const std::string failure = trtLogger.errors().empty() ? "trtexec failed" : trtLogger.errors();
     if (engine.empty()) {
-        throw std::runtime_error("trtexec failed");
+        throw std::runtime_error(failure);
     }
     return engine;
 }
