@@ -129,6 +129,32 @@ stream:
   pureEditGroup: Edit Group
   pureParent: Parent
   pureRemoveGroup: Remove
+pipeline:
+  pureCreate: Create
+  pureRemove: Remove
+  pureGie: GIE
+  pureAnalyzer: Analyzer
+  pureName: Name
+  pureType: Type
+  pureStatus: Status
+  pureStart: Start
+  pureEdit: Edit
+  pureOps: Ops
+  pureModel: Model
+  pureClassAttrs: Class Attrs
+  pureInterval: Interval
+  pureUpdatedAt: Updated At
+  pureAnnotations: Annotations
+  pureClass: Class
+  pureAll: All
+  pureConf: Conf
+  pureMaxDet: Max Det
+  pureMinW: MinW
+  pureMinH: MinH
+  pureMaxW: MaxW
+  pureMaxH: MaxH
+  pureCancel: Cancel
+  pureConfirm: Confirm
 model:
   pureCreate: Create
   pureRemove: Remove

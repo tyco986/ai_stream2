@@ -38,7 +38,7 @@ JSON 成功外壳：`{success, message, data, file}`。`file` 无附件时为 `n
 
 成功时 `Content-Type` 为 `multipart/form-data; boundary=export-onnx-boundary`。zip 内含一个 `.onnx`、`labels.txt`、`meta.json`。文件名是上传文件主名加 `.zip`。同时写入 `/root/history/export_onnx`。
 
-multipart。`input` 后缀须对应该 `type`：YOLO 系列 `.pt` / `.pth`，`STGCNPP` `.zip`，`RTMPOSE` `.onnx`。`STGCNPP` 的 zip 内只能有一个 `.pt` 或 `.pth`，以及 `labels.txt`。`RTMPOSE` 的 `labels.txt` 固定为 `person`。`config` 是 YAML，至少含 `type`。可省略：`size`（默认 `640`）、`opset`（默认 `18`）、`batch_size`（默认 `1`）、`batch_mode`（默认 `static`）、`simplify`（默认 `false`）、`max_det`（默认 `30`）、`conf`（默认 `0.25`）、`iou`（默认 `0.45`）。
+multipart。`input` 后缀须对应该 `type`：YOLO 系列 `.pt` / `.pth`，`STGCNPP` `.zip`，`RTMPOSE` `.onnx`。`STGCNPP` 的 zip 内只能有一个 `.pt` 或 `.pth`，以及 `labels.txt`。`RTMPOSE` 的 `labels.txt` 固定为 `person`。`config` 是 YAML，至少含 `type`。可省略：`size`（默认 `640`）、`opset`（默认 `18`）、`batch_size`（默认 `1`）、`batch_mode`（默认 `static`）、`simplify`（默认 `false`）、`max_det`（默认 `30`）、`conf`（默认 `0.25`）、`iou`（默认 `null`）。
 
 入参：`input`、`config`。
 

@@ -129,6 +129,32 @@ stream:
   pureEditGroup: 编辑分组
   pureParent: 父组
   pureRemoveGroup: 移除
+pipeline:
+  pureCreate: 新建
+  pureRemove: 移除
+  pureGie: GIE
+  pureAnalyzer: 分析器
+  pureName: 名称
+  pureType: 类型
+  pureStatus: 状态
+  pureStart: 启动
+  pureEdit: 编辑
+  pureOps: 操作
+  pureModel: 模型
+  pureClassAttrs: 类别属性
+  pureInterval: 间隔
+  pureUpdatedAt: 更新时间
+  pureAnnotations: 标注
+  pureClass: 类别
+  pureAll: 全部
+  pureConf: 置信度
+  pureMaxDet: 最大检测
+  pureMinW: 最小宽
+  pureMinH: 最小高
+  pureMaxW: 最大宽
+  pureMaxH: 最大高
+  pureCancel: 取消
+  pureConfirm: 确定
 model:
   pureCreate: 新建
   pureRemove: 移除

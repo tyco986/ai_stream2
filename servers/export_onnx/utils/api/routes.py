@@ -10,7 +10,7 @@ from utils.api.constants import (
     PROJECT_NAME,
     STATE_INPUT,
 )
-from utils.api.schemas import ApiEnvelope
+from utils.api.response import ApiEnvelope
 from utils.api.services import ExportOnnxService
 from utils.manager.onnx_exporter_manager import OnnxExporterManager
 

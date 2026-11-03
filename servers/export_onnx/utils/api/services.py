@@ -3,10 +3,12 @@ import shutil
 import subprocess
 import zipfile
 from pathlib import Path
+from typing import Literal
 
 import yaml
 from fastapi import UploadFile
 from fastapi.responses import Response
+from pydantic import BaseModel, ConfigDict, Field
 
 from utils.api.constants import (
     FILE_LABELS,
@@ -19,7 +21,7 @@ from utils.api.constants import (
     TMP_ROOT,
 )
 from utils.api.logger import RequestLogger
-from utils.api.schemas import AppError, OnnxExportConfig
+from utils.api.response import AppError
 from utils.manager.onnx_exporter_manager import OnnxExporterManager
 from utils.yolo_e2e.common import write_bundle_meta
 
@@ -60,6 +62,20 @@ def history_data(parts: list[tuple[str, bytes]]) -> bytes:
     chunks.append(f"--{HISTORY_BOUNDARY}--\r\n".encode())
     body = b"".join(chunks)
     return body
+
+
+class OnnxExportConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: str
+    size: int = 640
+    opset: int = 18
+    batch_size: int | None = 1
+    batch_mode: Literal["dynamic", "static"] = "static"
+    simplify: bool = False
+    max_det: int = 30
+    conf: float = Field(default=0.25, gt=0, le=1)
+    iou: float | None = Field(default=None, gt=0, le=1)
 
 
 class ExportOnnxService:

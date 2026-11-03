@@ -13,7 +13,7 @@ from starlette.responses import Response
 from utils.api.constants import HOST, LOG_HEADERS, PORT, STATE_INPUT
 from utils.api.logger import RequestLogger
 from utils.api.routes import router
-from utils.api.schemas import ApiEnvelope, AppError
+from utils.api.response import ApiEnvelope, AppError
 
 
 def fail_json(status_code: int, message: str) -> JSONResponse:

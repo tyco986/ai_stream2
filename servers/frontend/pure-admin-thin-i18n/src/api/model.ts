@@ -5,6 +5,7 @@ import {
   PATH_MODEL_BATCH_REMOVE,
   PATH_MODEL_BUILD,
   PATH_MODEL_LIST,
+  PATH_MODEL_MAP,
   PATH_MODEL_STATUS,
   PATH_MODEL_UPLOAD,
   PATH_MODEL_TYPES,
@@ -121,6 +122,13 @@ export const getModelTypes = () => {
   return http.request<{ success: boolean; data: Record<string, ModelTypeDefaults> }>(
     "get",
     PATH_MODEL_TYPES
+  );
+};
+
+export const getModelMap = () => {
+  return http.request<{ success: boolean; message: string; data: Record<string, string> }>(
+    "get",
+    PATH_MODEL_MAP
   );
 };
 

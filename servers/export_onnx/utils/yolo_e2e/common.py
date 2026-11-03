@@ -38,7 +38,7 @@ def write_bundle_meta(
     version: str,
     max_det: int,
     conf: float,
-    iou: float,
+    iou: float | None,
     batch_mode: Literal["dynamic", "static"],
     batch_size: int,
 ) -> None:

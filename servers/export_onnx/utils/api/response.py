@@ -1,6 +1,4 @@
-from typing import Literal
-
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel
 
 
 class AppError(Exception):
@@ -23,17 +21,3 @@ class ApiEnvelope(BaseModel):
     @classmethod
     def fail(cls, message: str, data=None) -> "ApiEnvelope":
         return cls(success=False, data=data, message=message)
-
-
-class OnnxExportConfig(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    type: str
-    size: int = 640
-    opset: int = 18
-    batch_size: int | None = 1
-    batch_mode: Literal["dynamic", "static"] = "static"
-    simplify: bool = False
-    max_det: int = 30
-    conf: float = Field(default=0.25, gt=0, le=1)
-    iou: float = Field(default=0.45, gt=0, le=1)

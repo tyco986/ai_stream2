@@ -8,7 +8,7 @@ ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 PROJECT_NAME=ai_stream2
 
 IMAGE="${PROJECT_NAME}_backend_dev"
-mkdir -p "${ROOT}/logs/backend" "${ROOT}/media"
+mkdir -p "${ROOT}/logs/backend" "${ROOT}/media" "${ROOT}/models"
 
 docker network create "${PROJECT_NAME}_default" 2>/dev/null || true
 docker rm -f "${PROJECT_NAME}_backend" 2>/dev/null || true
@@ -28,5 +28,6 @@ docker run \
   -v "${ROOT}/servers/backend:/app" \
   -v "${ROOT}/logs:/root/logs" \
   -v "${ROOT}/media:/root/media" \
+  -v "${ROOT}/models:/root/models" \
   "${IMAGE}" \
   sh -c 'cmake -S /app -B /tmp/build && cmake --build /tmp/build && /tmp/build/backend'

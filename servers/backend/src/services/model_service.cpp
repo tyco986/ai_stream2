@@ -482,7 +482,8 @@ Json::Value ModelService::upload(const std::string& modelId,
     std::filesystem::remove(staged);
     throw std::runtime_error("invalid model file");
   }
-  std::filesystem::rename(staged, source);
+  std::filesystem::copy_file(staged, source, std::filesystem::copy_options::overwrite_existing);
+  std::filesystem::remove(staged);
   const bool hasSource = !current[model::KEY_SOURCE_PATH].isNull();
   const std::string oldSource = hasSource ? current[model::KEY_SOURCE_PATH].asString() : "";
   if (hasSource && oldSource != source.string()) {
