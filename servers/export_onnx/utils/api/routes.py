@@ -28,16 +28,6 @@ def health() -> ApiEnvelope:
 
 
 @router.get(
-    "/recipe",
-    response_model=ApiEnvelope,
-    summary="Model build recipes",
-)
-def recipe() -> ApiEnvelope:
-    payload = ApiEnvelope.ok(data=ExportOnnxService().recipe())
-    return payload
-
-
-@router.get(
     "/types",
     response_model=ApiEnvelope,
     summary="List available export types",

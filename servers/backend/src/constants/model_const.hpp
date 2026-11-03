@@ -72,6 +72,7 @@ inline const char* MULTIPART_CONTENT_TYPE = "multipart/form-data; boundary=ai_st
 inline const char* SOURCE_DIR = "/root/models/source";
 inline const char* ENGINE_DIR = "/root/models/engine";
 inline const char* SUFFIX_PT = ".pt";
+inline const char* SUFFIX_PTH = ".pth";
 inline const char* SUFFIX_ONNX = ".onnx";
 inline const char* SUFFIX_ONNX_DATA = ".onnx.data";
 inline const char* SUFFIX_ZIP = ".zip";
@@ -170,7 +171,7 @@ inline const char* RECIPE_TEXT = R"({
     "export_trt": {"batch_size": "18", "device": "0", "precision": "fp16", "opt_level": "3"}
   },
   "STGCNPP": {
-    "source_suffixes": [".pt", ".pth"],
+    "source_suffixes": [".zip"],
     "export_onnx": {"size": "null", "opset": "18", "batch_size": "null", "batch_mode": "dynamic", "simplify": "false", "max_det": "null", "conf": "null", "iou": "null"},
     "export_trt": {"batch_size": "64", "device": "0", "precision": "fp16", "opt_level": "null"}
   },

@@ -381,25 +381,21 @@ Json::Value ModelService::buildEnd(const std::string& modelId,
 bool ModelService::uploadCheck(const std::string& path) {
   int error = 0;
   zip_t* zip = zip_open(path.c_str(), ZIP_RDONLY, &error);
-  std::string onnx;
-  std::string data;
-  int files = 0;
+  bool weights = false;
+  bool labels = false;
   const zip_int64_t count = zip ? zip_get_num_entries(zip, 0) : 0;
   for (zip_int64_t index = 0; index < count; ++index) {
     const std::string entryName = zip_get_name(zip, index, 0);
     const bool directory = !entryName.empty() && entryName.back() == '/';
     const std::string filename = std::filesystem::path(entryName).filename().string();
-    const bool dataFile = filename.ends_with(model::SUFFIX_ONNX_DATA);
-    const bool onnxFile = !dataFile && filename.ends_with(model::SUFFIX_ONNX);
-    files += directory ? 0 : 1;
-    onnx = onnxFile ? filename : onnx;
-    data = dataFile ? filename : data;
+    const bool weightFile = filename.ends_with(model::SUFFIX_PT) || filename.ends_with(model::SUFFIX_PTH);
+    weights = weights || (!directory && weightFile);
+    labels = labels || (!directory && filename == model::FILE_LABELS);
   }
   if (zip) {
     zip_close(zip);
   }
-  const bool paired = !onnx.empty() && data == onnx + ".data";
-  const bool accepted = zip && files == 2 && paired;
+  const bool accepted = zip && weights && labels;
   return accepted;
 }
 

@@ -14,11 +14,9 @@ from utils.api.constants import (
     LOG_ROOT,
     MULTIPART_BOUNDARY,
     HISTORY_ROOT,
-    RECIPES,
     SOURCE_DIR,
+    SOURCE_SUFFIXES,
     TMP_ROOT,
-    TYPE_STGCNPP,
-    WEIGHT_SUFFIXES,
 )
 from utils.api.logger import RequestLogger
 from utils.api.schemas import AppError, OnnxExportConfig
@@ -75,29 +73,41 @@ class ExportOnnxService:
     def save_upload(self, upload: UploadFile, work_dir: Path, model_type: str) -> Path:
         filename = Path(upload.filename or "").name
         suffix = Path(filename).suffix.lower()
-        allowed = RECIPES[model_type]["source_suffixes"]
+        allowed = SOURCE_SUFFIXES[model_type]
         if suffix not in allowed:
             raise AppError(f"file must be {' or '.join(allowed)}: {filename}")
         stored = work_dir / filename
         with stored.open("wb") as handle:
             shutil.copyfileobj(upload.file, handle)
-        weights = self.unpack_stgcn(stored, work_dir) if model_type == TYPE_STGCNPP else stored
-        return weights
-
-    def unpack_stgcn(self, zip_path: Path, work_dir: Path) -> Path:
-        with zipfile.ZipFile(zip_path) as archive:
-            names = [info.filename for info in archive.infolist() if not info.is_dir()]
-            bases = [Path(name).name for name in names]
-            weight_names = [name for name in bases if Path(name).suffix.lower() in WEIGHT_SUFFIXES]
-            accepted = len(names) == 2 and len(weight_names) == 1 and bases.count(FILE_LABELS) == 1
-            if not accepted:
-                raise AppError(f"stgcnpp zip must contain one .pt or .pth and {FILE_LABELS}")
-            for info in archive.infolist():
-                target = work_dir / Path(info.filename).name
-                extracted = archive.read(info) if not info.is_dir() else b""
-                target.write_bytes(extracted) if not info.is_dir() else None
-        zip_path.unlink()
-        weights = work_dir / weight_names[0]
+        weights = stored
+        if model_type == "YOLO10-DET":
+            weights = stored
+        elif model_type == "YOLO11-DET":
+            weights = stored
+        elif model_type == "YOLO11-SEG":
+            weights = stored
+        elif model_type == "YOLO26-DET":
+            weights = stored
+        elif model_type == "YOLO26-SEG":
+            weights = stored
+        elif model_type == "YOLO26-POSE":
+            weights = stored
+        elif model_type == "STGCNPP":
+            with zipfile.ZipFile(stored) as archive:
+                names = [info.filename for info in archive.infolist() if not info.is_dir()]
+                bases = [Path(name).name for name in names]
+                weight_names = [name for name in bases if Path(name).suffix.lower() in (".pt", ".pth")]
+                accepted = len(names) == 2 and len(weight_names) == 1 and bases.count(FILE_LABELS) == 1
+                if not accepted:
+                    raise AppError(f"stgcnpp zip must contain one .pt or .pth and {FILE_LABELS}")
+                for info in archive.infolist():
+                    target = work_dir / Path(info.filename).name
+                    extracted = archive.read(info) if not info.is_dir() else b""
+                    target.write_bytes(extracted) if not info.is_dir() else None
+            stored.unlink()
+            weights = work_dir / weight_names[0]
+        elif model_type == "RTMPOSE":
+            weights = stored
         return weights
 
     def pack(self, work_dir: Path, stem: str) -> tuple[Path, dict]:
@@ -164,10 +174,6 @@ class ExportOnnxService:
             content=body,
             media_type=f"multipart/form-data; boundary={MULTIPART_BOUNDARY}",
         )
-        return payload
-
-    def recipe(self) -> dict:
-        payload = RECIPES
         return payload
 
     def get_history(self, filename: str) -> dict:

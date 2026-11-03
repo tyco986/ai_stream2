@@ -15,7 +15,6 @@ JSON 成功外壳：`{success, message, data, file}`。`file` 无附件时为 `n
 | 方法 | 路径 | 入参键 | 出参键（`data`） | 功能 |
 |------|------|--------|------------------|------|
 | `GET` | `/ai_stream2/export_onnx/health` | 无 | 空对象 | 健康检查 |
-| `GET` | `/ai_stream2/export_onnx/recipe` | 无 | 各类型 recipe | 构建默认值与允许的源文件后缀 |
 | `GET` | `/ai_stream2/export_onnx/types` | 无 | `items` | 可导出的模型类型 |
 | `POST` | `/ai_stream2/export_onnx/export` | multipart：`input`、`config` | 构建结果对象 | 把权重导出为 ONNX zip |
 | `GET` | `/ai_stream2/export_onnx/history` | query：`filename` | `{文件名: meta}` | 列出历史包的 meta |
@@ -29,12 +28,6 @@ JSON 成功外壳：`{success, message, data, file}`。`file` 无附件时为 `n
 
 出参 `data`：`{}`。`message`：空。`file`：`null`。失败时连接被拒绝。
 
-### GET `/ai_stream2/export_onnx/recipe`
-
-入参：无。
-
-出参 `data`：键为模型类型。每个值含 `source_suffixes`、`export_onnx`、`export_trt`。`source_suffixes`：YOLO 系列为 `.pt`、`.pth`，`STGCNPP` 为 `.zip`，`RTMPOSE` 为 `.onnx`。recipe 里的空值为 JSON `null`。`message`：空。`file`：`null`。
-
 ### GET `/ai_stream2/export_onnx/types`
 
 入参：无。
@@ -45,7 +38,7 @@ JSON 成功外壳：`{success, message, data, file}`。`file` 无附件时为 `n
 
 成功时 `Content-Type` 为 `multipart/form-data; boundary=export-onnx-boundary`。zip 内含一个 `.onnx`、`labels.txt`、`meta.json`。文件名是上传文件主名加 `.zip`。同时写入 `/root/history/export_onnx`。
 
-multipart。`input` 后缀须落在该 `type` 的 `source_suffixes` 里：YOLO 系列 `.pt` / `.pth`，`STGCNPP` `.zip`，`RTMPOSE` `.onnx`。`STGCNPP` 的 zip 内只能有一个 `.pt` 或 `.pth`，以及 `labels.txt`。`RTMPOSE` 的 `labels.txt` 固定为 `person`。`config` 是 YAML，至少含 `type`。可省略：`size`（默认 `640`）、`opset`（默认 `18`）、`batch_size`（默认 `1`）、`batch_mode`（默认 `static`）、`simplify`（默认 `false`）、`max_det`（默认 `30`）、`conf`（默认 `0.25`）、`iou`（默认 `0.45`）。
+multipart。`input` 后缀须对应该 `type`：YOLO 系列 `.pt` / `.pth`，`STGCNPP` `.zip`，`RTMPOSE` `.onnx`。`STGCNPP` 的 zip 内只能有一个 `.pt` 或 `.pth`，以及 `labels.txt`。`RTMPOSE` 的 `labels.txt` 固定为 `person`。`config` 是 YAML，至少含 `type`。可省略：`size`（默认 `640`）、`opset`（默认 `18`）、`batch_size`（默认 `1`）、`batch_mode`（默认 `static`）、`simplify`（默认 `false`）、`max_det`（默认 `30`）、`conf`（默认 `0.25`）、`iou`（默认 `0.45`）。
 
 入参：`input`、`config`。
 
@@ -93,7 +86,6 @@ multipart。`input` 后缀须落在该 `type` 的 `source_suffixes` 里：YOLO �
 | `scripts/1_build_image.sh` | 无 | 用本目录 `Dockerfile` 构建 `ai_stream2_export_onnx` |
 | `scripts/2_run_container.sh` | 无 | 重建并启动容器，挂载仓库根的 `history`、`logs` |
 | `scripts/3_health.sh` | 无 | `GET /health` |
-| `scripts/3_recipe.sh` | 无 | `GET /recipe` |
 | `scripts/3_export.sh` | `--input`、`--config` | `POST /export` |
 | `scripts/export_all.sh` | 无 | 按模板导出 `models/source` 里能对上的权重 |
 | `scripts/3_get_history.sh` | `--filename`（可省略） | `GET /history` |

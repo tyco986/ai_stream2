@@ -6,7 +6,7 @@ JSON 成功外壳：`{success, message, data}`。新建与更新是 multipart �
 
 模型对象键：`id`、`name`、`type`、`version`、`batch_size`、`batch_mode`、`input_tensors`、`output_tensors`、`precision`、`opt_level`、`device`、`workspace`、`static_plugin`、`max_det`、`conf`、`iou`、`num_class`、`classes`、`source_path`、`source_name`、`engine_name`、`status`（`not_built` | `building` | `built`）、`built_at`、`trt_version`、`ever_built`。`engine_path` 只在库内，接口不返回。
 
-`type`：`YOLO10-DET`、`YOLO26-SEG`、`YOLO26-DET`、`YOLO26-POSE`、`STGCNPP`、`RTMPOSE`。`batch_mode`：`static` | `dynamic`。`precision`：`fp16`。`batch_size`：1–128。
+`type`：`YOLO10-DET`、`YOLO11-DET`、`YOLO11-SEG`、`YOLO26-DET`、`YOLO26-SEG`、`YOLO26-POSE`、`STGCNPP`、`RTMPOSE`。`batch_mode`：`static` | `dynamic`。`precision`：`fp16`。`batch_size`：1–128。
 
 ---
 
@@ -58,7 +58,7 @@ multipart 表单。必填：`name`、`type`、`batch_size`、`batch_mode`、`pre
 
 入参：无。
 
-出参 `data`：键为 `RECIPES` 中的类型名。值的键：`batch_size`、`batch_mode`、`precision`、`device`、`opt_level`、`max_det`、`conf`、`iou`。`batch_size`、`precision`、`device`、`opt_level` 取自该类型 `export_trt` recipe；`max_det`、`conf`、`iou` 取自 `export_onnx` recipe。recipe 中的 `null` 出参为 JSON `null`。`batch_mode` 固定为 `dynamic`。`message`：`Loaded model types`。失败 `500`，`Failed to load model types`。
+出参 `data`：键为 `RECIPES` 中的类型名。值的键：`batch_size`、`batch_mode`、`precision`、`device`、`opt_level`、`max_det`、`conf`、`iou`、`source_suffixes`。`batch_size`、`precision`、`device`、`opt_level` 取自该类型 `export_trt` recipe；`max_det`、`conf`、`iou` 取自 `export_onnx` recipe。recipe 中的 `null` 出参为 JSON `null`。`batch_mode` 固定为 `dynamic`。`source_suffixes` 为该类型允许的源文件后缀数组。`message`：`model_types_ok`。失败 `500`，`model_types_error`。
 
 ### POST `/backend/models/import`
 
@@ -92,7 +92,7 @@ multipart 表单。必填：`name`、`type`、`batch_size`、`batch_mode`、`pre
 
 ### POST `/backend/models/{model_id}/upload`
 
-字段名 `input`。文件名只允许字母、数字、`.`、`_`、`-`，后缀 `.pt`、`.onnx` 或 `.zip`。zip 须通过源包校验。写入 `/root/models/source/`，并更新 `source_path` 与 `source_name`（文件名）。构建中 `409`，`model is building`。
+字段名 `input`。文件名只允许字母、数字、`.`、`_`、`-`，后缀须落在该模型类型的 `source_suffixes`。`.zip` 须能打开，且包内同时含 `.pt` 或 `.pth` 与 `labels.txt`。写入 `/root/models/source/`，并更新 `source_path` 与 `source_name`（文件名）。构建中 `409`，`model is building`。
 
 入参：path `model_id`；multipart `input`。
 
