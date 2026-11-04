@@ -235,13 +235,44 @@ CREATE TABLE pipeline_gie (
   updated_at TIMESTAMPTZ
 );
 
+-- media page
+
+CREATE TABLE media (
+  id UUID PRIMARY KEY,
+  type VARCHAR(16) NOT NULL,
+  name VARCHAR(150) NOT NULL,
+  width INT,
+  height INT,
+  duration NUMERIC(12, 3),
+  fps NUMERIC(6, 2),
+  codec VARCHAR(32),
+  size BIGINT,
+  md5 VARCHAR(32) NOT NULL,
+  folder TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL,
+  user_id UUID NOT NULL REFERENCES "user" (id),
+  stream_id UUID REFERENCES stream (id) ON DELETE SET NULL,
+  pipeline_id UUID REFERENCES pipeline (id) ON DELETE SET NULL,
+  CONSTRAINT media_type_check CHECK (
+    type IN ('image', 'video')
+    AND (type = 'video' OR (duration IS NULL AND fps IS NULL AND codec IS NULL))
+  )
+);
+
+CREATE INDEX media_user_id_idx ON media (user_id);
+CREATE INDEX media_stream_id_idx ON media (stream_id);
+CREATE INDEX media_pipeline_id_idx ON media (pipeline_id);
+
 CREATE TABLE pipeline_analyzer (
   id UUID PRIMARY KEY,
   name VARCHAR(150) NOT NULL UNIQUE,
-  source_path TEXT,
+  media_id UUID REFERENCES media (id),
   annotations JSONB NOT NULL,
   updated_at TIMESTAMPTZ
 );
+
+CREATE INDEX pipeline_analyzer_media_id_idx ON pipeline_analyzer (media_id);
 
 -- event page
 
@@ -321,32 +352,3 @@ VALUES (
   FALSE,
   FALSE
 );
-
--- media page
-
-CREATE TABLE media (
-  id UUID PRIMARY KEY,
-  type VARCHAR(16) NOT NULL,
-  name VARCHAR(150) NOT NULL,
-  width INT,
-  height INT,
-  duration NUMERIC(12, 3),
-  fps NUMERIC(6, 2),
-  codec VARCHAR(32),
-  size BIGINT,
-  md5 VARCHAR(32) NOT NULL,
-  folder TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL,
-  user_id UUID NOT NULL REFERENCES "user" (id),
-  stream_id UUID REFERENCES stream (id) ON DELETE SET NULL,
-  pipeline_id UUID REFERENCES pipeline (id) ON DELETE SET NULL,
-  CONSTRAINT media_type_check CHECK (
-    type IN ('image', 'video')
-    AND (type = 'video' OR (duration IS NULL AND fps IS NULL AND codec IS NULL))
-  )
-);
-
-CREATE INDEX media_user_id_idx ON media (user_id);
-CREATE INDEX media_stream_id_idx ON media (stream_id);
-CREATE INDEX media_pipeline_id_idx ON media (pipeline_id);

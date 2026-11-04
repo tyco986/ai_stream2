@@ -28,6 +28,7 @@ export const PATH_MODEL_MAP = "/backend/models/map";
 export const PATH_PIPELINE_GIE = "/backend/pipeline/gie";
 export const PATH_PIPELINE_GIE_ITEM = "/backend/pipeline/gie/{gie_id}";
 export const PATH_PIPELINE_GIE_BATCH_REMOVE = "/backend/pipeline/gie/batch/remove";
+export const PATH_PIPELINE_ANALYZER = "/backend/pipeline/analyzer";
 export const PATH_MODEL = "/backend/models/{model_id}";
 export const PATH_MODEL_UPLOAD = "/backend/models/{model_id}/upload";
 export const PATH_MODEL_BUILD = "/backend/models/{model_id}/build";

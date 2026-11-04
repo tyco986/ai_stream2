@@ -56,6 +56,12 @@ export const ANALYZER_ANGLE_GAP = 6;
 export const ANALYZER_ANGLE_LABEL_WIDTH = 36;
 export const ANALYZER_ARROW_HEAD = 0.15;
 export const ANALYZER_ARROW_RADIAN = (15 * Math.PI) / 180;
+export const ANALYZER_CLASS_ID = -1;
+export const ANALYZER_ENABLE = 1;
+export const ANALYZER_LINE_MODE = "balanced";
+export const ANALYZER_DIRECTION_MODE = "loose";
+export const ANALYZER_OBJECT_THRESHOLD = "5";
+export const ANALYZER_TIME_THRESHOLD = "2000";
 export const ANALYZER_TIP_OFFSET = 8;
 export const ANALYZER_TIP_WIDTH = 200;
 export const ANALYZER_TIP_HEIGHT = 32;
@@ -72,11 +78,11 @@ export const ANALYZER_RULES = [
 ];
 
 export const ANALYZER_LIST_COLUMN_PERCENTS = {
-  selection: 4,
-  name: 18,
-  annotations: 42,
-  updatedAt: 22,
-  ops: 14
+  selection: 5,
+  name: 22,
+  annotations: 20,
+  updatedAt: 38,
+  ops: 15
 };
 
 export const PIPELINE_LIST_COLUMN_PERCENTS = {

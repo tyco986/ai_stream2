@@ -4,10 +4,7 @@
 #include "logger/base_logger.hpp"
 #include "response/response.hpp"
 
-#include <drogon/MultiPart.h>
-
 #include <exception>
-#include <stdexcept>
 #include <string>
 
 PipelineAnalyzerController::PipelineAnalyzerController() : service(Database::client()) {}
@@ -35,27 +32,6 @@ void PipelineAnalyzerController::list(
   }
 }
 
-AnalyzerForm PipelineAnalyzerController::multipart2Form(const drogon::HttpRequestPtr& request) {
-  drogon::MultiPartParser parser;
-  const bool parsed = parser.parse(request) == 0;
-  if (!parsed) {
-    throw std::runtime_error("invalid analyzer");
-  }
-  const auto& fields = parser.getParameters();
-  AnalyzerForm form;
-  form.name = fields.count(pipeline_analyzer::KEY_NAME) ? Json::Value(fields.at(pipeline_analyzer::KEY_NAME)) : Json::Value();
-  const bool hasAnnotations = fields.count(pipeline_analyzer::KEY_ANNOTATIONS) != 0;
-  const bool annotationsParsed =
-      hasAnnotations && Json::Reader().parse(fields.at(pipeline_analyzer::KEY_ANNOTATIONS), form.annotations);
-  form.annotations = annotationsParsed ? form.annotations : Json::Value();
-  for (const auto& file : parser.getFiles()) {
-    const bool matched = file.getItemName() == pipeline_analyzer::FIELD_FILE;
-    form.fileName = matched ? file.getFileName() : form.fileName;
-    form.fileContent = matched ? std::string(file.fileData(), file.fileLength()) : form.fileContent;
-  }
-  return form;
-}
-
 void PipelineAnalyzerController::get(
     const drogon::HttpRequestPtr& request,
     std::function<void(const drogon::HttpResponsePtr&)>&& callback,
@@ -76,10 +52,13 @@ void PipelineAnalyzerController::create(
     const drogon::HttpRequestPtr& request,
     std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
   const auto started = std::chrono::steady_clock::now();
+  const auto body = request->getJsonObject();
+  const Json::Value payload = body ? *body : Json::Value(Json::objectValue);
   try {
-    const AnalyzerForm form = multipart2Form(request);
     logger.respond(request,
-            http::Response::ok(service.create(form.name, form.annotations, form.fileName, form.fileContent),
+            http::Response::ok(service.create(payload[pipeline_analyzer::KEY_NAME],
+                                              payload[pipeline_analyzer::KEY_ANNOTATIONS],
+                                              payload[pipeline_analyzer::KEY_MEDIA_ID]),
                                pipeline_analyzer::MSG_CREATE_OK),
             started,
             callback);
@@ -97,10 +76,14 @@ void PipelineAnalyzerController::update(
     std::function<void(const drogon::HttpResponsePtr&)>&& callback,
     const std::string& analyzer_id) {
   const auto started = std::chrono::steady_clock::now();
+  const auto body = request->getJsonObject();
+  const Json::Value payload = body ? *body : Json::Value(Json::objectValue);
   try {
-    const AnalyzerForm form = multipart2Form(request);
     logger.respond(request,
-            http::Response::ok(service.update(analyzer_id, form.name, form.annotations, form.fileName, form.fileContent),
+            http::Response::ok(service.update(analyzer_id,
+                                              payload[pipeline_analyzer::KEY_NAME],
+                                              payload[pipeline_analyzer::KEY_ANNOTATIONS],
+                                              payload[pipeline_analyzer::KEY_MEDIA_ID]),
                                pipeline_analyzer::MSG_UPDATE_OK),
             started,
             callback);

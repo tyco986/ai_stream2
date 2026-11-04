@@ -6,14 +6,11 @@ namespace pipeline_analyzer {
 
 inline const char* KEY_ID = "id";
 inline const char* KEY_NAME = "name";
-inline const char* KEY_SOURCE_PATH = "source_path";
+inline const char* KEY_MEDIA_ID = "media_id";
 inline const char* KEY_ANNOTATIONS = "annotations";
 inline const char* KEY_UPDATED_AT = "updated_at";
-
-inline const char* SOURCE_DIR = "/root/analyzers";
-inline const char* SUFFIX_JPG = ".jpg";
-inline const char* SUFFIX_JPEG = ".jpeg";
-inline const char* SUFFIX_PNG = ".png";
+inline const char* COLUMNS =
+    "id::text AS id, name, media_id::text AS media_id, annotations::text AS annotations, updated_at";
 inline const char* ERR_NOT_FOUND = "pipeline_analyzer_err_not_found";
 inline const char* ERR_OCCUPIED = "pipeline_analyzer_err_occupied";
 inline const char* KEY_IDS = "ids";
@@ -23,7 +20,6 @@ inline const char* KEY_SKIPPED_ROWS = "skipped_rows";
 inline const char* KEY_UPDATED_COUNT = "updated_count";
 inline const char* KEY_FAILED_COUNT = "failed_count";
 inline const char* KEY_SKIPPED_COUNT = "skipped_count";
-inline const char* FIELD_FILE = "file";
 inline const char* PATH_LIST = "/backend/pipeline/analyzer";
 inline const char* PATH_ITEM = "/backend/pipeline/analyzer/{analyzer_id}";
 inline const char* PATH_BATCH_REMOVE = "/backend/pipeline/analyzer/batch/remove";
@@ -32,7 +28,7 @@ inline Json::Value ROW() {
   Json::Value node;
   node[KEY_ID] = Json::Value();
   node[KEY_NAME] = Json::Value();
-  node[KEY_SOURCE_PATH] = Json::Value();
+  node[KEY_MEDIA_ID] = Json::Value();
   node[KEY_ANNOTATIONS] = Json::Value(Json::objectValue);
   node[KEY_UPDATED_AT] = Json::Value();
   return node;

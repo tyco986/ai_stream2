@@ -135,6 +135,8 @@ pipeline:
   pureGie: 推理引擎
   pureAnalyzer: 分析器
   pureName: 名称
+  pureNameTaken: 名称已存在
+  pureRuleRequired: 至少有一条规则
   pureType: 类型
   pureStatus: 状态
   pureStart: 启动
@@ -159,6 +161,9 @@ pipeline:
   pureAttrUnsupported: "{type} 不支持类别属性"
   pureImage: 图片
   pureImageSuffix: 仅支持 jpg、jpeg、png
+  pureInverseRoi: 反选区域
+  pureObjectThreshold: 数量
+  pureTimeThreshold: 时长
   pureRoiFiltering: ROI filtering
   pureOvercrowding: Overcrowding
   pureLineCrossing: Line crossing

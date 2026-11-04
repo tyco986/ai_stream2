@@ -7,11 +7,17 @@ export type AnalyzerRect = {
   y: number;
   width: number;
   height: number;
+  inverseRoi: boolean;
+  objectThreshold: string;
+  timeThreshold: string;
 };
 
 export const imageRect = (start: AnalyzerPoint, end: AnalyzerPoint): AnalyzerRect => ({
   name: "",
   rule: "",
+  inverseRoi: false,
+  objectThreshold: "",
+  timeThreshold: "",
   x: Math.min(start.x, end.x),
   y: Math.min(start.y, end.y),
   width: Math.abs(end.x - start.x),

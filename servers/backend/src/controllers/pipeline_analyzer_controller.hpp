@@ -9,13 +9,6 @@
 #include <functional>
 #include <string>
 
-struct AnalyzerForm {
-  Json::Value name;
-  Json::Value annotations;
-  std::string fileName;
-  std::string fileContent;
-};
-
 class PipelineAnalyzerController : public drogon::HttpController<PipelineAnalyzerController> {
  public:
   PipelineAnalyzerController();
@@ -42,7 +35,6 @@ class PipelineAnalyzerController : public drogon::HttpController<PipelineAnalyze
               const std::string& analyzer_id);
 
  private:
-  AnalyzerForm multipart2Form(const drogon::HttpRequestPtr& request);
   PipelineAnalyzerService service;
   PipelineAnalyzerLogger logger;
 };

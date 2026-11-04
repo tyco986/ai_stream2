@@ -17,8 +17,6 @@ import Play from "~icons/ri/play-circle-line";
 import ListCheck from "~icons/ri/list-check";
 import Edit from "~icons/ri/edit-line";
 import DeleteBin from "~icons/ri/delete-bin-line";
-import Upload from "~icons/ri/upload-2-line";
-import ArrowDown from "~icons/ri/arrow-down-s-line";
 import DragMove from "~icons/ri/drag-move-2-line";
 import Focus from "~icons/ri/focus-3-line";
 import Check from "~icons/ri/check-line";
@@ -37,6 +35,7 @@ import {
   type GieDraft,
   type GieItem
 } from "@/api/pipelineGie";
+import { createAnalyzer, getAnalyzers, type AnalyzerItem } from "@/api/pipelineAnalyzer";
 import {
   ANALYZER_ANCHOR_FILL,
   ANALYZER_ANCHOR_RADIUS,
@@ -45,11 +44,15 @@ import {
   ANALYZER_ANGLE_RADIUS,
   ANALYZER_CANVAS_HEIGHT,
   ANALYZER_CANVAS_WIDTH,
+  ANALYZER_CLASS_ID,
   ANALYZER_CROSSHAIR_DASH,
   ANALYZER_CROSSHAIR_STROKE,
+  ANALYZER_DIRECTION_MODE,
   ANALYZER_DIRECTION_RULE,
   ANALYZER_DIRECTION_STROKE,
   ANALYZER_EDGE_STROKE_WIDTH,
+  ANALYZER_ENABLE,
+  ANALYZER_LINE_MODE,
   ANALYZER_LINE_RULE,
   ANALYZER_LINE_STROKE,
   ANALYZER_LINE_WIDTH,
@@ -60,10 +63,12 @@ import {
   ANALYZER_RECT_FONT_SIZE,
   ANALYZER_RECT_LABEL_BG,
   ANALYZER_RECT_RULES,
+  ANALYZER_OBJECT_THRESHOLD,
   ANALYZER_SHAPE_COLORS,
   ANALYZER_SHAPE_OPS_WIDTH,
   ANALYZER_SHAPE_TYPE_WIDTH,
   ANALYZER_SNAP_THRESHOLD,
+  ANALYZER_TIME_THRESHOLD,
   ANALYZER_TIP_EXTEND_HEIGHT,
   ANALYZER_TIP_HEIGHT,
   ANALYZER_TIP_OFFSET,
@@ -209,11 +214,14 @@ const analyzerObserver = new ResizeObserver(entries => {
   analyzerWidth.value = Math.floor(entries[0].contentRect.width);
 });
 const analyzerWidths = computed(() => columnPixels(analyzerWidth.value, ANALYZER_LIST_COLUMN_PERCENTS));
-const analyzerItems = ref<Record<string, string>[]>([]);
-const analyzerSelected = ref<Record<string, string>[]>([]);
+const analyzerAnnotationsOpen = ref(false);
+const analyzerAnnotationText = ref("");
+const analyzerItems = ref<AnalyzerItem[]>([]);
+const analyzerSelected = ref<AnalyzerItem[]>([]);
 const analyzerCreateVisible = ref(false);
 const analyzerName = ref("");
 const analyzerImage = ref("");
+const analyzerMediaId = ref("");
 const analyzerRule = ref("");
 const analyzerFileRef = ref<HTMLInputElement>();
 const analyzerImagesVisible = ref(false);
@@ -243,6 +251,10 @@ const analyzerAnchor = ref<AnalyzerPoint | null>(null);
 const analyzerCorner = ref<AnalyzerPoint | null>(null);
 const analyzerTip = ref<AnalyzerPoint | null>(null);
 const analyzerRectName = ref("");
+const analyzerNameRef = ref<HTMLInputElement | null>(null);
+const analyzerInverseRoi = ref(false);
+const analyzerObjectThreshold = ref(ANALYZER_OBJECT_THRESHOLD);
+const analyzerTimeThreshold = ref(ANALYZER_TIME_THRESHOLD);
 const analyzerStage = {
   width: ANALYZER_CANVAS_WIDTH,
   height: ANALYZER_CANVAS_HEIGHT
@@ -633,17 +645,44 @@ const editTipPoint = (row: AnalyzerShapeRow) => {
   return placePoint(point);
 };
 
+const analyzerTipRule = () => {
+  const editing = analyzerEditing.value;
+  const rect = editing?.kind === "rect" ? (editing.mark as AnalyzerRect) : null;
+  return rect?.rule ?? analyzerRule.value;
+};
+
+const analyzerTipExtra = () => {
+  const rule = analyzerEditing.value?.kind === "line" || analyzerLineHead.value ? ANALYZER_LINE_RULE : analyzerTipRule();
+  const rows = { roi: 1, overcrowding: 2, [ANALYZER_LINE_RULE]: 1 };
+  return rows[rule] ?? 0;
+};
+
+const analyzerTipSize = () => ({
+  x: ANALYZER_TIP_WIDTH,
+  y: ANALYZER_TIP_HEIGHT + analyzerTipExtra() * ANALYZER_TIP_EXTEND_HEIGHT
+});
+
+const resetRectTip = () => {
+  analyzerInverseRoi.value = false;
+  analyzerObjectThreshold.value = ANALYZER_OBJECT_THRESHOLD;
+  analyzerTimeThreshold.value = ANALYZER_TIME_THRESHOLD;
+};
+
+const rectTipFields = () => ({
+  inverseRoi: analyzerInverseRoi.value,
+  objectThreshold: analyzerObjectThreshold.value.trim(),
+  timeThreshold: analyzerTimeThreshold.value.trim()
+});
+
 const openAnalyzerEditTip = (row: AnalyzerShapeRow) => {
   const line = row.kind === "line" ? (row.mark as AnalyzerLine) : null;
-  const height = ANALYZER_TIP_HEIGHT + (line ? ANALYZER_TIP_EXTEND_HEIGHT : 0);
+  const rect = row.kind === "rect" ? (row.mark as AnalyzerRect) : null;
   analyzerLineExtended.value = Boolean(line?.extended);
+  analyzerInverseRoi.value = Boolean(rect?.inverseRoi);
+  analyzerObjectThreshold.value = rect?.objectThreshold ?? "";
+  analyzerTimeThreshold.value = rect?.timeThreshold ?? "";
   analyzerRectName.value = row.name;
-  analyzerTip.value = tipOrigin(
-    editTipPoint(row),
-    { x: ANALYZER_CANVAS_WIDTH, y: ANALYZER_CANVAS_HEIGHT },
-    { x: ANALYZER_TIP_WIDTH, y: height },
-    ANALYZER_TIP_OFFSET
-  );
+  analyzerTip.value = tipOrigin(editTipPoint(row), { x: ANALYZER_CANVAS_WIDTH, y: ANALYZER_CANVAS_HEIGHT }, analyzerTipSize(), ANALYZER_TIP_OFFSET);
 };
 
 const onAnalyzerEditEnter = (event: KeyboardEvent) => {
@@ -684,8 +723,10 @@ const cancelAnalyzerEdit = () => {
 
 const commitAnalyzerEdit = (name: string) => {
   const row = analyzerEditing.value;
+  const rect = row?.kind === "rect" ? (row.mark as AnalyzerRect) : null;
   row && (row.name = name);
   row && (row.mark.name = name);
+  rect && Object.assign(rect, rectTipFields());
   finishAnalyzerEdit();
 };
 
@@ -797,17 +838,16 @@ const onAnalyzerPanStart = (event: KonvaEventObject<MouseEvent>) => {
   ready && window.addEventListener("mouseup", onAnalyzerPanEnd);
 };
 
-const openAnalyzerTip = (extended: boolean) => {
+const focusAnalyzerName = () => {
+  analyzerNameRef.value?.focus();
+};
+
+const openAnalyzerTip = () => {
   const pointer = analyzerPointer.value;
-  const height = ANALYZER_TIP_HEIGHT + (extended ? ANALYZER_TIP_EXTEND_HEIGHT : 0);
-  pointer &&
-    (analyzerTip.value = tipOrigin(
-      pointer,
-      { x: ANALYZER_CANVAS_WIDTH, y: ANALYZER_CANVAS_HEIGHT },
-      { x: ANALYZER_TIP_WIDTH, y: height },
-      ANALYZER_TIP_OFFSET
-    ));
+  pointer && (analyzerTip.value = tipOrigin(pointer, { x: ANALYZER_CANVAS_WIDTH, y: ANALYZER_CANVAS_HEIGHT }, analyzerTipSize(), ANALYZER_TIP_OFFSET));
   pointer && (analyzerRectName.value = "");
+  pointer && resetRectTip();
+  pointer && nextTick(focusAnalyzerName);
 };
 
 const closeAnalyzerTip = () => {
@@ -817,13 +857,7 @@ const closeAnalyzerTip = () => {
 
 const analyzerTipDrag = ref<{ x: number; y: number; cx: number; cy: number } | null>(null);
 
-const analyzerTipBox = () => {
-  const extended = Boolean(analyzerLineHead.value || analyzerEditing.value?.kind === "line");
-  return {
-    x: ANALYZER_TIP_WIDTH,
-    y: ANALYZER_TIP_HEIGHT + (extended ? ANALYZER_TIP_EXTEND_HEIGHT : 0)
-  };
-};
+const analyzerTipBox = () => analyzerTipSize();
 
 const onAnalyzerTipDrag = (event: MouseEvent) => {
   const drag = analyzerTipDrag.value;
@@ -855,7 +889,7 @@ const onRectClick = (snap: AnalyzerPoint) => {
   const rect = anchor ? imageRect(anchor, snap) : null;
   const second = Boolean(anchor && rect && rect.width && rect.height && analyzerPointer.value);
   second && (analyzerCorner.value = snap);
-  second && openAnalyzerTip(false);
+  second && openAnalyzerTip();
   !anchor && (analyzerAnchor.value = snap);
 };
 
@@ -872,14 +906,14 @@ const onLineClick = (snap: AnalyzerPoint) => {
   lineSecond && (analyzerLineEnd.value = snap);
   lineThird && projected && (analyzerLineAnchor.value = projected);
   lineFourth && (analyzerLineHead.value = snap);
-  lineFourth && openAnalyzerTip(true);
+  lineFourth && openAnalyzerTip();
 };
 
 const onDirClick = (snap: AnalyzerPoint) => {
   const tail = analyzerDirTail.value;
   const second = Boolean(tail && apart(tail, snap));
   second && (analyzerDirHead.value = snap);
-  second && openAnalyzerTip(false);
+  second && openAnalyzerTip();
   !tail && (analyzerDirTail.value = snap);
 };
 
@@ -941,7 +975,7 @@ const onRectConfirm = (name: string) => {
   const anchor = analyzerAnchor.value;
   const corner = analyzerCorner.value;
   const rect = anchor && corner ? imageRect(anchor, corner) : null;
-  const saved = rect ? { ...rect, name, rule: analyzerRule.value } : null;
+  const saved = rect ? { ...rect, name, rule: analyzerRule.value, ...rectTipFields() } : null;
   saved && analyzerRects.value.push(saved);
   saved && pushAnalyzerShape(name, "rect", saved);
   saved && clearAnalyzerDraft();
@@ -989,9 +1023,11 @@ const analyzerConfirms: Record<string, (name: string) => void> = {
 
 const onAnalyzerTipConfirm = () => {
   const name = analyzerRectName.value.trim();
-  const editing = Boolean(analyzerEditing.value);
-  name && editing && commitAnalyzerEdit(name);
-  name && !editing && analyzerConfirms[analyzerRule.value]?.(name);
+  const editing = analyzerEditing.value;
+  const duplicated = analyzerShapes.value.some(row => row !== editing && row.name === name);
+  name && duplicated && message(transformI18n($t("pipeline.pureNameTaken")), { type: "warning" });
+  name && !duplicated && editing && commitAnalyzerEdit(name);
+  name && !duplicated && !editing && analyzerConfirms[analyzerRule.value]?.(name);
 };
 
 const observeGie = () => {
@@ -1073,7 +1109,12 @@ const onSelect = (value: Record<string, string>[]) => {
   selected.value = value;
 };
 
-const onAnalyzerSelect = (value: Record<string, string>[]) => {
+const onAnalyzerAnnotations = (row: AnalyzerItem) => {
+  analyzerAnnotationText.value = JSON.stringify(row.annotations ?? {}, null, 2);
+  analyzerAnnotationsOpen.value = true;
+};
+
+const onAnalyzerSelect = (value: AnalyzerItem[]) => {
   analyzerSelected.value = value;
 };
 
@@ -1173,6 +1214,7 @@ const onAnalyzerPicture = (event: Event) => {
 const showAnalyzerImage = (item: MediaItem) => {
   resetAnalyzerMarks();
   analyzerImage.value = item.name;
+  analyzerMediaId.value = item.id;
   analyzerImageUrl.value && URL.revokeObjectURL(analyzerImageUrl.value);
   getMediaContent(item.id).then(blob => {
     const url = URL.createObjectURL(blob);
@@ -1194,6 +1236,84 @@ const loadAnalyzerImages = () => {
     analyzerImages.value = res.data.items;
     analyzerImageTotal.value = res.data.total;
   });
+};
+
+const loadAnalyzers = () => {
+  getAnalyzers({ page: 1, page_size: 20 }).then(res => {
+    analyzerItems.value = res.data.items;
+  });
+};
+
+const onAnalyzer = () => {
+  analyzerVisible.value = true;
+  loadAnalyzers();
+};
+
+const analyzerPointText = (values: number[]) => values.join(";");
+
+const analyzerRectText = (rect: AnalyzerRect) =>
+  analyzerPointText([
+    rect.x,
+    rect.y,
+    rect.x + rect.width,
+    rect.y,
+    rect.x + rect.width,
+    rect.y + rect.height,
+    rect.x,
+    rect.y + rect.height
+  ]);
+
+const onAnalyzerConfirm = () => {
+  const rois = analyzerRects.value.filter(rect => rect.rule === "roi");
+  const crowds = analyzerRects.value.filter(rect => rect.rule === "overcrowding");
+  const annotations: Record<string, Record<string, string | number>> = {};
+  rois.length &&
+    (annotations["roi-filtering-stream"] = {
+      enable: ANALYZER_ENABLE,
+      "class-id": ANALYZER_CLASS_ID,
+      "inverse-roi": Number(rois[0].inverseRoi),
+      ...Object.fromEntries(rois.map(rect => [`roi-${rect.name}`, analyzerRectText(rect)]))
+    });
+  crowds.length &&
+    (annotations["overcrowding-stream"] = {
+      enable: ANALYZER_ENABLE,
+      "class-id": ANALYZER_CLASS_ID,
+      "object-threshold": Number(crowds[0].objectThreshold),
+      "time-threshold": Number(crowds[0].timeThreshold),
+      ...Object.fromEntries(crowds.map(rect => [`roi-${rect.name}`, analyzerRectText(rect)]))
+    });
+  analyzerLines.value.length &&
+    (annotations["line-crossing-stream"] = {
+      enable: ANALYZER_ENABLE,
+      "class-id": ANALYZER_CLASS_ID,
+      extended: Number(analyzerLines.value[0].extended),
+      mode: ANALYZER_LINE_MODE,
+      ...Object.fromEntries(
+        analyzerLines.value.map(line => [
+          `line-crossing-${line.name}`,
+          analyzerPointText([line.ax, line.ay, line.hx, line.hy, line.x1, line.y1, line.x2, line.y2])
+        ])
+      )
+    });
+  analyzerDirs.value.length &&
+    (annotations["direction-detection-stream"] = {
+      enable: ANALYZER_ENABLE,
+      "class-id": ANALYZER_CLASS_ID,
+      mode: ANALYZER_DIRECTION_MODE,
+      ...Object.fromEntries(analyzerDirs.value.map(dir => [`direction-${dir.name}`, analyzerPointText([dir.x1, dir.y1, dir.x2, dir.y2])]))
+    });
+  const marked = Boolean(Object.keys(annotations).length);
+  !marked && message(transformI18n($t("pipeline.pureRuleRequired")), { type: "warning" });
+  marked &&
+    createAnalyzer({
+      name: analyzerName.value.trim(),
+      media_id: analyzerMediaId.value,
+      annotations
+    }).then(res => {
+      message(res.message, { type: "success" });
+      analyzerCreateVisible.value = false;
+      loadAnalyzers();
+    });
 };
 
 const onAnalyzerUpload = () => {
@@ -1278,7 +1398,7 @@ onUnmounted(() => {
       <el-button type="primary" @click="onGie">
         {{ transformI18n($t("pipeline.pureGie")) }}
       </el-button>
-      <el-button type="primary" @click="analyzerVisible = true">
+      <el-button type="primary" @click="onAnalyzer">
         {{ transformI18n($t("pipeline.pureAnalyzer")) }}
       </el-button>
     </div>
@@ -1410,7 +1530,9 @@ onUnmounted(() => {
         </el-table-column>
       </el-table>
       <el-button class="add-row" :disabled="!gieModel" @click="onAddAttr">+</el-button>
-      <p class="attr-hint">{{ gieAttrHint }}</p>
+      <el-tooltip :content="gieAttrHint" :disabled="!gieAttrHint" placement="top">
+        <p class="attr-hint">{{ gieAttrHint }}</p>
+      </el-tooltip>
       <template #footer>
         <el-button @click="gieCreateVisible = false">
           {{ transformI18n($t("pipeline.pureCancel")) }}
@@ -1424,7 +1546,7 @@ onUnmounted(() => {
       v-model="analyzerVisible"
       class="create-dialog"
       :title="transformI18n($t('pipeline.pureAnalyzer'))"
-      width="92%"
+      width="50%"
     >
       <div class="pipeline-toolbar">
         <el-button type="primary" @click="analyzerCreateVisible = true">
@@ -1436,9 +1558,17 @@ onUnmounted(() => {
       </div>
       <el-table ref="analyzerRef" class="analyzer-list" :data="analyzerItems" table-layout="fixed" border show-overflow-tooltip @selection-change="onAnalyzerSelect">
         <el-table-column type="selection" :width="analyzerWidths.selection" />
-        <el-table-column :label="transformI18n($t('pipeline.pureName'))" :width="analyzerWidths.name" />
-        <el-table-column :label="transformI18n($t('pipeline.pureAnnotations'))" :width="analyzerWidths.annotations" />
-        <el-table-column :label="transformI18n($t('pipeline.pureUpdatedAt'))" :width="analyzerWidths.updatedAt" />
+        <el-table-column prop="name" :label="transformI18n($t('pipeline.pureName'))" :width="analyzerWidths.name" />
+        <el-table-column :label="transformI18n($t('pipeline.pureAnnotations'))" :width="analyzerWidths.annotations" :show-overflow-tooltip="false">
+          <template #default="{ row }">
+            <el-button link type="primary" :title="transformI18n($t('pipeline.pureAnnotations'))" @click="onAnalyzerAnnotations(row)">
+              <IconifyIconOffline :icon="ListCheck" />
+            </el-button>
+          </template>
+        </el-table-column>
+        <el-table-column :label="transformI18n($t('pipeline.pureUpdatedAt'))" :width="analyzerWidths.updatedAt">
+          <template #default="{ row }">{{ formatLocalTime(row.updated_at) }}</template>
+        </el-table-column>
         <el-table-column :label="transformI18n($t('pipeline.pureOps'))" :width="analyzerWidths.ops" :show-overflow-tooltip="false">
           <template #default>
             <el-button link type="primary" :title="transformI18n($t('pipeline.pureEdit'))">
@@ -1451,26 +1581,26 @@ onUnmounted(() => {
         </el-table-column>
       </el-table>
     </el-dialog>
+    <el-dialog v-model="analyzerAnnotationsOpen" append-to-body :title="transformI18n($t('pipeline.pureAnnotations'))" width="760px">
+      <pre class="analyzer-annotations">{{ analyzerAnnotationText }}</pre>
+    </el-dialog>
     <el-dialog
       v-model="analyzerCreateVisible"
       align-center
       append-to-body
       class="create-dialog"
       :title="transformI18n($t('pipeline.pureCreate'))"
-      width="92%"
+      width="75%"
     >
       <el-form label-width="88px" label-position="left">
         <el-form-item :label="transformI18n($t('pipeline.pureName'))">
           <el-input v-model="analyzerName" />
         </el-form-item>
         <el-form-item :label="transformI18n($t('pipeline.pureImage'))">
-          <el-input v-model="analyzerImage" readonly>
-            <template #suffix>
-              <el-button link type="primary" :title="transformI18n($t('model.pureUpload'))" @click="onAnalyzerUpload">
-                <IconifyIconOffline :icon="Upload" />
-              </el-button>
-              <el-button link type="primary" @click="onAnalyzerImages">
-                <IconifyIconOffline :icon="ArrowDown" />
+          <el-input v-model="analyzerImage" readonly @click="onAnalyzerImages">
+            <template #append>
+              <el-button @click.stop="onAnalyzerUpload">
+                {{ transformI18n($t("model.pureUpload")) }}
               </el-button>
             </template>
           </el-input>
@@ -1546,7 +1676,7 @@ onUnmounted(() => {
             <button type="button" class="analyzer-tip-drag" @mousedown="onAnalyzerTipDragStart">
               <IconifyIconOffline :icon="Draggable" />
             </button>
-            <input v-model="analyzerRectName" class="analyzer-tip-name" @keydown.enter.prevent="onAnalyzerTipConfirm" />
+            <input ref="analyzerNameRef" v-model="analyzerRectName" class="analyzer-tip-name" @keydown.enter.prevent="onAnalyzerTipConfirm" />
             <button type="button" class="analyzer-tip-btn" :disabled="!analyzerRectName.trim()" @click="onAnalyzerTipConfirm">
               <IconifyIconOffline :icon="Check" />
             </button>
@@ -1554,6 +1684,23 @@ onUnmounted(() => {
               <IconifyIconOffline :icon="Close" />
             </button>
           </div>
+          <button
+            v-if="analyzerTipRule() === 'roi'"
+            type="button"
+            class="analyzer-tip-extend"
+            :class="{ active: analyzerInverseRoi }"
+            @click="analyzerInverseRoi = !analyzerInverseRoi"
+          >
+            {{ transformI18n($t("pipeline.pureInverseRoi")) }}
+          </button>
+          <label v-if="analyzerTipRule() === 'overcrowding'" class="analyzer-tip-field">
+            <span>{{ transformI18n($t("pipeline.pureObjectThreshold")) }}</span>
+            <input v-model="analyzerObjectThreshold" @keydown.enter.prevent="onAnalyzerTipConfirm" />
+          </label>
+          <label v-if="analyzerTipRule() === 'overcrowding'" class="analyzer-tip-field">
+            <span>{{ transformI18n($t("pipeline.pureTimeThreshold")) }}</span>
+            <input v-model="analyzerTimeThreshold" @keydown.enter.prevent="onAnalyzerTipConfirm" />
+          </label>
           <button
             v-if="analyzerLineHead || analyzerEditing?.kind === 'line'"
             type="button"
@@ -1594,7 +1741,7 @@ onUnmounted(() => {
         <el-button @click="analyzerCreateVisible = false">
           {{ transformI18n($t("pipeline.pureCancel")) }}
         </el-button>
-        <el-button type="primary" :disabled="!analyzerConfirmable">
+        <el-button type="primary" :disabled="!analyzerConfirmable" @click="onAnalyzerConfirm">
           {{ transformI18n($t("pipeline.pureConfirm")) }}
         </el-button>
       </template>
@@ -1724,11 +1871,14 @@ onUnmounted(() => {
 }
 
 .attr-hint {
-  min-height: 20px;
+  height: 20px;
   margin: 6px 0 0;
+  overflow: hidden;
   font-size: 12px;
   line-height: 20px;
   color: var(--el-color-danger);
+  white-space: nowrap;
+  text-overflow: ellipsis;
   background: transparent;
 }
 
@@ -1826,6 +1976,32 @@ html.dark .analyzer-swatch {
   height: 32px;
 }
 
+.analyzer-tip-field {
+  display: flex;
+  height: 32px;
+  border-top: 1px solid var(--el-border-color);
+}
+
+.analyzer-tip-field span {
+  display: flex;
+  align-items: center;
+  width: 72px;
+  padding: 0 8px;
+  font-size: 12px;
+  color: var(--el-text-color-regular);
+  border-right: 1px solid var(--el-border-color);
+}
+
+.analyzer-tip-field input {
+  flex: 1;
+  min-width: 0;
+  padding: 0 8px;
+  color: var(--el-text-color-regular);
+  background: transparent;
+  border: 0;
+  outline: none;
+}
+
 .analyzer-tip-extend {
   height: 32px;
   padding: 0;
@@ -1883,6 +2059,16 @@ html.dark .analyzer-swatch {
 .analyzer-tip-btn:disabled {
   color: var(--el-text-color-disabled);
   cursor: default;
+}
+
+.analyzer-annotations {
+  max-height: 420px;
+  margin: 0;
+  overflow: auto;
+  font-family: monospace;
+  font-size: 12px;
+  line-height: 20px;
+  white-space: pre;
 }
 
 .analyzer-file {

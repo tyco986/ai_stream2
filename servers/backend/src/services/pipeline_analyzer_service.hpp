@@ -10,19 +10,14 @@ class PipelineAnalyzerService {
   explicit PipelineAnalyzerService(drogon::orm::DbClientPtr dbClient);
   Json::Value list(const std::string& search, int page, long pageSize);
   Json::Value get(const std::string& analyzerId);
-  Json::Value create(const Json::Value& name,
-                     const Json::Value& annotations,
-                     const std::string& fileName,
-                     const std::string& fileContent);
+  Json::Value create(const Json::Value& name, const Json::Value& annotations, const Json::Value& mediaId);
   Json::Value update(const std::string& analyzerId,
                      const Json::Value& name,
                      const Json::Value& annotations,
-                     const std::string& fileName,
-                     const std::string& fileContent);
+                     const Json::Value& mediaId);
   Json::Value remove(const std::string& analyzerId);
 
  private:
-  std::string saveFile(const std::string& analyzerId, const std::string& fileName, const std::string& fileContent);
   Json::Value row2json(const drogon::orm::Row& row);
 
   drogon::orm::DbClientPtr dbClient;

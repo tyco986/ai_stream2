@@ -135,6 +135,8 @@ pipeline:
   pureGie: GIE
   pureAnalyzer: Analyzer
   pureName: Name
+  pureNameTaken: Name already exists
+  pureRuleRequired: At least one rule
   pureType: Type
   pureStatus: Status
   pureStart: Start
@@ -159,6 +161,9 @@ pipeline:
   pureAttrUnsupported: "{type} does not support class attrs"
   pureImage: Image
   pureImageSuffix: Only jpg, jpeg and png
+  pureInverseRoi: Inverse ROI
+  pureObjectThreshold: Count
+  pureTimeThreshold: Time
   pureRoiFiltering: ROI filtering
   pureOvercrowding: Overcrowding
   pureLineCrossing: Line crossing
