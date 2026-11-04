@@ -351,7 +351,7 @@ onUnmounted(() => {
       <el-button type="primary" @click="onCreate">
         {{ transformI18n($t("model.pureCreate")) }}
       </el-button>
-      <el-button type="primary" @click="onRemoveBatch">
+      <el-button type="primary" :disabled="!selected.length" @click="onRemoveBatch">
         {{ transformI18n($t("model.pureRemove")) }}
       </el-button>
       <el-input

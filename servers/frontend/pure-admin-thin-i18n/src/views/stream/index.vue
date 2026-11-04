@@ -259,22 +259,22 @@ onUnmounted(() => {
       <el-button type="primary" @click="onCreate">
         {{ transformI18n($t("stream.pureCreate")) }}
       </el-button>
-      <el-button type="primary" @click="onBatch(PATH_STREAM_BATCH_REMOVE)">
+      <el-button type="primary" :disabled="!selected.length" @click="onBatch(PATH_STREAM_BATCH_REMOVE)">
         {{ transformI18n($t("stream.pureRemove")) }}
       </el-button>
-      <BarButton :loading="probing" @click="onProbeBatch">
+      <BarButton :loading="probing" :disabled="!selected.length" @click="onProbeBatch">
         {{ transformI18n($t("stream.pureProbe")) }}
       </BarButton>
-      <el-button type="primary" @click="onBatch(PATH_STREAM_BATCH_RECORD)">
+      <el-button type="primary" :disabled="!selected.length" @click="onBatch(PATH_STREAM_BATCH_RECORD)">
         {{ transformI18n($t("stream.pureRecord")) }}
       </el-button>
-      <el-button type="primary" @click="onBatch(PATH_STREAM_BATCH_UNRECORD)">
+      <el-button type="primary" :disabled="!selected.length" @click="onBatch(PATH_STREAM_BATCH_UNRECORD)">
         {{ transformI18n($t("stream.pureUnrecord")) }}
       </el-button>
-      <el-button type="primary" @click="onBatch(PATH_STREAM_BATCH_MOUNT)">
+      <el-button type="primary" :disabled="!selected.length" @click="onBatch(PATH_STREAM_BATCH_MOUNT)">
         {{ transformI18n($t("stream.pureMount")) }}
       </el-button>
-      <el-button type="primary" @click="onBatch(PATH_STREAM_BATCH_UNMOUNT)">
+      <el-button type="primary" :disabled="!selected.length" @click="onBatch(PATH_STREAM_BATCH_UNMOUNT)">
         {{ transformI18n($t("stream.pureUnmount")) }}
       </el-button>
       <el-input

@@ -192,12 +192,7 @@ router.beforeEach((to: ToRouteType, _from, next) => {
         })
         .catch(error => {
           const unauthorized = error?.response?.status === 401;
-          if (unauthorized) {
-            useUserStoreHook().clearSession();
-            next({ path: "/login" });
-          } else {
-            toCorrectRoute();
-          }
+          unauthorized ? next({ path: "/login" }) : toCorrectRoute();
         });
     } else {
       toCorrectRoute();

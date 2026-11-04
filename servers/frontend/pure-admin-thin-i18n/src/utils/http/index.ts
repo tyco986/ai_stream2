@@ -14,7 +14,7 @@ import { storageLocal } from "@pureadmin/utils";
 import { message } from "@/utils/message";
 import { getToken } from "@/utils/auth";
 import { responsiveStorageNameSpace } from "@/config";
-import { PATH_USER_LOGIN } from "@/constants/path";
+import { PATH_USER_LOGIN, PATH_USER_ME } from "@/constants/path";
 
 // 相关配置请参考：www.axios-js.com/zh-cn/docs/#axios-request-config-1
 const defaultConfig: AxiosRequestConfig = {
@@ -28,6 +28,18 @@ const defaultConfig: AxiosRequestConfig = {
   paramsSerializer: {
     serialize: stringify as unknown as CustomParamsSerializer
   }
+};
+
+// 循环依赖：http -> user store -> api/user -> http
+const expireSession = async (url?: string) => {
+  const [{ router }, { useUserStoreHook }] = await Promise.all([
+    import("@/store/utils"),
+    import("@/store/modules/user")
+  ]);
+  const onLogin = router.currentRoute.value.path === "/login";
+  const guard = url?.endsWith(PATH_USER_ME);
+  onLogin || useUserStoreHook().clearSession();
+  onLogin || guard || router.replace("/login");
 };
 
 class PureHttp {
@@ -89,13 +101,17 @@ class PureHttp {
         }
         return response.data;
       },
-      (error: PureHttpError) => {
+      async (error: PureHttpError) => {
         const $error = error;
         $error.isCancelRequest = Axios.isCancel($error);
         const text = ($error.response?.data as { message?: string })?.message;
+        const unauthorized =
+          $error.response?.status === 401 &&
+          !$error.config?.url?.endsWith(PATH_USER_LOGIN);
         if (!$error.isCancelRequest && text) {
           message(text, { type: "error" });
         }
+        unauthorized && (await expireSession($error.config?.url));
         return Promise.reject($error);
       }
     );

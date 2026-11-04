@@ -155,6 +155,15 @@ pipeline:
   pureMaxH: MaxH
   pureCancel: Cancel
   pureConfirm: Confirm
+  pureAttrSelectedOnly: Only selected classes are available, other classes will be disabled
+  pureAttrUnsupported: "{type} does not support class attrs"
+  pureImage: Image
+  pureImageSuffix: Only jpg, jpeg and png
+  pureRoiFiltering: ROI filtering
+  pureOvercrowding: Overcrowding
+  pureLineCrossing: Line crossing
+  pureExtendEdge: Extend to edges
+  pureDirection: Direction detection
 model:
   pureCreate: Create
   pureRemove: Remove

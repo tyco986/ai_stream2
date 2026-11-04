@@ -6,7 +6,7 @@ JSON 成功外壳：`{success, message, data}`。`GET /media/{media_id}/download
 
 批量结果键：`updated_rows`、`failed_rows`、`skipped_rows`、`updated_count`、`failed_count`、`skipped_count`。
 
-根目录 `/root/media`，其下固定三层：`upload/<用户名>/`、`pipeline/<流水线名>/`、`recording/<流名>/`。只收录图片和视频。图片后缀：`.jpg`、`.jpeg`、`.png`、`.gif`、`.webp`、`.bmp`。视频后缀：`.mp4`、`.mkv`、`.avi`、`.mov`、`.webm`、`.ts`、`.m4v`。比较时后缀转成小写。`type`：`image` | `video`。
+根目录 `/root/media`，其下固定三层：`upload/<用户名>/`、`pipeline/<流水线名>/`、`recording/<流名>/`。只收录图片和视频。图片后缀：`.jpg`、`.jpeg`、`.png`。视频后缀：`.mp4`。比较时后缀转成小写。`type`：`image` | `video`。
 
 媒体对象键：`id`、`type`、`name`、`width`、`height`、`duration`、`fps`、`codec`、`size`、`md5`、`folder`、`created_at`、`updated_at`、`user_id`、`stream_id`、`pipeline_id`。空字段为 `null`。`type=image` 时 `duration`、`fps`、`codec` 为 `null`。库内 `size` 为字节、`duration` 为秒；对外 `size` 是 MB 数字（1024×1024，保留一位小数），`duration` 是 `HH:MM:SS`（秒取整，时分秒都补到两位）。`folder` 是文件所在目录的绝对路径。`created_at`、`updated_at` 为 UTC，格式 `YYYY-MM-DDTHH:MM:SSZ`。
 

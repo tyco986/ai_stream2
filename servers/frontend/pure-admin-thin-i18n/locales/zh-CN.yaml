@@ -132,7 +132,7 @@ stream:
 pipeline:
   pureCreate: 新建
   pureRemove: 移除
-  pureGie: GIE
+  pureGie: 推理引擎
   pureAnalyzer: 分析器
   pureName: 名称
   pureType: 类型
@@ -155,6 +155,15 @@ pipeline:
   pureMaxH: 最大高
   pureCancel: 取消
   pureConfirm: 确定
+  pureAttrSelectedOnly: 仅选中的类别可用，其他类别将被禁用
+  pureAttrUnsupported: "{type} 不支持类别属性"
+  pureImage: 图片
+  pureImageSuffix: 仅支持 jpg、jpeg、png
+  pureRoiFiltering: ROI filtering
+  pureOvercrowding: Overcrowding
+  pureLineCrossing: Line crossing
+  pureExtendEdge: 延长到边缘
+  pureDirection: Direction detection
 model:
   pureCreate: 新建
   pureRemove: 移除
