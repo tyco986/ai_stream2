@@ -84,22 +84,25 @@ Json::Value PreviewService::create(const std::string& userId,
                                    const Json::Value& slots,
                                    const Json::Value& active) {
   const std::string text = slots2Text(layout.asString(), slots);
-  auto transaction = dbClient->newTransaction();
-  if (active.asBool()) {
-    Sql::sync({}, transaction, 
-        "UPDATE preview_preset SET active = false WHERE user_id = $1::uuid AND active", userId);
+  std::optional<drogon::orm::Result> rows;
+  {
+    auto transaction = dbClient->newTransaction();
+    if (active.asBool()) {
+      Sql::sync({}, transaction, 
+          "UPDATE preview_preset SET active = false WHERE user_id = $1::uuid AND active", userId);
+    }
+    rows = Sql::sync({}, transaction, 
+        std::string("INSERT INTO preview_preset (id, user_id, name, layout, mode, slots, active) "
+                    "VALUES (gen_random_uuid(), $1::uuid, $2, $3, $4, $5::jsonb, $6) RETURNING ") +
+            preview::SQL_COLUMNS,
+        userId,
+        name.asString(),
+        layout.asString(),
+        mode.asString(),
+        text,
+        active.asBool());
   }
-  const auto rows = Sql::sync({}, transaction, 
-      std::string("INSERT INTO preview_preset (id, user_id, name, layout, mode, slots, active) "
-                  "VALUES (gen_random_uuid(), $1::uuid, $2, $3, $4, $5::jsonb, $6) RETURNING ") +
-          preview::SQL_COLUMNS,
-      userId,
-      name.asString(),
-      layout.asString(),
-      mode.asString(),
-      text,
-      active.asBool());
-  Json::Value data = parseSlots(row2json(rows[0]));
+  Json::Value data = parseSlots(row2json((*rows)[0]));
   return data;
 }
 
@@ -111,28 +114,31 @@ Json::Value PreviewService::update(const std::string& presetId,
                                    const Json::Value& slots,
                                    const Json::Value& active) {
   const std::string text = slots2Text(layout.asString(), slots);
-  auto transaction = dbClient->newTransaction();
-  if (active.asBool()) {
-    Sql::sync({}, transaction, 
-        "UPDATE preview_preset SET active = false WHERE user_id = $1::uuid AND active", userId);
+  std::optional<drogon::orm::Result> rows;
+  {
+    auto transaction = dbClient->newTransaction();
+    if (active.asBool()) {
+      Sql::sync({}, transaction, 
+          "UPDATE preview_preset SET active = false WHERE user_id = $1::uuid AND active", userId);
+    }
+    rows = Sql::sync({}, transaction, 
+        std::string("UPDATE preview_preset SET name = CASE WHEN name = $8 THEN name ELSE $3 END, "
+                    "layout = $4, mode = $5, slots = $6::jsonb, active = $7 "
+                    "WHERE id = $1::uuid AND user_id = $2::uuid RETURNING ") +
+            preview::SQL_COLUMNS,
+        presetId,
+        userId,
+        name.asString(),
+        layout.asString(),
+        mode.asString(),
+        text,
+        active.asBool(),
+        std::string(preview::NAME_DEFAULT));
+    if (rows->empty()) {
+      throw std::runtime_error(preview::ERR_NOT_FOUND);
+    }
   }
-  const auto rows = Sql::sync({}, transaction, 
-      std::string("UPDATE preview_preset SET name = CASE WHEN name = $8 THEN name ELSE $3 END, "
-                  "layout = $4, mode = $5, slots = $6::jsonb, active = $7 "
-                  "WHERE id = $1::uuid AND user_id = $2::uuid RETURNING ") +
-          preview::SQL_COLUMNS,
-      presetId,
-      userId,
-      name.asString(),
-      layout.asString(),
-      mode.asString(),
-      text,
-      active.asBool(),
-      std::string(preview::NAME_DEFAULT));
-  if (rows.empty()) {
-    throw std::runtime_error(preview::ERR_NOT_FOUND);
-  }
-  Json::Value data = parseSlots(row2json(rows[0]));
+  Json::Value data = parseSlots(row2json((*rows)[0]));
   return data;
 }
 

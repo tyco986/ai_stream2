@@ -235,6 +235,7 @@ onMounted(() => {
               <PreviewCell
                 :key="slots[index - 1].id || `empty-${index}`"
                 :stream-id="slots[index - 1].id"
+                :stream-name="slots[index - 1].name"
                 :url="slots[index - 1].url"
                 @clear="clearSlot(index - 1)"
               />

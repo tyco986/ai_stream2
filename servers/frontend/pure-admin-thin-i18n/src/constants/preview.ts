@@ -11,6 +11,16 @@ export const SLOT_COUNT = 16;
 
 export const LAYOUTS = ["1x1", "2x2", "3x3", "4x4"];
 
+export const SHOT_COOLDOWN_MS = 500;
+
+const pad = (value: number, width = 2) => String(value).padStart(width, "0");
+
+export const shotFilename = (name: string) => {
+  const date = new Date();
+  const stamp = `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}${pad(date.getMilliseconds(), 3)}`;
+  return `${name}_${stamp}.png`;
+};
+
 export const whepUrl = (name: string) =>
   `${WEBRTC_ORIGIN}/${encodeURIComponent(name)}/whep`;
 

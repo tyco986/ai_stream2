@@ -4,7 +4,9 @@ import {
   PATH_MEDIA_BATCH_DOWNLOAD,
   PATH_MEDIA_BATCH_REMOVE,
   PATH_MEDIA_BATCH_UPLOAD,
+  PATH_MEDIA,
   PATH_MEDIA_CONTENT,
+  PATH_MEDIA_DOWNLOAD,
   PATH_MEDIA_UPLOAD_FILE
 } from "@/constants/path";
 
@@ -45,8 +47,14 @@ export type MediaListResult = {
   };
 };
 
+const mediaPath = (path: string, mediaId: string) => path.replace("{media_id}", mediaId);
+
+export const getMedia = (mediaId: string) => {
+  return http.request<{ success: boolean; message: string; data: MediaItem }>("get", mediaPath(PATH_MEDIA, mediaId));
+};
+
 export const getMediaContent = (mediaId: string) => {
-  return http.request<Blob>("get", `${PATH_MEDIA_CONTENT}/${mediaId}/content`, {
+  return http.request<Blob>("get", mediaPath(PATH_MEDIA_CONTENT, mediaId), {
     responseType: "blob",
     timeout: 0
   });
@@ -59,7 +67,7 @@ export const getUploadFiles = (params?: object) => {
 };
 
 export const downloadMedia = (mediaId: string) => {
-  return http.request<Blob>("get", `${PATH_MEDIA_CONTENT}/${mediaId}/download`, {
+  return http.request<Blob>("get", mediaPath(PATH_MEDIA_DOWNLOAD, mediaId), {
     responseType: "blob",
     timeout: 0
   });

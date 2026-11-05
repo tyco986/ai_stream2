@@ -6,12 +6,13 @@ import FullscreenExit from "~icons/ri/fullscreen-exit-line";
 import Fullscreen from "~icons/ri/fullscreen-line";
 import Pause from "~icons/ri/pause-line";
 import Play from "~icons/ri/play-line";
-import { slotMediaLabel } from "@/constants/preview";
+import { SHOT_COOLDOWN_MS, shotFilename, slotMediaLabel } from "@/constants/preview";
 import { $t, transformI18n } from "@/plugins/i18n";
 import { requireStreamPlayers, streamPlayersKey } from "./players";
 
 const props = defineProps<{
   streamId: string;
+  streamName: string;
   url: string;
 }>();
 
@@ -23,8 +24,12 @@ const shell = ref<HTMLElement>();
 const host = ref<HTMLElement>();
 const paused = ref(false);
 const fullscreen = ref(false);
+const ready = ref(false);
+const cooling = ref(false);
+const shotTimer = ref(0);
 const width = ref(0);
 const height = ref(0);
+const frameRequest = ref(0);
 const players = requireStreamPlayers(inject(streamPlayersKey));
 
 const videoOf = (element: HTMLElement | undefined) => element?.querySelector("video") ?? null;
@@ -40,16 +45,26 @@ const syncPaused = () => {
   paused.value = Boolean(video?.paused);
 };
 
+const onFrame = () => {
+  ready.value = true;
+  frameRequest.value = 0;
+};
+
 const bindVideo = (video: HTMLVideoElement | null) => {
   video?.addEventListener("resize", syncSize);
   video?.addEventListener("pause", syncPaused);
   video?.addEventListener("play", syncPaused);
+  frameRequest.value = video?.requestVideoFrameCallback(onFrame) ?? 0;
 };
 
 const unbindVideo = (video: HTMLVideoElement | null) => {
   video?.removeEventListener("resize", syncSize);
   video?.removeEventListener("pause", syncPaused);
   video?.removeEventListener("play", syncPaused);
+  if (video && frameRequest.value) {
+    video.cancelVideoFrameCallback(frameRequest.value);
+    frameRequest.value = 0;
+  }
 };
 
 const applyPlayback = (video: HTMLVideoElement | null, pausedNow: boolean) => {
@@ -62,6 +77,10 @@ const toggle = () => {
   applyPlayback(video, Boolean(video?.paused));
 };
 
+const endShotCooldown = () => {
+  cooling.value = false;
+};
+
 const capture = () => {
   const video = videoOf(host.value);
   const canvas = document.createElement("canvas");
@@ -72,8 +91,11 @@ const capture = () => {
     context.drawImage(video, 0, 0);
     const link = document.createElement("a");
     link.href = canvas.toDataURL("image/png");
-    link.download = `${props.streamId}.png`;
+    link.download = shotFilename(props.streamName);
     link.click();
+    cooling.value = true;
+    window.clearTimeout(shotTimer.value);
+    shotTimer.value = window.setTimeout(endShotCooldown, SHOT_COOLDOWN_MS);
   }
 };
 
@@ -100,6 +122,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  window.clearTimeout(shotTimer.value);
   document.removeEventListener("fullscreenchange", syncFullscreen);
   const element = host.value;
   unbindVideo(videoOf(element));
@@ -117,7 +140,7 @@ onBeforeUnmount(() => {
         <button
           type="button"
           class="preview-ctl"
-          :disabled="!streamId"
+          :disabled="!ready"
           :title="transformI18n($t(paused ? 'preview.purePlay' : 'preview.purePause'))"
           @click="toggle"
         >
@@ -126,7 +149,7 @@ onBeforeUnmount(() => {
         <button
           type="button"
           class="preview-ctl"
-          :disabled="!streamId"
+          :disabled="!ready || cooling"
           :title="transformI18n($t('preview.pureShot'))"
           @click="capture"
         >
@@ -135,7 +158,7 @@ onBeforeUnmount(() => {
         <button
           type="button"
           class="preview-ctl"
-          :disabled="!streamId"
+          :disabled="!ready"
           :title="transformI18n($t('preview.pureFullscreen'))"
           @click="toggleFullscreen"
         >

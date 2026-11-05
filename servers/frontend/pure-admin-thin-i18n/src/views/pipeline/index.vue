@@ -22,7 +22,7 @@ import Focus from "~icons/ri/focus-3-line";
 import Check from "~icons/ri/check-line";
 import Close from "~icons/ri/close-line";
 import Draggable from "~icons/ri/draggable";
-import { getUploadFiles, getMediaContent, uploadMedia, type MediaItem } from "@/api/media";
+import { getMedia, getUploadFiles, getMediaContent, uploadMedia, type MediaItem } from "@/api/media";
 import { getModel, getModelMap } from "@/api/model";
 import {
   createGie,
@@ -35,7 +35,15 @@ import {
   type GieDraft,
   type GieItem
 } from "@/api/pipelineGie";
-import { createAnalyzer, getAnalyzers, type AnalyzerItem } from "@/api/pipelineAnalyzer";
+import {
+  createAnalyzer,
+  getAnalyzer,
+  getAnalyzers,
+  removeAnalyzer,
+  removeAnalyzers,
+  updateAnalyzer,
+  type AnalyzerItem
+} from "@/api/pipelineAnalyzer";
 import {
   ANALYZER_ANCHOR_FILL,
   ANALYZER_ANCHOR_RADIUS,
@@ -105,6 +113,57 @@ import {
 } from "@/views/pipeline/analyzerLine";
 import { imageRect, moveRectBetween, oppositeRectCorner, shiftRect, stageRect, tipOrigin, type AnalyzerRect } from "@/views/pipeline/analyzerRect";
 import { imagePoint, snapAnalyzerPointer, snapEdgeLines, stagePoint, type AnalyzerPoint } from "@/views/pipeline/analyzerSnap";
+
+const annotationNumbers = (value: unknown) => String(value).split(";").map(Number);
+
+const annotationGroup = (annotations: Record<string, unknown>, key: string) =>
+  (annotations[key] ?? {}) as Record<string, unknown>;
+
+const annotationFields = (group: Record<string, unknown>, prefix: string) =>
+  Object.entries(group).filter(([key, value]) => key.startsWith(prefix) && typeof value === "string");
+
+const restoredRect = (
+  name: string,
+  rule: string,
+  value: string,
+  inverseRoi: boolean,
+  objectThreshold: string,
+  timeThreshold: string
+): AnalyzerRect => {
+  const points = annotationNumbers(value);
+  return {
+    name,
+    rule,
+    inverseRoi,
+    objectThreshold,
+    timeThreshold,
+    x: points[0],
+    y: points[1],
+    width: points[2] - points[0],
+    height: points[5] - points[1]
+  };
+};
+
+const restoredLine = (name: string, value: string, extended: boolean): AnalyzerLine => {
+  const points = annotationNumbers(value);
+  return {
+    name,
+    ax: points[0],
+    ay: points[1],
+    hx: points[2],
+    hy: points[3],
+    x1: points[4],
+    y1: points[5],
+    x2: points[6],
+    y2: points[7],
+    extended
+  };
+};
+
+const restoredDirection = (name: string, value: string): AnalyzerDirection => {
+  const points = annotationNumbers(value);
+  return { name, x1: points[0], y1: points[1], x2: points[2], y2: points[3] };
+};
 
 type AnalyzerShapeKind = "rect" | "line" | "direction";
 
@@ -219,6 +278,7 @@ const analyzerAnnotationText = ref("");
 const analyzerItems = ref<AnalyzerItem[]>([]);
 const analyzerSelected = ref<AnalyzerItem[]>([]);
 const analyzerCreateVisible = ref(false);
+const analyzerId = ref("");
 const analyzerName = ref("");
 const analyzerImage = ref("");
 const analyzerMediaId = ref("");
@@ -1211,17 +1271,94 @@ const onAnalyzerPicture = (event: Event) => {
   };
 };
 
-const showAnalyzerImage = (item: MediaItem) => {
-  resetAnalyzerMarks();
-  analyzerImage.value = item.name;
-  analyzerMediaId.value = item.id;
+const openAnalyzerPicture = (mediaId: string) => {
+  analyzerMediaId.value = mediaId;
   analyzerImageUrl.value && URL.revokeObjectURL(analyzerImageUrl.value);
-  getMediaContent(item.id).then(blob => {
+  getMediaContent(mediaId).then(blob => {
     const url = URL.createObjectURL(blob);
     const image = new Image();
     analyzerImageUrl.value = url;
     image.onload = onAnalyzerPicture;
     image.src = url;
+  });
+};
+
+const showAnalyzerImage = (item: MediaItem) => {
+  resetAnalyzerMarks();
+  analyzerImage.value = item.name;
+  openAnalyzerPicture(item.id);
+};
+
+const applyAnalyzerAnnotations = (annotations: Record<string, unknown>) => {
+  const roi = annotationGroup(annotations, "roi-filtering-stream");
+  const crowd = annotationGroup(annotations, "overcrowding-stream");
+  const line = annotationGroup(annotations, "line-crossing-stream");
+  const direction = annotationGroup(annotations, "direction-detection-stream");
+  const inverse = Boolean(Number(roi["inverse-roi"] ?? 0));
+  const objectThreshold = String(crowd["object-threshold"] ?? "");
+  const timeThreshold = String(crowd["time-threshold"] ?? "");
+  const extended = Boolean(Number(line.extended ?? 0));
+  const rects = [
+    ...annotationFields(roi, "roi-").map(([key, value]) =>
+      restoredRect(key.slice(4), "roi", value, inverse, "", "")
+    ),
+    ...annotationFields(crowd, "roi-").map(([key, value]) =>
+      restoredRect(key.slice(4), "overcrowding", value, false, objectThreshold, timeThreshold)
+    )
+  ];
+  const lines = annotationFields(line, "line-crossing-").map(([key, value]) =>
+    restoredLine(key.slice("line-crossing-".length), value, extended)
+  );
+  const dirs = annotationFields(direction, "direction-").map(([key, value]) =>
+    restoredDirection(key.slice("direction-".length), value)
+  );
+  const rows = [
+    ...rects.map(mark => ({ name: mark.name, color: ANALYZER_SHAPE_COLORS[mark.rule], kind: "rect" as const, mark })),
+    ...lines.map(mark => ({ name: mark.name, color: ANALYZER_SHAPE_COLORS.line, kind: "line" as const, mark })),
+    ...dirs.map(mark => ({ name: mark.name, color: ANALYZER_SHAPE_COLORS.direction, kind: "direction" as const, mark }))
+  ];
+  analyzerRects.value = rects;
+  analyzerLines.value = lines;
+  analyzerDirs.value = dirs;
+  analyzerShapes.value = rows;
+};
+
+const onAnalyzerCreate = () => {
+  analyzerId.value = "";
+  analyzerName.value = "";
+  analyzerImage.value = "";
+  analyzerMediaId.value = "";
+  analyzerCreateVisible.value = true;
+};
+
+const onAnalyzerEdit = (row: AnalyzerItem) => {
+  getAnalyzer(row.id).then(res => {
+    const item = res.data;
+    analyzerId.value = item.id;
+    analyzerName.value = item.name;
+    analyzerImage.value = "";
+    resetAnalyzerMarks();
+    applyAnalyzerAnnotations(item.annotations ?? {});
+    analyzerCreateVisible.value = true;
+    item.media_id && openAnalyzerPicture(item.media_id);
+    item.media_id &&
+      getMedia(item.media_id).then(media => {
+        analyzerImage.value = media.data.name;
+      });
+  });
+};
+
+const onAnalyzerRemove = (row: AnalyzerItem) => {
+  removeAnalyzer(row.id).then(res => {
+    message(res.message, { type: "success" });
+    loadAnalyzers();
+  });
+};
+
+const onAnalyzerRemoveBatch = () => {
+  removeAnalyzers(analyzerSelected.value.map(row => row.id)).then(res => {
+    message(res.message, { type: "success" });
+    loadAnalyzers();
   });
 };
 
@@ -1304,12 +1441,13 @@ const onAnalyzerConfirm = () => {
     });
   const marked = Boolean(Object.keys(annotations).length);
   !marked && message(transformI18n($t("pipeline.pureRuleRequired")), { type: "warning" });
+  const draft = {
+    name: analyzerName.value.trim(),
+    media_id: analyzerMediaId.value,
+    annotations
+  };
   marked &&
-    createAnalyzer({
-      name: analyzerName.value.trim(),
-      media_id: analyzerMediaId.value,
-      annotations
-    }).then(res => {
+    (analyzerId.value ? updateAnalyzer(analyzerId.value, draft) : createAnalyzer(draft)).then(res => {
       message(res.message, { type: "success" });
       analyzerCreateVisible.value = false;
       loadAnalyzers();
@@ -1549,10 +1687,10 @@ onUnmounted(() => {
       width="50%"
     >
       <div class="pipeline-toolbar">
-        <el-button type="primary" @click="analyzerCreateVisible = true">
+        <el-button type="primary" @click="onAnalyzerCreate">
           {{ transformI18n($t("pipeline.pureCreate")) }}
         </el-button>
-        <el-button type="primary" :disabled="!analyzerSelected.length">
+        <el-button type="primary" :disabled="!analyzerSelected.length" @click="onAnalyzerRemoveBatch">
           {{ transformI18n($t("pipeline.pureRemove")) }}
         </el-button>
       </div>
@@ -1570,11 +1708,11 @@ onUnmounted(() => {
           <template #default="{ row }">{{ formatLocalTime(row.updated_at) }}</template>
         </el-table-column>
         <el-table-column :label="transformI18n($t('pipeline.pureOps'))" :width="analyzerWidths.ops" :show-overflow-tooltip="false">
-          <template #default>
-            <el-button link type="primary" :title="transformI18n($t('pipeline.pureEdit'))">
+          <template #default="{ row }">
+            <el-button link type="primary" :title="transformI18n($t('pipeline.pureEdit'))" @click="onAnalyzerEdit(row)">
               <IconifyIconOffline :icon="Edit" />
             </el-button>
-            <el-button link type="primary" :title="transformI18n($t('pipeline.pureRemove'))">
+            <el-button link type="primary" :title="transformI18n($t('pipeline.pureRemove'))" @click="onAnalyzerRemove(row)">
               <IconifyIconOffline :icon="DeleteBin" />
             </el-button>
           </template>
@@ -1589,7 +1727,7 @@ onUnmounted(() => {
       align-center
       append-to-body
       class="create-dialog"
-      :title="transformI18n($t('pipeline.pureCreate'))"
+      :title="transformI18n($t(analyzerId ? 'pipeline.pureEdit' : 'pipeline.pureCreate'))"
       width="75%"
     >
       <el-form label-width="88px" label-position="left">
