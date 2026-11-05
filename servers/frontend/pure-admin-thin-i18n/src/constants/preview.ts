@@ -13,6 +13,8 @@ export const LAYOUTS = ["1x1", "2x2", "3x3", "4x4"];
 
 export const SHOT_COOLDOWN_MS = 500;
 
+export const PREVIEW_SAVE_DIALOG_WIDTH = "22%";
+
 const pad = (value: number, width = 2) => String(value).padStart(width, "0");
 
 export const shotFilename = (name: string) => {

@@ -11,7 +11,6 @@ class PgieParser {
 public:
     PgieParser(
         std::filesystem::path modelZip,
-        std::string pipelineName,
         int runtimeBatchSize,
         YAML::Node classAttrs,
         int interval = 1);
@@ -27,7 +26,6 @@ private:
     void initClass();
 
     std::filesystem::path modelZip;
-    std::string pipelineName;
     int runtimeBatchSize;
     YAML::Node classAttrs;
     int interval;

@@ -28,7 +28,7 @@ import {
   PATH_STREAM_BATCH_UNMOUNT,
   PATH_STREAM_BATCH_UNRECORD
 } from "@/constants/path";
-import { STREAM_CREATE_COLUMN_PERCENTS, STREAM_LIST_COLUMN_PERCENTS } from "@/constants/stream";
+import { STREAM_CREATE_COLUMN_PERCENTS, STREAM_DIALOG_WIDTH, STREAM_LIST_COLUMN_PERCENTS } from "@/constants/stream";
 import { ALL_GROUP_ID } from "@/constants/streamGroup";
 import { $t, transformI18n } from "@/plugins/i18n";
 import { message } from "@/utils/message";
@@ -294,7 +294,7 @@ onUnmounted(() => {
       v-model="visible"
       class="create-dialog"
       :title="transformI18n($t('stream.pureCreate'))"
-      width="92%"
+      :width="STREAM_DIALOG_WIDTH"
     >
       <div class="stream-toolbar">
         <BarButton :loading="probingRows.length > 0" @click="onProbeSelected">
@@ -363,7 +363,7 @@ onUnmounted(() => {
       v-model="editing"
       class="create-dialog"
       :title="transformI18n($t('stream.pureEdit'))"
-      width="92%"
+      :width="STREAM_DIALOG_WIDTH"
     >
       <el-table class="create-table" :data="[editRow]" table-layout="fixed" border>
         <el-table-column :label="transformI18n($t('stream.pureName'))">

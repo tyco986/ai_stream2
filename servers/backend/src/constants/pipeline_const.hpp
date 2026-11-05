@@ -47,6 +47,10 @@ inline const char* KEY_FAILED_COUNT = "failed_count";
 inline const char* KEY_SKIPPED_COUNT = "skipped_count";
 
 inline const char* FIELD_INPUT = "input";
+inline const char* FIELD_CONFIG = "config";
+inline const char* FIELD_MODEL = "model";
+inline const char* KEY_MODEL_ZIP = "model_zip";
+inline const char* PARAMS_YML = "params.yml";
 inline const char* CONFIG_FILENAME = "input.yaml";
 inline const char* MULTIPART_BOUNDARY = "ai_stream2_pipeline_generate";
 inline const char* MULTIPART_CONTENT_TYPE = "multipart/form-data; boundary=ai_stream2_pipeline_generate";
@@ -70,7 +74,6 @@ inline const int DEEPSTREAM_PORT = 9000;
 inline const char* DEEPSTREAM_HEALTH_PATH = "/health";
 inline const char* DEEPSTREAM_START_PATH = "/start";
 inline const char* DEEPSTREAM_STATUS_PATH = "/status";
-inline const char* ZIP_FILENAME = "config.zip";
 inline const int HEALTH_ATTEMPTS = 15;
 inline const int STATUS_ATTEMPTS = 15;
 inline const double HEALTH_INTERVAL_SECONDS = 1.0;

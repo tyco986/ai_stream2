@@ -17,7 +17,7 @@ public:
     static constexpr const char* SGIE_CONFIG_NAME = "sgie0.yml";
     static constexpr const char* RTMPOSE_PREPROCESS_CONFIG_NAME = "nvdspreprocess_rtmpose.txt";
 
-    TopdownPose(nlohmann::json sgie, std::string pipelineName, int streamCount);
+    TopdownPose(nlohmann::json sgie, int streamCount);
 
     void init();
     void applySavePaths(YAML::Node pipelineDocument, const std::filesystem::path& configSaveDir) const;
@@ -31,7 +31,6 @@ public:
 
 private:
     nlohmann::json sgie;
-    std::string pipelineName;
     int streamCount;
     std::optional<SgieParser> sgieConfigParser;
     std::optional<SgieGenerator> sgieGenerator;

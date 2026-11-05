@@ -38,7 +38,7 @@ void TopdownPoseSahiVisVideoGenerator::applyPgieConfig() {
 
 void TopdownPoseSahiVisVideoGenerator::initParams() {
     SahiVideoGenerator::initParams();
-    pose.emplace(sgie, pipelineName, muxBatchSize);
+    pose.emplace(sgie, muxBatchSize);
     pose->init();
     std::get<YAML::Node>(files.at(PARAMS_CONFIG_NAME))["sgie"] = pose->sgieParams();
     files.insert_or_assign(TopdownPose::SGIE_CONFIG_NAME, ConfigFile(pose->sgieConfig));

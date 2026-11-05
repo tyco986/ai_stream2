@@ -7,10 +7,22 @@ namespace pipeline_analyzer {
 inline const char* KEY_ID = "id";
 inline const char* KEY_NAME = "name";
 inline const char* KEY_MEDIA_ID = "media_id";
+inline const char* KEY_MEDIA_NAME = "media_name";
+inline const char* KEY_WIDTH = "width";
+inline const char* KEY_HEIGHT = "height";
 inline const char* KEY_ANNOTATIONS = "annotations";
 inline const char* KEY_UPDATED_AT = "updated_at";
 inline const char* COLUMNS =
-    "id::text AS id, name, media_id::text AS media_id, annotations::text AS annotations, updated_at";
+    "pipeline_analyzer.id::text AS id, pipeline_analyzer.name, pipeline_analyzer.media_id::text AS media_id, "
+    "pipeline_analyzer.annotations::text AS annotations, pipeline_analyzer.updated_at, "
+    "media.name AS media_name, media.width, media.height";
+inline const char* FROM_MEDIA =
+    "FROM pipeline_analyzer LEFT JOIN media ON media.id = pipeline_analyzer.media_id ";
+inline const char* SELECT_SAVED =
+    "SELECT saved.id::text AS id, saved.name, saved.media_id::text AS media_id, "
+    "saved.annotations::text AS annotations, saved.updated_at, "
+    "media.name AS media_name, media.width, media.height "
+    "FROM saved LEFT JOIN media ON media.id = saved.media_id";
 inline const char* ERR_NOT_FOUND = "pipeline_analyzer_err_not_found";
 inline const char* ERR_OCCUPIED = "pipeline_analyzer_err_occupied";
 inline const char* KEY_IDS = "ids";
@@ -29,6 +41,9 @@ inline Json::Value ROW() {
   node[KEY_ID] = Json::Value();
   node[KEY_NAME] = Json::Value();
   node[KEY_MEDIA_ID] = Json::Value();
+  node[KEY_MEDIA_NAME] = Json::Value();
+  node[KEY_WIDTH] = Json::Value();
+  node[KEY_HEIGHT] = Json::Value();
   node[KEY_ANNOTATIONS] = Json::Value(Json::objectValue);
   node[KEY_UPDATED_AT] = Json::Value();
   return node;

@@ -11,11 +11,14 @@ PipelineAnalyzerService::PipelineAnalyzerService(drogon::orm::DbClientPtr dbClie
 
 Json::Value PipelineAnalyzerService::list(const std::string& search, int page, long pageSize) {
   const long offset = static_cast<long>(page - 1) * pageSize;
-  const std::string match = Searcher::clause({"id", "name", "media_id", "annotations"}, 1);
-  const std::string from = "FROM pipeline_analyzer WHERE " + match + " ";
+  const std::string match = Searcher::clause(
+      {"pipeline_analyzer.id", "pipeline_analyzer.name", "pipeline_analyzer.media_id", "pipeline_analyzer.annotations"},
+      1);
+  const std::string from = std::string(pipeline_analyzer::FROM_MEDIA) + "WHERE " + match + " ";
   const auto counted = Sql::sync({}, dbClient, "SELECT count(*) AS total " + from, search);
   const auto rows = Sql::sync({}, dbClient,
-      std::string("SELECT ") + pipeline_analyzer::COLUMNS + " " + from + "ORDER BY name LIMIT $2 OFFSET $3",
+      std::string("SELECT ") + pipeline_analyzer::COLUMNS + " " + from +
+          "ORDER BY pipeline_analyzer.name LIMIT $2 OFFSET $3",
       search,
       pageSize,
       offset);
@@ -33,7 +36,8 @@ Json::Value PipelineAnalyzerService::list(const std::string& search, int page, l
 
 Json::Value PipelineAnalyzerService::get(const std::string& analyzerId) {
   const auto rows = Sql::sync({}, dbClient,
-      std::string("SELECT ") + pipeline_analyzer::COLUMNS + " FROM pipeline_analyzer WHERE id = $1::uuid",
+      std::string("SELECT ") + pipeline_analyzer::COLUMNS + " " + pipeline_analyzer::FROM_MEDIA +
+          "WHERE pipeline_analyzer.id = $1::uuid",
       analyzerId);
   if (rows.empty()) {
     throw std::runtime_error(pipeline_analyzer::ERR_NOT_FOUND);
@@ -54,9 +58,11 @@ Json::Value PipelineAnalyzerService::create(const Json::Value& name,
   const std::string annotationsText = Json::writeString(builder, data[pipeline_analyzer::KEY_ANNOTATIONS]);
   const std::string media = mediaId.isString() ? mediaId.asString() : "";
   const auto rows = Sql::sync({}, dbClient,
+      "WITH saved AS ("
       "INSERT INTO pipeline_analyzer (id, name, media_id, annotations, updated_at) "
-      "VALUES (gen_random_uuid(), $1, NULLIF($2, '')::uuid, $3::jsonb, now()) RETURNING " +
-          std::string(pipeline_analyzer::COLUMNS),
+      "VALUES (gen_random_uuid(), $1, NULLIF($2, '')::uuid, $3::jsonb, now()) "
+      "RETURNING id, name, media_id, annotations, updated_at) " +
+          std::string(pipeline_analyzer::SELECT_SAVED),
       data[pipeline_analyzer::KEY_NAME].asString(),
       media,
       annotationsText);
@@ -77,9 +83,11 @@ Json::Value PipelineAnalyzerService::update(const std::string& analyzerId,
   const std::string annotationsText = Json::writeString(builder, data[pipeline_analyzer::KEY_ANNOTATIONS]);
   const std::string media = mediaId.isString() ? mediaId.asString() : "";
   const auto rows = Sql::sync({}, dbClient,
+      "WITH saved AS ("
       "UPDATE pipeline_analyzer SET name = $2, annotations = $3::jsonb, "
       "media_id = COALESCE(NULLIF($4, '')::uuid, media_id), updated_at = now() "
-      "WHERE id = $1::uuid RETURNING " + std::string(pipeline_analyzer::COLUMNS),
+      "WHERE id = $1::uuid RETURNING id, name, media_id, annotations, updated_at) " +
+          std::string(pipeline_analyzer::SELECT_SAVED),
       analyzerId,
       data[pipeline_analyzer::KEY_NAME].asString(),
       annotationsText,
@@ -99,7 +107,10 @@ Json::Value PipelineAnalyzerService::remove(const std::string& analyzerId) {
     throw std::runtime_error(pipeline_analyzer::ERR_OCCUPIED);
   }
   const auto rows = Sql::sync({}, dbClient,
-      "DELETE FROM pipeline_analyzer WHERE id = $1::uuid RETURNING " + std::string(pipeline_analyzer::COLUMNS),
+      "WITH saved AS ("
+      "DELETE FROM pipeline_analyzer WHERE id = $1::uuid "
+      "RETURNING id, name, media_id, annotations, updated_at) " +
+          std::string(pipeline_analyzer::SELECT_SAVED),
       analyzerId);
   if (rows.empty()) {
     throw std::runtime_error(pipeline_analyzer::ERR_NOT_FOUND);
@@ -115,6 +126,10 @@ Json::Value PipelineAnalyzerService::row2json(const drogon::orm::Row& row) {
   data[pipeline_analyzer::KEY_ID] = row["id"].as<std::string>();
   data[pipeline_analyzer::KEY_NAME] = row["name"].as<std::string>();
   data[pipeline_analyzer::KEY_MEDIA_ID] = row["media_id"].isNull() ? Json::Value() : row["media_id"].as<std::string>();
+  data[pipeline_analyzer::KEY_MEDIA_NAME] =
+      row["media_name"].isNull() ? Json::Value() : row["media_name"].as<std::string>();
+  data[pipeline_analyzer::KEY_WIDTH] = row["width"].isNull() ? Json::Value() : row["width"].as<int>();
+  data[pipeline_analyzer::KEY_HEIGHT] = row["height"].isNull() ? Json::Value() : row["height"].as<int>();
   data[pipeline_analyzer::KEY_ANNOTATIONS] = annotations;
   data[pipeline_analyzer::KEY_UPDATED_AT] = row["updated_at"].as<std::string>();
   return data;

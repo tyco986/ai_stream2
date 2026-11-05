@@ -38,9 +38,9 @@ void StgcnppRtmposeVisRtspGenerator::applyPgieConfig() {
 
 void StgcnppRtmposeVisRtspGenerator::initParams() {
     BaseRtspGenerator::initParams();
-    pose.emplace(sgie, pipelineName, static_cast<int>(streams.size()));
+    pose.emplace(sgie, static_cast<int>(streams.size()));
     pose->init();
-    model.emplace(stgcnpp, pipelineName, static_cast<int>(streams.size()));
+    model.emplace(stgcnpp, static_cast<int>(streams.size()));
     model->init(pgie.at("interval").get<int>());
     std::get<YAML::Node>(files.at(PARAMS_CONFIG_NAME))["sgie"] = pose->sgieParams();
     std::get<YAML::Node>(files.at(PARAMS_CONFIG_NAME))["stgcnpp"] = model->params();

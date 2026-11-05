@@ -5,7 +5,7 @@ import PlayCircle from "~icons/ri/play-circle-line";
 import PauseCircle from "~icons/ri/pause-circle-fill";
 import DeleteBin from "~icons/ri/delete-bin-line";
 import Refresh from "~icons/ri/refresh-line";
-import { LOG_PAGES } from "@/constants/logger";
+import { LOGGER_DIALOG_WIDTH, LOG_PAGES } from "@/constants/logger";
 import { $t, transformI18n } from "@/plugins/i18n";
 import {
   disableLogs,
@@ -96,7 +96,7 @@ onMounted(() => {
     <el-dialog
       v-model="visible"
       :title="transformI18n($t('logger.pureTitle'))"
-      width="880px"
+      :width="LOGGER_DIALOG_WIDTH"
       align-center
       append-to-body
     >

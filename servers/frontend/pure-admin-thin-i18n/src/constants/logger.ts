@@ -1,5 +1,7 @@
 export const DEBUG_USER = "admin";
 
+export const LOGGER_DIALOG_WIDTH = "46%";
+
 export const LOG_PAGES = [
   { page: "stream", label: "Stream" },
   { page: "stream_group", label: "Stream Group" },

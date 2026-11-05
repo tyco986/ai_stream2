@@ -8,7 +8,7 @@ import type { Preset, PresetDraft } from "@/api/preview";
 import type { StreamItem } from "@/api/stream";
 import type { TreeNode } from "@/api/streamGroup";
 import StreamGroupTree from "@/components/StreamGroupTree/index.vue";
-import { LAYOUTS, MODE_GRID, SLOT_COUNT, whepUrl } from "@/constants/preview";
+import { LAYOUTS, MODE_GRID, PREVIEW_SAVE_DIALOG_WIDTH, SLOT_COUNT, whepUrl } from "@/constants/preview";
 import { $t, transformI18n } from "@/plugins/i18n";
 import PreviewCell from "./cell.vue";
 import { StreamPlayers, streamPlayersKey } from "./players";
@@ -244,7 +244,7 @@ onMounted(() => {
         </div>
       </div>
     </div>
-    <el-dialog v-model="saveAsVisible" :title="transformI18n($t('preview.pureSaveAs'))" width="420px">
+    <el-dialog v-model="saveAsVisible" :title="transformI18n($t('preview.pureSaveAs'))" :width="PREVIEW_SAVE_DIALOG_WIDTH">
       <el-form label-width="72px" label-position="left" @submit.prevent="onSaveAsConfirm">
         <el-form-item :label="transformI18n($t('preview.pureName'))">
           <el-input v-model="saveAsName" />

@@ -72,4 +72,16 @@ inline const std::map<std::string, std::string> GENERATOR_PIPELINE_MAP = {
     {"StgcnppYoloPoseSahiVisRTSPGenerator", "StgcnppYoloPoseSahiVisRTSPPipeline"},
 };
 
+inline std::map<std::string, std::string> invertMap(
+    const std::map<std::string, std::string>& source) {
+    std::map<std::string, std::string> inverted;
+    for (const auto& item : source) {
+        inverted.emplace(item.second, item.first);
+    }
+    return inverted;
+}
+
+inline const std::map<std::string, std::string> PIPELINE_GENERATOR_MAP =
+    invertMap(GENERATOR_PIPELINE_MAP);
+
 }

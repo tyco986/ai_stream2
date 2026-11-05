@@ -1,3 +1,6 @@
+export const MODEL_DIALOG_WIDTH = "92%";
+export const MODEL_CLASSES_DIALOG_WIDTH = "25%";
+
 export const MODEL_STATUS_FIRST_MS = 500;
 export const MODEL_STATUS_POLL_MS = 2000;
 

@@ -10,7 +10,6 @@ class SgieParser {
 public:
     SgieParser(
         std::filesystem::path modelZip,
-        std::string pipelineName,
         int interval = 1);
 
     YAML::Node build();
@@ -20,7 +19,6 @@ private:
     void getMetaFromZip();
 
     std::filesystem::path modelZip;
-    std::string pipelineName;
     int interval;
     nlohmann::json meta;
 };

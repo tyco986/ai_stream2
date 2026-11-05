@@ -9,10 +9,8 @@
 
 SgieParser::SgieParser(
     std::filesystem::path modelZip,
-    std::string pipelineName,
     int interval)
     : modelZip(std::move(modelZip)),
-      pipelineName(std::move(pipelineName)),
       interval(interval),
       meta(nullptr) {
     getMetaFromZip();
@@ -91,7 +89,7 @@ YAML::Node SgieParser::build() {
         outputBlobNames += item.key();
     }
     const std::filesystem::path modelDir =
-        std::filesystem::path(sgie_parser::RUNTIME_ROOT) / pipelineName / modelZip.stem();
+        std::filesystem::path(sgie_parser::RUNTIME_ROOT) / modelZip.stem();
     YAML::Node parsed(YAML::NodeType::Map);
     parsed["property"]["model-engine-file"] = (modelDir / meta.at("engine_name").get<std::string>()).string();
     parsed["property"]["labelfile-path"] = (modelDir / sgie_parser::LABELS_NAME).string();

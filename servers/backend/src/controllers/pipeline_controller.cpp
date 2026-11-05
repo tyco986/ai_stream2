@@ -82,13 +82,17 @@ std::string PipelineController::yaml2Multipart(const std::string& yaml) {
   return body;
 }
 
-std::string PipelineController::zip2Multipart(const std::string& zip) {
+std::string PipelineController::zips2Multipart(const std::vector<ZipPart>& files) {
   const std::string boundary = pipeline::MULTIPART_BOUNDARY;
-  const std::string body = "--" + boundary + "\r\n"
-      "Content-Disposition: form-data; name=\"" + std::string(pipeline::FIELD_INPUT) +
-      "\"; filename=\"" + std::string(pipeline::ZIP_FILENAME) + "\"\r\n"
-      "Content-Type: application/zip\r\n\r\n" +
-      zip + "\r\n--" + boundary + "--\r\n";
+  std::string body;
+  for (const ZipPart& file : files) {
+    body += "--" + boundary + "\r\n"
+        "Content-Disposition: form-data; name=\"" + file.field +
+        "\"; filename=\"" + file.filename + "\"\r\n"
+        "Content-Type: application/zip\r\n\r\n" +
+        file.content + "\r\n";
+  }
+  body += "--" + boundary + "--\r\n";
   return body;
 }
 
@@ -161,19 +165,29 @@ drogon::Task<bool> PipelineController::runDeepstreamContainer(const std::string&
 drogon::Task<Json::Value> PipelineController::postDeepstreamStart(const std::string& containerName,
                                                                       const std::string& configPath) {
   const bool exists = std::filesystem::is_regular_file(configPath);
-  std::string zip;
+  std::vector<ZipPart> files;
   if (exists) {
-    std::ifstream file(configPath, std::ios::binary);
-    zip.assign(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
+    std::ifstream configFile(configPath, std::ios::binary);
+    std::string configZip(std::istreambuf_iterator<char>(configFile), std::istreambuf_iterator<char>());
+    files.push_back(ZipPart{pipeline::FIELD_CONFIG, std::filesystem::path(configPath).filename().string(), configZip});
+    for (const std::string& path : service.getModelPaths(configPath)) {
+      const bool modelExists = std::filesystem::is_regular_file(path);
+      if (!modelExists) {
+        throw std::runtime_error("model zip missing");
+      }
+      std::ifstream modelFile(path, std::ios::binary);
+      std::string modelZip(std::istreambuf_iterator<char>(modelFile), std::istreambuf_iterator<char>());
+      files.push_back(ZipPart{pipeline::FIELD_MODEL, std::filesystem::path(path).filename().string(), modelZip});
+    }
   }
   const std::string baseUrl = "http://" + containerName + ":" + std::to_string(pipeline::DEEPSTREAM_PORT);
   bool posted = false;
-  if (exists && !zip.empty()) {
+  if (!files.empty() && !files.front().content.empty()) {
     auto startRequest = drogon::HttpRequest::newHttpRequest();
     startRequest->setMethod(drogon::Post);
     startRequest->setPath(pipeline::DEEPSTREAM_START_PATH);
     startRequest->addHeader("content-type", pipeline::MULTIPART_CONTENT_TYPE);
-    startRequest->setBody(zip2Multipart(zip));
+    startRequest->setBody(zips2Multipart(files));
     auto deepstream = drogon::HttpClient::newHttpClient(baseUrl);
     const auto started = co_await deepstream->sendRequestCoro(startRequest, pipeline::START_TIMEOUT_SECONDS);
     posted = started->statusCode() >= drogon::k200OK && started->statusCode() < drogon::k300MultipleChoices;

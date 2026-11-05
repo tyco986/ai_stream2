@@ -40,9 +40,9 @@ void StgcnppRtmposeVisVideoGenerator::applyPgieConfig() {
 
 void StgcnppRtmposeVisVideoGenerator::initParams() {
     BaseVideoGenerator::initParams();
-    pose.emplace(sgie, pipelineName, runtimeBatchSize);
+    pose.emplace(sgie, runtimeBatchSize);
     pose->init();
-    model.emplace(stgcnpp, pipelineName, runtimeBatchSize);
+    model.emplace(stgcnpp, runtimeBatchSize);
     model->init(pgie.at("interval").get<int>());
     std::get<YAML::Node>(files.at(PARAMS_CONFIG_NAME))["sgie"] = pose->sgieParams();
     std::get<YAML::Node>(files.at(PARAMS_CONFIG_NAME))["stgcnpp"] = model->params();

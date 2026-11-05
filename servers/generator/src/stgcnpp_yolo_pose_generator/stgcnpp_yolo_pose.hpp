@@ -19,7 +19,7 @@ public:
     static constexpr const char* PREPROCESS_CONFIG_NAME = "preprocess_stgcnpp.txt";
     static constexpr const char* DRAWER_ELEMENT = "nvstgcnppfadedrawerwithtracker";
 
-    StgcnppYoloPose(nlohmann::json stgcnpp, std::string pipelineName, int streamCount);
+    StgcnppYoloPose(nlohmann::json stgcnpp, int streamCount);
 
     void init(int pgieInterval);
     YAML::Node params() const;
@@ -35,7 +35,6 @@ public:
 
 private:
     nlohmann::json stgcnpp;
-    std::string pipelineName;
     int streamCount;
     std::optional<StgcnppParser> parser;
     std::optional<StgcnppGenerator> generator;

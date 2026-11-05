@@ -5,6 +5,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include <string>
+#include <vector>
 
 class PipelineService {
  public:
@@ -36,8 +37,10 @@ class PipelineService {
                     const Json::Value& startTime,
                     const Json::Value& endTime,
                     const Json::Value& duration);
+  std::vector<std::string> getModelPaths(const std::string& configPath);
 
  private:
+  void collectModelZips(const YAML::Node& node, std::vector<std::string>& paths);
   YAML::Node json2yaml(const Json::Value& value);
   Json::Value json2array(const std::string& text);
   Json::Value row2json(const drogon::orm::Row& row);

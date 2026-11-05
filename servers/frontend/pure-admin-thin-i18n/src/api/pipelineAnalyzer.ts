@@ -9,6 +9,9 @@ export type AnalyzerItem = {
   id: string;
   name: string;
   media_id: string | null;
+  media_name: string | null;
+  width: number | null;
+  height: number | null;
   annotations: Record<string, unknown>;
   updated_at: string | null;
 };
@@ -32,10 +35,6 @@ export const getAnalyzers = (params?: object) => {
 };
 
 const analyzerPath = (id: string) => PATH_PIPELINE_ANALYZER_ITEM.replace("{analyzer_id}", id);
-
-export const getAnalyzer = (id: string) => {
-  return http.request<AnalyzerResult>("get", analyzerPath(id));
-};
 
 export const createAnalyzer = (draft: AnalyzerDraft) => {
   return http.request<AnalyzerResult>("post", PATH_PIPELINE_ANALYZER, { data: draft });

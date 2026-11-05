@@ -9,6 +9,7 @@
 
 #include <functional>
 #include <string>
+#include <vector>
 
 class PipelineController : public drogon::HttpController<PipelineController> {
  public:
@@ -41,8 +42,14 @@ class PipelineController : public drogon::HttpController<PipelineController> {
   drogon::Task<drogon::HttpResponsePtr> stop(drogon::HttpRequestPtr request, std::string pipeline_id);
 
  private:
+  struct ZipPart {
+    std::string field;
+    std::string filename;
+    std::string content;
+  };
+
   std::string yaml2Multipart(const std::string& yaml);
-  std::string zip2Multipart(const std::string& zip);
+  std::string zips2Multipart(const std::vector<ZipPart>& files);
   drogon::Task<Json::Value> postGenerate(const std::string& yaml);
   drogon::Task<bool> runDeepstreamContainer(const std::string& containerName);
   drogon::Task<Json::Value> postDeepstreamStart(const std::string& containerName, const std::string& configPath);

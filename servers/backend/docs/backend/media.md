@@ -2,7 +2,7 @@
 
 前缀：`/backend/media`。全部接口经 `AuthFilter`。
 
-JSON 成功外壳：`{success, message, data}`。`GET /media/{media_id}/download` 与 `POST /media/batch/download` 成功时不套这层外壳，分别直接返回原文件和 zip。
+JSON 成功外壳：`{success, message, data}`。`GET /media/{media_id}/content` 与 `GET /media/{media_id}/download` 成功时直接返回原文件，`POST /media/batch/download` 成功时直接返回 zip，三者都不套这层外壳。
 
 批量结果键：`updated_rows`、`failed_rows`、`skipped_rows`、`updated_count`、`failed_count`、`skipped_count`。
 

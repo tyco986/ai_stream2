@@ -6,9 +6,8 @@
 
 #include <utility>
 
-StgcnppYoloPose::StgcnppYoloPose(nlohmann::json stgcnpp, std::string pipelineName, int streamCount)
+StgcnppYoloPose::StgcnppYoloPose(nlohmann::json stgcnpp, int streamCount)
     : stgcnpp(std::move(stgcnpp)),
-      pipelineName(std::move(pipelineName)),
       streamCount(streamCount) {
 }
 
@@ -18,7 +17,7 @@ void StgcnppYoloPose::init(int pgieInterval) {
         {"model_zip", stgcnpp.at("model_zip")},
         {"interval", interval},
     };
-    parser.emplace(stgcnpp.at("model_zip").get<std::string>(), pipelineName, interval);
+    parser.emplace(stgcnpp.at("model_zip").get<std::string>(), interval);
     const YAML::Node built = parser->build();
     const YAML::Node property = built["property"];
     generator.emplace(

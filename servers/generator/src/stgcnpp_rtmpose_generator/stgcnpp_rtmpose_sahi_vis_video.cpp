@@ -42,9 +42,9 @@ void StgcnppRtmposeSahiVisVideoGenerator::applyPgieConfig() {
 
 void StgcnppRtmposeSahiVisVideoGenerator::initParams() {
     SahiVideoGenerator::initParams();
-    pose.emplace(sgie, pipelineName, muxBatchSize);
+    pose.emplace(sgie, muxBatchSize);
     pose->init();
-    model.emplace(stgcnpp, pipelineName, muxBatchSize);
+    model.emplace(stgcnpp, muxBatchSize);
     model->init(pgie.at("interval").get<int>());
     std::get<YAML::Node>(files.at(PARAMS_CONFIG_NAME))["sgie"] = pose->sgieParams();
     std::get<YAML::Node>(files.at(PARAMS_CONFIG_NAME))["stgcnpp"] = model->params();

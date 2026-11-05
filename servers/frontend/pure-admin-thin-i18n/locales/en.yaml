@@ -160,6 +160,7 @@ pipeline:
   pureAttrSelectedOnly: Only selected classes are available, other classes will be disabled
   pureAttrUnsupported: "{type} does not support class attrs"
   pureImage: Image
+  pureSelectImage: Select image
   pureImageSuffix: Only jpg, jpeg and png
   pureInverseRoi: Inverse ROI
   pureObjectThreshold: Count
@@ -169,6 +170,13 @@ pipeline:
   pureLineCrossing: Line crossing
   pureExtendEdge: Extend to edges
   pureDirection: Direction detection
+  purePgie: PGIE
+  pureDrawer: Drawer
+  pureFadeTime: Fade Time
+  pureShowLabel: Show Label
+  pureStreams: Streams
+  pureTracker: Tracker
+  pureSelect: Select
 model:
   pureCreate: Create
   pureRemove: Remove

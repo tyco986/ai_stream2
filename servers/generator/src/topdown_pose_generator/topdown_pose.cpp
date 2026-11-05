@@ -4,9 +4,8 @@
 
 #include <utility>
 
-TopdownPose::TopdownPose(nlohmann::json sgie, std::string pipelineName, int streamCount)
+TopdownPose::TopdownPose(nlohmann::json sgie, int streamCount)
     : sgie(std::move(sgie)),
-      pipelineName(std::move(pipelineName)),
       streamCount(streamCount) {
 }
 
@@ -16,7 +15,7 @@ void TopdownPose::init() {
         {"model_zip", sgie.at("model_zip")},
         {"interval", interval},
     };
-    sgieConfigParser.emplace(sgie.at("model_zip").get<std::string>(), pipelineName, interval);
+    sgieConfigParser.emplace(sgie.at("model_zip").get<std::string>(), interval);
     const YAML::Node built = sgieConfigParser->build();
     const YAML::Node property = built["property"];
     sgieGenerator.emplace(

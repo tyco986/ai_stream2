@@ -1,10 +1,18 @@
+export const GIE_DIALOG_WIDTH = "60%";
+export const GIE_ATTR_DIALOG_WIDTH = "40%";
+export const GIE_FORM_DIALOG_WIDTH = "70%";
+export const ANALYZER_DIALOG_WIDTH = "50%";
+export const ANALYZER_ANNOTATION_DIALOG_WIDTH = "40%";
+export const ANALYZER_FORM_DIALOG_WIDTH = "75%";
+export const ANALYZER_IMAGE_DIALOG_WIDTH = "50%";
+
 export const GIE_LIST_COLUMN_PERCENTS = {
-  selection: 4,
-  name: 16,
+  selection: 5,
+  name: 15,
   model: 18,
-  classAttrs: 22,
+  classAttrs: 15,
   interval: 10,
-  updatedAt: 18,
+  updatedAt: 25,
   ops: 12
 };
 
@@ -58,6 +66,8 @@ export const ANALYZER_ARROW_HEAD = 0.15;
 export const ANALYZER_ARROW_RADIAN = (15 * Math.PI) / 180;
 export const ANALYZER_CLASS_ID = -1;
 export const ANALYZER_ENABLE = 1;
+export const ANALYZER_OSD_MODE = 2;
+export const ANALYZER_DISPLAY_FONT_SIZE = 12;
 export const ANALYZER_LINE_MODE = "balanced";
 export const ANALYZER_DIRECTION_MODE = "loose";
 export const ANALYZER_OBJECT_THRESHOLD = "5";
@@ -79,11 +89,18 @@ export const ANALYZER_RULES = [
 
 export const ANALYZER_LIST_COLUMN_PERCENTS = {
   selection: 5,
-  name: 22,
-  annotations: 20,
-  updatedAt: 38,
+  name: 14,
+  image: 18,
+  width: 8,
+  height: 8,
+  annotations: 12,
+  updatedAt: 20,
   ops: 15
 };
+
+export const PIPELINE_FORM_DIALOG_WIDTH = "70%";
+export const PIPELINE_STREAM_DIALOG_WIDTH = "70%";
+export const PIPELINE_CLASS_DIALOG_WIDTH = "40%";
 
 export const PIPELINE_LIST_COLUMN_PERCENTS = {
   selection: 4,

@@ -9,12 +9,10 @@
 
 PgieParser::PgieParser(
     std::filesystem::path modelZip,
-    std::string pipelineName,
     int runtimeBatchSize,
     YAML::Node classAttrs,
     int interval)
     : modelZip(std::move(modelZip)),
-      pipelineName(std::move(pipelineName)),
       runtimeBatchSize(runtimeBatchSize),
       classAttrs(std::move(classAttrs)),
       interval(interval),
@@ -176,7 +174,7 @@ YAML::Node PgieParser::build() {
         }
     }
     const std::filesystem::path modelDir =
-        std::filesystem::path(pgie_parser::RUNTIME_ROOT) / pipelineName / modelZip.stem();
+        std::filesystem::path(pgie_parser::RUNTIME_ROOT) / modelZip.stem();
     YAML::Node parsed(YAML::NodeType::Map);
     parsed["property"]["model-engine-file"] = (modelDir / meta.at("engine_name").get<std::string>()).string();
     parsed["property"]["labelfile-path"] = (modelDir / pgie_parser::LABELS_NAME).string();

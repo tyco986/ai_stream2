@@ -160,6 +160,7 @@ pipeline:
   pureAttrSelectedOnly: 仅选中的类别可用，其他类别将被禁用
   pureAttrUnsupported: "{type} 不支持类别属性"
   pureImage: 图片
+  pureSelectImage: 选择图片
   pureImageSuffix: 仅支持 jpg、jpeg、png
   pureInverseRoi: 反选区域
   pureObjectThreshold: 数量
@@ -169,6 +170,13 @@ pipeline:
   pureLineCrossing: Line crossing
   pureExtendEdge: 延长到边缘
   pureDirection: Direction detection
+  purePgie: PGIE
+  pureDrawer: 绘制
+  pureFadeTime: 淡出时间
+  pureShowLabel: 显示标签
+  pureStreams: 流
+  pureTracker: 跟踪
+  pureSelect: 选择
 model:
   pureCreate: 新建
   pureRemove: 移除

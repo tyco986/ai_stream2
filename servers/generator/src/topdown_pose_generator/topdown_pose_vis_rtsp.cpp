@@ -34,7 +34,7 @@ void TopdownPoseVisRtspGenerator::applyPgieConfig() {
 
 void TopdownPoseVisRtspGenerator::initParams() {
     BaseRtspGenerator::initParams();
-    pose.emplace(sgie, pipelineName, static_cast<int>(streams.size()));
+    pose.emplace(sgie, static_cast<int>(streams.size()));
     pose->init();
     std::get<YAML::Node>(files.at(PARAMS_CONFIG_NAME))["sgie"] = pose->sgieParams();
     files.insert_or_assign(TopdownPose::SGIE_CONFIG_NAME, ConfigFile(pose->sgieConfig));

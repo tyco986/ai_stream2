@@ -4,7 +4,7 @@
 
 JSON 成功外壳：`{success, message, data}`。
 
-分析器对象键：`id`、`name`、`media_id`、`annotations`、`updated_at`。`media_id` 未指定时为 `null`。`annotations` 为对象。被 `pipeline.analyzer_ids` 引用时不可删。
+分析器对象键：`id`、`name`、`media_id`、`media_name`、`width`、`height`、`annotations`、`updated_at`。`media_id` 未指定或媒体不存在时，`media_id`、`media_name`、`width`、`height` 为 `null`。`media_name`、`width`、`height` 来自关联的 `media`。`annotations` 为对象。被 `pipeline.analyzer_ids` 引用时不可删。
 
 ---
 

@@ -34,7 +34,7 @@ void StgcnppYoloPoseVideoGenerator::applyPgieConfig() {
 
 void StgcnppYoloPoseVideoGenerator::initParams() {
     BaseVideoGenerator::initParams();
-    model.emplace(stgcnpp, pipelineName, runtimeBatchSize);
+    model.emplace(stgcnpp, runtimeBatchSize);
     model->init(pgie.at("interval").get<int>());
     std::get<YAML::Node>(files.at(PARAMS_CONFIG_NAME))["stgcnpp"] = model->params();
     files.insert_or_assign(StgcnppYoloPose::CONFIG_NAME, ConfigFile(model->config));

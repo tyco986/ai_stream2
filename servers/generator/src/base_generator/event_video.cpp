@@ -169,7 +169,7 @@ void EventVideoGenerator::initPgie() {
         {"class_attrs", classAttrs},
         {"interval", interval},
     };
-    pgieConfigParser.emplace(pgie.at("model_zip").get<std::string>(), pipelineName, runtimeBatchSize, jsonToYaml(classAttrs), interval);
+    pgieConfigParser.emplace(pgie.at("model_zip").get<std::string>(), runtimeBatchSize, jsonToYaml(classAttrs), interval);
     const YAML::Node built = pgieConfigParser->build();
     const YAML::Node property = built["property"];
     YAML::Node mappedClassAttrs(YAML::NodeType::Map);

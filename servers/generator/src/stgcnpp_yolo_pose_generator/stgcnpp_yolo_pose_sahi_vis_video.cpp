@@ -38,7 +38,7 @@ void StgcnppYoloPoseSahiVisVideoGenerator::applyPgieConfig() {
 
 void StgcnppYoloPoseSahiVisVideoGenerator::initParams() {
     SahiVideoGenerator::initParams();
-    model.emplace(stgcnpp, pipelineName, muxBatchSize);
+    model.emplace(stgcnpp, muxBatchSize);
     model->init(pgie.at("interval").get<int>());
     std::get<YAML::Node>(files.at(PARAMS_CONFIG_NAME))["stgcnpp"] = model->params();
     files.insert_or_assign(StgcnppYoloPose::CONFIG_NAME, ConfigFile(model->config));

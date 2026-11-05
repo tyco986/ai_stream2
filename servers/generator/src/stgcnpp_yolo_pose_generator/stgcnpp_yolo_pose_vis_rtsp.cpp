@@ -34,7 +34,7 @@ void StgcnppYoloPoseVisRtspGenerator::applyPgieConfig() {
 
 void StgcnppYoloPoseVisRtspGenerator::initParams() {
     BaseRtspGenerator::initParams();
-    model.emplace(stgcnpp, pipelineName, static_cast<int>(streams.size()));
+    model.emplace(stgcnpp, static_cast<int>(streams.size()));
     model->init(pgie.at("interval").get<int>());
     std::get<YAML::Node>(files.at(PARAMS_CONFIG_NAME))["stgcnpp"] = model->params();
     files.insert_or_assign(StgcnppYoloPose::CONFIG_NAME, ConfigFile(model->config));

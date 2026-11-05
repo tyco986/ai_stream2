@@ -10,6 +10,8 @@
 #include <filesystem>
 #include <stdexcept>
 
+#include <zip.h>
+
 PipelineService::PipelineService(drogon::orm::DbClientPtr dbClient) : dbClient(std::move(dbClient)) {}
 
 Json::Value PipelineService::list(const std::string& search, int page, long pageSize) {
@@ -242,6 +244,59 @@ Json::Value PipelineService::remove(const std::string& pipelineId) {
   }
   Json::Value result = row2json(rows[0]);
   return result;
+}
+
+void PipelineService::collectModelZips(const YAML::Node& node, std::vector<std::string>& paths) {
+  const bool map = node && node.IsMap();
+  const bool sequence = node && node.IsSequence();
+  if (map) {
+    for (const auto& item : node) {
+      const bool modelZip = item.first.as<std::string>() == pipeline::KEY_MODEL_ZIP && item.second.IsScalar();
+      if (modelZip) {
+        paths.push_back(item.second.as<std::string>());
+      }
+      collectModelZips(item.second, paths);
+    }
+  }
+  if (sequence) {
+    for (const auto& item : node) {
+      collectModelZips(item, paths);
+    }
+  }
+}
+
+std::vector<std::string> PipelineService::getModelPaths(const std::string& configPath) {
+  int error = 0;
+  zip_t* archive = zip_open(configPath.c_str(), ZIP_RDONLY, &error);
+  std::string paramsBytes;
+  const zip_int64_t count = archive ? zip_get_num_entries(archive, 0) : 0;
+  for (zip_int64_t index = 0; index < count; ++index) {
+    const char* entryName = zip_get_name(archive, index, 0);
+    const std::string name = entryName ? entryName : "";
+    const bool directoryEntry = !name.empty() && name.back() == '/';
+    zip_stat_t stat;
+    const int stated = directoryEntry ? -1 : zip_stat_index(archive, index, 0, &stat);
+    const bool sized = stated == 0 && (stat.valid & ZIP_STAT_SIZE) != 0;
+    zip_file_t* entry = sized ? zip_fopen_index(archive, index, 0) : nullptr;
+    std::string bytes(sized ? static_cast<std::size_t>(stat.size) : 0, '\0');
+    const zip_int64_t read = entry ? zip_fread(entry, bytes.data(), bytes.size()) : -1;
+    if (entry) {
+      zip_fclose(entry);
+    }
+    const bool paramsFile = read == static_cast<zip_int64_t>(bytes.size()) &&
+                            std::filesystem::path(name).filename() == pipeline::PARAMS_YML;
+    paramsBytes = paramsFile ? bytes : paramsBytes;
+  }
+  if (archive) {
+    zip_close(archive);
+  }
+  if (paramsBytes.empty()) {
+    throw std::runtime_error("params.yml missing");
+  }
+  YAML::Node params = YAML::Load(paramsBytes);
+  std::vector<std::string> paths;
+  collectModelZips(params, paths);
+  return paths;
 }
 
 Json::Value PipelineService::json2array(const std::string& text) {

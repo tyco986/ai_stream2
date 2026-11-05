@@ -20,7 +20,7 @@ import {
   type GroupTreeNode,
   type TreeNode
 } from "@/api/streamGroup";
-import { ALL_GROUP_ID } from "@/constants/streamGroup";
+import { ALL_GROUP_ID, STREAM_GROUP_DIALOG_WIDTH } from "@/constants/streamGroup";
 import { $t, transformI18n } from "@/plugins/i18n";
 
 defineOptions({
@@ -236,7 +236,7 @@ onMounted(load);
   <el-dialog
     v-model="visible"
     :title="transformI18n($t(mode === 'new' ? 'stream.pureNewGroup' : 'stream.pureEditGroup'))"
-    width="720px"
+    :width="STREAM_GROUP_DIALOG_WIDTH"
   >
     <el-form label-width="72px" label-position="left">
       <el-form-item :label="transformI18n($t('stream.pureName'))">

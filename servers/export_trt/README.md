@@ -96,7 +96,6 @@ multipart。`input` 是 zip 文件，内含一个 `.onnx`、`labels.txt`、`meta
 | `scripts/3_download_history.sh` | `--filename`（可省略） | `POST /history` |
 | `scripts/3_remove_history.sh` | `--filename`（可省略） | `DELETE /history` |
 | `scripts/3_remove_logs.sh` | 无 | `DELETE /logs` |
-| `scripts/4_rebuild_src.sh` | 无 | 在运行中的容器里编译并覆盖 `/app/export_trt`，然后 `docker restart` |
 
 ### `0_pull_base_image.sh`
 
@@ -137,7 +136,3 @@ multipart。`input` 是 zip 文件，内含一个 `.onnx`、`labels.txt`、`meta
 ### `3_remove_logs.sh`
 
 无参数。用法：`scripts/3_remove_logs.sh`。
-
-### `4_rebuild_src.sh`
-
-对容器 `ai_stream2_export_trt` 执行 `cmake --build /tmp/build`，把产物拷到 `/app/export_trt`，然后重启该容器。

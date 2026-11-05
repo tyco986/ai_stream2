@@ -1,3 +1,5 @@
+export const STREAM_DIALOG_WIDTH = "92%";
+
 export const STREAM_LIST_COLUMN_PERCENTS = {
   selection: 5,
   name: 10,

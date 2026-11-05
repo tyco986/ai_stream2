@@ -22,7 +22,7 @@ import Focus from "~icons/ri/focus-3-line";
 import Check from "~icons/ri/check-line";
 import Close from "~icons/ri/close-line";
 import Draggable from "~icons/ri/draggable";
-import { getMedia, getUploadFiles, getMediaContent, uploadMedia, type MediaItem } from "@/api/media";
+import { getUploadFiles, getMediaContent, uploadMedia, type MediaItem } from "@/api/media";
 import { getModel, getModelMap } from "@/api/model";
 import {
   createGie,
@@ -37,7 +37,6 @@ import {
 } from "@/api/pipelineGie";
 import {
   createAnalyzer,
-  getAnalyzer,
   getAnalyzers,
   removeAnalyzer,
   removeAnalyzers,
@@ -50,8 +49,12 @@ import {
   ANALYZER_ANGLE_GAP,
   ANALYZER_ANGLE_LABEL_WIDTH,
   ANALYZER_ANGLE_RADIUS,
+  ANALYZER_ANNOTATION_DIALOG_WIDTH,
   ANALYZER_CANVAS_HEIGHT,
   ANALYZER_CANVAS_WIDTH,
+  ANALYZER_DIALOG_WIDTH,
+  ANALYZER_FORM_DIALOG_WIDTH,
+  ANALYZER_IMAGE_DIALOG_WIDTH,
   ANALYZER_CLASS_ID,
   ANALYZER_CROSSHAIR_DASH,
   ANALYZER_CROSSHAIR_STROKE,
@@ -59,7 +62,9 @@ import {
   ANALYZER_DIRECTION_RULE,
   ANALYZER_DIRECTION_STROKE,
   ANALYZER_EDGE_STROKE_WIDTH,
+  ANALYZER_DISPLAY_FONT_SIZE,
   ANALYZER_ENABLE,
+  ANALYZER_OSD_MODE,
   ANALYZER_LINE_MODE,
   ANALYZER_LINE_RULE,
   ANALYZER_LINE_STROKE,
@@ -87,7 +92,10 @@ import {
   ANALYZER_LIST_COLUMN_PERCENTS,
   ANALYZER_RULES,
   GIE_ATTR_COLUMN_PERCENTS,
+  GIE_ATTR_DIALOG_WIDTH,
   GIE_ATTR_UNSUPPORTED_TYPES,
+  GIE_DIALOG_WIDTH,
+  GIE_FORM_DIALOG_WIDTH,
   GIE_LIST_COLUMN_PERCENTS,
   PIPELINE_LIST_COLUMN_PERCENTS
 } from "@/constants/pipeline";
@@ -113,6 +121,7 @@ import {
 } from "@/views/pipeline/analyzerLine";
 import { imageRect, moveRectBetween, oppositeRectCorner, shiftRect, stageRect, tipOrigin, type AnalyzerRect } from "@/views/pipeline/analyzerRect";
 import { imagePoint, snapAnalyzerPointer, snapEdgeLines, stagePoint, type AnalyzerPoint } from "@/views/pipeline/analyzerSnap";
+import DetVisRtsp from "@/views/pipeline/create/DetVisRtsp.vue";
 
 const annotationNumbers = (value: unknown) => String(value).split(";").map(Number);
 
@@ -225,6 +234,7 @@ const listObserver = new ResizeObserver(entries => {
 });
 const listWidths = computed(() => columnPixels(listWidth.value, PIPELINE_LIST_COLUMN_PERCENTS));
 const items = ref<Record<string, string>[]>([]);
+const pipelineCreateVisible = ref(false);
 const gieVisible = ref(false);
 const gieRef = ref();
 const gieWidth = ref(0);
@@ -281,6 +291,9 @@ const analyzerCreateVisible = ref(false);
 const analyzerId = ref("");
 const analyzerName = ref("");
 const analyzerImage = ref("");
+const analyzerImageName = ref("");
+const analyzerImageWidth = ref(0);
+const analyzerImageHeight = ref(0);
 const analyzerMediaId = ref("");
 const analyzerRule = ref("");
 const analyzerFileRef = ref<HTMLInputElement>();
@@ -326,6 +339,9 @@ const analyzerStageStyle = {
   background: "var(--el-fill-color-light)"
 };
 const analyzerConfirmable = computed(() => Boolean(analyzerName.value.trim() && analyzerImage.value));
+const analyzerImageSizeLabel = computed(() =>
+  analyzerImageWidth.value && analyzerImageHeight.value ? `${analyzerImageWidth.value}×${analyzerImageHeight.value}` : ""
+);
 const analyzerImageConfig = computed(() => ({
   image: analyzerPicture.value,
   ...analyzerImageBox.value
@@ -691,6 +707,18 @@ const resetAnalyzerMarks = () => {
   analyzerEditing.value = null;
   analyzerEditBackup.value = null;
   clearAnalyzerDraft();
+};
+
+const clearAnalyzerImage = () => {
+  analyzerImage.value = "";
+  analyzerImageName.value = "";
+  analyzerImageWidth.value = 0;
+  analyzerImageHeight.value = 0;
+  analyzerMediaId.value = "";
+  analyzerPicture.value = null;
+  analyzerImageUrl.value && URL.revokeObjectURL(analyzerImageUrl.value);
+  analyzerImageUrl.value = "";
+  resetAnalyzerMarks();
 };
 
 const editTipPoint = (row: AnalyzerShapeRow) => {
@@ -1283,9 +1311,16 @@ const openAnalyzerPicture = (mediaId: string) => {
   });
 };
 
+const analyzerImageLabel = () => {
+  analyzerImage.value = analyzerImageName.value;
+};
+
 const showAnalyzerImage = (item: MediaItem) => {
   resetAnalyzerMarks();
-  analyzerImage.value = item.name;
+  analyzerImageName.value = item.name;
+  analyzerImageWidth.value = item.width ?? 0;
+  analyzerImageHeight.value = item.height ?? 0;
+  analyzerImageLabel();
   openAnalyzerPicture(item.id);
 };
 
@@ -1327,25 +1362,24 @@ const onAnalyzerCreate = () => {
   analyzerId.value = "";
   analyzerName.value = "";
   analyzerImage.value = "";
+  analyzerImageName.value = "";
+  analyzerImageWidth.value = 0;
+  analyzerImageHeight.value = 0;
   analyzerMediaId.value = "";
   analyzerCreateVisible.value = true;
 };
 
 const onAnalyzerEdit = (row: AnalyzerItem) => {
-  getAnalyzer(row.id).then(res => {
-    const item = res.data;
-    analyzerId.value = item.id;
-    analyzerName.value = item.name;
-    analyzerImage.value = "";
-    resetAnalyzerMarks();
-    applyAnalyzerAnnotations(item.annotations ?? {});
-    analyzerCreateVisible.value = true;
-    item.media_id && openAnalyzerPicture(item.media_id);
-    item.media_id &&
-      getMedia(item.media_id).then(media => {
-        analyzerImage.value = media.data.name;
-      });
-  });
+  analyzerId.value = row.id;
+  analyzerName.value = row.name;
+  analyzerImageName.value = row.media_name ?? "";
+  analyzerImageWidth.value = row.width ?? 0;
+  analyzerImageHeight.value = row.height ?? 0;
+  analyzerImageLabel();
+  resetAnalyzerMarks();
+  applyAnalyzerAnnotations(row.annotations ?? {});
+  analyzerCreateVisible.value = true;
+  row.media_id && openAnalyzerPicture(row.media_id);
 };
 
 const onAnalyzerRemove = (row: AnalyzerItem) => {
@@ -1386,7 +1420,7 @@ const onAnalyzer = () => {
   loadAnalyzers();
 };
 
-const analyzerPointText = (values: number[]) => values.join(";");
+const analyzerPointText = (values: number[]) => values.map(value => Math.round(value)).join(";");
 
 const analyzerRectText = (rect: AnalyzerRect) =>
   analyzerPointText([
@@ -1440,6 +1474,14 @@ const onAnalyzerConfirm = () => {
       ...Object.fromEntries(analyzerDirs.value.map(dir => [`direction-${dir.name}`, analyzerPointText([dir.x1, dir.y1, dir.x2, dir.y2])]))
     });
   const marked = Boolean(Object.keys(annotations).length);
+  marked &&
+    (annotations.property = {
+      enable: ANALYZER_ENABLE,
+      "config-width": analyzerImageWidth.value,
+      "config-height": analyzerImageHeight.value,
+      "osd-mode": ANALYZER_OSD_MODE,
+      "display-font-size": ANALYZER_DISPLAY_FONT_SIZE
+    });
   !marked && message(transformI18n($t("pipeline.pureRuleRequired")), { type: "warning" });
   const draft = {
     name: analyzerName.value.trim(),
@@ -1527,7 +1569,7 @@ onUnmounted(() => {
 <template>
   <div class="pipeline-page">
     <div class="pipeline-toolbar">
-      <el-button type="primary">
+      <el-button type="primary" @click="pipelineCreateVisible = true">
         {{ transformI18n($t("pipeline.pureCreate")) }}
       </el-button>
       <el-button type="primary" :disabled="!selected.length">
@@ -1540,11 +1582,12 @@ onUnmounted(() => {
         {{ transformI18n($t("pipeline.pureAnalyzer")) }}
       </el-button>
     </div>
+    <DetVisRtsp v-model="pipelineCreateVisible" />
     <el-dialog
       v-model="gieVisible"
       class="create-dialog"
       :title="transformI18n($t('pipeline.pureGie'))"
-      width="92%"
+      :width="GIE_DIALOG_WIDTH"
     >
       <div class="pipeline-toolbar">
         <el-button type="primary" @click="onGieCreate">
@@ -1581,7 +1624,7 @@ onUnmounted(() => {
         </el-table-column>
       </el-table>
     </el-dialog>
-    <el-dialog v-model="gieAttrsOpen" append-to-body :title="transformI18n($t('pipeline.pureClassAttrs'))" width="760px">
+    <el-dialog v-model="gieAttrsOpen" append-to-body :title="transformI18n($t('pipeline.pureClassAttrs'))" :width="GIE_ATTR_DIALOG_WIDTH">
       <el-table :data="gieAttrRows" border max-height="420" show-overflow-tooltip>
         <el-table-column :label="transformI18n($t('pipeline.pureClass'))">
           <template #default="{ row }">{{ row.classKey === "all" ? transformI18n($t("pipeline.pureAll")) : row.classKey }}</template>
@@ -1599,7 +1642,7 @@ onUnmounted(() => {
       append-to-body
       class="create-dialog"
       :title="transformI18n($t(gieId ? 'pipeline.pureEdit' : 'pipeline.pureCreate'))"
-      width="70%"
+      :width="GIE_FORM_DIALOG_WIDTH"
     >
       <el-form label-width="88px" label-position="left">
         <el-form-item :label="transformI18n($t('pipeline.pureName'))">
@@ -1684,7 +1727,7 @@ onUnmounted(() => {
       v-model="analyzerVisible"
       class="create-dialog"
       :title="transformI18n($t('pipeline.pureAnalyzer'))"
-      width="50%"
+      :width="ANALYZER_DIALOG_WIDTH"
     >
       <div class="pipeline-toolbar">
         <el-button type="primary" @click="onAnalyzerCreate">
@@ -1697,6 +1740,9 @@ onUnmounted(() => {
       <el-table ref="analyzerRef" class="analyzer-list" :data="analyzerItems" table-layout="fixed" border show-overflow-tooltip @selection-change="onAnalyzerSelect">
         <el-table-column type="selection" :width="analyzerWidths.selection" />
         <el-table-column prop="name" :label="transformI18n($t('pipeline.pureName'))" :width="analyzerWidths.name" />
+        <el-table-column prop="media_name" :label="transformI18n($t('pipeline.pureImage'))" :width="analyzerWidths.image" />
+        <el-table-column prop="width" :label="transformI18n($t('media.pureWidth'))" :width="analyzerWidths.width" />
+        <el-table-column prop="height" :label="transformI18n($t('media.pureHeight'))" :width="analyzerWidths.height" />
         <el-table-column :label="transformI18n($t('pipeline.pureAnnotations'))" :width="analyzerWidths.annotations" :show-overflow-tooltip="false">
           <template #default="{ row }">
             <el-button link type="primary" :title="transformI18n($t('pipeline.pureAnnotations'))" @click="onAnalyzerAnnotations(row)">
@@ -1719,7 +1765,7 @@ onUnmounted(() => {
         </el-table-column>
       </el-table>
     </el-dialog>
-    <el-dialog v-model="analyzerAnnotationsOpen" append-to-body :title="transformI18n($t('pipeline.pureAnnotations'))" width="760px">
+    <el-dialog v-model="analyzerAnnotationsOpen" append-to-body :title="transformI18n($t('pipeline.pureAnnotations'))" :width="ANALYZER_ANNOTATION_DIALOG_WIDTH">
       <pre class="analyzer-annotations">{{ analyzerAnnotationText }}</pre>
     </el-dialog>
     <el-dialog
@@ -1728,14 +1774,25 @@ onUnmounted(() => {
       append-to-body
       class="create-dialog"
       :title="transformI18n($t(analyzerId ? 'pipeline.pureEdit' : 'pipeline.pureCreate'))"
-      width="75%"
+      :width="ANALYZER_FORM_DIALOG_WIDTH"
     >
       <el-form label-width="88px" label-position="left">
         <el-form-item :label="transformI18n($t('pipeline.pureName'))">
           <el-input v-model="analyzerName" />
         </el-form-item>
         <el-form-item :label="transformI18n($t('pipeline.pureImage'))">
-          <el-input v-model="analyzerImage" readonly @click="onAnalyzerImages">
+          <el-input
+            v-model="analyzerImage"
+            readonly
+            :placeholder="transformI18n($t('pipeline.pureSelectImage'))"
+            @click="onAnalyzerImages"
+          >
+            <template #suffix>
+              <span v-if="analyzerImageSizeLabel" class="analyzer-image-size">{{ analyzerImageSizeLabel }}</span>
+              <button v-if="analyzerImage" type="button" class="analyzer-image-clear" @click.stop="clearAnalyzerImage">
+                <IconifyIconOffline :icon="Close" />
+              </button>
+            </template>
             <template #append>
               <el-button @click.stop="onAnalyzerUpload">
                 {{ transformI18n($t("model.pureUpload")) }}
@@ -1890,10 +1947,12 @@ onUnmounted(() => {
       append-to-body
       class="create-dialog"
       :title="transformI18n($t('pipeline.pureImage'))"
-      width="640px"
+      :width="ANALYZER_IMAGE_DIALOG_WIDTH"
     >
-      <el-table :data="analyzerImages" border @row-click="onPickAnalyzerImage">
+      <el-table :data="analyzerImages" table-layout="fixed" border show-overflow-tooltip @row-click="onPickAnalyzerImage">
         <el-table-column :label="transformI18n($t('pipeline.pureName'))" prop="name" />
+        <el-table-column :label="transformI18n($t('media.pureWidth'))" prop="width" width="96" />
+        <el-table-column :label="transformI18n($t('media.pureHeight'))" prop="height" width="96" />
         <el-table-column :label="transformI18n($t('pipeline.pureUpdatedAt'))">
           <template #default="{ row }">
             {{ formatLocalTime(row.updated_at) }}
@@ -2211,6 +2270,26 @@ html.dark .analyzer-swatch {
 
 .analyzer-file {
   display: none;
+}
+
+.analyzer-image-size {
+  padding: 0 6px;
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--el-text-color-secondary);
+  background: var(--el-fill-color);
+  border-radius: 4px;
+}
+
+.analyzer-image-clear {
+  display: inline-flex;
+  padding: 0;
+  margin-left: 4px;
+  font-size: 14px;
+  color: var(--el-text-color-placeholder);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
 }
 
 .analyzer-pager {

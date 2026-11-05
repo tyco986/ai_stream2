@@ -25,6 +25,8 @@ import {
 import SearchHighlight from "@/components/SearchHighlight/index.vue";
 import {
   MODEL_BATCH_MODES,
+  MODEL_CLASSES_DIALOG_WIDTH,
+  MODEL_DIALOG_WIDTH,
   MODEL_CREATE_COLUMN_PERCENTS,
   MODEL_EDIT_COLUMN_PERCENTS,
   MODEL_LIST_COLUMN_PERCENTS,
@@ -371,7 +373,7 @@ onUnmounted(() => {
       v-model="visible"
       class="create-dialog"
       :title="transformI18n($t('model.pureCreate'))"
-      width="92%"
+      :width="MODEL_DIALOG_WIDTH"
     >
       <div class="model-toolbar">
         <el-button type="primary" @click="onRemoveSelected">
@@ -455,7 +457,7 @@ onUnmounted(() => {
       v-model="editing"
       class="create-dialog"
       :title="transformI18n($t('model.pureEdit'))"
-      width="92%"
+      :width="MODEL_DIALOG_WIDTH"
     >
       <el-table ref="editRef" class="create-table" :data="[editRow]" table-layout="fixed" border show-overflow-tooltip>
         <el-table-column :resizable="false" :label="transformI18n($t('model.pureName'))" :width="editWidths.name">
@@ -527,7 +529,7 @@ onUnmounted(() => {
         </el-button>
       </template>
     </el-dialog>
-    <el-dialog v-model="classesOpen" :title="transformI18n($t('model.pureClasses'))" width="480px">
+    <el-dialog v-model="classesOpen" :title="transformI18n($t('model.pureClasses'))" :width="MODEL_CLASSES_DIALOG_WIDTH">
       <el-table :data="classes" border max-height="420" show-overflow-tooltip>
         <el-table-column :label="transformI18n($t('model.pureClassId'))" prop="id" width="120" />
         <el-table-column :label="transformI18n($t('model.pureClassName'))" prop="name" />
