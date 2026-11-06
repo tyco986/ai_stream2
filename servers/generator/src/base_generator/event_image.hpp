@@ -22,12 +22,12 @@
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → nvdsanalytics → nvpresencecoder → tee_msg
+//     nvurisrcbin{N} → nvstreammux → pgie → nvdsanalytics → presenceeventcoder → tee_msg
 //       ─┬→ nvvideoconvert → tee_raw
-//       │     ─┬→ nvrawcapturer → fakesink_raw
+//       │     ─┬→ rawcapturer → fakesink_raw
 //       │     └→ nvosdbin → tee_vis
-//       │           ─┬→ nvviscapturer → fakesink_vis
-//       │           └→ queue_enc → nvvideoconvert_enc → capsfilter_jpeg → nvpresencelogger
+//       │           ─┬→ viscapturer → fakesink_vis
+//       │           └→ queue_enc → nvvideoconvert_enc → capsfilter_jpeg → presencelogger
 //       │                 → nvstreamdemux → queue_demux{N} → nvjpegenc{N} → filesink{N}
 //       └→ queue_msg → nvmsgconv → nvmsgbroker
 class EventImageGenerator : public BaseEventGenerator {

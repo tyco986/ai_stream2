@@ -7,15 +7,15 @@
 
 // Generate topdown-pose SAHI video pipeline with OSD and one mp4 per input.
 //
-// Drawer is nvposefadedrawer. mux batch size is the video count.
+// Drawer is posefadedrawer. mux batch size is the video count.
 //
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
-//         → nvbboxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0 → nvrtmposepostprocess
+//         → boxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0 → nvrtmposepostprocess
 //         → nvdsanalytics → tee_msg
-//         ├→ nvposefadedrawer → nvosdbin → nvvideoconvert → nvstreamdemux
-//         │     → queue_demux{N} → nvdetlogger{N} → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
+//         ├→ posefadedrawer → nvosdbin → nvvideoconvert → nvstreamdemux
+//         │     → queue_demux{N} → detlogger{N} → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
 //         └→ queue_msg → nvmsgconv → nvmsgbroker
 class TopdownPoseSahiVisVideoGenerator : public VisSahiVideoGenerator {
 public:

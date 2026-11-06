@@ -7,15 +7,15 @@
 
 // Generate ST-GCN++ YOLO-pose SAHI RTSP pipeline with OSD preview.
 //
-// Postprocess element is nvsahipostprocess_pose. Drawer is nvstgcnppfadedrawerwithtracker.
+// Postprocess element is nvsahipostprocesspose. Drawer is stgcnppfadedrawerwithtracker.
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess_pose
-//         → nvbboxsnapshot → nvtracker → nvdspreprocess → sgie1 → nvstgcnppactionlabel
+//     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocesspose
+//         → boxsnapshot → nvtracker → nvdspreprocess → sgie1 → stgcnppactionlabel
 //         → nvdsanalytics → tee_msg
-//           ─┬→ nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → nvstgcnppfadedrawerwithtracker{N} → nvosdbin{N}
-//           │     → queue_enc{N} → nvstgcnpplogger{N} → nvv4l2h264enc{N} → h264parse{N} → rtspclientsink{N}
+//           ─┬→ nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → stgcnppfadedrawerwithtracker{N} → nvosdbin{N}
+//           │     → queue_enc{N} → stgcnpplogger{N} → nvv4l2h264enc{N} → h264parse{N} → rtspclientsink{N}
 //           └→ queue_msg → nvmsgconv → nvmsgbroker
 class StgcnppYoloPoseSahiVisRtspGenerator : public VisSahiPoseRtspGenerator {
 public:

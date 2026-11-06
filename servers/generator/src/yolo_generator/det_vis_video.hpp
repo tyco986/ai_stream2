@@ -4,13 +4,13 @@
 
 // Generate YOLO detection video pipeline YAML with OSD and one mp4 per input.
 //
-// Drawer is nvdetfadedrawer. OSD displays bbox and text.
+// Drawer is detfadedrawer. OSD displays bbox and text.
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → nvbboxsnapshot → nvtracker → nvdsanalytics → tee_msg
-//         ├→ nvdetfadedrawer → nvosdbin → nvvideoconvert → nvstreamdemux
-//         │     → queue{N} → nvdetlogger{N} → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
+//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → tee_msg
+//         ├→ detfadedrawer → nvosdbin → nvvideoconvert → nvstreamdemux
+//         │     → queue{N} → detlogger{N} → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
 //         └→ queue_msg → nvmsgconv → nvmsgbroker
 class DetVisVideoGenerator : public VisVideoGenerator {
 public:

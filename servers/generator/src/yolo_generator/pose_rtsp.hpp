@@ -6,8 +6,8 @@
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → nvbboxsnapshot → nvtracker → nvdsanalytics → tee_msg
-//           ─┬→ nvstreamdemux → queue_demux{N} → nvdetlogger{N} → fakesink{N}
+//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → tee_msg
+//           ─┬→ nvstreamdemux → queue_demux{N} → detlogger{N} → fakesink{N}
 //           └→ queue_msg → nvmsgconv → nvmsgbroker
 class PoseRtspGenerator : public BaseRtspGenerator {
 public:

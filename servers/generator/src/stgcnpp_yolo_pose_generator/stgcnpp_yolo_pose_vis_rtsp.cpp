@@ -61,7 +61,7 @@ void StgcnppYoloPoseVisRtspGenerator::add() {
     appendNode("nvinfer", "pgie", addNvinfer(PGIE_CONFIG_NAME, pgieGenerator->config["property"]["batch-size"].as<int>(), gpuId));
     if (enableNvtracker) {
         if (drawer.has_value()) {
-            appendNode("nvbboxsnapshot", "nvbboxsnapshot", addNvbboxsnapshot());
+            appendNode("boxsnapshot", "boxsnapshot", addBoxsnapshot());
         }
         appendNode(
             "nvtracker",
@@ -70,7 +70,7 @@ void StgcnppYoloPoseVisRtspGenerator::add() {
     }
     appendNode("nvdspreprocess", "nvdspreprocess", addNvdspreprocess(StgcnppYoloPose::PREPROCESS_CONFIG_NAME));
     appendNode("nvinfer", "sgie1", addNvinfer(StgcnppYoloPose::CONFIG_NAME, model->batchSize, model->gpuId, true));
-    appendNode("nvstgcnppactionlabel", "nvstgcnppactionlabel", addNvstgcnppactionlabel(model->uniqueId));
+    appendNode("stgcnppactionlabel", "stgcnppactionlabel", addStgcnppactionlabel(model->uniqueId));
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME, gpuId));
     appendNode("tee", "tee_msg", addTee());
     appendNode("queue", "queue_msg", addQueue());
@@ -91,9 +91,9 @@ void StgcnppYoloPoseVisRtspGenerator::add() {
         appendNode("nvosdbin", "nvosdbin" + suffix, addNvosdbin(gpuId, true, true, false));
         appendNode("queue", "queue_enc" + suffix, addQueue());
         appendNode(
-            "nvstgcnpplogger",
-            "nvstgcnpplogger" + suffix,
-            addNvstgcnpplogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
+            "stgcnpplogger",
+            "stgcnpplogger" + suffix,
+            addStgcnpplogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
         appendNode(
             "nvv4l2h264enc",
             "nvv4l2h264enc" + suffix,
@@ -116,8 +116,8 @@ void StgcnppYoloPoseVisRtspGenerator::link() {
     std::string inferenceTail = "pgie";
     if (enableNvtracker) {
         if (drawer.has_value()) {
-            edges[inferenceTail] = "nvbboxsnapshot";
-            edges["nvbboxsnapshot"] = "nvtracker";
+            edges[inferenceTail] = "boxsnapshot";
+            edges["boxsnapshot"] = "nvtracker";
         } else {
             edges[inferenceTail] = "nvtracker";
         }
@@ -125,8 +125,8 @@ void StgcnppYoloPoseVisRtspGenerator::link() {
     }
     edges[inferenceTail] = "nvdspreprocess";
     edges["nvdspreprocess"] = "sgie1";
-    edges["sgie1"] = "nvstgcnppactionlabel";
-    edges["nvstgcnppactionlabel"] = "nvdsanalytics";
+    edges["sgie1"] = "stgcnppactionlabel";
+    edges["stgcnppactionlabel"] = "nvdsanalytics";
     edges["nvdsanalytics"] = "tee_msg";
     edges["tee_msg"].push_back("nvstreamdemux");
     edges["tee_msg"].push_back("queue_msg");
@@ -142,8 +142,8 @@ void StgcnppYoloPoseVisRtspGenerator::link() {
             edges[drawerName] = "nvosdbin" + suffix;
         }
         edges["nvosdbin" + suffix] = "queue_enc" + suffix;
-        edges["queue_enc" + suffix] = "nvstgcnpplogger" + suffix;
-        edges["nvstgcnpplogger" + suffix] = "nvv4l2h264enc" + suffix;
+        edges["queue_enc" + suffix] = "stgcnpplogger" + suffix;
+        edges["stgcnpplogger" + suffix] = "nvv4l2h264enc" + suffix;
         edges["nvv4l2h264enc" + suffix] = "h264parse" + suffix;
         edges["h264parse" + suffix] = "rtspclientsink" + suffix;
     }

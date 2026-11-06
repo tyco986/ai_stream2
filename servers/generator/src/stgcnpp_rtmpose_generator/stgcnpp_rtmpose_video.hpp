@@ -12,9 +12,9 @@
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → nvbboxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0
-//         → nvrtmposepostprocess → nvdspreprocess → sgie1 → nvstgcnppactionlabel → nvdsanalytics → tee_msg
-//         ├→ nvstgcnpplogger → fakesink
+//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0
+//         → nvrtmposepostprocess → nvdspreprocess → sgie1 → stgcnppactionlabel → nvdsanalytics → tee_msg
+//         ├→ stgcnpplogger → fakesink
 //         └→ queue_msg → nvmsgconv → nvmsgbroker
 class StgcnppRtmposeVideoGenerator : public BaseVideoGenerator {
 public:

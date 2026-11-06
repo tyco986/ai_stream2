@@ -265,27 +265,27 @@ nlohmann::json BaseImageGenerator::eventOsdKwargs(int gpuId) const {
 }
 
 std::string BaseImageGenerator::nvdetDrawerElement() const {
-    const std::string element = "nvdetfadedrawer";
+    const std::string element = "detfadedrawer";
     return element;
 }
 
 std::string BaseImageGenerator::nvposeDrawerElement() const {
-    const std::string element = "nvposefadedrawer";
+    const std::string element = "posefadedrawer";
     return element;
 }
 
 std::string BaseImageGenerator::nvsegDrawerElement() const {
-    const std::string element = "nvsegfadedrawer";
+    const std::string element = "segfadedrawer";
     return element;
 }
 
 YAML::Node BaseImageGenerator::nvdetDrawerProperties(const nlohmann::json& drawerNode) {
-    const YAML::Node properties = addNvdetfadedrawer(drawerNode.value("interval", 0), drawerNode.value("fade_time", 0), drawerNode.value("show_label", false));
+    const YAML::Node properties = addDetfadedrawer(drawerNode.value("interval", 0), drawerNode.value("fade_time", 0), drawerNode.value("show_label", false));
     return properties;
 }
 
 YAML::Node BaseImageGenerator::nvposeDrawerProperties(const nlohmann::json& drawerNode) {
-    const YAML::Node properties = addNvposefadedrawer(
+    const YAML::Node properties = addPosefadedrawer(
         drawerNode.value("interval", 0),
         drawerNode.value("fade_time", 0),
         drawerNode.value("show_label", false),
@@ -296,7 +296,7 @@ YAML::Node BaseImageGenerator::nvposeDrawerProperties(const nlohmann::json& draw
 }
 
 YAML::Node BaseImageGenerator::nvsegDrawerProperties(const nlohmann::json& drawerNode) {
-    const YAML::Node properties = addNvsegfadedrawer(
+    const YAML::Node properties = addSegfadedrawer(
         drawerNode.value("interval", 0),
         drawerNode.value("fade_time", 0),
         drawerNode.value("show_label", false),
@@ -322,7 +322,7 @@ void BaseImageGenerator::add() {
         "nvmsgbroker",
         addNvmsgbroker(subelement::KAFKA_PROTO_LIB, subelement::KAFKA_CONN_STR, kafkaTopic, KAFKA_CONFIG_NAME, false, false));
     if (drawer.has_value()) {
-        appendNode(nvdetDrawerElement(), "nvdetfadedrawer", nvdetDrawerProperties(*drawer));
+        appendNode(nvdetDrawerElement(), "detfadedrawer", nvdetDrawerProperties(*drawer));
     }
     appendNode("nvosdbin", "nvosdbin", addNvosdbin(gpuId, true, true));
     appendNode("nvvideoconvert", "nvvideoconvert", addNvvideoconvert(gpuId));
@@ -334,9 +334,9 @@ void BaseImageGenerator::add() {
         appendNode("queue", "queue" + suffix, addQueue());
         appendNode("capsfilter", "capsfilter" + suffix, addCapsfilter());
         appendNode(
-            "nvdetlogger",
-            "nvdetlogger" + suffix,
-            addNvdetlogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
+            "detlogger",
+            "detlogger" + suffix,
+            addDetlogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
         appendNode("nvjpegenc", "nvjpegenc" + suffix, addNvjpegenc());
         appendNode("filesink", "filesink" + suffix, addFilesink(sink, false, false));
     }
@@ -350,11 +350,11 @@ void BaseImageGenerator::link() {
     edges["nvstreammux"] = "pgie";
     edges["pgie"] = "nvdsanalytics";
     edges["nvdsanalytics"] = "tee_msg";
-    const std::string visNext = drawer.has_value() ? "nvdetfadedrawer" : "nvosdbin";
+    const std::string visNext = drawer.has_value() ? "detfadedrawer" : "nvosdbin";
     edges["tee_msg"].push_back(visNext);
     edges["tee_msg"].push_back("queue_msg");
     if (drawer.has_value()) {
-        edges["nvdetfadedrawer"] = "nvosdbin";
+        edges["detfadedrawer"] = "nvosdbin";
     }
     edges["queue_msg"] = "nvmsgconv";
     edges["nvmsgconv"] = "nvmsgbroker";
@@ -363,8 +363,8 @@ void BaseImageGenerator::link() {
     for (int index = 0; index < runtimeBatchSize; ++index) {
         const std::string suffix = std::to_string(index);
         edges["queue" + suffix] = "capsfilter" + suffix;
-        edges["capsfilter" + suffix] = "nvdetlogger" + suffix;
-        edges["nvdetlogger" + suffix] = "nvjpegenc" + suffix;
+        edges["capsfilter" + suffix] = "detlogger" + suffix;
+        edges["detlogger" + suffix] = "nvjpegenc" + suffix;
         edges["nvjpegenc" + suffix] = "filesink" + suffix;
     }
     pipeline["deepstream"]["edges"] = edges;

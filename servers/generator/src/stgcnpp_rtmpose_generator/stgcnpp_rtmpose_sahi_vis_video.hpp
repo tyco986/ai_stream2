@@ -8,15 +8,15 @@
 
 // Generate ST-GCN++ RTMPose SAHI video pipeline with OSD and one mp4 per input.
 //
-// Drawer is nvstgcnppfadedrawerwithtracker. mux batch size is the video count.
+// Drawer is stgcnppfadedrawerwithtracker. mux batch size is the video count.
 //
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
-//         → nvbboxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0 → nvrtmposepostprocess
+//         → boxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0 → nvrtmposepostprocess
 //         → nvdsanalytics → tee_msg
-//         ├→ nvstgcnppfadedrawerwithtracker → nvosdbin → nvvideoconvert → nvstreamdemux
-//         │     → queue_demux{N} → nvstgcnpplogger{N} → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
+//         ├→ stgcnppfadedrawerwithtracker → nvosdbin → nvvideoconvert → nvstreamdemux
+//         │     → queue_demux{N} → stgcnpplogger{N} → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
 //         └→ queue_msg → nvmsgconv → nvmsgbroker
 class StgcnppRtmposeSahiVisVideoGenerator : public VisSahiVideoGenerator {
 public:

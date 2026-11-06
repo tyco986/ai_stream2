@@ -18,8 +18,8 @@
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
-//           → nvbboxsnapshot → nvtracker → nvdsanalytics → tee_msg
-//             ─┬→ nvstreamdemux → queue_demux{N} → nvdetlogger{N} → fakesink{N}
+//           → boxsnapshot → nvtracker → nvdsanalytics → tee_msg
+//             ─┬→ nvstreamdemux → queue_demux{N} → detlogger{N} → fakesink{N}
 //             └→ queue_msg → nvmsgconv → nvmsgbroker
 class SahiRtspGenerator : public BaseRtspGenerator {
 public:

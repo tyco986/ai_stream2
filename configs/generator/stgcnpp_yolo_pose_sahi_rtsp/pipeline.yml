@@ -47,8 +47,8 @@ deepstream:
     properties:
       leaky: 2
       max-size-buffers: 4
-  - type: nvsahipostprocess_pose
-    name: nvsahipostprocess_pose
+  - type: nvsahipostprocesspose
+    name: nvsahipostprocesspose
     properties:
       gie-ids: '1'
       class-agnostic: false
@@ -148,8 +148,8 @@ deepstream:
     nvstreammux: nvsahipreprocess
     nvsahipreprocess: pgie
     pgie: queue_sahi
-    queue_sahi: nvsahipostprocess_pose
-    nvsahipostprocess_pose: nvtracker
+    queue_sahi: nvsahipostprocesspose
+    nvsahipostprocesspose: nvtracker
     nvtracker: nvdspreprocess
     nvdspreprocess: sgie1
     sgie1: nvstgcnppactionlabel

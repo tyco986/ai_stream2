@@ -44,7 +44,7 @@ void SegVisRtspGenerator::add() {
     appendNode("nvinfer", "pgie", addNvinfer(PGIE_CONFIG_NAME, pgieGenerator->config["property"]["batch-size"].as<int>(), gpuId));
     if (enableNvtracker) {
         if (drawer.has_value()) {
-            appendNode("nvbboxsnapshot", "nvbboxsnapshot", addNvbboxsnapshot());
+            appendNode("boxsnapshot", "boxsnapshot", addBoxsnapshot());
         }
         appendNode(
             "nvtracker",
@@ -72,9 +72,9 @@ void SegVisRtspGenerator::add() {
         appendNode("nvosdbin", "nvosdbin" + suffix, addNvosdbin(gpuId, true, true));
         appendNode("queue", "queue_enc" + suffix, addQueue());
         appendNode(
-            "nvdetlogger",
-            "nvdetlogger" + suffix,
-            addNvdetlogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
+            "detlogger",
+            "detlogger" + suffix,
+            addDetlogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
         appendNode(
             "nvv4l2h264enc",
             "nvv4l2h264enc" + suffix,
@@ -97,8 +97,8 @@ void SegVisRtspGenerator::link() {
     std::string inferenceTail = "pgie";
     if (enableNvtracker) {
         if (drawer.has_value()) {
-            edges[inferenceTail] = "nvbboxsnapshot";
-            edges["nvbboxsnapshot"] = "nvtracker";
+            edges[inferenceTail] = "boxsnapshot";
+            edges["boxsnapshot"] = "nvtracker";
         } else {
             edges[inferenceTail] = "nvtracker";
         }
@@ -120,8 +120,8 @@ void SegVisRtspGenerator::link() {
             edges[drawerElement + suffix] = "nvosdbin" + suffix;
         }
         edges["nvosdbin" + suffix] = "queue_enc" + suffix;
-        edges["queue_enc" + suffix] = "nvdetlogger" + suffix;
-        edges["nvdetlogger" + suffix] = "nvv4l2h264enc" + suffix;
+        edges["queue_enc" + suffix] = "detlogger" + suffix;
+        edges["detlogger" + suffix] = "nvv4l2h264enc" + suffix;
         edges["nvv4l2h264enc" + suffix] = "h264parse" + suffix;
         edges["h264parse" + suffix] = "rtspclientsink" + suffix;
     }

@@ -7,8 +7,8 @@
 // Topology::
 //
 //     nvosdbin{N} → tee_vis{N}
-//       ─┬→ nvviscapturer{N} → fakesink_vis{N}
-//       └→ queue_enc{N} → nvpresencelogger{N} → nvv4l2h264enc{N} → h264parse{N} → rtspclientsink{N}
+//       ─┬→ viscapturer{N} → fakesink_vis{N}
+//       └→ queue_enc{N} → presencelogger{N} → nvv4l2h264enc{N} → h264parse{N} → rtspclientsink{N}
 class VisEventRtspGenerator : public EventRtspGenerator {
 public:
     using EventRtspGenerator::EventRtspGenerator;

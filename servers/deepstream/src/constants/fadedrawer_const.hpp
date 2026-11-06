@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cstdint>
-
 #include "nvdsmeta.h"
 
 namespace fadedrawer {
@@ -14,7 +12,6 @@ inline constexpr float COLOR_TEXT_BG[4] = {0.0f, 0.0f, 0.0f, 0.6f};
 inline constexpr float COLOR_ORANGE[4] = {1.0f, 0.5f, 0.0f, 1.0f};
 inline constexpr float COLOR_PURPLE[4] = {0.62f, 0.13f, 0.94f, 1.0f};
 inline constexpr float MIN_CACHED_CONFIDENCE = 0.0f;
-inline constexpr std::uint64_t UNTRACKED_OBJECT_ID = ~0ull;
 
 inline constexpr int KPT_RADIUS = 2;
 inline constexpr int SKELETON_WIDTH = 2;
@@ -34,5 +31,24 @@ inline constexpr int LABEL_LINE_SIZE = 160;
 
 inline constexpr NvDsMetaType PRESENCE_EVENT_USER_META = static_cast<NvDsMetaType>(NVDS_START_USER_META + 0x5045);
 inline constexpr unsigned PRESENCE_EVENT_CODE_LEN = 8;
+inline constexpr NvDsMetaType STGCNPP_ACTION_USER_META = static_cast<NvDsMetaType>(NVDS_START_USER_META + 0x5341);
+inline constexpr NvDsMetaType STGCNPP_READY_USER_META = static_cast<NvDsMetaType>(NVDS_START_USER_META + 0x5347);
+inline constexpr float STGCNPP_ACTION_CONF_NONE = 0.0f;
+
+inline constexpr const char* ELEMENT_DET = "detfadedrawer";
+inline constexpr const char* ELEMENT_DET_TRACKER = "detfadedrawerwithtracker";
+inline constexpr const char* ELEMENT_SEG = "segfadedrawer";
+inline constexpr const char* ELEMENT_SEG_TRACKER = "segfadedrawerwithtracker";
+inline constexpr const char* ELEMENT_POSE = "posefadedrawer";
+inline constexpr const char* ELEMENT_POSE_TRACKER = "posefadedrawerwithtracker";
+inline constexpr const char* ELEMENT_STGCNPP_TRACKER = "stgcnppfadedrawerwithtracker";
+inline constexpr const char* PLUGIN_DESCRIPTION = "DeepStream fade drawer elements";
+inline constexpr const char* VERSION = "1.0";
+inline constexpr const char* LICENSE = "Apache-2.0";
+inline constexpr const char* PLUGIN_PACKAGE = "DeepStream fade drawer";
+inline constexpr const char* ORIGIN = "https://github.com";
+inline constexpr const char* POSE_MODE = "coco17";
 
 }
+
+#define FADEDRAWER_NVMM_CAPS GST_VIDEO_CAPS_MAKE_WITH_FEATURES("memory:NVMM", "{ NV12, RGBA, I420 }")

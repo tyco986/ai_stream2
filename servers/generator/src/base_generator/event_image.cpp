@@ -259,12 +259,12 @@ void EventImageGenerator::write(const std::filesystem::path& configSaveDir) {
 }
 
 std::string EventImageGenerator::nvdetDrawerElement() const {
-    const std::string element = "nvdetfadedrawer";
+    const std::string element = "detfadedrawer";
     return element;
 }
 
 YAML::Node EventImageGenerator::nvdetDrawerProperties(const nlohmann::json& drawerNode) {
-    const YAML::Node properties = addNvdetfadedrawer(drawerNode.value("interval", 0), drawerNode.value("fade_time", 0), drawerNode.value("show_label", false));
+    const YAML::Node properties = addDetfadedrawer(drawerNode.value("interval", 0), drawerNode.value("fade_time", 0), drawerNode.value("show_label", false));
     return properties;
 }
 
@@ -294,7 +294,7 @@ void EventImageGenerator::add() {
     appendNode("queue", "queue_raw", addQueue());
     appendNode("nvvideoconvert", "nvvideoconvert_raw", addNvvideoconvert(gpuId));
     appendNode("capsfilter", "capsfilter_raw", addCapsfilter("video/x-raw(memory:NVMM), format=RGB"));
-    appendNode("nvrawcapturer", "nvrawcapturer", addNvrawcapturer(captureOutputDir(), capturerCodes()));
+    appendNode("rawcapturer", "rawcapturer", addRawcapturer(captureOutputDir(), capturerCodes()));
     appendNode("fakesink", "fakesink_raw", addFakesink(false, false));
     appendNode("queue", "queue_osd", addQueue());
     appendNode("nvvideoconvert", "nvvideoconvert_osd", addNvvideoconvert(gpuId));
@@ -307,15 +307,15 @@ void EventImageGenerator::add() {
     appendNode("queue", "queue_vis", addQueue());
     appendNode("nvvideoconvert", "nvvideoconvert_vis", addNvvideoconvert(gpuId));
     appendNode("capsfilter", "capsfilter_vis", addCapsfilter("video/x-raw(memory:NVMM), format=RGB"));
-    appendNode("nvviscapturer", "nvviscapturer", addNvviscapturer(captureOutputDir(), capturerCodes()));
+    appendNode("viscapturer", "viscapturer", addViscapturer(captureOutputDir(), capturerCodes()));
     appendNode("fakesink", "fakesink_vis", addFakesink(false, false));
     appendNode("queue", "queue_enc", addQueue());
     appendNode("nvvideoconvert", "nvvideoconvert_enc", addNvvideoconvert(gpuId));
     appendNode("capsfilter", "capsfilter_jpeg", addCapsfilter());
     appendNode(
-        "nvpresencelogger",
-        "nvpresencelogger",
-        addNvpresencelogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
+        "presencelogger",
+        "presencelogger",
+        addPresencelogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     for (int streamIndex = 0; streamIndex < runtimeBatchSize; ++streamIndex) {
         const std::string suffix = std::to_string(streamIndex);
@@ -345,8 +345,8 @@ void EventImageGenerator::link() {
     edges["tee_raw"].push_back("queue_osd");
     edges["queue_raw"] = "nvvideoconvert_raw";
     edges["nvvideoconvert_raw"] = "capsfilter_raw";
-    edges["capsfilter_raw"] = "nvrawcapturer";
-    edges["nvrawcapturer"] = "fakesink_raw";
+    edges["capsfilter_raw"] = "rawcapturer";
+    edges["rawcapturer"] = "fakesink_raw";
     edges["queue_osd"] = "nvvideoconvert_osd";
     edges["nvvideoconvert_osd"] = "capsfilter_osd";
     const std::string osdPrev = drawer.has_value() ? nvdetDrawerElement() : "nvosdbin";
@@ -359,12 +359,12 @@ void EventImageGenerator::link() {
     edges["tee_vis"].push_back("queue_enc");
     edges["queue_vis"] = "nvvideoconvert_vis";
     edges["nvvideoconvert_vis"] = "capsfilter_vis";
-    edges["capsfilter_vis"] = "nvviscapturer";
-    edges["nvviscapturer"] = "fakesink_vis";
+    edges["capsfilter_vis"] = "viscapturer";
+    edges["viscapturer"] = "fakesink_vis";
     edges["queue_enc"] = "nvvideoconvert_enc";
     edges["nvvideoconvert_enc"] = "capsfilter_jpeg";
-    edges["capsfilter_jpeg"] = "nvpresencelogger";
-    edges["nvpresencelogger"] = "nvstreamdemux";
+    edges["capsfilter_jpeg"] = "presencelogger";
+    edges["presencelogger"] = "nvstreamdemux";
     for (int index = 0; index < runtimeBatchSize; ++index) {
         const std::string suffix = std::to_string(index);
         edges["queue_demux" + suffix] = "nvjpegenc" + suffix;

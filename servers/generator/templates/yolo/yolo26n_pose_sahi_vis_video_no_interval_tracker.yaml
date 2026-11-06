@@ -33,5 +33,5 @@ sahi:
     slice_height: 640
     overlap_width_ratio: 0.2
     overlap_height_ratio: 0.2
-  nvsahipostprocess_pose:
+  nvsahipostprocesspose:
     oks_threshold: 0.2

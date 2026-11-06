@@ -15,7 +15,7 @@ public:
 
     std::string capturerCodes() const;
     std::string captureOutputDir() const;
-    void appendEventCoder(const std::string& name = "nvpresencecoder");
+    void appendEventCoder(const std::string& name = "presenceeventcoder");
     std::string afterAnalytics(const std::string& teeName = "tee_msg") const;
     void linkEventCoder(YAML::Node edges, const std::string& teeName = "tee_msg") const;
 

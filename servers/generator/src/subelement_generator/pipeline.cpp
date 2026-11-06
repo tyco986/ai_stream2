@@ -109,7 +109,7 @@ YAML::Node PipelineGenerator::addNvrtmposepostprocess(int sgieUniqueId) {
     return properties;
 }
 
-YAML::Node PipelineGenerator::addNvstgcnppactionlabel(int classifierUniqueId) {
+YAML::Node PipelineGenerator::addStgcnppactionlabel(int classifierUniqueId) {
     YAML::Node properties;
     properties["classifier-unique-id"] = classifierUniqueId;
     return properties;
@@ -136,7 +136,7 @@ YAML::Node PipelineGenerator::addNvtracker(const std::string& llLibFile, const s
     return properties;
 }
 
-YAML::Node PipelineGenerator::addNvbboxsnapshot() {
+YAML::Node PipelineGenerator::addBoxsnapshot() {
     return YAML::Node(YAML::NodeType::Map);
 }
 
@@ -147,22 +147,22 @@ YAML::Node PipelineGenerator::addNvdsanalytics(const std::string& configFile, in
     return properties;
 }
 
-YAML::Node PipelineGenerator::addNvdetlogger(const std::string& root, int interval) {
+YAML::Node PipelineGenerator::addDetlogger(const std::string& root, int interval) {
     YAML::Node properties;
     properties["root"] = root.empty() ? pipeline::DEEPSTREAM_LOG_ROOT : root;
     properties["interval"] = interval;
     return properties;
 }
 
-YAML::Node PipelineGenerator::addNvpresencelogger(const std::string& root, int interval) {
-    return addNvdetlogger(root, interval);
+YAML::Node PipelineGenerator::addPresencelogger(const std::string& root, int interval) {
+    return addDetlogger(root, interval);
 }
 
-YAML::Node PipelineGenerator::addNvstgcnpplogger(const std::string& root, int interval) {
-    return addNvdetlogger(root, interval);
+YAML::Node PipelineGenerator::addStgcnpplogger(const std::string& root, int interval) {
+    return addDetlogger(root, interval);
 }
 
-YAML::Node PipelineGenerator::addNvdetfadedrawer(int interval, int fadeTime, bool showLabel) {
+YAML::Node PipelineGenerator::addDetfadedrawer(int interval, int fadeTime, bool showLabel) {
     YAML::Node properties;
     properties["interval"] = interval;
     properties["fade-time"] = fadeTime;
@@ -170,7 +170,7 @@ YAML::Node PipelineGenerator::addNvdetfadedrawer(int interval, int fadeTime, boo
     return properties;
 }
 
-YAML::Node PipelineGenerator::addNvdetfadedrawerwithtracker(int interval, int fadeTime, bool showLabel, bool showSnap) {
+YAML::Node PipelineGenerator::addDetfadedrawerwithtracker(int interval, int fadeTime, bool showLabel, bool showSnap) {
     YAML::Node properties;
     properties["interval"] = interval;
     properties["fade-time"] = fadeTime;
@@ -179,7 +179,7 @@ YAML::Node PipelineGenerator::addNvdetfadedrawerwithtracker(int interval, int fa
     return properties;
 }
 
-YAML::Node PipelineGenerator::addNvposefadedrawer(int interval, int fadeTime, bool showLabel, bool showPose, double poseThreshold, const std::string& mode) {
+YAML::Node PipelineGenerator::addPosefadedrawer(int interval, int fadeTime, bool showLabel, bool showPose, double poseThreshold, const std::string& mode) {
     YAML::Node properties;
     properties["interval"] = interval;
     properties["fade-time"] = fadeTime;
@@ -190,7 +190,7 @@ YAML::Node PipelineGenerator::addNvposefadedrawer(int interval, int fadeTime, bo
     return properties;
 }
 
-YAML::Node PipelineGenerator::addNvposefadedrawerwithtracker(int interval, int fadeTime, bool showLabel, bool showPose, double poseThreshold, const std::string& mode, bool showSnap) {
+YAML::Node PipelineGenerator::addPosefadedrawerwithtracker(int interval, int fadeTime, bool showLabel, bool showPose, double poseThreshold, const std::string& mode, bool showSnap) {
     YAML::Node properties;
     properties["interval"] = interval;
     properties["fade-time"] = fadeTime;
@@ -202,11 +202,11 @@ YAML::Node PipelineGenerator::addNvposefadedrawerwithtracker(int interval, int f
     return properties;
 }
 
-YAML::Node PipelineGenerator::addNvstgcnppfadedrawerwithtracker(int interval, int fadeTime, bool showLabel, bool showPose, double poseThreshold, const std::string& mode, bool showSnap) {
-    return addNvposefadedrawerwithtracker(interval, fadeTime, showLabel, showPose, poseThreshold, mode, showSnap);
+YAML::Node PipelineGenerator::addStgcnppfadedrawerwithtracker(int interval, int fadeTime, bool showLabel, bool showPose, double poseThreshold, const std::string& mode, bool showSnap) {
+    return addPosefadedrawerwithtracker(interval, fadeTime, showLabel, showPose, poseThreshold, mode, showSnap);
 }
 
-YAML::Node PipelineGenerator::addNvsegfadedrawer(int interval, int fadeTime, bool showLabel, bool showMask) {
+YAML::Node PipelineGenerator::addSegfadedrawer(int interval, int fadeTime, bool showLabel, bool showMask) {
     YAML::Node properties;
     properties["interval"] = interval;
     properties["fade-time"] = fadeTime;
@@ -215,7 +215,7 @@ YAML::Node PipelineGenerator::addNvsegfadedrawer(int interval, int fadeTime, boo
     return properties;
 }
 
-YAML::Node PipelineGenerator::addNvsegfadedrawerwithtracker(int interval, int fadeTime, bool showLabel, bool showMask, bool showSnap) {
+YAML::Node PipelineGenerator::addSegfadedrawerwithtracker(int interval, int fadeTime, bool showLabel, bool showMask, bool showSnap) {
     YAML::Node properties;
     properties["interval"] = interval;
     properties["fade-time"] = fadeTime;
@@ -225,7 +225,7 @@ YAML::Node PipelineGenerator::addNvsegfadedrawerwithtracker(int interval, int fa
     return properties;
 }
 
-YAML::Node PipelineGenerator::addNvpresencecoder(const std::string& classIds, const std::string& eventNames, int length, double threshold, const std::string& mode) {
+YAML::Node PipelineGenerator::addPresenceeventcoder(const std::string& classIds, const std::string& eventNames, int length, double threshold, const std::string& mode) {
     YAML::Node properties;
     properties["class-ids"] = classIds;
     properties["event-names"] = eventNames;
@@ -235,14 +235,14 @@ YAML::Node PipelineGenerator::addNvpresencecoder(const std::string& classIds, co
     return properties;
 }
 
-YAML::Node PipelineGenerator::addNvrawcapturer(const std::string& outputDir, const std::string& captureCodes) {
+YAML::Node PipelineGenerator::addRawcapturer(const std::string& outputDir, const std::string& captureCodes) {
     YAML::Node properties;
     properties["output-dir"] = outputDir;
     properties["capture-codes"] = captureCodes;
     return properties;
 }
 
-YAML::Node PipelineGenerator::addNvviscapturer(const std::string& outputDir, const std::string& captureCodes, const std::string& labelTask) {
+YAML::Node PipelineGenerator::addViscapturer(const std::string& outputDir, const std::string& captureCodes, const std::string& labelTask) {
     YAML::Node properties;
     properties["output-dir"] = outputDir;
     properties["capture-codes"] = captureCodes;

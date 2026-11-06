@@ -7,14 +7,14 @@
 
 // Generate topdown-pose image pipeline YAML.
 //
-// PGIE detects people. SGIE is RTMPose through nvdspreprocess. Drawer is nvposefadedrawer.
+// PGIE detects people. SGIE is RTMPose through nvdspreprocess. Drawer is posefadedrawer.
 //
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → pgie → nvdspreprocess_rtmpose → sgie0 → nvrtmposepostprocess
 //         → nvdsanalytics → tee_msg
-//         ├→ nvposefadedrawer → nvosdbin → nvvideoconvert → nvstreamdemux
-//         │     → queue{N} → capsfilter{N} → nvdetlogger{N} → nvjpegenc{N} → filesink{N}
+//         ├→ posefadedrawer → nvosdbin → nvvideoconvert → nvstreamdemux
+//         │     → queue{N} → capsfilter{N} → detlogger{N} → nvjpegenc{N} → filesink{N}
 //         └→ queue_msg → nvmsgconv → nvmsgbroker
 class TopdownPoseImageGenerator : public BaseImageGenerator {
 public:

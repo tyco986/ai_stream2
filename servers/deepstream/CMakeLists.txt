@@ -53,3 +53,11 @@ target_link_options(deepstream PRIVATE
 
 add_subdirectory(src/plugins/boxsnapshot)
 add_subdirectory(src/plugins/fadedrawer)
+add_subdirectory(src/plugins/presenceeventcoder)
+add_subdirectory(src/plugins/capturer)
+add_subdirectory(src/plugins/dslogger)
+add_subdirectory(src/plugins/nvdspreprocess/rtmposepreprocess)
+add_subdirectory(src/plugins/nvdspreprocess/stgcnpppreprocess)
+add_subdirectory(src/plugins/stgcnppactionlabel)
+add_subdirectory(src/plugins/sahipostprocesspose)
+add_subdirectory(src/plugins/gie/yolopose)

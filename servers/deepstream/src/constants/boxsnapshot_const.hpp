@@ -10,7 +10,7 @@ inline constexpr const char* ELEMENT_DETAIL = "Copy object boxes into frame user
 inline constexpr const char* PLUGIN_DESCRIPTION = "DeepStream frame bbox snapshot";
 inline constexpr const char* VERSION = "1.0";
 inline constexpr const char* LICENSE = "Apache-2.0";
-inline constexpr const char* PACKAGE = "DeepStream bbox snapshot";
+inline constexpr const char* PLUGIN_PACKAGE = "DeepStream bbox snapshot";
 inline constexpr const char* ORIGIN = "https://github.com";
 
 }

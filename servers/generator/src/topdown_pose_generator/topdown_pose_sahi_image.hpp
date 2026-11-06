@@ -8,14 +8,14 @@
 // Generate topdown-pose SAHI image pipeline YAML.
 //
 // mux batch size is the image count. pgie batch size is the SAHI tile count.
-// PGIE detects people. SGIE is RTMPose through nvdspreprocess. Drawer is nvposefadedrawer.
+// PGIE detects people. SGIE is RTMPose through nvdspreprocess. Drawer is posefadedrawer.
 //
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
 //         → nvdspreprocess_rtmpose → sgie0 → nvrtmposepostprocess → nvdsanalytics → tee_msg
-//         ├→ nvposefadedrawer → nvosdbin → nvvideoconvert → nvstreamdemux
-//         │     → queue_demux{N} → capsfilter{N} → nvdetlogger{N} → nvjpegenc{N} → filesink{N}
+//         ├→ posefadedrawer → nvosdbin → nvvideoconvert → nvstreamdemux
+//         │     → queue_demux{N} → capsfilter{N} → detlogger{N} → nvjpegenc{N} → filesink{N}
 //         └→ queue_msg → nvmsgconv → nvmsgbroker
 class TopdownPoseSahiImageGenerator : public SahiImageGenerator {
 public:

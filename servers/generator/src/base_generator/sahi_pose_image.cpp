@@ -22,7 +22,7 @@ SahiPoseImageGenerator::SahiPoseImageGenerator(
           std::move(sahi),
           std::move(logger),
           std::move(drawer)) {
-    sahiPostprocess = "nvsahipostprocess_pose";
+    sahiPostprocess = "nvsahipostprocesspose";
 }
 
 YAML::Node SahiPoseImageGenerator::sahiPostprocessProperties(const nlohmann::json& postprocess) {
@@ -37,7 +37,7 @@ YAML::Node SahiPoseImageGenerator::sahiPostprocessProperties(const nlohmann::jso
 }
 
 std::string SahiPoseImageGenerator::visDrawerElement() const {
-    const std::string element = "nvposefadedrawer";
+    const std::string element = "posefadedrawer";
     return element;
 }
 

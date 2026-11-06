@@ -24,12 +24,12 @@
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → nvbboxsnapshot → nvtracker → nvdsanalytics → nvpresencecoder → tee_msg
+//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → presenceeventcoder → tee_msg
 //       ─┬→ nvvideoconvert → tee_raw
-//           ─┬→ queue_raw → nvvideoconvert_raw → capsfilter_raw → nvrawcapturer → fakesink_raw
+//           ─┬→ queue_raw → nvvideoconvert_raw → capsfilter_raw → rawcapturer → fakesink_raw
 //           └→ queue_osd → nvvideoconvert_osd → capsfilter_osd → nvosdbin → tee_vis
-//                 ─┬→ queue_vis → nvvideoconvert_vis → capsfilter_vis → nvviscapturer → fakesink_vis
-//                 └→ queue_enc → nvpresencelogger → fakesink
+//                 ─┬→ queue_vis → nvvideoconvert_vis → capsfilter_vis → viscapturer → fakesink_vis
+//                 └→ queue_enc → presencelogger → fakesink
 class EventVideoGenerator : public BaseEventGenerator {
 public:
     static constexpr const char* PIPELINE_CONFIG_NAME = "pipeline.yml";

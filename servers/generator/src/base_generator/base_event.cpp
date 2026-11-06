@@ -40,9 +40,9 @@ std::string BaseEventGenerator::captureOutputDir() const {
 
 void BaseEventGenerator::appendEventCoder(const std::string& name) {
     appendNode(
-        "nvpresencecoder",
+        "presenceeventcoder",
         name,
-        addNvpresencecoder(
+        addPresenceeventcoder(
             joinList(eventCoder.value("class_ids", nlohmann::json::array())),
             joinList(eventCoder.value("event_names", nlohmann::json::array())),
             eventCoder.value("length", pipeline::PRESENCE_LENGTH),
@@ -52,10 +52,10 @@ void BaseEventGenerator::appendEventCoder(const std::string& name) {
 
 std::string BaseEventGenerator::afterAnalytics(const std::string& teeName) const {
     (void)teeName;
-    const std::string element = "nvpresencecoder";
+    const std::string element = "presenceeventcoder";
     return element;
 }
 
 void BaseEventGenerator::linkEventCoder(YAML::Node edges, const std::string& teeName) const {
-    edges["nvpresencecoder"] = teeName;
+    edges["presenceeventcoder"] = teeName;
 }

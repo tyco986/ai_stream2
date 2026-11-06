@@ -78,7 +78,7 @@ void StgcnppYoloPoseSahiVideoGenerator::add() {
     appendNode(sahiPostprocess, sahiPostprocess, sahiPostprocessProperties(sahi.at(sahiPostprocess)));
     if (enableNvtracker) {
         if (drawer.has_value()) {
-            appendNode("nvbboxsnapshot", "nvbboxsnapshot", addNvbboxsnapshot());
+            appendNode("boxsnapshot", "boxsnapshot", addBoxsnapshot());
         }
         appendNode(
             "nvtracker",
@@ -87,7 +87,7 @@ void StgcnppYoloPoseSahiVideoGenerator::add() {
     }
     appendNode("nvdspreprocess", "nvdspreprocess", addNvdspreprocess(StgcnppYoloPose::PREPROCESS_CONFIG_NAME));
     appendNode("nvinfer", "sgie1", addNvinfer(StgcnppYoloPose::CONFIG_NAME, model->batchSize, model->gpuId, true));
-    appendNode("nvstgcnppactionlabel", "nvstgcnppactionlabel", addNvstgcnppactionlabel(model->uniqueId));
+    appendNode("stgcnppactionlabel", "stgcnppactionlabel", addStgcnppactionlabel(model->uniqueId));
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME, gpuId));
     appendNode("tee", "tee_msg", addTee());
     appendNode("queue", "queue_msg", addQueue());
@@ -97,9 +97,9 @@ void StgcnppYoloPoseSahiVideoGenerator::add() {
         "nvmsgbroker",
         addNvmsgbroker(subelement::KAFKA_PROTO_LIB, subelement::KAFKA_CONN_STR, kafkaTopic, KAFKA_CONFIG_NAME, false, false));
     appendNode(
-        "nvstgcnpplogger",
-        "nvstgcnpplogger",
-        addNvstgcnpplogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
+        "stgcnpplogger",
+        "stgcnpplogger",
+        addStgcnpplogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
     appendNode("fakesink", "fakesink", addFakesink(false, false));
 }
 
@@ -115,8 +115,8 @@ void StgcnppYoloPoseSahiVideoGenerator::link() {
     std::string inferenceTail = sahiPostprocess;
     if (enableNvtracker) {
         if (drawer.has_value()) {
-            edges[inferenceTail] = "nvbboxsnapshot";
-            edges["nvbboxsnapshot"] = "nvtracker";
+            edges[inferenceTail] = "boxsnapshot";
+            edges["boxsnapshot"] = "nvtracker";
         } else {
             edges[inferenceTail] = "nvtracker";
         }
@@ -124,13 +124,13 @@ void StgcnppYoloPoseSahiVideoGenerator::link() {
     }
     edges[inferenceTail] = "nvdspreprocess";
     edges["nvdspreprocess"] = "sgie1";
-    edges["sgie1"] = "nvstgcnppactionlabel";
-    edges["nvstgcnppactionlabel"] = "nvdsanalytics";
+    edges["sgie1"] = "stgcnppactionlabel";
+    edges["stgcnppactionlabel"] = "nvdsanalytics";
     edges["nvdsanalytics"] = "tee_msg";
-    edges["tee_msg"].push_back("nvstgcnpplogger");
+    edges["tee_msg"].push_back("stgcnpplogger");
     edges["tee_msg"].push_back("queue_msg");
     edges["queue_msg"] = "nvmsgconv";
     edges["nvmsgconv"] = "nvmsgbroker";
-    edges["nvstgcnpplogger"] = "fakesink";
+    edges["stgcnpplogger"] = "fakesink";
     pipeline["deepstream"]["edges"] = edges;
 }

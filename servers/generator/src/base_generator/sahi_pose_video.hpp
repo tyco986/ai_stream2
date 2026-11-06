@@ -4,17 +4,17 @@
 
 // Generate YOLO SAHI pose video pipeline YAML (headless, ends at fakesink).
 //
-// Postprocess element is nvsahipostprocess_pose.
+// Postprocess element is nvsahipostprocesspose.
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess_pose
-//         → nvbboxsnapshot → nvtracker → nvdsanalytics → tee_msg
-//         ├→ nvdetlogger → fakesink
+//     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocesspose
+//         → boxsnapshot → nvtracker → nvdsanalytics → tee_msg
+//         ├→ detlogger → fakesink
 //         └→ queue_msg → nvmsgconv → nvmsgbroker
 class SahiPoseVideoGenerator : public SahiVideoGenerator {
 public:
-    static constexpr const char* SAHI_POSE_POSTPROCESS = "nvsahipostprocess_pose";
+    static constexpr const char* SAHI_POSE_POSTPROCESS = "nvsahipostprocesspose";
 
     SahiPoseVideoGenerator(
         std::string pipelineName,

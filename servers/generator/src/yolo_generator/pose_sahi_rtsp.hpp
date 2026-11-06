@@ -5,13 +5,13 @@
 // Generate YOLO SAHI pose RTSP pipeline (headless, ends at fakesink).
 //
 // mux batch size is the stream count. pgie batch size is the SAHI tile count times the stream count.
-// Postprocess element is nvsahipostprocess_pose.
+// Postprocess element is nvsahipostprocesspose.
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess_pose
-//           → nvbboxsnapshot → nvtracker → nvdsanalytics → tee_msg
-//             ─┬→ nvstreamdemux → queue_demux{N} → nvdetlogger{N} → fakesink{N}
+//     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocesspose
+//           → boxsnapshot → nvtracker → nvdsanalytics → tee_msg
+//             ─┬→ nvstreamdemux → queue_demux{N} → detlogger{N} → fakesink{N}
 //             └→ queue_msg → nvmsgconv → nvmsgbroker
 class PoseSahiRtspGenerator : public SahiPoseRtspGenerator {
 public:

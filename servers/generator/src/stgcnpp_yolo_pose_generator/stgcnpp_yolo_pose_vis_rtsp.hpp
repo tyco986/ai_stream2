@@ -7,14 +7,14 @@
 
 // Generate ST-GCN++ YOLO-pose RTSP pipeline with OSD preview.
 //
-// Drawer is nvstgcnppfadedrawerwithtracker. OSD displays bbox and text.
+// Drawer is stgcnppfadedrawerwithtracker. OSD displays bbox and text.
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → nvbboxsnapshot → nvtracker → nvdspreprocess → sgie1
-//         → nvstgcnppactionlabel → nvdsanalytics → tee_msg
-//           ─┬→ nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → nvstgcnppfadedrawerwithtracker{N} → nvosdbin{N}
-//           │     → queue_enc{N} → nvstgcnpplogger{N} → nvv4l2h264enc{N} → h264parse{N} → rtspclientsink{N}
+//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdspreprocess → sgie1
+//         → stgcnppactionlabel → nvdsanalytics → tee_msg
+//           ─┬→ nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → stgcnppfadedrawerwithtracker{N} → nvosdbin{N}
+//           │     → queue_enc{N} → stgcnpplogger{N} → nvv4l2h264enc{N} → h264parse{N} → rtspclientsink{N}
 //           └→ queue_msg → nvmsgconv → nvmsgbroker
 class StgcnppYoloPoseVisRtspGenerator : public VisRtspGenerator {
 public:

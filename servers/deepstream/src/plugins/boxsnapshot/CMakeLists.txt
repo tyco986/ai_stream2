@@ -2,8 +2,8 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0 gstreamer-base-1.0 gstreamer-video-1.0)
 
 add_library(boxsnapshot SHARED
-    boxsnapshot.cpp
-    gst_boxsnapshot.cpp
+    engine/boxsnapshot.cpp
+    gst_bridge/gst_boxsnapshot.cpp
     register_plugin.cpp
 )
 

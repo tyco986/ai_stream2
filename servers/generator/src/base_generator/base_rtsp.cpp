@@ -261,17 +261,17 @@ nlohmann::json BaseRtspGenerator::eventOsdKwargs(int gpuId) const {
 }
 
 std::string BaseRtspGenerator::nvdetDrawerElement() const {
-    const std::string element = enableNvtracker ? "nvdetfadedrawerwithtracker" : "nvdetfadedrawer";
+    const std::string element = enableNvtracker ? "detfadedrawerwithtracker" : "detfadedrawer";
     return element;
 }
 
 std::string BaseRtspGenerator::nvposeDrawerElement() const {
-    const std::string element = enableNvtracker ? "nvposefadedrawerwithtracker" : "nvposefadedrawer";
+    const std::string element = enableNvtracker ? "posefadedrawerwithtracker" : "posefadedrawer";
     return element;
 }
 
 std::string BaseRtspGenerator::nvsegDrawerElement() const {
-    const std::string element = enableNvtracker ? "nvsegfadedrawerwithtracker" : "nvsegfadedrawer";
+    const std::string element = enableNvtracker ? "segfadedrawerwithtracker" : "segfadedrawer";
     return element;
 }
 
@@ -279,9 +279,9 @@ YAML::Node BaseRtspGenerator::nvdetDrawerProperties(const nlohmann::json& drawer
     const int interval = drawerNode.value("interval", 0);
     const int fadeTime = drawerNode.value("fade_time", 0);
     const bool showLabel = drawerNode.value("show_label", false);
-    YAML::Node properties = addNvdetfadedrawer(interval, fadeTime, showLabel);
+    YAML::Node properties = addDetfadedrawer(interval, fadeTime, showLabel);
     if (enableNvtracker) {
-        properties = addNvdetfadedrawerwithtracker(interval, fadeTime, showLabel, drawerNode.value("show_snap", true));
+        properties = addDetfadedrawerwithtracker(interval, fadeTime, showLabel, drawerNode.value("show_snap", true));
     }
     return properties;
 }
@@ -293,9 +293,9 @@ YAML::Node BaseRtspGenerator::nvposeDrawerProperties(const nlohmann::json& drawe
     const bool showPose = drawerNode.value("show_pose", true);
     const double poseThreshold = drawerNode.value("pose_threshold", 0.0);
     const std::string mode = drawerNode.value("mode", std::string(pipeline::POSE_MODE_COCO17));
-    YAML::Node properties = addNvposefadedrawer(interval, fadeTime, showLabel, showPose, poseThreshold, mode);
+    YAML::Node properties = addPosefadedrawer(interval, fadeTime, showLabel, showPose, poseThreshold, mode);
     if (enableNvtracker) {
-        properties = addNvposefadedrawerwithtracker(interval, fadeTime, showLabel, showPose, poseThreshold, mode, drawerNode.value("show_snap", true));
+        properties = addPosefadedrawerwithtracker(interval, fadeTime, showLabel, showPose, poseThreshold, mode, drawerNode.value("show_snap", true));
     }
     return properties;
 }
@@ -305,9 +305,9 @@ YAML::Node BaseRtspGenerator::nvsegDrawerProperties(const nlohmann::json& drawer
     const int fadeTime = drawerNode.value("fade_time", 0);
     const bool showLabel = drawerNode.value("show_label", false);
     const bool showMask = drawerNode.value("show_mask", true);
-    YAML::Node properties = addNvsegfadedrawer(interval, fadeTime, showLabel, showMask);
+    YAML::Node properties = addSegfadedrawer(interval, fadeTime, showLabel, showMask);
     if (enableNvtracker) {
-        properties = addNvsegfadedrawerwithtracker(interval, fadeTime, showLabel, showMask, drawerNode.value("show_snap", true));
+        properties = addSegfadedrawerwithtracker(interval, fadeTime, showLabel, showMask, drawerNode.value("show_snap", true));
     }
     return properties;
 }
@@ -328,7 +328,7 @@ void BaseRtspGenerator::add() {
         addNvinfer(PGIE_CONFIG_NAME, pgieGenerator->config["property"]["batch-size"].as<int>(), pgieGenerator->config["property"]["gpu-id"].as<int>()));
     if (enableNvtracker) {
         if (drawer.has_value()) {
-            appendNode("nvbboxsnapshot", "nvbboxsnapshot", addNvbboxsnapshot());
+            appendNode("boxsnapshot", "boxsnapshot", addBoxsnapshot());
         }
         appendNode(
             "nvtracker",
@@ -353,9 +353,9 @@ void BaseRtspGenerator::add() {
     for (int streamIndex = 0; streamIndex < runtimeBatchSize; ++streamIndex) {
         appendNode("queue", "queue_demux" + std::to_string(streamIndex), addQueue());
         appendNode(
-            "nvdetlogger",
-            "nvdetlogger" + std::to_string(streamIndex),
-            addNvdetlogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
+            "detlogger",
+            "detlogger" + std::to_string(streamIndex),
+            addDetlogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
         appendNode("fakesink", "fakesink" + std::to_string(streamIndex), addFakesink(false, false));
     }
 }
@@ -369,8 +369,8 @@ void BaseRtspGenerator::link() {
     std::string inferenceTail = "pgie";
     if (enableNvtracker) {
         if (drawer.has_value()) {
-            edges[inferenceTail] = "nvbboxsnapshot";
-            edges["nvbboxsnapshot"] = "nvtracker";
+            edges[inferenceTail] = "boxsnapshot";
+            edges["boxsnapshot"] = "nvtracker";
         } else {
             edges[inferenceTail] = "nvtracker";
         }
@@ -383,8 +383,8 @@ void BaseRtspGenerator::link() {
     edges["queue_msg"] = "nvmsgconv";
     edges["nvmsgconv"] = "nvmsgbroker";
     for (int streamIndex = 0; streamIndex < runtimeBatchSize; ++streamIndex) {
-        edges["queue_demux" + std::to_string(streamIndex)] = "nvdetlogger" + std::to_string(streamIndex);
-        edges["nvdetlogger" + std::to_string(streamIndex)] = "fakesink" + std::to_string(streamIndex);
+        edges["queue_demux" + std::to_string(streamIndex)] = "detlogger" + std::to_string(streamIndex);
+        edges["detlogger" + std::to_string(streamIndex)] = "fakesink" + std::to_string(streamIndex);
     }
     pipeline["deepstream"]["edges"] = edges;
 }

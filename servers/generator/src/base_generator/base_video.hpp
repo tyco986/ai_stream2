@@ -28,8 +28,8 @@
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → nvbboxsnapshot → nvtracker → nvdsanalytics → tee_msg
-//         ├→ nvdetlogger → fakesink
+//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → tee_msg
+//         ├→ detlogger → fakesink
 //         └→ queue_msg → nvmsgconv → nvmsgbroker
 class BaseVideoGenerator : public PipelineGenerator {
 public:

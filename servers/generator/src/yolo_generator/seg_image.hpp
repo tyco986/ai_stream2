@@ -4,13 +4,13 @@
 
 // Generate YOLO segmentation image pipeline YAML.
 //
-// Drawer is nvsegfadedrawer. OSD displays instance masks.
+// Drawer is segfadedrawer. OSD displays instance masks.
 //
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → pgie → nvdsanalytics → tee_msg
-//         ├→ nvsegfadedrawer → nvosdbin → nvvideoconvert → nvstreamdemux
-//         │     → queue{N} → capsfilter{N} → nvdetlogger{N} → nvjpegenc{N} → filesink{N}
+//         ├→ segfadedrawer → nvosdbin → nvvideoconvert → nvstreamdemux
+//         │     → queue{N} → capsfilter{N} → detlogger{N} → nvjpegenc{N} → filesink{N}
 //         └→ queue_msg → nvmsgconv → nvmsgbroker
 class SegImageGenerator : public BaseImageGenerator {
 public:

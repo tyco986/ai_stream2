@@ -20,13 +20,13 @@ void VisEventSahiRtspGenerator::appendAfterOsd(int index, int gpuId) {
     appendNode("queue", "queue_vis" + suffix, addQueue());
     appendNode("nvvideoconvert", "nvvideoconvert_vis" + suffix, addNvvideoconvert(gpuId));
     appendNode("capsfilter", "capsfilter_vis" + suffix, addCapsfilter("video/x-raw(memory:NVMM), format=RGB"));
-    appendNode("nvviscapturer", "nvviscapturer" + suffix, addNvviscapturer(captureOutputDir(), capturerCodes()));
+    appendNode("viscapturer", "viscapturer" + suffix, addViscapturer(captureOutputDir(), capturerCodes()));
     appendNode("fakesink", "fakesink_vis" + suffix, addFakesink(false, false));
     appendNode("queue", "queue_enc" + suffix, addQueue());
     appendNode(
-        "nvpresencelogger",
-        "nvpresencelogger" + suffix,
-        addNvpresencelogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
+        "presencelogger",
+        "presencelogger" + suffix,
+        addPresencelogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
     appendNode(
         "nvv4l2h264enc",
         "nvv4l2h264enc" + suffix,
@@ -45,10 +45,10 @@ void VisEventSahiRtspGenerator::linkAfterOsd(YAML::Node edges, int index) {
     edges["tee_vis" + suffix].push_back("queue_enc" + suffix);
     edges["queue_vis" + suffix] = "nvvideoconvert_vis" + suffix;
     edges["nvvideoconvert_vis" + suffix] = "capsfilter_vis" + suffix;
-    edges["capsfilter_vis" + suffix] = "nvviscapturer" + suffix;
-    edges["nvviscapturer" + suffix] = "fakesink_vis" + suffix;
-    edges["queue_enc" + suffix] = "nvpresencelogger" + suffix;
-    edges["nvpresencelogger" + suffix] = "nvv4l2h264enc" + suffix;
+    edges["capsfilter_vis" + suffix] = "viscapturer" + suffix;
+    edges["viscapturer" + suffix] = "fakesink_vis" + suffix;
+    edges["queue_enc" + suffix] = "presencelogger" + suffix;
+    edges["presencelogger" + suffix] = "nvv4l2h264enc" + suffix;
     edges["nvv4l2h264enc" + suffix] = "h264parse" + suffix;
     edges["h264parse" + suffix] = "rtspclientsink" + suffix;
 }

@@ -2,12 +2,22 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0 gstreamer-base-1.0 gstreamer-video-1.0)
 
 add_library(fadedrawer SHARED
-    det_fade_engine.cpp
-    det_fade_engine_with_tracker.cpp
-    seg_fade_engine.cpp
-    seg_fade_engine_with_tracker.cpp
-    pose_fade_engine.cpp
-    pose_fade_engine_with_tracker.cpp
+    engine/det_fade_engine.cpp
+    engine/det_fade_engine_with_tracker.cpp
+    engine/seg_fade_engine.cpp
+    engine/seg_fade_engine_with_tracker.cpp
+    engine/pose_fade_engine.cpp
+    engine/pose_fade_engine_with_tracker.cpp
+    engine/stgcnpp_fade_engine_with_tracker.cpp
+    gst_bridge/gst_fade_drawer_utils.cpp
+    gst_bridge/gst_det_fade_drawer.cpp
+    gst_bridge/gst_det_fade_drawer_with_tracker.cpp
+    gst_bridge/gst_seg_fade_drawer.cpp
+    gst_bridge/gst_seg_fade_drawer_with_tracker.cpp
+    gst_bridge/gst_pose_fade_drawer.cpp
+    gst_bridge/gst_pose_fade_drawer_with_tracker.cpp
+    gst_bridge/gst_stgcnpp_fade_drawer_with_tracker.cpp
+    register_plugin.cpp
 )
 
 target_include_directories(fadedrawer PRIVATE
@@ -29,3 +39,4 @@ target_link_options(fadedrawer PRIVATE
     -Wl,-no-undefined
     -Wl,-rpath,/opt/nvidia/deepstream/deepstream/lib
 )
+set_target_properties(fadedrawer PROPERTIES OUTPUT_NAME gstfadedrawer)

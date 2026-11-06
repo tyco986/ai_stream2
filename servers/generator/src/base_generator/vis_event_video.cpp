@@ -56,7 +56,7 @@ void VisEventVideoGenerator::appendEncode(int gpuId) {
 }
 
 void VisEventVideoGenerator::linkEncode(YAML::Node edges) {
-    edges["nvpresencelogger"] = "nvstreamdemux";
+    edges["presencelogger"] = "nvstreamdemux";
     for (int index = 0; index < static_cast<int>(videos.size()); ++index) {
         const std::string suffix = std::to_string(index);
         edges["queue_demux" + suffix] = "nvv4l2h264enc" + suffix;

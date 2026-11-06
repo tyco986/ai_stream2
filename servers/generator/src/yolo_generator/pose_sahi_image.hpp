@@ -4,14 +4,14 @@
 
 // Generate YOLO SAHI pose image pipeline YAML.
 //
-// Postprocess element is nvsahipostprocess_pose. Drawer is nvposefadedrawer.
+// Postprocess element is nvsahipostprocesspose. Drawer is posefadedrawer.
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess_pose
+//     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocesspose
 //         → nvdsanalytics → tee_msg
-//         ├→ nvposefadedrawer → nvosdbin → nvvideoconvert → nvstreamdemux
-//         │     → queue_demux{N} → capsfilter{N} → nvdetlogger{N} → nvjpegenc{N} → filesink{N}
+//         ├→ posefadedrawer → nvosdbin → nvvideoconvert → nvstreamdemux
+//         │     → queue_demux{N} → capsfilter{N} → detlogger{N} → nvjpegenc{N} → filesink{N}
 //         └→ queue_msg → nvmsgconv → nvmsgbroker
 class PoseSahiImageGenerator : public SahiPoseImageGenerator {
 public:

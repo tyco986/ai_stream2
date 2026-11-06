@@ -24,7 +24,7 @@ VisSahiPoseVideoGenerator::VisSahiPoseVideoGenerator(
           std::move(tracker),
           std::move(logger),
           std::move(drawer)) {
-    sahiPostprocess = "nvsahipostprocess_pose";
+    sahiPostprocess = "nvsahipostprocesspose";
 }
 
 YAML::Node VisSahiPoseVideoGenerator::sahiPostprocessProperties(const nlohmann::json& postprocess) {
@@ -39,7 +39,7 @@ YAML::Node VisSahiPoseVideoGenerator::sahiPostprocessProperties(const nlohmann::
 }
 
 std::string VisSahiPoseVideoGenerator::visDrawerElement() const {
-    const std::string element = "nvposefadedrawer";
+    const std::string element = "posefadedrawer";
     return element;
 }
 

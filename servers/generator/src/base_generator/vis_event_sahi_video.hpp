@@ -11,7 +11,7 @@
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
-//         → nvpresencecoder → tee_msg → … → nvstreamdemux → filesink{N}
+//         → presenceeventcoder → tee_msg → … → nvstreamdemux → filesink{N}
 class VisEventSahiVideoGenerator : public VisEventVideoGenerator {
 public:
     static constexpr const char* SAHI_PREPROCESS_CONFIG_NAME = "nvsahipreprocess.ini";

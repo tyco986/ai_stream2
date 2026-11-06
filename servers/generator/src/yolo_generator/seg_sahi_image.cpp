@@ -83,9 +83,9 @@ void SegSahiImageGenerator::add() {
         appendNode("queue", "queue_demux" + suffix, addQueue());
         appendNode("capsfilter", "capsfilter" + suffix, addCapsfilter());
         appendNode(
-            "nvdetlogger",
-            "nvdetlogger" + suffix,
-            addNvdetlogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
+            "detlogger",
+            "detlogger" + suffix,
+            addDetlogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
         appendNode("nvjpegenc", "nvjpegenc" + suffix, addNvjpegenc());
         appendNode("filesink", "filesink" + suffix, addFilesink(sink, false, false));
     }
@@ -116,8 +116,8 @@ void SegSahiImageGenerator::link() {
     for (int index = 0; index < muxBatchSize; ++index) {
         const std::string suffix = std::to_string(index);
         edges["queue_demux" + suffix] = "capsfilter" + suffix;
-        edges["capsfilter" + suffix] = "nvdetlogger" + suffix;
-        edges["nvdetlogger" + suffix] = "nvjpegenc" + suffix;
+        edges["capsfilter" + suffix] = "detlogger" + suffix;
+        edges["detlogger" + suffix] = "nvjpegenc" + suffix;
         edges["nvjpegenc" + suffix] = "filesink" + suffix;
     }
     pipeline["deepstream"]["edges"] = edges;

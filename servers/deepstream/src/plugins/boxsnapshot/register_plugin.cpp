@@ -1,5 +1,5 @@
 #include "constants/boxsnapshot_const.hpp"
-#include "plugins/boxsnapshot/gst_boxsnapshot.hpp"
+#include "plugins/boxsnapshot/gst_bridge/gst_boxsnapshot.hpp"
 
 #include <gst/gst.h>
 
@@ -16,5 +16,5 @@ GST_PLUGIN_DEFINE(GST_VERSION_MAJOR,
                   boxsnapshotPluginInit,
                   boxsnapshot::VERSION,
                   boxsnapshot::LICENSE,
-                  boxsnapshot::PACKAGE,
+                  boxsnapshot::PLUGIN_PACKAGE,
                   boxsnapshot::ORIGIN)

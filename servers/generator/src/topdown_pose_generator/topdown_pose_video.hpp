@@ -11,9 +11,9 @@
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → nvbboxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0
+//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0
 //         → nvrtmposepostprocess → nvdsanalytics → tee_msg
-//         ├→ nvdetlogger → fakesink
+//         ├→ detlogger → fakesink
 //         └→ queue_msg → nvmsgconv → nvmsgbroker
 class TopdownPoseVideoGenerator : public BaseVideoGenerator {
 public:

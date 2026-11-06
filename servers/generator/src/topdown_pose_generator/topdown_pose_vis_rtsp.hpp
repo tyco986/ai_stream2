@@ -7,14 +7,14 @@
 
 // Generate topdown-pose RTSP pipeline with OSD preview.
 //
-// Drawer is nvposefadedrawer. OSD displays bbox and text.
+// Drawer is posefadedrawer. OSD displays bbox and text.
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → nvbboxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0
+//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0
 //         → nvrtmposepostprocess → nvdsanalytics → tee_msg
-//           ─┬→ nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → nvposefadedrawer{N} → nvosdbin{N}
-//           │     → queue_enc{N} → nvdetlogger{N} → nvv4l2h264enc{N} → h264parse{N} → rtspclientsink{N}
+//           ─┬→ nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → posefadedrawer{N} → nvosdbin{N}
+//           │     → queue_enc{N} → detlogger{N} → nvv4l2h264enc{N} → h264parse{N} → rtspclientsink{N}
 //           └→ queue_msg → nvmsgconv → nvmsgbroker
 class TopdownPoseVisRtspGenerator : public VisRtspGenerator {
 public:

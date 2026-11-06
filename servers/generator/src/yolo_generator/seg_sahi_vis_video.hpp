@@ -4,14 +4,14 @@
 
 // Generate YOLO SAHI segmentation video pipeline YAML with OSD and one mp4 per input.
 //
-// Drawer is nvsegfadedrawer. OSD displays instance masks.
+// Drawer is segfadedrawer. OSD displays instance masks.
 //
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
-//         → nvbboxsnapshot → nvtracker → nvdsanalytics → tee_msg
-//         ├→ nvsegfadedrawer → nvosdbin → nvvideoconvert → nvstreamdemux
-//         │     → queue_demux{N} → nvdetlogger{N} → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
+//         → boxsnapshot → nvtracker → nvdsanalytics → tee_msg
+//         ├→ segfadedrawer → nvosdbin → nvvideoconvert → nvstreamdemux
+//         │     → queue_demux{N} → detlogger{N} → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
 //         └→ queue_msg → nvmsgconv → nvmsgbroker
 class SegSahiVisVideoGenerator : public VisSahiVideoGenerator {
 public:

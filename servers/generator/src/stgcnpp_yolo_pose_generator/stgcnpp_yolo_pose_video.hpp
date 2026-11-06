@@ -11,9 +11,9 @@
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → nvbboxsnapshot → nvtracker → nvdspreprocess → sgie1
-//         → nvstgcnppactionlabel → nvdsanalytics → tee_msg
-//         ├→ nvstgcnpplogger → fakesink
+//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdspreprocess → sgie1
+//         → stgcnppactionlabel → nvdsanalytics → tee_msg
+//         ├→ stgcnpplogger → fakesink
 //         └→ queue_msg → nvmsgconv → nvmsgbroker
 class StgcnppYoloPoseVideoGenerator : public BaseVideoGenerator {
 public:

@@ -8,14 +8,14 @@
 
 // Generate ST-GCN++ RTMPose video pipeline with OSD and one mp4 per input.
 //
-// Drawer is nvstgcnppfadedrawerwithtracker. OSD displays bbox and text.
+// Drawer is stgcnppfadedrawerwithtracker. OSD displays bbox and text.
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → nvbboxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0
-//         → nvrtmposepostprocess → nvdspreprocess → sgie1 → nvstgcnppactionlabel → nvdsanalytics → tee_msg
-//         ├→ nvstgcnppfadedrawerwithtracker → nvosdbin → nvvideoconvert → nvstreamdemux
-//         │     → queue{N} → nvstgcnpplogger{N} → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
+//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0
+//         → nvrtmposepostprocess → nvdspreprocess → sgie1 → stgcnppactionlabel → nvdsanalytics → tee_msg
+//         ├→ stgcnppfadedrawerwithtracker → nvosdbin → nvvideoconvert → nvstreamdemux
+//         │     → queue{N} → stgcnpplogger{N} → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
 //         └→ queue_msg → nvmsgconv → nvmsgbroker
 class StgcnppRtmposeVisVideoGenerator : public VisVideoGenerator {
 public:

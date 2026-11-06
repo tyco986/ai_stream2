@@ -44,7 +44,7 @@ void PoseVisVideoGenerator::add() {
     appendNode("nvinfer", "pgie", addNvinfer(PGIE_CONFIG_NAME, pgieGenerator->config["property"]["batch-size"].as<int>(), gpuId));
     if (enableNvtracker) {
         if (drawer.has_value()) {
-            appendNode("nvbboxsnapshot", "nvbboxsnapshot", addNvbboxsnapshot());
+            appendNode("boxsnapshot", "boxsnapshot", addBoxsnapshot());
         }
         appendNode(
             "nvtracker",
@@ -71,9 +71,9 @@ void PoseVisVideoGenerator::add() {
         const std::filesystem::path sink = output / (std::to_string(streamIndex) + "_" + source.stem().string() + ".mp4");
         appendNode("queue", "queue" + std::to_string(streamIndex), addQueue());
         appendNode(
-            "nvdetlogger",
-            "nvdetlogger" + std::to_string(streamIndex),
-            addNvdetlogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
+            "detlogger",
+            "detlogger" + std::to_string(streamIndex),
+            addDetlogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
         appendNode(
             "nvv4l2h264enc",
             "nvv4l2h264enc" + std::to_string(streamIndex),
@@ -93,8 +93,8 @@ void PoseVisVideoGenerator::link() {
     std::string inferenceTail = "pgie";
     if (enableNvtracker) {
         if (drawer.has_value()) {
-            edges[inferenceTail] = "nvbboxsnapshot";
-            edges["nvbboxsnapshot"] = "nvtracker";
+            edges[inferenceTail] = "boxsnapshot";
+            edges["boxsnapshot"] = "nvtracker";
         } else {
             edges[inferenceTail] = "nvtracker";
         }
@@ -115,8 +115,8 @@ void PoseVisVideoGenerator::link() {
     edges["nvvideoconvert"] = "nvstreamdemux";
     for (int index = 0; index < runtimeBatchSize; ++index) {
         const std::string suffix = std::to_string(index);
-        edges["queue" + suffix] = "nvdetlogger" + suffix;
-        edges["nvdetlogger" + suffix] = "nvv4l2h264enc" + suffix;
+        edges["queue" + suffix] = "detlogger" + suffix;
+        edges["detlogger" + suffix] = "nvv4l2h264enc" + suffix;
         edges["nvv4l2h264enc" + suffix] = "h264parse" + suffix;
         edges["h264parse" + suffix] = "mp4mux" + suffix;
         edges["mp4mux" + suffix] = "filesink" + suffix;

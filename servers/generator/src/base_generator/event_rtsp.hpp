@@ -24,10 +24,10 @@
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → nvpresencecoder → tee_msg
+//     nvurisrcbin{N} → nvstreammux → pgie → presenceeventcoder → tee_msg
 //       ─┬→ nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → tee_raw{N}
-//       │     ─┬→ nvrawcapturer{N} → fakesink_raw{N}
-//       │     └→ nvosdbin{N} → nvpresencelogger{N} → nvviscapturer{N} → fakesink_vis{N}
+//       │     ─┬→ rawcapturer{N} → fakesink_raw{N}
+//       │     └→ nvosdbin{N} → presencelogger{N} → viscapturer{N} → fakesink_vis{N}
 //       └→ queue_msg → nvmsgconv → nvmsgbroker
 class EventRtspGenerator : public BaseEventGenerator {
 public:

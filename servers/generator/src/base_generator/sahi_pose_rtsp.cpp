@@ -22,7 +22,7 @@ SahiPoseRtspGenerator::SahiPoseRtspGenerator(
           std::move(tracker),
           std::move(logger),
           std::move(drawer)) {
-    sahiPostprocess = "nvsahipostprocess_pose";
+    sahiPostprocess = "nvsahipostprocesspose";
 }
 
 YAML::Node SahiPoseRtspGenerator::sahiPostprocessProperties(const nlohmann::json& postprocess) {

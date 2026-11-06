@@ -8,15 +8,15 @@
 
 // Generate ST-GCN++ RTMPose SAHI RTSP pipeline with OSD preview.
 //
-// Drawer is nvstgcnppfadedrawerwithtracker. mux batch size is the stream count.
+// Drawer is stgcnppfadedrawerwithtracker. mux batch size is the stream count.
 //
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
-//         → nvbboxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0 → nvrtmposepostprocess
+//         → boxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0 → nvrtmposepostprocess
 //         → nvdsanalytics → tee_msg
-//           ─┬→ nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → nvstgcnppfadedrawerwithtracker{N} → nvosdbin{N}
-//           │     → queue_enc{N} → nvstgcnpplogger{N} → nvv4l2h264enc{N} → h264parse{N} → rtspclientsink{N}
+//           ─┬→ nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → stgcnppfadedrawerwithtracker{N} → nvosdbin{N}
+//           │     → queue_enc{N} → stgcnpplogger{N} → nvv4l2h264enc{N} → h264parse{N} → rtspclientsink{N}
 //           └→ queue_msg → nvmsgconv → nvmsgbroker
 class StgcnppRtmposeSahiVisRtspGenerator : public VisSahiRtspGenerator {
 public:

@@ -7,15 +7,15 @@
 
 // Generate ST-GCN++ YOLO-pose SAHI video pipeline with OSD and one mp4 per input.
 //
-// Postprocess element is nvsahipostprocess_pose. Drawer is nvstgcnppfadedrawerwithtracker.
+// Postprocess element is nvsahipostprocesspose. Drawer is stgcnppfadedrawerwithtracker.
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess_pose
-//         → nvbboxsnapshot → nvtracker → nvdspreprocess → sgie1 → nvstgcnppactionlabel
+//     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocesspose
+//         → boxsnapshot → nvtracker → nvdspreprocess → sgie1 → stgcnppactionlabel
 //         → nvdsanalytics → tee_msg
-//         ├→ nvstgcnppfadedrawerwithtracker → nvosdbin → nvvideoconvert → nvstreamdemux
-//         │     → queue_demux{N} → nvstgcnpplogger{N} → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
+//         ├→ stgcnppfadedrawerwithtracker → nvosdbin → nvvideoconvert → nvstreamdemux
+//         │     → queue_demux{N} → stgcnpplogger{N} → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
 //         └→ queue_msg → nvmsgconv → nvmsgbroker
 class StgcnppYoloPoseSahiVisVideoGenerator : public VisSahiPoseVideoGenerator {
 public:

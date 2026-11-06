@@ -27,8 +27,8 @@
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → pgie → nvdsanalytics → tee_msg
-//         ├→ nvdetfadedrawer → nvosdbin → nvvideoconvert → nvstreamdemux
-//         │     → queue{N} → capsfilter{N} → nvdetlogger{N} → nvjpegenc{N} → filesink{N}
+//         ├→ detfadedrawer → nvosdbin → nvvideoconvert → nvstreamdemux
+//         │     → queue{N} → capsfilter{N} → detlogger{N} → nvjpegenc{N} → filesink{N}
 //         └→ queue_msg → nvmsgconv → nvmsgbroker
 class BaseImageGenerator : public PipelineGenerator {
 public:

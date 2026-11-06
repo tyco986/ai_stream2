@@ -8,10 +8,10 @@
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → nvpresencecoder → tee_msg
+//     nvurisrcbin{N} → nvstreammux → pgie → presenceeventcoder → tee_msg
 //       └→ … → tee_vis
-//             ─┬→ queue_vis → nvviscapturer → fakesink_vis
-//             └→ queue_enc → nvpresencelogger → nvstreamdemux
+//             ─┬→ queue_vis → viscapturer → fakesink_vis
+//             └→ queue_enc → presencelogger → nvstreamdemux
 //                   → queue_demux{N} → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
 class VisEventVideoGenerator : public EventVideoGenerator {
 public:

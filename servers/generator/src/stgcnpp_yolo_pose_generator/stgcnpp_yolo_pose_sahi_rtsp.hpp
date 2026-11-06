@@ -7,14 +7,14 @@
 
 // Generate ST-GCN++ YOLO-pose SAHI RTSP pipeline (headless).
 //
-// mux batch size is the stream count. Postprocess element is nvsahipostprocess_pose.
+// mux batch size is the stream count. Postprocess element is nvsahipostprocesspose.
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess_pose
-//         → nvbboxsnapshot → nvtracker → nvdspreprocess → sgie1 → nvstgcnppactionlabel
+//     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocesspose
+//         → boxsnapshot → nvtracker → nvdspreprocess → sgie1 → stgcnppactionlabel
 //         → nvdsanalytics → tee_msg
-//           ─┬→ nvstreamdemux → queue_demux{N} → nvstgcnpplogger{N} → fakesink{N}
+//           ─┬→ nvstreamdemux → queue_demux{N} → stgcnpplogger{N} → fakesink{N}
 //           └→ queue_msg → nvmsgconv → nvmsgbroker
 class StgcnppYoloPoseSahiRtspGenerator : public SahiPoseRtspGenerator {
 public:

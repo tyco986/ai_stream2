@@ -12,9 +12,9 @@
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
-//         → nvbboxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0 → nvrtmposepostprocess
+//         → boxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0 → nvrtmposepostprocess
 //         → nvdsanalytics → tee_msg
-//         ├→ nvdetlogger → fakesink
+//         ├→ detlogger → fakesink
 //         └→ queue_msg → nvmsgconv → nvmsgbroker
 class TopdownPoseSahiVideoGenerator : public SahiVideoGenerator {
 public:

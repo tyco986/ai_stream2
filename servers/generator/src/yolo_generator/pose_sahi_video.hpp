@@ -5,13 +5,13 @@
 // Generate YOLO SAHI pose video pipeline YAML (headless, ends at fakesink).
 //
 // mux batch size is the number of videos. pgie batch size is the SAHI tile count.
-// Postprocess element is nvsahipostprocess_pose.
+// Postprocess element is nvsahipostprocesspose.
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess_pose
-//         → nvbboxsnapshot → nvtracker → nvdsanalytics → tee_msg
-//         ├→ nvdetlogger → fakesink
+//     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocesspose
+//         → boxsnapshot → nvtracker → nvdsanalytics → tee_msg
+//         ├→ detlogger → fakesink
 //         └→ queue_msg → nvmsgconv → nvmsgbroker
 class PoseSahiVideoGenerator : public SahiPoseVideoGenerator {
 public:

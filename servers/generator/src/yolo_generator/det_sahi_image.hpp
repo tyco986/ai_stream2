@@ -5,14 +5,14 @@
 // Generate YOLO SAHI detection image pipeline YAML.
 //
 // mux batch size is the image count. pgie batch size is the SAHI tile count.
-// Drawer is nvdetfadedrawer. OSD displays bbox and text.
+// Drawer is detfadedrawer. OSD displays bbox and text.
 //
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
 //         → nvdsanalytics → tee_msg
-//         ├→ nvdetfadedrawer → nvosdbin → nvvideoconvert → nvstreamdemux
-//         │     → queue_demux{N} → capsfilter{N} → nvdetlogger{N} → nvjpegenc{N} → filesink{N}
+//         ├→ detfadedrawer → nvosdbin → nvvideoconvert → nvstreamdemux
+//         │     → queue_demux{N} → capsfilter{N} → detlogger{N} → nvjpegenc{N} → filesink{N}
 //         └→ queue_msg → nvmsgconv → nvmsgbroker
 class DetSahiImageGenerator : public SahiImageGenerator {
 public:

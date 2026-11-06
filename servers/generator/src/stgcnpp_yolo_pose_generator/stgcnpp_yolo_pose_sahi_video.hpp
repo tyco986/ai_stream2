@@ -8,14 +8,14 @@
 // Generate ST-GCN++ YOLO-pose SAHI video pipeline (headless, ends at fakesink).
 //
 // mux batch size is the video count. pgie batch size is the SAHI tile count.
-// Postprocess element is nvsahipostprocess_pose.
+// Postprocess element is nvsahipostprocesspose.
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess_pose
-//         → nvbboxsnapshot → nvtracker → nvdspreprocess → sgie1 → nvstgcnppactionlabel
+//     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocesspose
+//         → boxsnapshot → nvtracker → nvdspreprocess → sgie1 → stgcnppactionlabel
 //         → nvdsanalytics → tee_msg
-//         ├→ nvstgcnpplogger → fakesink
+//         ├→ stgcnpplogger → fakesink
 //         └→ queue_msg → nvmsgconv → nvmsgbroker
 class StgcnppYoloPoseSahiVideoGenerator : public SahiPoseVideoGenerator {
 public:

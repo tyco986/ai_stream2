@@ -79,7 +79,7 @@ void TopdownPoseSahiRtspGenerator::add() {
     appendNode(sahiPostprocess, sahiPostprocess, sahiPostprocessProperties(sahi.at(sahiPostprocess)));
     if (enableNvtracker) {
         if (drawer.has_value()) {
-            appendNode("nvbboxsnapshot", "nvbboxsnapshot", addNvbboxsnapshot());
+            appendNode("boxsnapshot", "boxsnapshot", addBoxsnapshot());
         }
         appendNode(
             "nvtracker",
@@ -102,9 +102,9 @@ void TopdownPoseSahiRtspGenerator::add() {
         const std::string suffix = std::to_string(streamIndex);
         appendNode("queue", "queue_demux" + suffix, addQueue());
         appendNode(
-            "nvdetlogger",
-            "nvdetlogger" + suffix,
-            addNvdetlogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
+            "detlogger",
+            "detlogger" + suffix,
+            addDetlogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
         appendNode("fakesink", "fakesink" + suffix, addFakesink(false, false));
     }
 }
@@ -121,8 +121,8 @@ void TopdownPoseSahiRtspGenerator::link() {
     std::string inferenceTail = sahiPostprocess;
     if (enableNvtracker) {
         if (drawer.has_value()) {
-            edges[inferenceTail] = "nvbboxsnapshot";
-            edges["nvbboxsnapshot"] = "nvtracker";
+            edges[inferenceTail] = "boxsnapshot";
+            edges["boxsnapshot"] = "nvtracker";
         } else {
             edges[inferenceTail] = "nvtracker";
         }
@@ -139,8 +139,8 @@ void TopdownPoseSahiRtspGenerator::link() {
     edges["nvmsgconv"] = "nvmsgbroker";
     for (int index = 0; index < muxBatchSize; ++index) {
         const std::string suffix = std::to_string(index);
-        edges["queue_demux" + suffix] = "nvdetlogger" + suffix;
-        edges["nvdetlogger" + suffix] = "fakesink" + suffix;
+        edges["queue_demux" + suffix] = "detlogger" + suffix;
+        edges["detlogger" + suffix] = "fakesink" + suffix;
     }
     pipeline["deepstream"]["edges"] = edges;
 }

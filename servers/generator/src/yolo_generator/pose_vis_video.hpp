@@ -4,13 +4,13 @@
 
 // Generate YOLO pose video pipeline YAML with OSD and one mp4 per input.
 //
-// Drawer is nvposefadedrawer. OSD displays bbox and text.
+// Drawer is posefadedrawer. OSD displays bbox and text.
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → nvbboxsnapshot → nvtracker → nvdsanalytics → tee_msg
-//         ├→ nvposefadedrawer → nvosdbin → nvvideoconvert → nvstreamdemux
-//         │     → queue{N} → nvdetlogger{N} → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
+//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → tee_msg
+//         ├→ posefadedrawer → nvosdbin → nvvideoconvert → nvstreamdemux
+//         │     → queue{N} → detlogger{N} → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
 //         └→ queue_msg → nvmsgconv → nvmsgbroker
 class PoseVisVideoGenerator : public VisVideoGenerator {
 public:

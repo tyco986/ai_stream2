@@ -288,7 +288,7 @@ void EventVideoGenerator::write(const std::filesystem::path& configSaveDir) {
 }
 
 std::string EventVideoGenerator::nvdetDrawerElement() const {
-    const std::string element = enableNvtracker ? "nvdetfadedrawerwithtracker" : "nvdetfadedrawer";
+    const std::string element = enableNvtracker ? "detfadedrawerwithtracker" : "detfadedrawer";
     return element;
 }
 
@@ -296,9 +296,9 @@ YAML::Node EventVideoGenerator::nvdetDrawerProperties(const nlohmann::json& draw
     const int interval = drawerNode.value("interval", 0);
     const int fadeTime = drawerNode.value("fade_time", 0);
     const bool showLabel = drawerNode.value("show_label", false);
-    YAML::Node properties = addNvdetfadedrawer(interval, fadeTime, showLabel);
+    YAML::Node properties = addDetfadedrawer(interval, fadeTime, showLabel);
     if (enableNvtracker) {
-        properties = addNvdetfadedrawerwithtracker(interval, fadeTime, showLabel, drawerNode.value("show_snap", true));
+        properties = addDetfadedrawerwithtracker(interval, fadeTime, showLabel, drawerNode.value("show_snap", true));
     }
     return properties;
 }
@@ -321,7 +321,7 @@ void EventVideoGenerator::appendEncode(int gpuId) {
 }
 
 void EventVideoGenerator::linkEncode(YAML::Node edges) {
-    edges["nvpresencelogger"] = "fakesink";
+    edges["presencelogger"] = "fakesink";
 }
 
 std::string EventVideoGenerator::inferenceTail() const {
@@ -339,7 +339,7 @@ void EventVideoGenerator::add() {
     appendInfer(gpuId);
     if (enableNvtracker) {
         if (drawer.has_value()) {
-            appendNode("nvbboxsnapshot", "nvbboxsnapshot", addNvbboxsnapshot());
+            appendNode("boxsnapshot", "boxsnapshot", addBoxsnapshot());
         }
         appendNode(
             "nvtracker",
@@ -360,7 +360,7 @@ void EventVideoGenerator::add() {
     appendNode("queue", "queue_raw", addQueue());
     appendNode("nvvideoconvert", "nvvideoconvert_raw", addNvvideoconvert(gpuId));
     appendNode("capsfilter", "capsfilter_raw", addCapsfilter("video/x-raw(memory:NVMM), format=RGB"));
-    appendNode("nvrawcapturer", "nvrawcapturer", addNvrawcapturer(captureOutputDir(), capturerCodes()));
+    appendNode("rawcapturer", "rawcapturer", addRawcapturer(captureOutputDir(), capturerCodes()));
     appendNode("fakesink", "fakesink_raw", addFakesink(false, false));
     appendNode("queue", "queue_osd", addQueue());
     appendNode("nvvideoconvert", "nvvideoconvert_osd", addNvvideoconvert(gpuId));
@@ -373,13 +373,13 @@ void EventVideoGenerator::add() {
     appendNode("queue", "queue_vis", addQueue());
     appendNode("nvvideoconvert", "nvvideoconvert_vis", addNvvideoconvert(gpuId));
     appendNode("capsfilter", "capsfilter_vis", addCapsfilter("video/x-raw(memory:NVMM), format=RGB"));
-    appendNode("nvviscapturer", "nvviscapturer", addNvviscapturer(captureOutputDir(), capturerCodes()));
+    appendNode("viscapturer", "viscapturer", addViscapturer(captureOutputDir(), capturerCodes()));
     appendNode("fakesink", "fakesink_vis", addFakesink(false, false));
     appendNode("queue", "queue_enc", addQueue());
     appendNode(
-        "nvpresencelogger",
-        "nvpresencelogger",
-        addNvpresencelogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
+        "presencelogger",
+        "presencelogger",
+        addPresencelogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
     appendEncode(gpuId);
 }
 
@@ -392,8 +392,8 @@ void EventVideoGenerator::link() {
     std::string inferenceTail = this->inferenceTail();
     if (enableNvtracker) {
         if (drawer.has_value()) {
-            edges[inferenceTail] = "nvbboxsnapshot";
-            edges["nvbboxsnapshot"] = "nvtracker";
+            edges[inferenceTail] = "boxsnapshot";
+            edges["boxsnapshot"] = "nvtracker";
         } else {
             edges[inferenceTail] = "nvtracker";
         }
@@ -411,8 +411,8 @@ void EventVideoGenerator::link() {
     edges["tee_raw"].push_back("queue_osd");
     edges["queue_raw"] = "nvvideoconvert_raw";
     edges["nvvideoconvert_raw"] = "capsfilter_raw";
-    edges["capsfilter_raw"] = "nvrawcapturer";
-    edges["nvrawcapturer"] = "fakesink_raw";
+    edges["capsfilter_raw"] = "rawcapturer";
+    edges["rawcapturer"] = "fakesink_raw";
     edges["queue_osd"] = "nvvideoconvert_osd";
     edges["nvvideoconvert_osd"] = "capsfilter_osd";
     const std::string osdPrev = drawer.has_value() ? nvdetDrawerElement() : "nvosdbin";
@@ -425,9 +425,9 @@ void EventVideoGenerator::link() {
     edges["tee_vis"].push_back("queue_enc");
     edges["queue_vis"] = "nvvideoconvert_vis";
     edges["nvvideoconvert_vis"] = "capsfilter_vis";
-    edges["capsfilter_vis"] = "nvviscapturer";
-    edges["nvviscapturer"] = "fakesink_vis";
-    edges["queue_enc"] = "nvpresencelogger";
+    edges["capsfilter_vis"] = "viscapturer";
+    edges["viscapturer"] = "fakesink_vis";
+    edges["queue_enc"] = "presencelogger";
     linkEncode(edges);
     pipeline["deepstream"]["edges"] = edges;
 }

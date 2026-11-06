@@ -4,13 +4,13 @@
 
 // Generate YOLO pose image pipeline YAML.
 //
-// Drawer is nvposefadedrawer. OSD displays bbox and text.
+// Drawer is posefadedrawer. OSD displays bbox and text.
 //
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → pgie → nvdsanalytics → tee_msg
-//         ├→ nvposefadedrawer → nvosdbin → nvvideoconvert → nvstreamdemux
-//         │     → queue{N} → capsfilter{N} → nvdetlogger{N} → nvjpegenc{N} → filesink{N}
+//         ├→ posefadedrawer → nvosdbin → nvvideoconvert → nvstreamdemux
+//         │     → queue{N} → capsfilter{N} → detlogger{N} → nvjpegenc{N} → filesink{N}
 //         └→ queue_msg → nvmsgconv → nvmsgbroker
 class PoseImageGenerator : public BaseImageGenerator {
 public:

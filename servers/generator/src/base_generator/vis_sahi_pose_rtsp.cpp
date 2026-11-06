@@ -22,7 +22,7 @@ VisSahiPoseRtspGenerator::VisSahiPoseRtspGenerator(
           std::move(tracker),
           std::move(logger),
           std::move(drawer)) {
-    sahiPostprocess = "nvsahipostprocess_pose";
+    sahiPostprocess = "nvsahipostprocesspose";
 }
 
 YAML::Node VisSahiPoseRtspGenerator::sahiPostprocessProperties(const nlohmann::json& postprocess) {
@@ -37,7 +37,7 @@ YAML::Node VisSahiPoseRtspGenerator::sahiPostprocessProperties(const nlohmann::j
 }
 
 std::string VisSahiPoseRtspGenerator::visDrawerElement() const {
-    const std::string element = "nvposefadedrawer";
+    const std::string element = "posefadedrawer";
     return element;
 }
 

@@ -17,7 +17,7 @@ public:
     static constexpr const char* CONFIG_NAME = "sgie1.yml";
     static constexpr const char* META_NAME = "sgie1_meta.json";
     static constexpr const char* PREPROCESS_CONFIG_NAME = "preprocess_stgcnpp.txt";
-    static constexpr const char* DRAWER_ELEMENT = "nvstgcnppfadedrawerwithtracker";
+    static constexpr const char* DRAWER_ELEMENT = "stgcnppfadedrawerwithtracker";
 
     StgcnppYoloPose(nlohmann::json stgcnpp, int streamCount);
 
