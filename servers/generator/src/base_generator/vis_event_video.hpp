@@ -10,7 +10,7 @@
 //
 //     nvurisrcbin{N} → nvstreammux → pgie → presenceeventcoder → tee_msg
 //       └→ … → tee_vis
-//             ─┬→ queue_vis → viscapturer → fakesink_vis
+//             ─┬→ queue_vis → nvvideoconvert_vis → capsfilter_vis → viscapturer → fakesink_vis
 //             └→ queue_enc → presencelogger → nvstreamdemux
 //                   → queue_demux{N} → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
 class VisEventVideoGenerator : public EventVideoGenerator {

@@ -7,7 +7,7 @@
 
 namespace stgcnpp_parser {
 
-inline constexpr const char* RUNTIME_ROOT = "/root/runtime";
+inline constexpr const char* MODELS_DIR = "/root/runtime/models";
 inline constexpr const char* META_JSON_NAME = "meta.json";
 inline constexpr const char* LABELS_NAME = "labels.txt";
 inline constexpr std::array<int, 4> INPUT_TAIL = {2, 100, 17, 3};

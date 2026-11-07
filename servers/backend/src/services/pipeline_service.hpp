@@ -37,10 +37,13 @@ class PipelineService {
                     const Json::Value& startTime,
                     const Json::Value& endTime,
                     const Json::Value& duration);
-  std::vector<std::string> getModelPaths(const std::string& configPath);
+  YAML::Node readParams(const std::string& configPath);
+  std::vector<std::string> getModelPaths(const YAML::Node& params);
+  std::string packMedia(const YAML::Node& params);
 
  private:
   void collectModelZips(const YAML::Node& node, std::vector<std::string>& paths);
+  void collectMedia(const YAML::Node& params, std::vector<std::string>& paths);
   YAML::Node json2yaml(const Json::Value& value);
   Json::Value json2array(const std::string& text);
   Json::Value row2json(const drogon::orm::Row& row);

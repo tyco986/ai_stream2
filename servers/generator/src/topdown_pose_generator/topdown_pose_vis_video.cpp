@@ -70,30 +70,23 @@ void TopdownPoseVisVideoGenerator::add() {
     appendNode("nvdspreprocess", "nvdspreprocess_rtmpose", addNvdspreprocess(TopdownPose::RTMPOSE_PREPROCESS_CONFIG_NAME));
     appendNode("nvinfer", "sgie0", addNvinfer(TopdownPose::SGIE_CONFIG_NAME, pose->batchSize, pose->gpuId, true));
     appendNode("nvrtmposepostprocess", "nvrtmposepostprocess", addNvrtmposepostprocess(pose->uniqueId));
-    appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME, gpuId));
-    appendNode("tee", "tee_msg", addTee());
-    appendNode("queue", "queue_msg", addQueue());
-    appendNode("nvmsgconv", "nvmsgconv", addNvmsgconv(MSGCONV_CONFIG_NAME, pipeline::PAYLOAD_DEEPSTREAM_MINIMAL));
-    appendNode(
-        "nvmsgbroker",
-        "nvmsgbroker",
-        addNvmsgbroker(subelement::KAFKA_PROTO_LIB, subelement::KAFKA_CONN_STR, kafkaTopic, KAFKA_CONFIG_NAME, false, false));
-    const std::string drawerElement = nvposeDrawerElement();
-    if (drawer.has_value()) {
-        appendNode(drawerElement, drawerElement, nvposeDrawerProperties(*drawer));
-    }
-    appendNode("nvosdbin", "nvosdbin", addNvosdbin(gpuId, true, true, false));
-    appendNode("nvvideoconvert", "nvvideoconvert", addNvvideoconvert(gpuId));
+    appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
+    const std::string drawerElement = nvposeDrawerElement();
     for (int streamIndex = 0; streamIndex < runtimeBatchSize; ++streamIndex) {
         const std::string suffix = std::to_string(streamIndex);
         const std::filesystem::path source(videos.at(streamIndex).get<std::string>());
-        const std::filesystem::path sink = output / (suffix + "_" + source.stem().string() + ".mp4");
-        appendNode("queue", "queue" + suffix, addQueue());
+        const std::filesystem::path sink = output / source.filename();
+        appendNode("queue", "queue_demux" + suffix, addQueue());
+        appendNode("nvvideoconvert", "nvvideoconvert" + suffix, addNvvideoconvert(gpuId));
+        if (drawer.has_value()) {
+            appendNode(drawerElement, drawerElement + suffix, nvposeDrawerProperties(*drawer));
+        }
+        appendNode("nvosdbin", "nvosdbin" + suffix, addNvosdbin(gpuId, true, true, false));
         appendNode(
             "detlogger",
             "detlogger" + suffix,
-            addDetlogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
+            addDetlogger(logger.value("interval", 0)));
         appendNode(
             "nvv4l2h264enc",
             "nvv4l2h264enc" + suffix,
@@ -124,21 +117,17 @@ void TopdownPoseVisVideoGenerator::link() {
     edges["nvdspreprocess_rtmpose"] = "sgie0";
     edges["sgie0"] = "nvrtmposepostprocess";
     edges["nvrtmposepostprocess"] = "nvdsanalytics";
-    edges["nvdsanalytics"] = "tee_msg";
+    edges["nvdsanalytics"] = "nvstreamdemux";
     const std::string drawerElement = nvposeDrawerElement();
-    const std::string visNext = drawer.has_value() ? drawerElement : "nvosdbin";
-    edges["tee_msg"].push_back(visNext);
-    edges["tee_msg"].push_back("queue_msg");
-    if (drawer.has_value()) {
-        edges[drawerElement] = "nvosdbin";
-    }
-    edges["queue_msg"] = "nvmsgconv";
-    edges["nvmsgconv"] = "nvmsgbroker";
-    edges["nvosdbin"] = "nvvideoconvert";
-    edges["nvvideoconvert"] = "nvstreamdemux";
     for (int index = 0; index < runtimeBatchSize; ++index) {
         const std::string suffix = std::to_string(index);
-        edges["queue" + suffix] = "detlogger" + suffix;
+        const std::string osdPrev = drawer.has_value() ? drawerElement + suffix : "nvosdbin" + suffix;
+        edges["queue_demux" + suffix] = "nvvideoconvert" + suffix;
+        edges["nvvideoconvert" + suffix] = osdPrev;
+        if (drawer.has_value()) {
+            edges[drawerElement + suffix] = "nvosdbin" + suffix;
+        }
+        edges["nvosdbin" + suffix] = "detlogger" + suffix;
         edges["detlogger" + suffix] = "nvv4l2h264enc" + suffix;
         edges["nvv4l2h264enc" + suffix] = "h264parse" + suffix;
         edges["h264parse" + suffix] = "mp4mux" + suffix;

@@ -97,7 +97,6 @@ BaseVideoGenerator::BaseVideoGenerator(
     if (logger.has_value()) {
         this->logger.update(*logger);
     }
-    this->logger["root"] = std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + this->pipelineName;
 }
 
 void BaseVideoGenerator::init() {
@@ -105,7 +104,6 @@ void BaseVideoGenerator::init() {
     initPgie();
     initNvdsanalytics();
     initNvtracker();
-    initNvmsgconv();
     initKafka();
     initParams();
     initPipeline();
@@ -220,22 +218,9 @@ void BaseVideoGenerator::initNvtracker() {
     }
 }
 
-std::vector<std::string> BaseVideoGenerator::kafkaStreams() const {
-    std::vector<std::string> names;
-    for (const nlohmann::json& item : videos) {
-        names.push_back(item.get<std::string>());
-    }
-    return names;
-}
-
-void BaseVideoGenerator::initNvmsgconv() {
-    nvmsgconvGenerator.emplace(kafkaStreams());
-    files.insert_or_assign(MSGCONV_CONFIG_NAME, ConfigFile(nvmsgconvGenerator->config));
-}
-
 void BaseVideoGenerator::initKafka() {
     kafkaGenerator.emplace();
-    kafkaTopic = std::string("ai_stream2_") + pipelineName;
+    kafkaTopic = std::string(subelement::KAFKA_TOPIC_PREFIX) + pipelineName;
     files.insert_or_assign(KAFKA_CONFIG_NAME, ConfigFile(kafkaGenerator->config));
 }
 
@@ -251,12 +236,6 @@ void BaseVideoGenerator::applySavePaths(YAML::Node pipelineDocument, const std::
         }
         if (name == "nvdsanalytics") {
             properties["config-file"] = (configSaveDir / ANALYTICS_CONFIG_NAME).string();
-        }
-        if (name == "nvmsgconv") {
-            properties["config"] = (configSaveDir / MSGCONV_CONFIG_NAME).string();
-        }
-        if (name == "nvmsgbroker") {
-            properties["config"] = (configSaveDir / KAFKA_CONFIG_NAME).string();
         }
         node["properties"] = properties;
     }
@@ -365,18 +344,11 @@ void BaseVideoGenerator::add() {
             "nvtracker",
             addNvtracker(subelement::TRACKER_LL_LIB, TRACKER_CONFIG_NAME, trackerWidth, trackerHeight, gpuId, operateOnClassIds));
     }
-    appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME, gpuId));
-    appendNode("tee", "tee_msg", addTee());
-    appendNode("queue", "queue_msg", addQueue());
-    appendNode("nvmsgconv", "nvmsgconv", addNvmsgconv(MSGCONV_CONFIG_NAME, pipeline::PAYLOAD_DEEPSTREAM_MINIMAL));
-    appendNode(
-        "nvmsgbroker",
-        "nvmsgbroker",
-        addNvmsgbroker(subelement::KAFKA_PROTO_LIB, subelement::KAFKA_CONN_STR, kafkaTopic, KAFKA_CONFIG_NAME, false, false));
+    appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
     appendNode(
         "detlogger",
         "detlogger",
-        addDetlogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
+        addDetlogger(logger.value("interval", 0)));
     appendNode("fakesink", "fakesink", addFakesink(false, false));
 }
 
@@ -397,11 +369,7 @@ void BaseVideoGenerator::link() {
         inferenceTail = "nvtracker";
     }
     edges[inferenceTail] = "nvdsanalytics";
-    edges["nvdsanalytics"] = "tee_msg";
-    edges["tee_msg"].push_back("detlogger");
-    edges["tee_msg"].push_back("queue_msg");
-    edges["queue_msg"] = "nvmsgconv";
-    edges["nvmsgconv"] = "nvmsgbroker";
+    edges["nvdsanalytics"] = "detlogger";
     edges["detlogger"] = "fakesink";
     pipeline["deepstream"]["edges"] = edges;
 }

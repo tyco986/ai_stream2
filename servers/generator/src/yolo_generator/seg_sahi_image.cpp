@@ -42,7 +42,7 @@ void SegSahiImageGenerator::add() {
     appendNode(
         "nvstreammux",
         "nvstreammux",
-        addNvstreammux(muxBatchSize, width, height, false, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId));
+        addNvstreammux(muxBatchSize, width, height, false, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId, false));
     const nlohmann::json& preprocess = sahi.at("nvsahipreprocess");
     appendNode(
         "nvsahipreprocess",
@@ -61,31 +61,24 @@ void SegSahiImageGenerator::add() {
         addNvinfer(PGIE_CONFIG_NAME, pgieGenerator->config["property"]["batch-size"].as<int>(), gpuId, true));
     appendNode("queue", "queue_sahi", addQueue());
     appendNode(sahiPostprocess, sahiPostprocess, sahiPostprocessProperties(sahi.at(sahiPostprocess)));
-    appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME, gpuId));
-    appendNode("tee", "tee_msg", addTee());
-    appendNode("queue", "queue_msg", addQueue());
-    appendNode("nvmsgconv", "nvmsgconv", addNvmsgconv(MSGCONV_CONFIG_NAME, pipeline::PAYLOAD_DEEPSTREAM_MINIMAL));
-    appendNode(
-        "nvmsgbroker",
-        "nvmsgbroker",
-        addNvmsgbroker(subelement::KAFKA_PROTO_LIB, subelement::KAFKA_CONN_STR, kafkaTopic, KAFKA_CONFIG_NAME, false, false));
-    const std::string drawerElement = nvsegDrawerElement();
-    if (drawer.has_value()) {
-        appendNode(drawerElement, drawerElement, nvsegDrawerProperties(*drawer));
-    }
-    appendNode("nvosdbin", "nvosdbin", addNvosdbin(gpuId, true, true, true));
-    appendNode("nvvideoconvert", "nvvideoconvert", addNvvideoconvert(gpuId));
+    appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
+    const std::string drawerElement = nvsegDrawerElement();
     for (int streamIndex = 0; streamIndex < muxBatchSize; ++streamIndex) {
         const std::string suffix = std::to_string(streamIndex);
         const std::filesystem::path source(images.at(streamIndex).get<std::string>());
-        const std::filesystem::path sink = output / (suffix + "_" + source.stem().string() + ".jpg");
+        const std::filesystem::path sink = output / (source.stem().string() + ".jpg");
         appendNode("queue", "queue_demux" + suffix, addQueue());
+        if (drawer.has_value()) {
+            appendNode(drawerElement, drawerElement + suffix, nvsegDrawerProperties(*drawer));
+        }
+        appendNode("nvosdbin", "nvosdbin" + suffix, addNvosdbin(gpuId, true, true, true));
+        appendNode("nvvideoconvert", "nvvideoconvert" + suffix, addNvvideoconvert(gpuId));
         appendNode("capsfilter", "capsfilter" + suffix, addCapsfilter());
         appendNode(
             "detlogger",
             "detlogger" + suffix,
-            addDetlogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
+            addDetlogger(logger.value("interval", 0)));
         appendNode("nvjpegenc", "nvjpegenc" + suffix, addNvjpegenc());
         appendNode("filesink", "filesink" + suffix, addFilesink(sink, false, false));
     }
@@ -101,21 +94,17 @@ void SegSahiImageGenerator::link() {
     edges["pgie"] = "queue_sahi";
     edges["queue_sahi"] = sahiPostprocess;
     edges[sahiPostprocess] = "nvdsanalytics";
-    edges["nvdsanalytics"] = "tee_msg";
+    edges["nvdsanalytics"] = "nvstreamdemux";
     const std::string drawerElement = nvsegDrawerElement();
-    const std::string visNext = drawer.has_value() ? drawerElement : "nvosdbin";
-    edges["tee_msg"].push_back(visNext);
-    edges["tee_msg"].push_back("queue_msg");
-    if (drawer.has_value()) {
-        edges[drawerElement] = "nvosdbin";
-    }
-    edges["queue_msg"] = "nvmsgconv";
-    edges["nvmsgconv"] = "nvmsgbroker";
-    edges["nvosdbin"] = "nvvideoconvert";
-    edges["nvvideoconvert"] = "nvstreamdemux";
     for (int index = 0; index < muxBatchSize; ++index) {
         const std::string suffix = std::to_string(index);
-        edges["queue_demux" + suffix] = "capsfilter" + suffix;
+        const std::string osdPrev = drawer.has_value() ? drawerElement + suffix : "nvosdbin" + suffix;
+        edges["queue_demux" + suffix] = osdPrev;
+        if (drawer.has_value()) {
+            edges[drawerElement + suffix] = "nvosdbin" + suffix;
+        }
+        edges["nvosdbin" + suffix] = "nvvideoconvert" + suffix;
+        edges["nvvideoconvert" + suffix] = "capsfilter" + suffix;
         edges["capsfilter" + suffix] = "detlogger" + suffix;
         edges["detlogger" + suffix] = "nvjpegenc" + suffix;
         edges["nvjpegenc" + suffix] = "filesink" + suffix;

@@ -33,10 +33,10 @@ protected:
     YAML::Node addNvsahipostprocessPose(const std::string& gieIds = pipeline::GIE_IDS_DEFAULT, bool classAgnostic = false, double oksThreshold = pipeline::OKS_THRESHOLD, double visThreshold = 0.0, int numKeypoints = 0);
     YAML::Node addNvtracker(const std::string& llLibFile, const std::string& llConfigFile, int trackerWidth, int trackerHeight, int gpuId = 0, const std::string& operateOnClassIds = "");
     YAML::Node addBoxsnapshot();
-    YAML::Node addNvdsanalytics(const std::string& configFile, int gpuId = 0);
-    YAML::Node addDetlogger(const std::string& root = "", int interval = 0);
-    YAML::Node addPresencelogger(const std::string& root = "", int interval = 0);
-    YAML::Node addStgcnpplogger(const std::string& root = "", int interval = 0);
+    YAML::Node addNvdsanalytics(const std::string& configFile);
+    YAML::Node addDetlogger(int interval = 0);
+    YAML::Node addPresencelogger(int interval = 0);
+    YAML::Node addStgcnpplogger(int interval = 0);
     YAML::Node addDetfadedrawer(int interval = 0, int fadeTime = 0, bool showLabel = false);
     YAML::Node addDetfadedrawerwithtracker(int interval = 0, int fadeTime = 0, bool showLabel = false, bool showSnap = true);
     YAML::Node addPosefadedrawer(int interval = 0, int fadeTime = 0, bool showLabel = false, bool showPose = true, double poseThreshold = 0.0, const std::string& mode = pipeline::POSE_MODE_COCO17);
@@ -49,7 +49,7 @@ protected:
     YAML::Node addViscapturer(const std::string& outputDir, const std::string& captureCodes = pipeline::CAPTURE_CODES_DEFAULT, const std::string& labelTask = pipeline::LABEL_TASK_DET);
     YAML::Node addTee();
     YAML::Node addQueue(int leaky = pipeline::QUEUE_LEAKY_DOWNSTREAM, int maxSizeBuffers = pipeline::QUEUE_MAX_BUFFERS);
-    YAML::Node addNvmsgconv(const std::string& config, int payloadType = pipeline::PAYLOAD_DEEPSTREAM_MINIMAL, bool msg2pNewapi = true, int frameInterval = pipeline::FRAME_INTERVAL);
+    YAML::Node addNvmsgconv(const std::string& config, const std::string& msg2pLib, int payloadType = pipeline::PAYLOAD_DEEPSTREAM_MINIMAL, bool msg2pNewapi = true, int frameInterval = pipeline::FRAME_INTERVAL);
     YAML::Node addNvmsgbroker(const std::string& protoLib, const std::string& connStr, const std::string& topic, const std::string& brokerConfig, bool sync = false, bool asyncFlag = false);
     YAML::Node addNvstreamdemux();
     YAML::Node addNvosdbin(int gpuId = 0, bool displayBbox = true, bool displayText = true, bool displayMask = false);

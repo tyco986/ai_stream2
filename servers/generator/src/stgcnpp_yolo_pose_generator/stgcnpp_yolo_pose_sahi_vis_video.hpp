@@ -13,10 +13,8 @@
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocesspose
 //         → boxsnapshot → nvtracker → nvdspreprocess → sgie1 → stgcnppactionlabel
-//         → nvdsanalytics → tee_msg
-//         ├→ stgcnppfadedrawerwithtracker → nvosdbin → nvvideoconvert → nvstreamdemux
-//         │     → queue_demux{N} → stgcnpplogger{N} → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
-//         └→ queue_msg → nvmsgconv → nvmsgbroker
+//         → nvdsanalytics → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → stgcnppfadedrawerwithtracker{N} → nvosdbin{N}
+//         │     → stgcnpplogger{N} → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
 class StgcnppYoloPoseSahiVisVideoGenerator : public VisSahiPoseVideoGenerator {
 public:
     StgcnppYoloPoseSahiVisVideoGenerator(

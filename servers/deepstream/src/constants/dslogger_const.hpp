@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+
 #include "nvdsmeta.h"
 
 namespace dslogger {
@@ -9,7 +11,8 @@ inline constexpr const char* SUFFIX = ".jsonl";
 inline constexpr const char* PAGE_DET = "det";
 inline constexpr const char* PAGE_PRESENCE = "presence";
 inline constexpr const char* PAGE_STGCNPP = "stgcnpp";
-inline constexpr int MAX_DAYS = 90;
+inline constexpr std::size_t MAX_BYTES = 10 * 1024 * 1024;
+inline constexpr std::size_t MAX_FILES = 5;
 inline constexpr int PAD_WIDTH = 3;
 inline constexpr int DEFAULT_INTERVAL = 0;
 inline constexpr const char* TS_FORMAT = "%Y-%m-%d %H:%M:%S";

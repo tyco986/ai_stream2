@@ -26,7 +26,7 @@ void VisEventRtspGenerator::appendAfterOsd(int index, int gpuId) {
     appendNode(
         "presencelogger",
         "presencelogger" + suffix,
-        addPresencelogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
+        addPresencelogger(logger.value("interval", 0)));
     appendNode(
         "nvv4l2h264enc",
         "nvv4l2h264enc" + suffix,

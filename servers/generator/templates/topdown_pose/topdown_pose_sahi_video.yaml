@@ -22,6 +22,7 @@ logger:
 drawer: null
 videos:
   - /root/attachments/videos/video1.mp4
+  - /root/attachments/videos/video2.mp4
 sahi:
   nvsahipreprocess:
     slice_width: 640

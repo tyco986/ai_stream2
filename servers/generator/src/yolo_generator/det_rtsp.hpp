@@ -8,9 +8,7 @@
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → tee_msg
-//           ─┬→ nvstreamdemux → queue_demux{N} → detlogger{N} → fakesink{N}
-//           └→ queue_msg → nvmsgconv → nvmsgbroker
+//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → nvstreamdemux → queue_demux{N} → detlogger{N} → fakesink{N}
 class DetRtspGenerator : public BaseRtspGenerator {
 public:
     DetRtspGenerator(

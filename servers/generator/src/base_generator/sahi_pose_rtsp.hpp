@@ -9,9 +9,7 @@
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocesspose
-//           → boxsnapshot → nvtracker → nvdsanalytics → tee_msg
-//             ─┬→ nvstreamdemux → queue_demux{N} → detlogger{N} → fakesink{N}
-//             └→ queue_msg → nvmsgconv → nvmsgbroker
+//           → boxsnapshot → nvtracker → nvdsanalytics → nvstreamdemux → queue_demux{N} → detlogger{N} → fakesink{N}
 class SahiPoseRtspGenerator : public SahiRtspGenerator {
 public:
     SahiPoseRtspGenerator(

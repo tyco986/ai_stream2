@@ -12,17 +12,15 @@
 // Generate YOLO SAHI image pipeline YAML.
 //
 // mux batch size is the image count. pgie batch size is the SAHI tile count.
-// Each image is one frame (num-buffers=1) and is written to its own jpeg after OSD.
+// Each image is one frame (num-buffers=1) and is written to its own jpeg after per-stream OSD.
 //
 // Set ``analyzer=None`` to disable nvdsanalytics rules.
 //
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
-//         → nvdsanalytics → tee_msg
-//         ├→ detfadedrawer → nvosdbin → nvvideoconvert → nvstreamdemux
-//         │     → queue_demux{N} → capsfilter{N} → detlogger{N} → nvjpegenc{N} → filesink{N}
-//         └→ queue_msg → nvmsgconv → nvmsgbroker
+//         → nvdsanalytics → nvstreamdemux → queue_demux{N} → detfadedrawer{N} → nvosdbin{N} → nvvideoconvert{N}
+//         │     → capsfilter{N} → detlogger{N} → nvjpegenc{N} → filesink{N}
 class SahiImageGenerator : public BaseImageGenerator {
 public:
     static constexpr const char* SAHI_PREPROCESS_CONFIG_NAME = "nvsahipreprocess.ini";

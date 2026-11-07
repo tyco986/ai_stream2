@@ -90,14 +90,7 @@ void StgcnppYoloPoseSahiRtspGenerator::add() {
     appendNode("nvdspreprocess", "nvdspreprocess", addNvdspreprocess(StgcnppYoloPose::PREPROCESS_CONFIG_NAME));
     appendNode("nvinfer", "sgie1", addNvinfer(StgcnppYoloPose::CONFIG_NAME, model->batchSize, model->gpuId, true));
     appendNode("stgcnppactionlabel", "stgcnppactionlabel", addStgcnppactionlabel(model->uniqueId));
-    appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME, gpuId));
-    appendNode("tee", "tee_msg", addTee());
-    appendNode("queue", "queue_msg", addQueue());
-    appendNode("nvmsgconv", "nvmsgconv", addNvmsgconv(MSGCONV_CONFIG_NAME, pipeline::PAYLOAD_DEEPSTREAM_MINIMAL));
-    appendNode(
-        "nvmsgbroker",
-        "nvmsgbroker",
-        addNvmsgbroker(subelement::KAFKA_PROTO_LIB, subelement::KAFKA_CONN_STR, kafkaTopic, KAFKA_CONFIG_NAME, false, false));
+    appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     for (int streamIndex = 0; streamIndex < muxBatchSize; ++streamIndex) {
         const std::string suffix = std::to_string(streamIndex);
@@ -105,7 +98,7 @@ void StgcnppYoloPoseSahiRtspGenerator::add() {
         appendNode(
             "stgcnpplogger",
             "stgcnpplogger" + suffix,
-            addStgcnpplogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
+            addStgcnpplogger(logger.value("interval", 0)));
         appendNode("fakesink", "fakesink" + suffix, addFakesink(false, false));
     }
 }
@@ -133,11 +126,7 @@ void StgcnppYoloPoseSahiRtspGenerator::link() {
     edges["nvdspreprocess"] = "sgie1";
     edges["sgie1"] = "stgcnppactionlabel";
     edges["stgcnppactionlabel"] = "nvdsanalytics";
-    edges["nvdsanalytics"] = "tee_msg";
-    edges["tee_msg"].push_back("nvstreamdemux");
-    edges["tee_msg"].push_back("queue_msg");
-    edges["queue_msg"] = "nvmsgconv";
-    edges["nvmsgconv"] = "nvmsgbroker";
+    edges["nvdsanalytics"] = "nvstreamdemux";
     for (int index = 0; index < muxBatchSize; ++index) {
         const std::string suffix = std::to_string(index);
         edges["queue_demux" + suffix] = "stgcnpplogger" + suffix;

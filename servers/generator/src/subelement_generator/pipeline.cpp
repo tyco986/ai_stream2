@@ -140,26 +140,24 @@ YAML::Node PipelineGenerator::addBoxsnapshot() {
     return YAML::Node(YAML::NodeType::Map);
 }
 
-YAML::Node PipelineGenerator::addNvdsanalytics(const std::string& configFile, int gpuId) {
+YAML::Node PipelineGenerator::addNvdsanalytics(const std::string& configFile) {
     YAML::Node properties;
     properties["config-file"] = configFile;
-    properties["gpu-id"] = gpuId;
     return properties;
 }
 
-YAML::Node PipelineGenerator::addDetlogger(const std::string& root, int interval) {
+YAML::Node PipelineGenerator::addDetlogger(int interval) {
     YAML::Node properties;
-    properties["root"] = root.empty() ? pipeline::DEEPSTREAM_LOG_ROOT : root;
     properties["interval"] = interval;
     return properties;
 }
 
-YAML::Node PipelineGenerator::addPresencelogger(const std::string& root, int interval) {
-    return addDetlogger(root, interval);
+YAML::Node PipelineGenerator::addPresencelogger(int interval) {
+    return addDetlogger(interval);
 }
 
-YAML::Node PipelineGenerator::addStgcnpplogger(const std::string& root, int interval) {
-    return addDetlogger(root, interval);
+YAML::Node PipelineGenerator::addStgcnpplogger(int interval) {
+    return addDetlogger(interval);
 }
 
 YAML::Node PipelineGenerator::addDetfadedrawer(int interval, int fadeTime, bool showLabel) {
@@ -261,10 +259,11 @@ YAML::Node PipelineGenerator::addQueue(int leaky, int maxSizeBuffers) {
     return properties;
 }
 
-YAML::Node PipelineGenerator::addNvmsgconv(const std::string& config, int payloadType, bool msg2pNewapi, int frameInterval) {
+YAML::Node PipelineGenerator::addNvmsgconv(const std::string& config, const std::string& msg2pLib, int payloadType, bool msg2pNewapi, int frameInterval) {
     YAML::Node properties;
     properties["config"] = config;
     properties["payload-type"] = payloadType;
+    properties["msg2p-lib"] = msg2pLib;
     properties["msg2p-newapi"] = msg2pNewapi;
     properties["frame-interval"] = frameInterval;
     return properties;

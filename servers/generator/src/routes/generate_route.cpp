@@ -18,8 +18,7 @@ void GenerateRoute::generate(const httplib::Request& request, httplib::Response&
     const std::string type = payload.at(generate::KEY_GENERATOR).get<std::string>();
     const std::filesystem::path stem = std::filesystem::path(yamlFile.filename).stem();
     const std::string fileName = stem.string() + history::ZIP_SUFFIX;
-    const std::filesystem::path configSaveDir = std::filesystem::path(generate::RUNTIME_ROOT) / stem;
-    const std::string archive = GeneratorManager::generate(type, configSaveDir, payload);
+    const std::string archive = GeneratorManager::generate(type, generate::CONFIG_DIR, payload);
     History().save(fileName, archive);
     Response::ok(response, payload, "", fileName, archive);
 }

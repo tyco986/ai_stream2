@@ -94,14 +94,12 @@ BaseImageGenerator::BaseImageGenerator(
     if (logger.has_value()) {
         this->logger.update(*logger);
     }
-    this->logger["root"] = std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + this->pipelineName;
 }
 
 void BaseImageGenerator::init() {
     initImages();
     initPgie();
     initNvdsanalytics();
-    initNvmsgconv();
     initKafka();
     initParams();
     initPipeline();
@@ -125,7 +123,7 @@ void BaseImageGenerator::initImages() {
         index += 1;
     }
     runtimeBatchSize = static_cast<int>(images.size());
-    std::filesystem::create_directories(output.parent_path());
+    std::filesystem::create_directories(output);
 }
 
 void BaseImageGenerator::initParams() {
@@ -197,22 +195,9 @@ void BaseImageGenerator::initNvdsanalytics() {
     files.insert_or_assign(ANALYTICS_CONFIG_NAME, ConfigFile(analytics));
 }
 
-std::vector<std::string> BaseImageGenerator::kafkaStreams() const {
-    std::vector<std::string> names;
-    for (const nlohmann::json& item : images) {
-        names.push_back(item.get<std::string>());
-    }
-    return names;
-}
-
-void BaseImageGenerator::initNvmsgconv() {
-    nvmsgconvGenerator.emplace(kafkaStreams());
-    files.insert_or_assign(MSGCONV_CONFIG_NAME, ConfigFile(nvmsgconvGenerator->config));
-}
-
 void BaseImageGenerator::initKafka() {
     kafkaGenerator.emplace();
-    kafkaTopic = std::string("ai_stream2_") + pipelineName;
+    kafkaTopic = std::string(subelement::KAFKA_TOPIC_PREFIX) + pipelineName;
     files.insert_or_assign(KAFKA_CONFIG_NAME, ConfigFile(kafkaGenerator->config));
 }
 
@@ -225,12 +210,6 @@ void BaseImageGenerator::applySavePaths(YAML::Node pipelineDocument, const std::
         }
         if (name == "nvdsanalytics") {
             properties["config-file"] = (configSaveDir / ANALYTICS_CONFIG_NAME).string();
-        }
-        if (name == "nvmsgconv") {
-            properties["config"] = (configSaveDir / MSGCONV_CONFIG_NAME).string();
-        }
-        if (name == "nvmsgbroker") {
-            properties["config"] = (configSaveDir / KAFKA_CONFIG_NAME).string();
         }
         node["properties"] = properties;
     }
@@ -311,32 +290,25 @@ void BaseImageGenerator::add() {
         appendNode("nvurisrcbin", "nvurisrcbin" + std::to_string(index), addNvurisrcbin(fileUri(item.get<std::string>()), true, 1));
         index += 1;
     }
-    appendNode("nvstreammux", "nvstreammux", addNvstreammux(runtimeBatchSize, width, height, false, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId));
+    appendNode("nvstreammux", "nvstreammux", addNvstreammux(runtimeBatchSize, width, height, false, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId, false));
     appendNode("nvinfer", "pgie", addNvinfer(PGIE_CONFIG_NAME, pgieGenerator->config["property"]["batch-size"].as<int>(), gpuId));
-    appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME, gpuId));
-    appendNode("tee", "tee_msg", addTee());
-    appendNode("queue", "queue_msg", addQueue());
-    appendNode("nvmsgconv", "nvmsgconv", addNvmsgconv(MSGCONV_CONFIG_NAME, pipeline::PAYLOAD_DEEPSTREAM_MINIMAL));
-    appendNode(
-        "nvmsgbroker",
-        "nvmsgbroker",
-        addNvmsgbroker(subelement::KAFKA_PROTO_LIB, subelement::KAFKA_CONN_STR, kafkaTopic, KAFKA_CONFIG_NAME, false, false));
-    if (drawer.has_value()) {
-        appendNode(nvdetDrawerElement(), "detfadedrawer", nvdetDrawerProperties(*drawer));
-    }
-    appendNode("nvosdbin", "nvosdbin", addNvosdbin(gpuId, true, true));
-    appendNode("nvvideoconvert", "nvvideoconvert", addNvvideoconvert(gpuId));
+    appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     for (int streamIndex = 0; streamIndex < runtimeBatchSize; ++streamIndex) {
         const std::string suffix = std::to_string(streamIndex);
         const std::filesystem::path source(images.at(streamIndex).get<std::string>());
-        const std::filesystem::path sink = output / (suffix + "_" + source.stem().string() + ".jpg");
-        appendNode("queue", "queue" + suffix, addQueue());
+        const std::filesystem::path sink = output / (source.stem().string() + ".jpg");
+        appendNode("queue", "queue_demux" + suffix, addQueue());
+        if (drawer.has_value()) {
+            appendNode(nvdetDrawerElement(), "detfadedrawer" + suffix, nvdetDrawerProperties(*drawer));
+        }
+        appendNode("nvosdbin", "nvosdbin" + suffix, addNvosdbin(gpuId, true, true));
+        appendNode("nvvideoconvert", "nvvideoconvert" + suffix, addNvvideoconvert(gpuId));
         appendNode("capsfilter", "capsfilter" + suffix, addCapsfilter());
         appendNode(
             "detlogger",
             "detlogger" + suffix,
-            addDetlogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
+            addDetlogger(logger.value("interval", 0)));
         appendNode("nvjpegenc", "nvjpegenc" + suffix, addNvjpegenc());
         appendNode("filesink", "filesink" + suffix, addFilesink(sink, false, false));
     }
@@ -349,20 +321,16 @@ void BaseImageGenerator::link() {
     }
     edges["nvstreammux"] = "pgie";
     edges["pgie"] = "nvdsanalytics";
-    edges["nvdsanalytics"] = "tee_msg";
-    const std::string visNext = drawer.has_value() ? "detfadedrawer" : "nvosdbin";
-    edges["tee_msg"].push_back(visNext);
-    edges["tee_msg"].push_back("queue_msg");
-    if (drawer.has_value()) {
-        edges["detfadedrawer"] = "nvosdbin";
-    }
-    edges["queue_msg"] = "nvmsgconv";
-    edges["nvmsgconv"] = "nvmsgbroker";
-    edges["nvosdbin"] = "nvvideoconvert";
-    edges["nvvideoconvert"] = "nvstreamdemux";
+    edges["nvdsanalytics"] = "nvstreamdemux";
     for (int index = 0; index < runtimeBatchSize; ++index) {
         const std::string suffix = std::to_string(index);
-        edges["queue" + suffix] = "capsfilter" + suffix;
+        const std::string osdPrev = drawer.has_value() ? "detfadedrawer" + suffix : "nvosdbin" + suffix;
+        edges["queue_demux" + suffix] = osdPrev;
+        if (drawer.has_value()) {
+            edges["detfadedrawer" + suffix] = "nvosdbin" + suffix;
+        }
+        edges["nvosdbin" + suffix] = "nvvideoconvert" + suffix;
+        edges["nvvideoconvert" + suffix] = "capsfilter" + suffix;
         edges["capsfilter" + suffix] = "detlogger" + suffix;
         edges["detlogger" + suffix] = "nvjpegenc" + suffix;
         edges["nvjpegenc" + suffix] = "filesink" + suffix;

@@ -8,6 +8,7 @@ public:
 
 private:
     static void start(const httplib::Request& request, httplib::Response& response);
+    static void startLocal(const httplib::Request& request, httplib::Response& response);
     static void stop(const httplib::Request& request, httplib::Response& response);
     static void status(const httplib::Request& request, httplib::Response& response);
 };

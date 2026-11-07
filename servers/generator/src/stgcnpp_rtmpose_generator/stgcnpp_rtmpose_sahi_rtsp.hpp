@@ -14,9 +14,7 @@
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
 //         → boxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0 → nvrtmposepostprocess
-//         → nvdsanalytics → tee_msg
-//           ─┬→ nvstreamdemux → queue_demux{N} → stgcnpplogger{N} → fakesink{N}
-//           └→ queue_msg → nvmsgconv → nvmsgbroker
+//         → nvdspreprocess → sgie1 → stgcnppactionlabel → nvdsanalytics → nvstreamdemux → queue_demux{N} → stgcnpplogger{N} → fakesink{N}
 class StgcnppRtmposeSahiRtspGenerator : public SahiRtspGenerator {
 public:
     StgcnppRtmposeSahiRtspGenerator(

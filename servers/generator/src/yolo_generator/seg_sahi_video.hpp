@@ -9,9 +9,7 @@
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
-//         → boxsnapshot → nvtracker → nvdsanalytics → tee_msg
-//         ├→ detlogger → fakesink
-//         └→ queue_msg → nvmsgconv → nvmsgbroker
+//         → boxsnapshot → nvtracker → nvdsanalytics → detlogger → fakesink
 class SegSahiVideoGenerator : public SahiVideoGenerator {
 public:
     SegSahiVideoGenerator(

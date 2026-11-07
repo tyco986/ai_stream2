@@ -33,8 +33,20 @@ void dsloggerPrepare(GstBaseTransform* transform) {
     gst_base_transform_set_passthrough(transform, FALSE);
 }
 
+std::string dsloggerPipelineName(GstElement* element) {
+    GstObject* object = GST_OBJECT(element);
+    while (object != nullptr && !GST_IS_PIPELINE(object)) {
+        object = GST_OBJECT_PARENT(object);
+    }
+    const gchar* name = object != nullptr ? GST_OBJECT_NAME(object) : nullptr;
+    return name != nullptr ? std::string(name) : std::string();
+}
+
 GstFlowReturn dsloggerTransform(GstBaseTransform* transform, GstBuffer* buffer, LogEngine* engine) {
     nvds_set_input_system_timestamp(buffer, GST_ELEMENT_NAME(transform));
+    if (engine != nullptr && !engine->named()) {
+        engine->setPipelineName(dsloggerPipelineName(GST_ELEMENT(transform)));
+    }
     NvDsBatchMeta* batch = gst_buffer_get_nvds_batch_meta(buffer);
     if (batch != nullptr && engine != nullptr) {
         auto* latencyInfo = static_cast<NvDsFrameLatencyInfo*>(g_malloc0(sizeof(NvDsFrameLatencyInfo) * batch->num_frames_in_batch));

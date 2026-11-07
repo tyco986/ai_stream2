@@ -6,6 +6,7 @@
 class PresenceLogEngine : public LogEngine {
 public:
     explicit PresenceLogEngine(int interval);
+    bool active(NvDsFrameMeta* frame) const;
 
 protected:
     const char* page() const override;

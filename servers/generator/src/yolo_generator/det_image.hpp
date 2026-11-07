@@ -8,10 +8,8 @@
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → nvdsanalytics → tee_msg
-//         ├→ detfadedrawer → nvosdbin → nvvideoconvert → nvstreamdemux
-//         │     → queue{N} → capsfilter{N} → detlogger{N} → nvjpegenc{N} → filesink{N}
-//         └→ queue_msg → nvmsgconv → nvmsgbroker
+//     nvurisrcbin{N} → nvstreammux → pgie → nvdsanalytics → nvstreamdemux → queue_demux{N} → detfadedrawer{N} → nvosdbin{N} → nvvideoconvert{N}
+//         │     → capsfilter{N} → detlogger{N} → nvjpegenc{N} → filesink{N}
 class DetImageGenerator : public BaseImageGenerator {
 public:
     DetImageGenerator(

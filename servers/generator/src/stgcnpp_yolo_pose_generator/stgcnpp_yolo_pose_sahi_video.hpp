@@ -14,9 +14,7 @@
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocesspose
 //         → boxsnapshot → nvtracker → nvdspreprocess → sgie1 → stgcnppactionlabel
-//         → nvdsanalytics → tee_msg
-//         ├→ stgcnpplogger → fakesink
-//         └→ queue_msg → nvmsgconv → nvmsgbroker
+//         → nvdsanalytics → stgcnpplogger → fakesink
 class StgcnppYoloPoseSahiVideoGenerator : public SahiPoseVideoGenerator {
 public:
     StgcnppYoloPoseSahiVideoGenerator(

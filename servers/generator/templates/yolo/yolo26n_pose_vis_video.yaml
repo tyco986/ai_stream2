@@ -23,4 +23,5 @@ drawer:
   mode: coco17
 videos:
   - /root/attachments/videos/video1.mp4
-output: /root/outputs/deepstream/yolo26n_pose_vis_video.mp4
+  - /root/attachments/videos/video2.mp4
+output: /root/outputs/deepstream/yolo26n_pose_vis_video

@@ -12,10 +12,8 @@
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0
-//         → nvrtmposepostprocess → nvdsanalytics → tee_msg
-//         ├→ posefadedrawer → nvosdbin → nvvideoconvert → nvstreamdemux
-//         │     → queue{N} → detlogger{N} → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
-//         └→ queue_msg → nvmsgconv → nvmsgbroker
+//         → nvrtmposepostprocess → nvdsanalytics → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → posefadedrawer{N} → nvosdbin{N}
+//         │     → detlogger{N} → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
 class TopdownPoseVisVideoGenerator : public VisVideoGenerator {
 public:
     TopdownPoseVisVideoGenerator(

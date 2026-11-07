@@ -1,6 +1,7 @@
 #pragma once
 
 #include "base_generator/base_event.hpp"
+#include "constants/subelement_const.hpp"
 #include "subelement_generator/kafka.hpp"
 #include "subelement_generator/nvmsgconv.hpp"
 #include "subelement_generator/pgie.hpp"
@@ -24,9 +25,9 @@
 //
 //     nvurisrcbin{N} → nvstreammux → pgie → nvdsanalytics → presenceeventcoder → tee_msg
 //       ─┬→ nvvideoconvert → tee_raw
-//       │     ─┬→ rawcapturer → fakesink_raw
-//       │     └→ nvosdbin → tee_vis
-//       │           ─┬→ viscapturer → fakesink_vis
+//       │     ─┬→ queue_raw → nvvideoconvert_raw → capsfilter_raw → rawcapturer → fakesink_raw
+//       │     └→ queue_osd → nvvideoconvert_osd → capsfilter_osd → nvosdbin → tee_vis
+//       │           ─┬→ queue_vis → nvvideoconvert_vis → capsfilter_vis → viscapturer → fakesink_vis
 //       │           └→ queue_enc → nvvideoconvert_enc → capsfilter_jpeg → presencelogger
 //       │                 → nvstreamdemux → queue_demux{N} → nvjpegenc{N} → filesink{N}
 //       └→ queue_msg → nvmsgconv → nvmsgbroker
@@ -81,6 +82,7 @@ public:
     int height = 0;
     int runtimeBatchSize = 0;
     std::string kafkaTopic;
+    std::string msg2pLib = subelement::MSG2P_LIB_PRESENCE;
     bool enableNvdsanalytics = false;
     std::optional<PgieParser> pgieConfigParser;
     std::optional<PgieGenerator> pgieGenerator;

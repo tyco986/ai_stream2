@@ -28,7 +28,8 @@ drawer:
   mode: coco17
 videos:
   - /root/attachments/videos/video1.mp4
-output: /root/outputs/deepstream/topdown_pose_sahi_vis_video.mp4
+  - /root/attachments/videos/video2.mp4
+output: /root/outputs/deepstream/topdown_pose_sahi_vis_video
 sahi:
   nvsahipreprocess:
     slice_width: 640

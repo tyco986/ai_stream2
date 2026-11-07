@@ -23,5 +23,5 @@ event_coder:
   threshold: 0.5
   mode: fold
 capturer:
-  capture_codes: "1"
+  capture_codes: "12"
 input: /root/attachments/videos/video2.mp4

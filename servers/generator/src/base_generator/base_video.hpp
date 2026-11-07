@@ -2,9 +2,9 @@
 
 #include "subelement_generator/kafka.hpp"
 #include "subelement_generator/nvdsanalytics.hpp"
-#include "subelement_generator/nvmsgconv.hpp"
 #include "subelement_generator/nvtracker.hpp"
 #include "subelement_generator/pgie.hpp"
+#include "constants/subelement_const.hpp"
 #include "subelement_generator/pipeline.hpp"
 #include "subelement_generator/utils/pgie_parser.hpp"
 
@@ -28,16 +28,13 @@
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → tee_msg
-//         ├→ detlogger → fakesink
-//         └→ queue_msg → nvmsgconv → nvmsgbroker
+//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → detlogger → fakesink
 class BaseVideoGenerator : public PipelineGenerator {
 public:
     static constexpr const char* PIPELINE_CONFIG_NAME = "pipeline.yml";
     static constexpr const char* PGIE_CONFIG_NAME = "pgie.yml";
     static constexpr const char* TRACKER_CONFIG_NAME = "nvtracker.yml";
     static constexpr const char* ANALYTICS_CONFIG_NAME = "nvdsanalytics.yml";
-    static constexpr const char* MSGCONV_CONFIG_NAME = "nvmsgconv.yml";
     static constexpr const char* KAFKA_CONFIG_NAME = "kafka.txt";
     static constexpr const char* PARAMS_CONFIG_NAME = "params.yml";
 
@@ -60,8 +57,6 @@ public:
     void initPgie();
     void initNvdsanalytics();
     void initNvtracker();
-    std::vector<std::string> kafkaStreams() const;
-    void initNvmsgconv();
     void initKafka();
     virtual void applySavePaths(YAML::Node pipelineDocument, const std::filesystem::path& configSaveDir);
     std::map<std::string, std::string> documents(const std::filesystem::path& configSaveDir);
@@ -101,7 +96,6 @@ protected:
     std::optional<PgieParser> pgieConfigParser;
     std::optional<PgieGenerator> pgieGenerator;
     std::optional<NvtrackerGenerator> nvtrackerGenerator;
-    std::optional<NvmsgconvGenerator> nvmsgconvGenerator;
     std::optional<KafkaGenerator> kafkaGenerator;
     std::map<std::string, ConfigFile> files;
 };

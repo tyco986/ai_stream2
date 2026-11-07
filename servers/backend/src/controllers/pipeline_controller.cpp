@@ -8,6 +8,7 @@
 
 #include <drogon/HttpClient.h>
 
+#include <chrono>
 #include <ctime>
 #include <exception>
 #include <filesystem>
@@ -72,6 +73,23 @@ void PipelineController::get(
   }
 }
 
+PipelineController::ZipPart PipelineController::filePart(const std::string& body) {
+  const std::string marker = "name=\"" + std::string(pipeline::FIELD_FILE) + "\"; filename=\"";
+  const std::size_t named = body.find(marker);
+  const std::size_t nameEnd = named == std::string::npos ? std::string::npos : body.find('"', named + marker.size());
+  const std::size_t headerEnd = nameEnd == std::string::npos ? std::string::npos : body.find("\r\n\r\n", nameEnd);
+  const std::string closing = "\r\n--" + std::string(pipeline::GENERATOR_BOUNDARY) + "--";
+  const std::size_t end = headerEnd == std::string::npos ? std::string::npos : body.rfind(closing);
+  const bool ready = headerEnd != std::string::npos && end != std::string::npos && end >= headerEnd + 4;
+  ZipPart part;
+  part.filename = ready ? std::filesystem::path(body.substr(named + marker.size(), nameEnd - named - marker.size())).filename().string() : "";
+  part.content = ready ? body.substr(headerEnd + 4, end - (headerEnd + 4)) : "";
+  if (!ready || part.filename.empty() || part.content.empty()) {
+    throw std::runtime_error("generate failed");
+  }
+  return part;
+}
+
 std::string PipelineController::yaml2Multipart(const std::string& yaml) {
   const std::string boundary = pipeline::MULTIPART_BOUNDARY;
   const std::string body = "--" + boundary + "\r\n"
@@ -108,13 +126,16 @@ drogon::Task<Json::Value> PipelineController::postGenerate(const std::string& ya
   if (!accepted) {
     throw std::runtime_error("generate failed");
   }
-  Json::Value envelope;
-  const bool read = Json::Reader().parse(std::string(generated->getBody()), envelope);
-  const Json::Value data = read && envelope.isMember("data") ? envelope["data"] : Json::Value();
-  const bool ready = data.isObject() && data.isMember(pipeline::KEY_CONFIG_PATH);
-  if (!ready) {
+  const ZipPart zip = filePart(std::string(generated->getBody()));
+  std::filesystem::create_directories(pipeline::CONFIG_DIR);
+  const std::filesystem::path path = std::filesystem::path(pipeline::CONFIG_DIR) / zip.filename;
+  std::ofstream output(path, std::ios::binary | std::ios::trunc);
+  output.write(zip.content.data(), static_cast<std::streamsize>(zip.content.size()));
+  if (!output) {
     throw std::runtime_error("generate failed");
   }
+  Json::Value data;
+  data[pipeline::KEY_CONFIG_PATH] = path.string();
   co_return data;
 }
 
@@ -170,7 +191,8 @@ drogon::Task<Json::Value> PipelineController::postDeepstreamStart(const std::str
     std::ifstream configFile(configPath, std::ios::binary);
     std::string configZip(std::istreambuf_iterator<char>(configFile), std::istreambuf_iterator<char>());
     files.push_back(ZipPart{pipeline::FIELD_CONFIG, std::filesystem::path(configPath).filename().string(), configZip});
-    for (const std::string& path : service.getModelPaths(configPath)) {
+    const YAML::Node params = service.readParams(configPath);
+    for (const std::string& path : service.getModelPaths(params)) {
       const bool modelExists = std::filesystem::is_regular_file(path);
       if (!modelExists) {
         throw std::runtime_error("model zip missing");
@@ -178,6 +200,10 @@ drogon::Task<Json::Value> PipelineController::postDeepstreamStart(const std::str
       std::ifstream modelFile(path, std::ios::binary);
       std::string modelZip(std::istreambuf_iterator<char>(modelFile), std::istreambuf_iterator<char>());
       files.push_back(ZipPart{pipeline::FIELD_MODEL, std::filesystem::path(path).filename().string(), modelZip});
+    }
+    const std::string mediaZip = service.packMedia(params);
+    if (!mediaZip.empty()) {
+      files.push_back(ZipPart{pipeline::FIELD_MEDIA, pipeline::MEDIA_FILENAME, mediaZip});
     }
   }
   const std::string baseUrl = "http://" + containerName + ":" + std::to_string(pipeline::DEEPSTREAM_PORT);

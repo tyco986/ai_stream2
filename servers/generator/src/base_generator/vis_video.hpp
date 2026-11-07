@@ -10,15 +10,13 @@
 
 // Generate YOLO video pipeline YAML with OSD and one mp4 per input.
 //
-// Each file is demuxed after OSD and encoded on its own branch, so a short
+// Each file is demuxed before OSD and encoded on its own branch, so a short
 // file finalizes its mp4 on EOS while the longer files keep running.
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → tee_msg
-//         ├→ detfadedrawer → nvosdbin → nvvideoconvert → nvstreamdemux
-//         │     → queue{N} → detlogger{N} → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
-//         └→ queue_msg → nvmsgconv → nvmsgbroker
+//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → detfadedrawer{N} → nvosdbin{N}
+//         │     → detlogger{N} → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
 class VisVideoGenerator : public BaseVideoGenerator {
 public:
     VisVideoGenerator(

@@ -12,10 +12,8 @@
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → pgie → nvdspreprocess_rtmpose → sgie0 → nvrtmposepostprocess
-//         → nvdsanalytics → tee_msg
-//         ├→ posefadedrawer → nvosdbin → nvvideoconvert → nvstreamdemux
-//         │     → queue{N} → capsfilter{N} → detlogger{N} → nvjpegenc{N} → filesink{N}
-//         └→ queue_msg → nvmsgconv → nvmsgbroker
+//         → nvdsanalytics → nvstreamdemux → queue_demux{N} → posefadedrawer{N} → nvosdbin{N} → nvvideoconvert{N}
+//         │     → capsfilter{N} → detlogger{N} → nvjpegenc{N} → filesink{N}
 class TopdownPoseImageGenerator : public BaseImageGenerator {
 public:
     TopdownPoseImageGenerator(

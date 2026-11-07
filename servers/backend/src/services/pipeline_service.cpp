@@ -7,8 +7,10 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include <cstdio>
 #include <filesystem>
 #include <stdexcept>
+#include <vector>
 
 #include <zip.h>
 
@@ -246,26 +248,7 @@ Json::Value PipelineService::remove(const std::string& pipelineId) {
   return result;
 }
 
-void PipelineService::collectModelZips(const YAML::Node& node, std::vector<std::string>& paths) {
-  const bool map = node && node.IsMap();
-  const bool sequence = node && node.IsSequence();
-  if (map) {
-    for (const auto& item : node) {
-      const bool modelZip = item.first.as<std::string>() == pipeline::KEY_MODEL_ZIP && item.second.IsScalar();
-      if (modelZip) {
-        paths.push_back(item.second.as<std::string>());
-      }
-      collectModelZips(item.second, paths);
-    }
-  }
-  if (sequence) {
-    for (const auto& item : node) {
-      collectModelZips(item, paths);
-    }
-  }
-}
-
-std::vector<std::string> PipelineService::getModelPaths(const std::string& configPath) {
+YAML::Node PipelineService::readParams(const std::string& configPath) {
   int error = 0;
   zip_t* archive = zip_open(configPath.c_str(), ZIP_RDONLY, &error);
   std::string paramsBytes;
@@ -293,10 +276,105 @@ std::vector<std::string> PipelineService::getModelPaths(const std::string& confi
   if (paramsBytes.empty()) {
     throw std::runtime_error("params.yml missing");
   }
-  YAML::Node params = YAML::Load(paramsBytes);
+  return YAML::Load(paramsBytes);
+}
+
+void PipelineService::collectModelZips(const YAML::Node& node, std::vector<std::string>& paths) {
+  const bool map = node && node.IsMap();
+  const bool sequence = node && node.IsSequence();
+  if (map) {
+    for (const auto& item : node) {
+      const bool modelZip = item.first.as<std::string>() == pipeline::KEY_MODEL_ZIP && item.second.IsScalar();
+      if (modelZip) {
+        paths.push_back(item.second.as<std::string>());
+      }
+      collectModelZips(item.second, paths);
+    }
+  }
+  if (sequence) {
+    for (const auto& item : node) {
+      collectModelZips(item, paths);
+    }
+  }
+}
+
+void PipelineService::collectMedia(const YAML::Node& params, std::vector<std::string>& paths) {
+  const char* keys[] = {pipeline::KEY_VIDEOS, pipeline::KEY_IMAGES};
+  for (const char* key : keys) {
+    const YAML::Node node = params[key];
+    const bool sequence = node && node.IsSequence();
+    if (sequence) {
+      for (const auto& item : node) {
+        const bool scalar = item.IsScalar();
+        if (scalar) {
+          paths.push_back(item.as<std::string>());
+        }
+      }
+    }
+  }
+}
+
+std::vector<std::string> PipelineService::getModelPaths(const YAML::Node& params) {
   std::vector<std::string> paths;
   collectModelZips(params, paths);
   return paths;
+}
+
+std::string PipelineService::packMedia(const YAML::Node& params) {
+  std::vector<std::string> paths;
+  collectMedia(params, paths);
+  zip_error_t error;
+  zip_error_init(&error);
+  zip_source_t* buffer = paths.empty() ? nullptr : zip_source_buffer_create(nullptr, 0, 1, &error);
+  if (buffer != nullptr) {
+    zip_source_keep(buffer);
+  }
+  zip_t* archive = buffer == nullptr ? nullptr : zip_open_from_source(buffer, ZIP_CREATE, &error);
+  bool packed = paths.empty() || archive != nullptr;
+  for (const std::string& path : paths) {
+    const std::filesystem::path file(path);
+    const bool exists = std::filesystem::is_regular_file(file);
+    std::string entry = file.generic_string();
+    if (!entry.empty() && entry.front() == '/') {
+      entry.erase(entry.begin());
+    }
+    bool safe = exists && !entry.empty();
+    for (const std::filesystem::path& part : std::filesystem::path(entry)) {
+      safe = safe && part != ".." && part != ".";
+    }
+    zip_source_t* source = packed && safe && archive != nullptr ? zip_source_file(archive, path.c_str(), 0, -1) : nullptr;
+    const zip_int64_t added = source == nullptr ? -1 : zip_file_add(archive, entry.c_str(), source, ZIP_FL_ENC_UTF_8 | ZIP_FL_OVERWRITE);
+    if (added < 0 && source != nullptr) {
+      zip_source_free(source);
+    }
+    packed = packed && added >= 0;
+  }
+  if (!packed && archive != nullptr) {
+    zip_discard(archive);
+    archive = nullptr;
+  }
+  if (packed && archive != nullptr && zip_close(archive) < 0) {
+    zip_discard(archive);
+    packed = false;
+  }
+  const bool readable = packed && buffer != nullptr && zip_source_open(buffer) == 0 && zip_source_seek(buffer, 0, SEEK_END) == 0;
+  const zip_int64_t size = readable ? zip_source_tell(buffer) : -1;
+  if (readable) {
+    zip_source_seek(buffer, 0, SEEK_SET);
+  }
+  std::string bytes(size > 0 ? static_cast<std::size_t>(size) : 0, '\0');
+  const zip_int64_t read = readable && size > 0 ? zip_source_read(buffer, bytes.data(), bytes.size()) : 0;
+  if (readable) {
+    zip_source_close(buffer);
+  }
+  if (buffer != nullptr) {
+    zip_source_free(buffer);
+  }
+  zip_error_fini(&error);
+  if (!packed || (size > 0 && read != size)) {
+    throw std::runtime_error("media zip failed");
+  }
+  return bytes;
 }
 
 Json::Value PipelineService::json2array(const std::string& text) {

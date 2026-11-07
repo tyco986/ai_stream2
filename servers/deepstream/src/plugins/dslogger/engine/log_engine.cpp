@@ -5,16 +5,17 @@
 #include <map>
 #include <sstream>
 
-#include <spdlog/sinks/daily_file_sink.h>
+#include <spdlog/sinks/rotating_file_sink.h>
 
 #include "constants/dslogger_const.hpp"
 #include "plugins/dslogger/engine/log_engine.hpp"
 
 LogEngine::LogEngine(int interval)
     : logInterval(interval),
+      pipelineName(),
       counters(),
       loggers() {
-    logInterval = interval < 0 ? 0 : interval;
+    logInterval = logInterval < 0 ? 0 : logInterval;
 }
 
 LogEngine::~LogEngine() = default;
@@ -26,6 +27,14 @@ void LogEngine::setInterval(int interval) {
 
 int LogEngine::interval() const {
     return logInterval;
+}
+
+bool LogEngine::named() const {
+    return !pipelineName.empty();
+}
+
+void LogEngine::setPipelineName(const std::string& name) {
+    pipelineName = pipelineName.empty() && !name.empty() ? name : pipelineName;
 }
 
 void LogEngine::appendExtra(std::ostringstream&, NvDsFrameMeta*) const {
@@ -43,11 +52,11 @@ std::shared_ptr<spdlog::logger> LogEngine::loggerFor(int pad) {
     if (!logger) {
         std::ostringstream folder;
         folder << std::setw(dslogger::PAD_WIDTH) << std::setfill('0') << pad;
-        const std::filesystem::path directory = std::filesystem::path(dslogger::ROOT) / folder.str();
+        const std::filesystem::path directory = std::filesystem::path(dslogger::ROOT) / pipelineName / folder.str();
         std::filesystem::create_directories(directory);
         const std::filesystem::path path = directory / (std::string(page()) + dslogger::SUFFIX);
         const std::string name = std::string(page()) + "-" + folder.str();
-        auto sink = std::make_shared<spdlog::sinks::daily_file_sink_mt>(path.string(), 0, 0, false, dslogger::MAX_DAYS);
+        auto sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(path.string(), dslogger::MAX_BYTES, dslogger::MAX_FILES);
         logger = std::make_shared<spdlog::logger>(name, sink);
         logger->set_pattern("%v");
         logger->flush_on(spdlog::level::info);
@@ -141,7 +150,8 @@ std::string LogEngine::buildLine(NvDsFrameMeta* frame, double latencyMs) const {
 
 void LogEngine::processFrame(NvDsFrameMeta* frame, double latencyMs) {
     const int pad = static_cast<int>(frame->pad_index);
-    if (shouldLog(pad)) {
+    const bool ready = !pipelineName.empty();
+    if (ready && shouldLog(pad)) {
         loggerFor(pad)->info(buildLine(frame, latencyMs));
     }
 }

@@ -1,12 +1,15 @@
 #pragma once
 
+#include <cstddef>
+
 namespace request_log {
 
 inline constexpr const char* PATH = "/ai_stream2/deepstream/logs";
 inline constexpr const char* ROOT = "/root/logs/deepstream";
 inline constexpr const char* PAGE = "deepstream";
 inline constexpr const char* SUFFIX = ".jsonl";
-inline constexpr int MAX_DAYS = 90;
+inline constexpr std::size_t MAX_BYTES = 10 * 1024 * 1024;
+inline constexpr std::size_t MAX_FILES = 5;
 inline constexpr const char* HEADERS[] = {"authorization", "accept-language"};
 inline constexpr const char* STARTED = "started";
 inline constexpr const char* ERROR = "error";

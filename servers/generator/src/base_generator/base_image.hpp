@@ -2,8 +2,8 @@
 
 #include "subelement_generator/kafka.hpp"
 #include "subelement_generator/nvdsanalytics.hpp"
-#include "subelement_generator/nvmsgconv.hpp"
 #include "subelement_generator/pgie.hpp"
+#include "constants/subelement_const.hpp"
 #include "subelement_generator/pipeline.hpp"
 #include "subelement_generator/utils/pgie_parser.hpp"
 
@@ -20,22 +20,19 @@
 // Generate YOLO image pipeline YAML.
 //
 // Reads a batch of images. Width and height must match. Each image is one frame
-// (num-buffers=1) and is written to its own jpeg after OSD.
+// (num-buffers=1) and is written to its own jpeg after per-stream OSD.
 //
 // Set ``analyzer=None`` to disable nvdsanalytics rules.
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → nvdsanalytics → tee_msg
-//         ├→ detfadedrawer → nvosdbin → nvvideoconvert → nvstreamdemux
-//         │     → queue{N} → capsfilter{N} → detlogger{N} → nvjpegenc{N} → filesink{N}
-//         └→ queue_msg → nvmsgconv → nvmsgbroker
+//     nvurisrcbin{N} → nvstreammux → pgie → nvdsanalytics → nvstreamdemux → queue_demux{N} → detfadedrawer{N} → nvosdbin{N} → nvvideoconvert{N}
+//         │     → capsfilter{N} → detlogger{N} → nvjpegenc{N} → filesink{N}
 class BaseImageGenerator : public PipelineGenerator {
 public:
     static constexpr const char* PIPELINE_CONFIG_NAME = "pipeline.yml";
     static constexpr const char* PGIE_CONFIG_NAME = "pgie.yml";
     static constexpr const char* ANALYTICS_CONFIG_NAME = "nvdsanalytics.yml";
-    static constexpr const char* MSGCONV_CONFIG_NAME = "nvmsgconv.yml";
     static constexpr const char* KAFKA_CONFIG_NAME = "kafka.txt";
     static constexpr const char* PARAMS_CONFIG_NAME = "params.yml";
 
@@ -57,8 +54,6 @@ public:
     virtual void initPipeline();
     void initPgie();
     void initNvdsanalytics();
-    std::vector<std::string> kafkaStreams() const;
-    void initNvmsgconv();
     void initKafka();
     virtual void applySavePaths(YAML::Node pipelineDocument, const std::filesystem::path& configSaveDir);
     std::map<std::string, std::string> documents(const std::filesystem::path& configSaveDir);
@@ -91,7 +86,6 @@ protected:
     bool enableNvdsanalytics = false;
     std::optional<PgieParser> pgieConfigParser;
     std::optional<PgieGenerator> pgieGenerator;
-    std::optional<NvmsgconvGenerator> nvmsgconvGenerator;
     std::optional<KafkaGenerator> kafkaGenerator;
     std::map<std::string, ConfigFile> files;
 };

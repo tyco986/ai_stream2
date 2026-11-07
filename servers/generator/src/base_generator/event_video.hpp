@@ -1,6 +1,7 @@
 #pragma once
 
 #include "base_generator/base_event.hpp"
+#include "constants/subelement_const.hpp"
 #include "subelement_generator/kafka.hpp"
 #include "subelement_generator/nvdsanalytics.hpp"
 #include "subelement_generator/nvmsgconv.hpp"
@@ -26,10 +27,11 @@
 //
 //     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → presenceeventcoder → tee_msg
 //       ─┬→ nvvideoconvert → tee_raw
-//           ─┬→ queue_raw → nvvideoconvert_raw → capsfilter_raw → rawcapturer → fakesink_raw
-//           └→ queue_osd → nvvideoconvert_osd → capsfilter_osd → nvosdbin → tee_vis
-//                 ─┬→ queue_vis → nvvideoconvert_vis → capsfilter_vis → viscapturer → fakesink_vis
-//                 └→ queue_enc → presencelogger → fakesink
+//       │     ─┬→ queue_raw → nvvideoconvert_raw → capsfilter_raw → rawcapturer → fakesink_raw
+//       │     └→ queue_osd → nvvideoconvert_osd → capsfilter_osd → nvosdbin → tee_vis
+//       │           ─┬→ queue_vis → nvvideoconvert_vis → capsfilter_vis → viscapturer → fakesink_vis
+//       │           └→ queue_enc → presencelogger → fakesink
+//       └→ queue_msg → nvmsgconv → nvmsgbroker
 class EventVideoGenerator : public BaseEventGenerator {
 public:
     static constexpr const char* PIPELINE_CONFIG_NAME = "pipeline.yml";
@@ -85,6 +87,7 @@ public:
     std::vector<int> videoFps;
     int runtimeBatchSize = 0;
     std::string kafkaTopic;
+    std::string msg2pLib = subelement::MSG2P_LIB_PRESENCE;
     bool enableNvdsanalytics = false;
     bool enableNvtracker = false;
     int trackerWidth = 0;

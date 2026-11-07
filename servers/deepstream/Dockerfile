@@ -68,7 +68,10 @@ RUN cmake -S /src -B /tmp/build -DCMAKE_BUILD_TYPE=Release \
     && cp /tmp/build/src/plugins/sahipostprocesspose/libgstnvsahipostprocesspose.so ${GST_PLUGIN_PATH}/ \
     && cp /tmp/build/src/plugins/nvdspreprocess/rtmposepreprocess/libnvds_rtmpose_preprocess.so /opt/ai_stream2/servers/deepstream/libs/ \
     && cp /tmp/build/src/plugins/nvdspreprocess/stgcnpppreprocess/libnvds_stgcnpp_preprocess.so /opt/ai_stream2/servers/deepstream/libs/ \
-    && cp /tmp/build/src/plugins/gie/yolopose/libnvinfer_yolo_pose.so /opt/ai_stream2/servers/deepstream/libs/
+    && cp /tmp/build/src/plugins/gie/yolopose/libnvinfer_yolo_pose.so /opt/ai_stream2/servers/deepstream/libs/ \
+    && cp /tmp/build/src/plugins/nvmsgconv/libnvds_msgconv_det.so /opt/ai_stream2/servers/deepstream/libs/ \
+    && cp /tmp/build/src/plugins/nvmsgconv/libnvds_msgconv_presence.so /opt/ai_stream2/servers/deepstream/libs/ \
+    && cp /tmp/build/src/plugins/nvmsgconv/libnvds_msgconv_stgcnpp.so /opt/ai_stream2/servers/deepstream/libs/
 
 
 FROM base

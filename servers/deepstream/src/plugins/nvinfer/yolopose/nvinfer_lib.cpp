@@ -1,4 +1,4 @@
-#include "plugins/gie/yolopose/engine/yolo_pose_parser.hpp"
+#include "plugins/nvinfer/yolopose/engine/yolo_pose_parser.hpp"
 
 extern "C" bool NvInferYoloPose(
     std::vector<NvDsInferLayerInfo> const& outputLayersInfo,

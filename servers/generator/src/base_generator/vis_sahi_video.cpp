@@ -29,7 +29,7 @@ VisSahiVideoGenerator::VisSahiVideoGenerator(
 
 void VisSahiVideoGenerator::initVideos() {
     SahiVideoGenerator::initVideos();
-    std::filesystem::create_directories(output.parent_path());
+    std::filesystem::create_directories(output);
 }
 
 void VisSahiVideoGenerator::initParams() {
@@ -73,29 +73,22 @@ void VisSahiVideoGenerator::add() {
             "nvtracker",
             addNvtracker(subelement::TRACKER_LL_LIB, TRACKER_CONFIG_NAME, trackerWidth, trackerHeight, gpuId, operateOnClassIds));
     }
-    appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME, gpuId));
-    appendNode("tee", "tee_msg", addTee());
-    appendNode("queue", "queue_msg", addQueue());
-    appendNode("nvmsgconv", "nvmsgconv", addNvmsgconv(MSGCONV_CONFIG_NAME, pipeline::PAYLOAD_DEEPSTREAM_MINIMAL));
-    appendNode(
-        "nvmsgbroker",
-        "nvmsgbroker",
-        addNvmsgbroker(subelement::KAFKA_PROTO_LIB, subelement::KAFKA_CONN_STR, kafkaTopic, KAFKA_CONFIG_NAME, false, false));
-    if (drawer.has_value()) {
-        appendNode(visDrawerElement(), visDrawerElement(), visDrawerProperties(*drawer));
-    }
-    appendNode("nvosdbin", "nvosdbin", addNvosdbin(gpuId, true, true));
-    appendNode("nvvideoconvert", "nvvideoconvert", addNvvideoconvert(gpuId));
+    appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     for (int streamIndex = 0; streamIndex < muxBatchSize; ++streamIndex) {
         const std::string suffix = std::to_string(streamIndex);
         const std::filesystem::path source(videos.at(streamIndex).get<std::string>());
-        const std::filesystem::path sink = output / (suffix + "_" + source.stem().string() + ".mp4");
+        const std::filesystem::path sink = output / source.filename();
         appendNode("queue", "queue_demux" + suffix, addQueue());
+        appendNode("nvvideoconvert", "nvvideoconvert" + suffix, addNvvideoconvert(gpuId));
+        if (drawer.has_value()) {
+            appendNode(visDrawerElement(), visDrawerElement() + suffix, visDrawerProperties(*drawer));
+        }
+        appendNode("nvosdbin", "nvosdbin" + suffix, addNvosdbin(gpuId, true, true));
         appendNode(
             "detlogger",
             "detlogger" + suffix,
-            addDetlogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
+            addDetlogger(logger.value("interval", 0)));
         appendNode(
             "nvv4l2h264enc",
             "nvv4l2h264enc" + suffix,
@@ -126,20 +119,17 @@ void VisSahiVideoGenerator::link() {
         inferenceTail = "nvtracker";
     }
     edges[inferenceTail] = "nvdsanalytics";
-    edges["nvdsanalytics"] = "tee_msg";
-    const std::string visNext = drawer.has_value() ? visDrawerElement() : "nvosdbin";
-    edges["tee_msg"].push_back(visNext);
-    edges["tee_msg"].push_back("queue_msg");
-    if (drawer.has_value()) {
-        edges[visDrawerElement()] = "nvosdbin";
-    }
-    edges["queue_msg"] = "nvmsgconv";
-    edges["nvmsgconv"] = "nvmsgbroker";
-    edges["nvosdbin"] = "nvvideoconvert";
-    edges["nvvideoconvert"] = "nvstreamdemux";
+    edges["nvdsanalytics"] = "nvstreamdemux";
     for (int index = 0; index < muxBatchSize; ++index) {
         const std::string suffix = std::to_string(index);
-        edges["queue_demux" + suffix] = "detlogger" + suffix;
+        const std::string drawerName = visDrawerElement() + suffix;
+        const std::string osdPrev = drawer.has_value() ? drawerName : "nvosdbin" + suffix;
+        edges["queue_demux" + suffix] = "nvvideoconvert" + suffix;
+        edges["nvvideoconvert" + suffix] = osdPrev;
+        if (drawer.has_value()) {
+            edges[drawerName] = "nvosdbin" + suffix;
+        }
+        edges["nvosdbin" + suffix] = "detlogger" + suffix;
         edges["detlogger" + suffix] = "nvv4l2h264enc" + suffix;
         edges["nvv4l2h264enc" + suffix] = "h264parse" + suffix;
         edges["h264parse" + suffix] = "mp4mux" + suffix;

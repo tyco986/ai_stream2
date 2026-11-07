@@ -2,13 +2,12 @@
 
 namespace pipeline {
 
-inline constexpr const char* DEEPSTREAM_LOG_ROOT = "/root/logs/deepstream";
 inline constexpr const char* DEEPSTREAM_OUTPUT_ROOT = "/root/outputs/deepstream";
 inline constexpr const char* DEFAULT_CAPS = "video/x-raw(memory:NVMM), format=I420";
 inline constexpr const char* POSE_MODE_COCO17 = "coco17";
 inline constexpr const char* PRESENCE_MODE_FOLD = "fold";
 inline constexpr const char* LABEL_TASK_DET = "det";
-inline constexpr const char* CAPTURE_CODES_DEFAULT = "1";
+inline constexpr const char* CAPTURE_CODES_DEFAULT = "12";
 inline constexpr const char* TARGET_UNIQUE_IDS_DEFAULT = "1";
 inline constexpr const char* GIE_IDS_DEFAULT = "1";
 

@@ -22,6 +22,21 @@ const PresenceLogEngine::PresenceEventMeta* PresenceLogEngine::eventMeta(NvDsFra
     return event;
 }
 
+bool PresenceLogEngine::active(NvDsFrameMeta* frame) const {
+    const PresenceEventMeta* event = eventMeta(frame);
+    bool found = false;
+    if (event != nullptr) {
+        unsigned count = event->numClasses;
+        if (count > dslogger::PRESENCE_EVENT_CODE_LEN) {
+            count = dslogger::PRESENCE_EVENT_CODE_LEN;
+        }
+        for (unsigned index = 0; index < count && !found; index++) {
+            found = event->eventCodes[index] != '0';
+        }
+    }
+    return found;
+}
+
 void PresenceLogEngine::appendExtra(std::ostringstream& json, NvDsFrameMeta* frame) const {
     const PresenceEventMeta* event = eventMeta(frame);
     json << ",\"eventcode\":";

@@ -22,4 +22,5 @@ drawer:
   mode: coco17
 images:
   - /root/attachments/images/video1.png
-output: /root/outputs/deepstream/yolo26n_pose_image.jpg
+  - /root/attachments/images/video2.png
+output: /root/outputs/deepstream/yolo26n_pose_image

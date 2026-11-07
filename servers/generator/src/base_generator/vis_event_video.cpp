@@ -30,7 +30,7 @@ VisEventVideoGenerator::VisEventVideoGenerator(
 
 void VisEventVideoGenerator::initVideos() {
     EventVideoGenerator::initVideos();
-    std::filesystem::create_directories(output.parent_path());
+    std::filesystem::create_directories(output);
 }
 
 void VisEventVideoGenerator::initParams() {
@@ -43,7 +43,7 @@ void VisEventVideoGenerator::appendEncode(int gpuId) {
     for (int streamIndex = 0; streamIndex < static_cast<int>(videos.size()); ++streamIndex) {
         const std::string suffix = std::to_string(streamIndex);
         const std::filesystem::path source(videos.at(streamIndex).get<std::string>());
-        const std::filesystem::path sink = output / (suffix + "_" + source.stem().string() + ".mp4");
+        const std::filesystem::path sink = output / source.filename();
         appendNode("queue", "queue_demux" + suffix, addQueue());
         appendNode(
             "nvv4l2h264enc",

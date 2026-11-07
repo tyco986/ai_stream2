@@ -6,9 +6,7 @@
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → tee_msg
-//         ├→ detlogger → fakesink
-//         └→ queue_msg → nvmsgconv → nvmsgbroker
+//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → detlogger → fakesink
 class SegVideoGenerator : public BaseVideoGenerator {
 public:
     SegVideoGenerator(

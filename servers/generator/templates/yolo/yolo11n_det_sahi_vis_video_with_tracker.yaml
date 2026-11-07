@@ -21,7 +21,8 @@ drawer:
   show_label: true
 videos:
   - /root/attachments/videos/video1.mp4
-output: /root/outputs/deepstream/yolo11n_det_sahi_vis_video_with_tracker.mp4
+  - /root/attachments/videos/video2.mp4
+output: /root/outputs/deepstream/yolo11n_det_sahi_vis_video_with_tracker
 sahi:
   nvsahipreprocess:
     slice_width: 640

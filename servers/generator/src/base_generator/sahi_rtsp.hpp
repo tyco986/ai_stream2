@@ -18,9 +18,7 @@
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
-//           → boxsnapshot → nvtracker → nvdsanalytics → tee_msg
-//             ─┬→ nvstreamdemux → queue_demux{N} → detlogger{N} → fakesink{N}
-//             └→ queue_msg → nvmsgconv → nvmsgbroker
+//           → boxsnapshot → nvtracker → nvdsanalytics → nvstreamdemux → queue_demux{N} → detlogger{N} → fakesink{N}
 class SahiRtspGenerator : public BaseRtspGenerator {
 public:
     static constexpr const char* SAHI_PREPROCESS_CONFIG_NAME = "nvsahipreprocess.ini";

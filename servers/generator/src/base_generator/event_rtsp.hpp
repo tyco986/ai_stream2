@@ -1,6 +1,7 @@
 #pragma once
 
 #include "base_generator/base_event.hpp"
+#include "constants/subelement_const.hpp"
 #include "subelement_generator/kafka.hpp"
 #include "subelement_generator/nvmsgconv.hpp"
 #include "subelement_generator/nvtracker.hpp"
@@ -24,10 +25,11 @@
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → presenceeventcoder → tee_msg
+//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → presenceeventcoder → tee_msg
 //       ─┬→ nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → tee_raw{N}
-//       │     ─┬→ rawcapturer{N} → fakesink_raw{N}
-//       │     └→ nvosdbin{N} → presencelogger{N} → viscapturer{N} → fakesink_vis{N}
+//       │     ─┬→ queue_raw{N} → nvvideoconvert_raw{N} → capsfilter_raw{N} → rawcapturer{N} → fakesink_raw{N}
+//       │     └→ queue_osd{N} → nvvideoconvert_osd{N} → capsfilter_osd{N} → nvosdbin{N} → presencelogger{N}
+//       │           → queue_vis{N} → nvvideoconvert_vis{N} → capsfilter_vis{N} → viscapturer{N} → fakesink_vis{N}
 //       └→ queue_msg → nvmsgconv → nvmsgbroker
 class EventRtspGenerator : public BaseEventGenerator {
 public:
@@ -84,6 +86,7 @@ public:
     int fps = 0;
     int runtimeBatchSize = 0;
     std::string kafkaTopic;
+    std::string msg2pLib = subelement::MSG2P_LIB_PRESENCE;
     bool enableNvdsanalytics = false;
     bool enableNvtracker = false;
     int trackerWidth = 0;

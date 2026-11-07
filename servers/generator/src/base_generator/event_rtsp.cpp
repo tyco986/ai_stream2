@@ -60,7 +60,6 @@ EventRtspGenerator::EventRtspGenerator(
     if (logger.has_value()) {
         this->logger.update(*logger);
     }
-    this->logger["root"] = std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + this->pipelineName;
 }
 
 void EventRtspGenerator::init() {
@@ -203,7 +202,7 @@ void EventRtspGenerator::initNvmsgconv() {
 
 void EventRtspGenerator::initKafka() {
     kafkaGenerator.emplace();
-    kafkaTopic = std::string("ai_stream2_") + pipelineName;
+    kafkaTopic = std::string(subelement::KAFKA_TOPIC_PREFIX) + pipelineName;
     files.insert_or_assign(KAFKA_CONFIG_NAME, ConfigFile(kafkaGenerator->config));
 }
 
@@ -296,7 +295,7 @@ void EventRtspGenerator::appendAfterOsd(int index, int gpuId) {
     appendNode(
         "presencelogger",
         "presencelogger" + suffix,
-        addPresencelogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
+        addPresencelogger(logger.value("interval", 0)));
     appendNode("queue", "queue_vis" + suffix, addQueue());
     appendNode("nvvideoconvert", "nvvideoconvert_vis" + suffix, addNvvideoconvert(gpuId));
     appendNode("capsfilter", "capsfilter_vis" + suffix, addCapsfilter("video/x-raw(memory:NVMM), format=RGB"));
@@ -331,11 +330,11 @@ void EventRtspGenerator::add() {
             "nvtracker",
             addNvtracker(subelement::TRACKER_LL_LIB, TRACKER_CONFIG_NAME, trackerWidth, trackerHeight, gpuId, operateOnClassIds));
     }
-    appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME, gpuId));
+    appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
     appendEventCoder();
     appendNode("tee", "tee_msg", addTee());
     appendNode("queue", "queue_msg", addQueue());
-    appendNode("nvmsgconv", "nvmsgconv", addNvmsgconv(MSGCONV_CONFIG_NAME, pipeline::PAYLOAD_DEEPSTREAM_MINIMAL));
+    appendNode("nvmsgconv", "nvmsgconv", addNvmsgconv(MSGCONV_CONFIG_NAME, msg2pLib, pipeline::PAYLOAD_DEEPSTREAM_MINIMAL, true, pgie.at("interval").get<int>()));
     appendNode(
         "nvmsgbroker",
         "nvmsgbroker",

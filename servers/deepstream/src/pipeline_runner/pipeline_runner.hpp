@@ -27,4 +27,7 @@ private:
     std::string loadPipelineName() const;
     YAML::Node loadPipelineYaml() const;
     void fixLink(deepstream::Pipeline& pipeline, const YAML::Node& pipelineYaml) const;
+    void prepareOutputs(const YAML::Node& pipelineYaml) const;
+    void redirectLog() const;
+    void runPipeline() const;
 };

@@ -95,7 +95,6 @@ EventImageGenerator::EventImageGenerator(
     if (logger.has_value()) {
         this->logger.update(*logger);
     }
-    this->logger["root"] = std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + this->pipelineName;
 }
 
 void EventImageGenerator::init() {
@@ -126,7 +125,7 @@ void EventImageGenerator::initImages() {
         index += 1;
     }
     runtimeBatchSize = static_cast<int>(images.size());
-    std::filesystem::create_directories(output.parent_path());
+    std::filesystem::create_directories(output);
 }
 
 void EventImageGenerator::initParams() {
@@ -215,7 +214,7 @@ void EventImageGenerator::initNvmsgconv() {
 
 void EventImageGenerator::initKafka() {
     kafkaGenerator.emplace();
-    kafkaTopic = std::string("ai_stream2_") + pipelineName;
+    kafkaTopic = std::string(subelement::KAFKA_TOPIC_PREFIX) + pipelineName;
     files.insert_or_assign(KAFKA_CONFIG_NAME, ConfigFile(kafkaGenerator->config));
 }
 
@@ -280,11 +279,11 @@ void EventImageGenerator::add() {
         "nvstreammux",
         addNvstreammux(runtimeBatchSize, width, height, false, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId, false));
     appendNode("nvinfer", "pgie", addNvinfer(PGIE_CONFIG_NAME, pgieGenerator->config["property"]["batch-size"].as<int>(), gpuId));
-    appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME, gpuId));
+    appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
     appendEventCoder();
     appendNode("tee", "tee_msg", addTee());
     appendNode("queue", "queue_msg", addQueue());
-    appendNode("nvmsgconv", "nvmsgconv", addNvmsgconv(MSGCONV_CONFIG_NAME, pipeline::PAYLOAD_DEEPSTREAM_MINIMAL));
+    appendNode("nvmsgconv", "nvmsgconv", addNvmsgconv(MSGCONV_CONFIG_NAME, msg2pLib, pipeline::PAYLOAD_DEEPSTREAM_MINIMAL, true, pgie.at("interval").get<int>()));
     appendNode(
         "nvmsgbroker",
         "nvmsgbroker",
@@ -315,12 +314,12 @@ void EventImageGenerator::add() {
     appendNode(
         "presencelogger",
         "presencelogger",
-        addPresencelogger(std::string(pipeline::DEEPSTREAM_LOG_ROOT) + "/" + pipelineName, logger.value("interval", 0)));
+        addPresencelogger(logger.value("interval", 0)));
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     for (int streamIndex = 0; streamIndex < runtimeBatchSize; ++streamIndex) {
         const std::string suffix = std::to_string(streamIndex);
         const std::filesystem::path source(images.at(streamIndex).get<std::string>());
-        const std::filesystem::path sink = output / (suffix + "_" + source.stem().string() + ".jpg");
+        const std::filesystem::path sink = output / (source.stem().string() + ".jpg");
         appendNode("queue", "queue_demux" + suffix, addQueue());
         appendNode("nvjpegenc", "nvjpegenc" + suffix, addNvjpegenc());
         appendNode("filesink", "filesink" + suffix, addFilesink(sink, false, false));

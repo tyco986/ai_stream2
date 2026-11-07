@@ -19,8 +19,11 @@ public:
 
     void setInterval(int interval);
     int interval() const;
+    bool named() const;
+    void setPipelineName(const std::string& name);
 
     void processFrame(NvDsFrameMeta* frame, double latencyMs);
+    std::string buildLine(NvDsFrameMeta* frame, double latencyMs) const;
 
 protected:
     virtual const char* page() const = 0;
@@ -32,9 +35,9 @@ protected:
 private:
     bool shouldLog(int pad);
     std::shared_ptr<spdlog::logger> loggerFor(int pad);
-    std::string buildLine(NvDsFrameMeta* frame, double latencyMs) const;
 
     int logInterval;
+    std::string pipelineName;
     std::unordered_map<int, int> counters;
     std::unordered_map<int, std::shared_ptr<spdlog::logger>> loggers;
 };

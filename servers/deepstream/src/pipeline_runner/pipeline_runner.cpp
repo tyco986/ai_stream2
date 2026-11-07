@@ -4,11 +4,15 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdio>
+#include <exception>
 #include <filesystem>
 #include <utility>
 #include <vector>
 
 #include <csignal>
+#include <fcntl.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -80,17 +84,58 @@ void PipelineRunner::fixLink(deepstream::Pipeline& pipeline, const YAML::Node& p
     }
 }
 
+void PipelineRunner::prepareOutputs(const YAML::Node& pipelineYaml) const {
+    for (const YAML::Node& node : pipelineYaml["deepstream"]["nodes"]) {
+        const bool sink = node["type"].as<std::string>() == pipeline_runner::FILE_SINK;
+        const YAML::Node properties = node["properties"];
+        const bool located = sink && properties && properties[pipeline_runner::LOCATION_KEY];
+        if (located) {
+            const std::filesystem::path location = properties[pipeline_runner::LOCATION_KEY].as<std::string>();
+            std::filesystem::create_directories(location.parent_path());
+        }
+    }
+}
+
+void PipelineRunner::redirectLog() const {
+    std::filesystem::create_directories(pipeline_runner::LOG_DIR);
+    const int fd = ::open(pipeline_runner::LOG_FILE, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    const bool opened = fd >= 0;
+    if (opened) {
+        ::dup2(fd, STDOUT_FILENO);
+        ::dup2(fd, STDERR_FILENO);
+        ::close(fd);
+        std::setvbuf(stdout, nullptr, _IOLBF, 0);
+        std::setvbuf(stderr, nullptr, _IOLBF, 0);
+    }
+}
+
+void PipelineRunner::runPipeline() const {
+    const std::string pipelineName = loadPipelineName();
+    const YAML::Node pipelineYaml = loadPipelineYaml();
+    const std::filesystem::path pipelinePath =
+        std::filesystem::path(configDir) / pipeline_runner::PIPELINE_FILE;
+    prepareOutputs(pipelineYaml);
+    deepstream::Pipeline pipeline(pipelineName.c_str(), pipelinePath.string());
+    fixLink(pipeline, pipelineYaml);
+    pipeline.start().wait();
+}
+
 void PipelineRunner::run() {
     const pid_t child = fork();
+    int code = 0;
     if (child == 0) {
-        const std::string pipelineName = loadPipelineName();
-        const YAML::Node pipelineYaml = loadPipelineYaml();
-        const std::filesystem::path pipelinePath =
-            std::filesystem::path(configDir) / pipeline_runner::PIPELINE_FILE;
-        deepstream::Pipeline pipeline(pipelineName.c_str(), pipelinePath.string());
-        fixLink(pipeline, pipelineYaml);
-        pipeline.start().wait();
-        _exit(0);
+        // The child inherits the HTTP server. An exception must exit here, otherwise
+        // it is reported as a second /start/local response and the child stays alive.
+        redirectLog();
+        try {
+            runPipeline();
+        } catch (const std::exception& error) {
+            std::fprintf(stderr, "%s\n", error.what());
+            code = 1;
+        }
+        std::fflush(stdout);
+        std::fflush(stderr);
+        _exit(code);
     }
     pid = child;
 }

@@ -13,9 +13,7 @@
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
 //         → boxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0 → nvrtmposepostprocess
-//         → nvdsanalytics → tee_msg
-//           ─┬→ nvstreamdemux → queue_demux{N} → detlogger{N} → fakesink{N}
-//           └→ queue_msg → nvmsgconv → nvmsgbroker
+//         → nvdsanalytics → nvstreamdemux → queue_demux{N} → detlogger{N} → fakesink{N}
 class TopdownPoseSahiRtspGenerator : public SahiRtspGenerator {
 public:
     TopdownPoseSahiRtspGenerator(

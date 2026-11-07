@@ -29,7 +29,10 @@ BaseEventGenerator::BaseEventGenerator(std::string pipelineName, nlohmann::json 
 }
 
 std::string BaseEventGenerator::capturerCodes() const {
-    const std::string codes = capturer.value("capture_codes", pipeline::CAPTURE_CODES_DEFAULT);
+    const nlohmann::json value = capturer.contains("capture_codes")
+        ? capturer.at("capture_codes")
+        : nlohmann::json(pipeline::CAPTURE_CODES_DEFAULT);
+    const std::string codes = value.is_string() ? value.get<std::string>() : value.dump();
     return codes;
 }
 

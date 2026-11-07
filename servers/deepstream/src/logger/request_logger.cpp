@@ -11,7 +11,7 @@
 #include <iomanip>
 #include <sstream>
 
-#include <spdlog/sinks/daily_file_sink.h>
+#include <spdlog/sinks/rotating_file_sink.h>
 
 std::shared_ptr<spdlog::logger> RequestLogger::logger;
 
@@ -31,6 +31,12 @@ nlohmann::json RequestLogger::requestInput(const httplib::Request& request) {
     if (!modelNames.empty()) {
         input[pipeline::FIELD_MODEL] = modelNames;
     }
+    const httplib::FormData media = request.form.get_file(pipeline::FIELD_MEDIA);
+    if (!media.filename.empty()) {
+        input[pipeline::FIELD_MEDIA] = "multipart(" + media.filename + ")";
+    }
+    const nlohmann::json parsed = input.empty() ? nlohmann::json::parse(request.body, nullptr, false) : nlohmann::json();
+    input = input.empty() && parsed.is_object() ? parsed : input;
     return input.empty() ? nlohmann::json("") : input;
 }
 
@@ -73,7 +79,7 @@ std::shared_ptr<spdlog::logger> RequestLogger::instance() {
     if (missing) {
         std::filesystem::create_directories(request_log::ROOT);
         const std::string path = std::filesystem::path(request_log::ROOT) / (std::string(request_log::PAGE) + request_log::SUFFIX);
-        auto sink = std::make_shared<spdlog::sinks::daily_file_sink_mt>(path, 0, 0, false, request_log::MAX_DAYS);
+        auto sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(path, request_log::MAX_BYTES, request_log::MAX_FILES);
         logger = std::make_shared<spdlog::logger>(request_log::PAGE, sink);
         logger->set_pattern("%v");
         logger->flush_on(spdlog::level::info);

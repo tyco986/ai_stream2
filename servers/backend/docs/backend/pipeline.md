@@ -74,7 +74,7 @@ JSON 成功外壳：`{success, message, data}`。
 
 ### POST `/backend/pipelines/{pipeline_id}/start`
 
-`starting` 或容器已在跑时 `409`。否则经 Docker 代理创建或重启容器 `puskas_{name}`（镜像 `puskas_deepstream`，端口 9000）。健康检查通过后，从 `config_path` 的 `params.yml` 取出全部 `model_zip`，把配置 zip（`name=config`）和这些模型 zip（`name=model`）放进同一个 multipart 调用 `/start`，再轮询 `/status`，把 `status`、`start_time`、`end_time`、`duration` 写回。
+`starting` 或容器已在跑时 `409`。否则经 Docker 代理创建或重启容器 `puskas_{name}`（镜像 `puskas_deepstream`，端口 9000）。健康检查通过后，从 `config_path` 的 `params.yml` 取出全部 `model_zip`，以及 `videos`、`images` 里的本地文件。配置 zip（`name=config`）、模型 zip（`name=model`）和媒体 zip（`name=media`，条目为去掉前导 `/` 的原路径；没有本地媒体则不传）放进同一个 multipart 调用 `/start`，再轮询 `/status`，把 `status`、`start_time`、`end_time`、`duration` 写回。
 
 入参：path `pipeline_id`。
 

@@ -3,7 +3,7 @@
 namespace capturer {
 
 inline constexpr const char* OUTPUT_DIR = "/root/output";
-inline constexpr const char* DEFAULT_CAPTURE_CODES = "1";
+inline constexpr const char* DEFAULT_CAPTURE_CODES = "12";
 inline constexpr const char* DEFAULT_LABEL_TASK = "det";
 inline constexpr const char* LABEL_TASK_SEG = "seg";
 inline constexpr int JPEG_QUALITY = 90;
