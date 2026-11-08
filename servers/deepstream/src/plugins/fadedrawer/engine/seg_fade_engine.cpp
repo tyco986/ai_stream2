@@ -19,7 +19,6 @@ void SegFadeEngine::clearMask(NvDsObjectMeta* object) const {
 }
 
 void SegFadeEngine::decorateCached(NvDsBatchMeta* batch, NvDsFrameMeta* frame, const CachedObject& cached, float alpha) {
-    (void)alpha;
     if (showMask && !cached.mask.empty() && cached.maskSize > 0) {
         NvDsObjectMeta* object = nvds_acquire_obj_meta_from_pool(batch);
         if (object != nullptr) {
@@ -31,6 +30,7 @@ void SegFadeEngine::decorateCached(NvDsBatchMeta* batch, NvDsFrameMeta* frame, c
             object->rect_params.width = cached.width;
             object->rect_params.height = cached.height;
             object->rect_params.border_width = 0;
+            object->rect_params.border_color = boxColor(frame, alpha);
             object->rect_params.has_bg_color = 0;
             g_free(object->text_params.display_text);
             object->text_params.display_text = nullptr;

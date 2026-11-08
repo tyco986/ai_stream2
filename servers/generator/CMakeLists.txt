@@ -142,4 +142,5 @@ add_executable(generator
 )
 
 target_include_directories(generator PRIVATE src ${OPENCV_INCLUDE_DIR})
+target_precompile_headers(generator PRIVATE libs/httplib.h)
 target_link_libraries(generator PRIVATE nlohmann_json::nlohmann_json yaml-cpp libzip::zip spdlog::spdlog Threads::Threads ${OPENCV_CORE} ${OPENCV_IMGPROC} ${OPENCV_IMGCODECS} ${OPENCV_VIDEOIO})

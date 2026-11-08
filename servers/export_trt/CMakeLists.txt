@@ -27,5 +27,6 @@ add_executable(export_trt
 )
 
 target_include_directories(export_trt PRIVATE src /usr/local/cuda/include)
+target_precompile_headers(export_trt PRIVATE libs/httplib.h)
 target_link_directories(export_trt PRIVATE /usr/local/cuda/lib64)
 target_link_libraries(export_trt PRIVATE nlohmann_json::nlohmann_json yaml-cpp::yaml-cpp libzip::zip spdlog::spdlog nvinfer nvinfer_plugin nvonnxparser cudart ${CMAKE_DL_LIBS} Threads::Threads)

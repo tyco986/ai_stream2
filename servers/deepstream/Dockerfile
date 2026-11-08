@@ -21,7 +21,7 @@ ENV NVDS_ENABLE_LATENCY_MEASUREMENT=1
 ENV NVDS_ENABLE_COMPONENT_LATENCY_MEASUREMENT=1
 
 
-FROM base AS build
+FROM base AS toolchain
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -46,35 +46,32 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 COPY src/patches /patches
 COPY attachments/deepstream-sahi-master.zip /tmp/deepstream-sahi-master.zip
-COPY scripts/4_apply_patches.sh /tmp/4_apply_patches.sh
-RUN bash /tmp/4_apply_patches.sh
+COPY scripts/5_apply_patches.sh /tmp/5_apply_patches.sh
+RUN bash /tmp/5_apply_patches.sh
 COPY attachments/nvdsinfer_custom_impl_Yolo_seg.zip /tmp/nvdsinfer_custom_impl_Yolo_seg.zip
 RUN unzip -o -q /tmp/nvdsinfer_custom_impl_Yolo_seg.zip -d /root/src \
     && make -C /root/src/nvdsinfer_custom_impl_Yolo_seg CUDA_VER=13.1 SM=120 -j"$(nproc)" \
     && mkdir -p /opt/ai_stream2/servers/deepstream/libs \
     && cp /root/src/nvdsinfer_custom_impl_Yolo_seg/libnvdsinfer_custom_impl_Yolo_seg.so /opt/ai_stream2/servers/deepstream/libs/
+
+
+FROM toolchain AS dev
+
+WORKDIR /src
+EXPOSE 8094
+
+
+FROM toolchain AS build
+
 COPY CMakeLists.txt main.cpp /src/
 COPY src /src/src
+COPY scripts/5_install_artifacts.sh /tmp/5_install_artifacts.sh
 RUN cmake -S /src -B /tmp/build -DCMAKE_BUILD_TYPE=Release \
     && cmake --build /tmp/build -j"$(nproc)" \
-    && mkdir -p /app /opt/ai_stream2/servers/deepstream/libs \
-    && cp /tmp/build/deepstream /app/deepstream \
-    && cp /tmp/build/src/plugins/boxsnapshot/libgstboxsnapshot.so ${GST_PLUGIN_PATH}/ \
-    && cp /tmp/build/src/plugins/fadedrawer/libgstfadedrawer.so ${GST_PLUGIN_PATH}/ \
-    && cp /tmp/build/src/plugins/presenceeventcoder/libgstpresenceeventcoder.so ${GST_PLUGIN_PATH}/ \
-    && cp /tmp/build/src/plugins/capturer/libgstcapturer.so ${GST_PLUGIN_PATH}/ \
-    && cp /tmp/build/src/plugins/dslogger/libgstdslogger.so ${GST_PLUGIN_PATH}/ \
-    && cp /tmp/build/src/plugins/stgcnppactionlabel/libgststgcnppactionlabel.so ${GST_PLUGIN_PATH}/ \
-    && cp /tmp/build/src/plugins/sahipostprocesspose/libgstnvsahipostprocesspose.so ${GST_PLUGIN_PATH}/ \
-    && cp /tmp/build/src/plugins/nvdspreprocess/rtmposepreprocess/libnvds_rtmpose_preprocess.so /opt/ai_stream2/servers/deepstream/libs/ \
-    && cp /tmp/build/src/plugins/nvdspreprocess/stgcnpppreprocess/libnvds_stgcnpp_preprocess.so /opt/ai_stream2/servers/deepstream/libs/ \
-    && cp /tmp/build/src/plugins/gie/yolopose/libnvinfer_yolo_pose.so /opt/ai_stream2/servers/deepstream/libs/ \
-    && cp /tmp/build/src/plugins/nvmsgconv/libnvds_msgconv_det.so /opt/ai_stream2/servers/deepstream/libs/ \
-    && cp /tmp/build/src/plugins/nvmsgconv/libnvds_msgconv_presence.so /opt/ai_stream2/servers/deepstream/libs/ \
-    && cp /tmp/build/src/plugins/nvmsgconv/libnvds_msgconv_stgcnpp.so /opt/ai_stream2/servers/deepstream/libs/
+    && bash /tmp/5_install_artifacts.sh
 
 
-FROM base
+FROM base AS prod
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \

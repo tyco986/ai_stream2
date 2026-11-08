@@ -31,6 +31,7 @@ target_include_directories(deepstream PRIVATE
     ${YAML_CPP_INCLUDE_DIRS}
 )
 target_compile_definitions(deepstream PRIVATE CPPHTTPLIB_NO_OPENSSL)
+target_precompile_headers(deepstream PRIVATE libs/httplib.h)
 target_compile_options(deepstream PRIVATE -Wall -Werror ${YAML_CPP_CFLAGS_OTHER})
 target_link_directories(deepstream PRIVATE
     /opt/nvidia/deepstream/deepstream/lib

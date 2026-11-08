@@ -189,7 +189,7 @@ drogon::Task<Json::Value> PipelineController::postDeepstreamStart(const std::str
   std::vector<ZipPart> files;
   if (exists) {
     std::ifstream configFile(configPath, std::ios::binary);
-    std::string configZip(std::istreambuf_iterator<char>(configFile), std::istreambuf_iterator<char>());
+    std::string configZip = std::string(std::istreambuf_iterator<char>(configFile), std::istreambuf_iterator<char>());
     files.push_back(ZipPart{pipeline::FIELD_CONFIG, std::filesystem::path(configPath).filename().string(), configZip});
     const YAML::Node params = service.readParams(configPath);
     for (const std::string& path : service.getModelPaths(params)) {
@@ -198,7 +198,7 @@ drogon::Task<Json::Value> PipelineController::postDeepstreamStart(const std::str
         throw std::runtime_error("model zip missing");
       }
       std::ifstream modelFile(path, std::ios::binary);
-      std::string modelZip(std::istreambuf_iterator<char>(modelFile), std::istreambuf_iterator<char>());
+      std::string modelZip = std::string(std::istreambuf_iterator<char>(modelFile), std::istreambuf_iterator<char>());
       files.push_back(ZipPart{pipeline::FIELD_MODEL, std::filesystem::path(path).filename().string(), modelZip});
     }
     const std::string mediaZip = service.packMedia(params);

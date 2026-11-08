@@ -22,8 +22,8 @@ YAML::Node default_gie::yoloPose() {
     config["property"]["scaling-compute-hw"] = 0;
     config["property"]["net-scale-factor"] = 0.0039215697906911373;
     config["property"]["infer-dims"] = "3;640;640";
-    config["property"]["custom-lib-path"] = "/opt/ai_stream2/servers/deepstream/libs/libnvds_infer_yolo_pose.so";
-    config["property"]["parse-bbox-instance-mask-func-name"] = "NvDsInferYoloPose";
+    config["property"]["custom-lib-path"] = "/opt/ai_stream2/servers/deepstream/libs/libnvinfer_yolo_pose.so";
+    config["property"]["parse-bbox-instance-mask-func-name"] = "NvInferYoloPose";
     config["property"]["output-blob-names"] = "output0";
     config["property"]["output-instance-mask"] = 1;
     config["class-attrs-all"]["topk"] = 300;
