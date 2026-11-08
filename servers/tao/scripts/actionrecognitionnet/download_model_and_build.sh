@@ -82,7 +82,7 @@ if docker ps --format '{{.Names}}' | grep -qx "${CONTAINER}"; then
 else
   echo "   Container ${CONTAINER} not running, using ${IMAGE}"
   tmp="ds_action_build_$$"
-  docker run --name "${tmp}" --gpus all "${IMAGE}" bash -c "${BUILD}"
+  docker run --name "${tmp}" --ulimit core=0 --gpus all "${IMAGE}" bash -c "${BUILD}"
   copy_so_from_container "${tmp}"
   docker rm -f "${tmp}"
 fi

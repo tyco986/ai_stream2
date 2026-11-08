@@ -4,12 +4,12 @@
 
 // Generate YOLO SAHI segmentation RTSP pipeline with OSD preview sink.
 //
-// Drawer is segfadedrawer. OSD does not display instance masks.
+// Drawer is segfadedrawerwithtracker. OSD does not display instance masks.
 //
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
-//           → boxsnapshot → nvtracker → nvdsanalytics → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → segfadedrawer{N} → nvosdbin{N}
+//           → boxsnapshot → nvtracker → nvdsanalytics → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → segfadedrawerwithtracker{N} → nvosdbin{N}
 //             │     → queue_enc{N} → detlogger{N} → nvv4l2h264enc{N} → h264parse{N} → rtspclientsink{N}
 class SegSahiVisRtspGenerator : public VisSahiRtspGenerator {
 public:

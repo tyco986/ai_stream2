@@ -32,7 +32,8 @@ void VisRtspGenerator::add() {
         appendNode("queue", "queue_demux" + suffix, addQueue());
         appendNode("nvvideoconvert", "nvvideoconvert" + suffix, addNvvideoconvert(gpuId));
         if (drawer.has_value()) {
-            appendNode(nvdetDrawerElement(), "detfadedrawer" + suffix, nvdetDrawerProperties(*drawer));
+            const std::string drawerName = nvdetDrawerElement() + suffix;
+            appendNode(nvdetDrawerElement(), drawerName, nvdetDrawerProperties(*drawer));
         }
         appendNode("nvosdbin", "nvosdbin" + suffix, addNvosdbin(gpuId, true, true));
         appendNode("queue", "queue_enc" + suffix, addQueue());
@@ -74,10 +75,11 @@ void VisRtspGenerator::link() {
     for (int index = 0; index < runtimeBatchSize; ++index) {
         const std::string suffix = std::to_string(index);
         edges["queue_demux" + suffix] = "nvvideoconvert" + suffix;
-        const std::string osdPrev = drawer.has_value() ? "detfadedrawer" + suffix : "nvosdbin" + suffix;
+        const std::string drawerName = nvdetDrawerElement() + suffix;
+        const std::string osdPrev = drawer.has_value() ? drawerName : "nvosdbin" + suffix;
         edges["nvvideoconvert" + suffix] = osdPrev;
         if (drawer.has_value()) {
-            edges["detfadedrawer" + suffix] = "nvosdbin" + suffix;
+            edges[drawerName] = "nvosdbin" + suffix;
         }
         edges["nvosdbin" + suffix] = "queue_enc" + suffix;
         edges["queue_enc" + suffix] = "detlogger" + suffix;

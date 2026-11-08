@@ -9,6 +9,7 @@ docker rm -f "${PROJECT_NAME}_cloudbeaver" 2>/dev/null || true
 
 docker run -d \
   --name "${PROJECT_NAME}_cloudbeaver" \
+  --ulimit core=0 \
   --network "${PROJECT_NAME}_default" \
   -p 8978:8978 \
   -e CB_SERVER_NAME=ai_stream2 \

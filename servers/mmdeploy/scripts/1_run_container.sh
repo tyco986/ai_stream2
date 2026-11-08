@@ -16,6 +16,7 @@ docker rm -f "${NAME}" 2>/dev/null || true
 
 docker run -d \
   --name "${NAME}" \
+  --ulimit core=0 \
   --network "${PROJECT_NAME}_default" \
   -e TZ="${TZ:-$(cat /etc/timezone 2>/dev/null || echo UTC)}" \
   -v /etc/localtime:/etc/localtime:ro \

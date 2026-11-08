@@ -111,7 +111,7 @@ void VisEventSahiVideoGenerator::appendInfer(int gpuId) {
     appendNode(
         "nvstreammux",
         "nvstreammux",
-        addNvstreammux(muxBatchSize, width, height, false, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId, false));
+        addNvstreammux(muxBatchSize, width, height, true, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId, false));
     const nlohmann::json& preprocess = sahi.at("nvsahipreprocess");
     appendNode(
         "nvsahipreprocess",
@@ -136,11 +136,12 @@ void VisEventSahiVideoGenerator::appendInfer(int gpuId) {
         SAHI_POSTPROCESS,
         addNvsahipostprocess(
             gieId,
-            pipeline::MATCH_METRIC_IOS,
+            postprocess.value("match_metric", pipeline::MATCH_METRIC_IOS),
             postprocess.at("match_threshold").get<double>(),
-            false,
+            postprocess.value("class_agnostic", false),
             postprocess.value("enable_merge", true),
-            true));
+            postprocess.value("two_phase_nmm", true),
+            postprocess.value("prefer_full_frame", true)));
 }
 
 void VisEventSahiVideoGenerator::linkInfer(YAML::Node edges) {

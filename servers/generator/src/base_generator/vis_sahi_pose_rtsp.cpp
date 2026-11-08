@@ -37,7 +37,7 @@ YAML::Node VisSahiPoseRtspGenerator::sahiPostprocessProperties(const nlohmann::j
 }
 
 std::string VisSahiPoseRtspGenerator::visDrawerElement() const {
-    const std::string element = "posefadedrawer";
+    const std::string element = nvposeDrawerElement();
     return element;
 }
 

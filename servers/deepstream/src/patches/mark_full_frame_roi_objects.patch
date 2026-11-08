@@ -1,0 +1,19 @@
+--- sources/gst-plugins/gst-nvinfer/gstnvinfer_meta_utils.cpp
++++ sources/gst-plugins/gst-nvinfer/gstnvinfer_meta_utils.cpp
+@@ -152,6 +152,16 @@
+     rect_params.top = obj.top;
+     rect_params.width = obj.width;
+     rect_params.height = obj.height;
++    obj_meta->misc_obj_info[0] = 0;
++    if (nvinfer->input_tensor_from_meta && frame.roi_meta && frame.frame_meta &&
++        frame.frame_meta->source_frame_width > 0 &&
++        frame.frame_meta->source_frame_height > 0 &&
++        frame.roi_meta->roi.left <= 1.0f &&
++        frame.roi_meta->roi.top <= 1.0f &&
++        frame.roi_meta->roi.width + 1.0f >= frame.frame_meta->source_frame_width &&
++        frame.roi_meta->roi.height + 1.0f >= frame.frame_meta->source_frame_height) {
++      obj_meta->misc_obj_info[0] = 1;
++    }
+ 
+     /* Set rotation angle (converted to degrees for OSD) */
+     rect_params.rotation_angle = rotation_angle_rad * 57.2957795f;

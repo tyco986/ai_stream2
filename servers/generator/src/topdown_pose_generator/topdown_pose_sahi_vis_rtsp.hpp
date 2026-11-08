@@ -7,13 +7,13 @@
 
 // Generate topdown-pose SAHI RTSP pipeline with OSD preview.
 //
-// Drawer is posefadedrawer. mux batch size is the stream count.
+// Drawer is posefadedrawerwithtracker. mux batch size is the stream count.
 //
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
 //         → boxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0 → nvrtmposepostprocess
-//         → nvdsanalytics → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → posefadedrawer{N} → nvosdbin{N}
+//         → nvdsanalytics → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → posefadedrawerwithtracker{N} → nvosdbin{N}
 //           │     → queue_enc{N} → detlogger{N} → nvv4l2h264enc{N} → h264parse{N} → rtspclientsink{N}
 class TopdownPoseSahiVisRtspGenerator : public VisSahiRtspGenerator {
 public:

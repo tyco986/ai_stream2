@@ -27,7 +27,7 @@ protected:
     YAML::Node addNvinfer(const std::string& configFilePath, int batchSize, int gpuId = 0, bool inputTensorMeta = false);
     YAML::Node addNvsahipreprocess(const std::string& configFile, int sliceWidth = pipeline::SLICE_SIZE, int sliceHeight = pipeline::SLICE_SIZE, double overlapWidthRatio = pipeline::OVERLAP_RATIO, double overlapHeightRatio = pipeline::OVERLAP_RATIO, bool enableFullFrame = true, int gpuId = 0, int uniqueId = pipeline::PREPROCESS_UNIQUE_ID, const std::string& targetUniqueIds = pipeline::TARGET_UNIQUE_IDS_DEFAULT);
     YAML::Node addNvdspreprocess(const std::string& configFile);
-    YAML::Node addNvsahipostprocess(const std::string& gieIds = pipeline::GIE_IDS_DEFAULT, int matchMetric = pipeline::MATCH_METRIC_IOS, double matchThreshold = pipeline::MATCH_THRESHOLD, bool classAgnostic = false, bool enableMerge = true, bool twoPhaseNmm = true);
+    YAML::Node addNvsahipostprocess(const std::string& gieIds = pipeline::GIE_IDS_DEFAULT, int matchMetric = pipeline::MATCH_METRIC_IOS, double matchThreshold = pipeline::MATCH_THRESHOLD, bool classAgnostic = false, bool enableMerge = true, bool twoPhaseNmm = true, bool preferFullFrame = true);
     YAML::Node addNvrtmposepostprocess(int sgieUniqueId = pipeline::POSE_SGIE_UNIQUE_ID);
     YAML::Node addStgcnppactionlabel(int classifierUniqueId = pipeline::CLASSIFIER_UNIQUE_ID);
     YAML::Node addNvsahipostprocessPose(const std::string& gieIds = pipeline::GIE_IDS_DEFAULT, bool classAgnostic = false, double oksThreshold = pipeline::OKS_THRESHOLD, double visThreshold = 0.0, int numKeypoints = 0);

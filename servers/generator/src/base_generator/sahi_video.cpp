@@ -106,11 +106,12 @@ YAML::Node SahiVideoGenerator::sahiPostprocessProperties(const nlohmann::json& p
     const std::string gieId = std::to_string(pgieGenerator->config["property"]["gie-unique-id"].as<int>());
     const YAML::Node properties = addNvsahipostprocess(
         gieId,
-        pipeline::MATCH_METRIC_IOS,
+        postprocess.value("match_metric", pipeline::MATCH_METRIC_IOS),
         postprocess.at("match_threshold").get<double>(),
-        false,
+        postprocess.value("class_agnostic", false),
         postprocess.value("enable_merge", true),
-        true);
+        postprocess.value("two_phase_nmm", true),
+        postprocess.value("prefer_full_frame", true));
     return properties;
 }
 
@@ -121,7 +122,7 @@ void SahiVideoGenerator::add() {
         appendNode("nvurisrcbin", "nvurisrcbin" + std::to_string(index), addNvurisrcbin(fileUri(item.get<std::string>()), true));
         index += 1;
     }
-    YAML::Node mux = addNvstreammux(muxBatchSize, width, height, false, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId, false);
+    YAML::Node mux = addNvstreammux(muxBatchSize, width, height, true, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId, false);
     appendNode("nvstreammux", "nvstreammux", mux);
     const nlohmann::json& preprocess = sahi.at("nvsahipreprocess");
     appendNode(

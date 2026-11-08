@@ -7,12 +7,12 @@
 
 // Generate topdown-pose video pipeline with OSD and one mp4 per input.
 //
-// Drawer is posefadedrawer. OSD displays bbox and text.
+// Drawer is posefadedrawerwithtracker. OSD displays bbox and text.
 //
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0
-//         → nvrtmposepostprocess → nvdsanalytics → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → posefadedrawer{N} → nvosdbin{N}
+//         → nvrtmposepostprocess → nvdsanalytics → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → posefadedrawerwithtracker{N} → nvosdbin{N}
 //         │     → detlogger{N} → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
 class TopdownPoseVisVideoGenerator : public VisVideoGenerator {
 public:

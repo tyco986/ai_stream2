@@ -16,6 +16,7 @@ docker rm -f "${NAME}" 2>/dev/null || true
 
 docker run -d \
   --name "${NAME}" \
+  --ulimit core=0 \
   --network "${NET}" \
   --restart unless-stopped \
   -v /etc/localtime:/etc/localtime:ro \

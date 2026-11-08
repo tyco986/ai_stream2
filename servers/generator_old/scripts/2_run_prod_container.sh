@@ -19,6 +19,7 @@ docker rm -f "${PROJECT_NAME}_generator" 2>/dev/null || true
 
 docker run -d \
   --name "${PROJECT_NAME}_generator" \
+  --ulimit core=0 \
   --network "${PROJECT_NAME}_default" \
   -p 8091:8091 \
   -e PROJECT_NAME="${PROJECT_NAME}" \

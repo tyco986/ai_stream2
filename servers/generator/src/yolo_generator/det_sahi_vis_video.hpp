@@ -4,12 +4,12 @@
 
 // Generate YOLO SAHI detection video pipeline YAML with OSD and one mp4 per input.
 //
-// Drawer is detfadedrawer. OSD displays bbox and text.
+// Drawer is detfadedrawerwithtracker. OSD displays bbox and text.
 //
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
-//         → boxsnapshot → nvtracker → nvdsanalytics → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → detfadedrawer{N} → nvosdbin{N}
+//         → boxsnapshot → nvtracker → nvdsanalytics → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → detfadedrawerwithtracker{N} → nvosdbin{N}
 //         │     → detlogger{N} → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
 class DetSahiVisVideoGenerator : public VisSahiVideoGenerator {
 public:

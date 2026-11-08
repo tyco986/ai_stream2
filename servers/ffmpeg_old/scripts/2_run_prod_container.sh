@@ -14,6 +14,7 @@ docker rm -f "${PROJECT_NAME}_ffmpeg" 2>/dev/null || true
 
 docker run -d \
   --name "${PROJECT_NAME}_ffmpeg" \
+  --ulimit core=0 \
   --network "${PROJECT_NAME}_default" \
   -p 8080:8080 \
   -e HOST=0.0.0.0 \

@@ -12,6 +12,7 @@ docker network create "${PROJECT_NAME}_default" 2>/dev/null || true
 docker rm -f "${NAME}" 2>/dev/null || true
 docker run -d \
   --name "${NAME}" \
+  --ulimit core=0 \
   --network "${PROJECT_NAME}_default" \
   -p 8091:8091 \
   -v /etc/localtime:/etc/localtime:ro \

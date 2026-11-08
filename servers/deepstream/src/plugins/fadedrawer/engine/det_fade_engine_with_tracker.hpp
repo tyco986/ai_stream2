@@ -7,7 +7,7 @@
 #include "plugins/fadedrawer/engine/det_fade_engine.hpp"
 
 // Live tracker boxes stay opaque. Snapshot boxes fade between inference frames.
-class DetFadeEngineWithTracker : public virtual DetFadeEngine {
+class DetFadeEngineWithTracker : public DetFadeEngine {
 public:
     DetFadeEngineWithTracker(int interval, int fadeTime, bool showLabel, bool showSnap);
     void dropStream(int padIndex) override;

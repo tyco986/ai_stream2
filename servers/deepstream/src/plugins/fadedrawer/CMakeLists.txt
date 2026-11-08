@@ -6,6 +6,8 @@ add_library(fadedrawer SHARED
     engine/det_fade_engine_with_tracker.cpp
     engine/seg_fade_engine.cpp
     engine/seg_fade_engine_with_tracker.cpp
+    engine/pose_drawer.cpp
+    engine/seg_mask.cpp
     engine/pose_fade_engine.cpp
     engine/pose_fade_engine_with_tracker.cpp
     engine/stgcnpp_fade_engine_with_tracker.cpp

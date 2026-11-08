@@ -92,7 +92,7 @@ YAML::Node PipelineGenerator::addNvdspreprocess(const std::string& configFile) {
     return properties;
 }
 
-YAML::Node PipelineGenerator::addNvsahipostprocess(const std::string& gieIds, int matchMetric, double matchThreshold, bool classAgnostic, bool enableMerge, bool twoPhaseNmm) {
+YAML::Node PipelineGenerator::addNvsahipostprocess(const std::string& gieIds, int matchMetric, double matchThreshold, bool classAgnostic, bool enableMerge, bool twoPhaseNmm, bool preferFullFrame) {
     YAML::Node properties;
     properties["gie-ids"] = gieIds;
     properties["match-metric"] = matchMetric;
@@ -100,6 +100,7 @@ YAML::Node PipelineGenerator::addNvsahipostprocess(const std::string& gieIds, in
     properties["class-agnostic"] = classAgnostic;
     properties["enable-merge"] = enableMerge;
     properties["two-phase-nmm"] = twoPhaseNmm;
+    properties["prefer-full-frame"] = preferFullFrame;
     return properties;
 }
 

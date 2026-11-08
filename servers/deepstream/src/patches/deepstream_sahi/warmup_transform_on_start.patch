@@ -1,0 +1,92 @@
+--- a/deepstream_source/gst-plugins/gst-nvsahipreprocess/gstnvsahipreprocess.cpp
++++ b/deepstream_source/gst-plugins/gst-nvsahipreprocess/gstnvsahipreprocess.cpp
+@@ -756,6 +756,79 @@
+  * start / stop / set_caps / sink_event / finalize
+  * ═══════════════════════════════════════════════════════════════════════════ */
+ 
++/* First NvBufSurfTransformAsync loads the GPU transform path. Doing that here,
++ * before the pipeline is PLAYING, keeps live-source from dropping frames. */
++static gboolean
++warmup_surface_transform (GstNvSahiPreProcess *self)
++{
++  GstBuffer *conv_gst_buf = NULL;
++  GstNvSahiPreProcessMemory *memory = NULL;
++  NvBufSurface *src_surface = NULL;
++  NvBufSurfTransformSyncObj_t sync_obj = NULL;
++  gboolean warmed = FALSE;
++  guint src_width = self->processing_width & ~1u;
++  guint src_height = self->processing_height & ~1u;
++  NvBufSurfaceCreateParams src_params = { 0 };
++
++  src_params.gpuId = self->gpu_id;
++  src_params.width = src_width;
++  src_params.height = src_height;
++  src_params.colorFormat = NVBUF_COLOR_FORMAT_NV12;
++  src_params.layout = NVBUF_LAYOUT_PITCH;
++  src_params.memType = NVBUF_MEM_DEFAULT;
++
++  if (src_width == 0 || src_height == 0)
++    goto done;
++  if (NvBufSurfaceCreate (&src_surface, 1, &src_params) != 0)
++    goto done;
++  if (gst_buffer_pool_acquire_buffer (self->scaling_pool,
++          &conv_gst_buf, NULL) != GST_FLOW_OK)
++    goto done;
++
++  memory = gst_nvsahipreprocess_buffer_get_memory (conv_gst_buf);
++  if (!memory || !memory->surf)
++    goto done;
++
++  self->batch_insurf.surfaceList[0] = src_surface->surfaceList[0];
++  self->batch_outsurf.surfaceList[0] = memory->surf->surfaceList[0];
++  self->batch_insurf.memType = src_surface->memType;
++  self->batch_outsurf.memType = memory->surf->memType;
++  self->batch_insurf.numFilled = 1;
++  self->batch_outsurf.numFilled = 1;
++  self->batch_insurf.batchSize = 1;
++  self->batch_outsurf.batchSize = 1;
++  self->transform_params.src_rect[0] = {0, 0, src_width, src_height};
++  self->transform_params.dst_rect[0] = {
++    0, 0, (guint) self->processing_width, (guint) self->processing_height
++  };
++
++  if (!batch_transformation (self, &sync_obj))
++    goto done;
++  if (sync_obj) {
++    NvBufSurfTransformSyncObjWait (sync_obj, -1);
++    NvBufSurfTransformSyncObjDestroy (&sync_obj);
++    sync_obj = NULL;
++  }
++  warmed = TRUE;
++
++done:
++  if (!warmed) {
++    GST_ELEMENT_ERROR (self, RESOURCE, FAILED,
++        ("Warmup NvBufSurfTransformAsync failed"), (NULL));
++  }
++  self->batch_insurf.numFilled = 0;
++  self->batch_outsurf.numFilled = 0;
++  self->batch_insurf.batchSize = self->max_batch_size;
++  self->batch_outsurf.batchSize = self->max_batch_size;
++  if (sync_obj)
++    NvBufSurfTransformSyncObjDestroy (&sync_obj);
++  if (conv_gst_buf)
++    gst_buffer_unref (conv_gst_buf);
++  if (src_surface)
++    NvBufSurfaceDestroy (src_surface);
++  return warmed;
++}
++
+ static gboolean
+ gst_nvsahipreprocess_start (GstBaseTransform *btrans)
+ {
+@@ -888,6 +961,9 @@
+   if (!gst_buffer_pool_set_active (self->scaling_pool, TRUE))
+     goto error;
+ 
++  if (!warmup_surface_transform (self))
++    goto error;
++
+   /* Tensor pool */
+   self->tensor_pool = gst_buffer_pool_new ();
+   tensor_pool_config = gst_buffer_pool_get_config (self->tensor_pool);

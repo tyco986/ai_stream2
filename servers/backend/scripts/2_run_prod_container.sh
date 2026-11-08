@@ -13,6 +13,7 @@ docker rm -f "${PROJECT_NAME}_backend" 2>/dev/null || true
 
 docker run -d \
   --name "${PROJECT_NAME}_backend" \
+  --ulimit core=0 \
   --gpus all \
   --network "${PROJECT_NAME}_default" \
   -p "${BACKEND_HOST_PORT:-8001}:8000" \

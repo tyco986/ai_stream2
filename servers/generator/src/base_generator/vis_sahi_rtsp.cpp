@@ -109,7 +109,7 @@ void VisSahiRtspGenerator::link() {
 }
 
 std::string VisSahiRtspGenerator::visDrawerElement() const {
-    const std::string element = "detfadedrawer";
+    const std::string element = nvdetDrawerElement();
     return element;
 }
 

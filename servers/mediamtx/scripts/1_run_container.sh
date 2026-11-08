@@ -11,7 +11,7 @@ mkdir -p recordings logs/mediamtx
 docker network create "${PROJECT_NAME}_default" 2>/dev/null || true
 docker rm -f "${PROJECT_NAME}_mediamtx" 2>/dev/null || true
 
-docker run -d --name "${PROJECT_NAME}_mediamtx" --network "${PROJECT_NAME}_default" \
+docker run -d --name "${PROJECT_NAME}_mediamtx" --ulimit core=0 --network "${PROJECT_NAME}_default" \
   -p 8554:8554 -p 8889:8889 -p 9996:9996 -p 9997:9997 \
   -p 8189:8189/udp -p 8189:8189/tcp \
   -v /etc/localtime:/etc/localtime:ro \

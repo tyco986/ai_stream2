@@ -106,11 +106,12 @@ YAML::Node SahiRtspGenerator::sahiPostprocessProperties(const nlohmann::json& po
     const std::string gieId = std::to_string(pgieGenerator->config["property"]["gie-unique-id"].as<int>());
     const YAML::Node properties = addNvsahipostprocess(
         gieId,
-        pipeline::MATCH_METRIC_IOS,
+        postprocess.value("match_metric", pipeline::MATCH_METRIC_IOS),
         postprocess.at("match_threshold").get<double>(),
-        false,
+        postprocess.value("class_agnostic", false),
         postprocess.value("enable_merge", true),
-        true);
+        postprocess.value("two_phase_nmm", true),
+        postprocess.value("prefer_full_frame", true));
     return properties;
 }
 

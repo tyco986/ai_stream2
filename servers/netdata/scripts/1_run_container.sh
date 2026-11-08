@@ -28,6 +28,7 @@ fi
 
 docker run -d \
   --name "${NAME}" \
+  --ulimit core=0 \
   --network "${NET}" \
   --pid=host \
   --restart unless-stopped \

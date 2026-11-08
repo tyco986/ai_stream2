@@ -15,6 +15,7 @@ echo "Mode:      dev image=${IMAGE}"
 
 docker run -d \
   --name "${PROJECT_NAME}_kafka" \
+  --ulimit core=0 \
   --network "${PROJECT_NAME}_default" \
   -p "${HOST_PORT}:19092" \
   -v /etc/localtime:/etc/localtime:ro \

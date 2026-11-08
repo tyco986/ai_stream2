@@ -1,0 +1,129 @@
+--- a/deepstream_source/gst-plugins/gst-nvsahipostprocess/gstnvsahipostprocess.h
++++ b/deepstream_source/gst-plugins/gst-nvsahipostprocess/gstnvsahipostprocess.h
+@@ -68,6 +68,7 @@
+   gchar  obj_label[128];
+   gfloat area;
+   NvDsObjectMeta *obj_meta;
++  gboolean from_full_frame;
+   gboolean merged;
+ 
+   /* mask support */
+@@ -93,6 +94,7 @@
+   gboolean          class_agnostic;
+   gboolean          enable_merge;
+   gboolean          two_phase_nmm;
++  gboolean          prefer_full_frame;
+   guint             merge_strategy;
+   gint              max_detections;
+   gboolean          drop_mask_on_merge;
+--- a/deepstream_source/gst-plugins/gst-nvsahipostprocess/gstnvsahipostprocess.cpp
++++ b/deepstream_source/gst-plugins/gst-nvsahipostprocess/gstnvsahipostprocess.cpp
+@@ -39,6 +39,7 @@
+   PROP_CLASS_AGNOSTIC,
+   PROP_ENABLE_MERGE,
+   PROP_TWO_PHASE_NMM,
++  PROP_PREFER_FULL_FRAME,
+   PROP_MERGE_STRATEGY,
+   PROP_MAX_DETECTIONS,
+   PROP_DROP_MASK_ON_MERGE,
+@@ -50,6 +51,7 @@
+ #define DEFAULT_CLASS_AGNOSTIC      FALSE
+ #define DEFAULT_ENABLE_MERGE        TRUE
+ #define DEFAULT_TWO_PHASE_NMM       TRUE
++#define DEFAULT_PREFER_FULL_FRAME   TRUE
+ #define DEFAULT_MERGE_STRATEGY      SAHI_MERGE_UNION
+ #define DEFAULT_MAX_DETECTIONS      -1
+ #define DEFAULT_DROP_MASK_ON_MERGE  FALSE
+@@ -126,6 +128,7 @@
+     d.area     = obj->rect_params.width * obj->rect_params.height;
+     d.obj_meta = obj;
+     d.merged   = FALSE;
++    d.from_full_frame = obj->misc_obj_info[0] == 1;
+     d.merged_mask_data = nullptr;
+     d.mask = sahi_mask_from_nvds (
+         obj->mask_params.data, obj->mask_params.width,
+@@ -158,6 +161,25 @@
+   const guint metric = self->match_metric;
+   const guint strategy = self->merge_strategy;
+   const gboolean drop_mask = self->drop_mask_on_merge;
++  if (self->prefer_full_frame) {
++    std::vector<guint> anchors;
++    for (guint i = 0; i < n; i++) {
++      if (dets[i].from_full_frame)
++        anchors.push_back (i);
++    }
++    for (guint i = 0; i < n && !anchors.empty (); i++) {
++      if (dets[i].from_full_frame)
++        continue;
++      for (guint anchor : anchors) {
++        if (!agnostic && dets[i].class_id != dets[anchor].class_id)
++          continue;
++        if (compute_overlap_orig (metric, dets[anchor], dets[i]) >= threshold) {
++          suppressed[i] = 1;
++          break;
++        }
++      }
++    }
++  }
+ 
+   /* Build spatial index */
+   gfloat fw = 0, fh = 0;
+@@ -182,14 +204,22 @@
+   /* Execute NMM (per-class or class-agnostic) */
+   if (!agnostic) {
+     std::unordered_map<gint, std::vector<guint>> by_class;
+-    for (guint ii = 0; ii < order.size (); ii++)
++    for (guint ii = 0; ii < order.size (); ii++) {
++      if (self->prefer_full_frame && dets[order[ii]].from_full_frame)
++        continue;
+       by_class[dets[order[ii]].class_id].push_back (order[ii]);
++    }
+     for (auto &kv : by_class)
+       run_nmm_on_group (dets, suppressed, grid, kv.second,
+           threshold, metric, strategy, agnostic, do_merge, two_phase,
+           drop_mask);
+   } else {
+-    std::vector<guint> all (order.begin (), order.end ());
++    std::vector<guint> all;
++    all.reserve (order.size ());
++    for (guint idx : order) {
++      if (!(self->prefer_full_frame && dets[idx].from_full_frame))
++        all.push_back (idx);
++    }
+     run_nmm_on_group (dets, suppressed, grid, all,
+         threshold, metric, strategy, agnostic, do_merge, two_phase,
+         drop_mask);
+@@ -369,6 +400,9 @@
+   g_object_class_install_property (go, PROP_TWO_PHASE_NMM,
+       g_param_spec_boolean ("two-phase-nmm", "Two-Phase NMM",
+           "Phase 1: original bboxes, phase 2: re-check expanded", DEFAULT_TWO_PHASE_NMM, RW));
++  g_object_class_install_property (go, PROP_PREFER_FULL_FRAME,
++      g_param_spec_boolean ("prefer-full-frame", "Prefer Full Frame",
++          "Keep full-frame boxes and drop overlapping slice boxes", DEFAULT_PREFER_FULL_FRAME, RW));
+   g_object_class_install_property (go, PROP_MERGE_STRATEGY,
+       g_param_spec_uint ("merge-strategy", "Merge Strategy",
+           "0=union, 1=weighted, 2=largest", 0, 2, DEFAULT_MERGE_STRATEGY, RW));
+@@ -408,6 +433,7 @@
+   self->class_agnostic      = DEFAULT_CLASS_AGNOSTIC;
+   self->enable_merge        = DEFAULT_ENABLE_MERGE;
+   self->two_phase_nmm       = DEFAULT_TWO_PHASE_NMM;
++  self->prefer_full_frame   = DEFAULT_PREFER_FULL_FRAME;
+   self->merge_strategy      = DEFAULT_MERGE_STRATEGY;
+   self->max_detections      = DEFAULT_MAX_DETECTIONS;
+   self->drop_mask_on_merge  = DEFAULT_DROP_MASK_ON_MERGE;
+@@ -452,6 +478,7 @@
+     case PROP_CLASS_AGNOSTIC:    s->class_agnostic = g_value_get_boolean (value); break;
+     case PROP_ENABLE_MERGE:      s->enable_merge = g_value_get_boolean (value); break;
+     case PROP_TWO_PHASE_NMM:     s->two_phase_nmm = g_value_get_boolean (value); break;
++    case PROP_PREFER_FULL_FRAME: s->prefer_full_frame = g_value_get_boolean (value); break;
+     case PROP_MERGE_STRATEGY:    s->merge_strategy = g_value_get_uint (value); break;
+     case PROP_MAX_DETECTIONS:    s->max_detections = g_value_get_int (value); break;
+     case PROP_DROP_MASK_ON_MERGE:s->drop_mask_on_merge = g_value_get_boolean (value); break;
+@@ -471,6 +498,7 @@
+     case PROP_CLASS_AGNOSTIC:    g_value_set_boolean (value, s->class_agnostic); break;
+     case PROP_ENABLE_MERGE:      g_value_set_boolean (value, s->enable_merge); break;
+     case PROP_TWO_PHASE_NMM:     g_value_set_boolean (value, s->two_phase_nmm); break;
++    case PROP_PREFER_FULL_FRAME: g_value_set_boolean (value, s->prefer_full_frame); break;
+     case PROP_MERGE_STRATEGY:    g_value_set_uint (value, s->merge_strategy); break;
+     case PROP_MAX_DETECTIONS:    g_value_set_int (value, s->max_detections); break;
+     case PROP_DROP_MASK_ON_MERGE:g_value_set_boolean (value, s->drop_mask_on_merge); break;

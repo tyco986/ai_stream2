@@ -4,11 +4,11 @@
 
 // Generate YOLO detection RTSP pipeline with OSD preview sink.
 //
-// Drawer is detfadedrawer. OSD displays bbox and text.
+// Drawer is detfadedrawerwithtracker. OSD displays bbox and text.
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → detfadedrawer{N} → nvosdbin{N}
+//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → detfadedrawerwithtracker{N} → nvosdbin{N}
 //           │                → queue_enc{N} → detlogger{N} → nvv4l2h264enc{N} → h264parse{N} → rtspclientsink{N}
 class DetVisRtspGenerator : public VisRtspGenerator {
 public:

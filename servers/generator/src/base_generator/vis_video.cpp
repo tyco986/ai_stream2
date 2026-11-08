@@ -42,7 +42,7 @@ void VisVideoGenerator::add() {
         appendNode("nvurisrcbin", "nvurisrcbin" + std::to_string(index), addNvurisrcbin(fileUri(item.get<std::string>()), true));
         index += 1;
     }
-    YAML::Node mux = addNvstreammux(runtimeBatchSize, width, height, false, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId, false);
+    YAML::Node mux = addNvstreammux(runtimeBatchSize, width, height, true, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId, false);
     appendNode("nvstreammux", "nvstreammux", mux);
     appendNode("nvinfer", "pgie", addNvinfer(PGIE_CONFIG_NAME, pgieGenerator->config["property"]["batch-size"].as<int>(), gpuId));
     if (enableNvtracker) {
@@ -63,7 +63,8 @@ void VisVideoGenerator::add() {
         appendNode("queue", "queue_demux" + suffix, addQueue());
         appendNode("nvvideoconvert", "nvvideoconvert" + suffix, addNvvideoconvert(gpuId));
         if (drawer.has_value()) {
-            appendNode(nvdetDrawerElement(), "detfadedrawer" + suffix, nvdetDrawerProperties(*drawer));
+            const std::string drawerName = nvdetDrawerElement() + suffix;
+            appendNode(nvdetDrawerElement(), drawerName, nvdetDrawerProperties(*drawer));
         }
         appendNode("nvosdbin", "nvosdbin" + suffix, addNvosdbin(gpuId, true, true));
         appendNode("detlogger", "detlogger" + suffix, addDetlogger(logger.value("interval", 0)));
@@ -97,11 +98,12 @@ void VisVideoGenerator::link() {
     edges["nvdsanalytics"] = "nvstreamdemux";
     for (int index = 0; index < runtimeBatchSize; ++index) {
         const std::string suffix = std::to_string(index);
-        const std::string osdPrev = drawer.has_value() ? "detfadedrawer" + suffix : "nvosdbin" + suffix;
+        const std::string drawerName = nvdetDrawerElement() + suffix;
+        const std::string osdPrev = drawer.has_value() ? drawerName : "nvosdbin" + suffix;
         edges["queue_demux" + suffix] = "nvvideoconvert" + suffix;
         edges["nvvideoconvert" + suffix] = osdPrev;
         if (drawer.has_value()) {
-            edges["detfadedrawer" + suffix] = "nvosdbin" + suffix;
+            edges[drawerName] = "nvosdbin" + suffix;
         }
         edges["nvosdbin" + suffix] = "detlogger" + suffix;
         edges["detlogger" + suffix] = "nvv4l2h264enc" + suffix;

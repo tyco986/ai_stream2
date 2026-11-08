@@ -4,12 +4,12 @@
 
 // Generate YOLO SAHI pose RTSP pipeline with OSD preview sink.
 //
-// Postprocess element is nvsahipostprocesspose. Drawer is posefadedrawer.
+// Postprocess element is nvsahipostprocesspose. Drawer follows nvposeDrawerElement.
 //
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocesspose
-//           → boxsnapshot → nvtracker → nvdsanalytics → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → posefadedrawer{N} → nvosdbin{N}
+//           → boxsnapshot → nvtracker → nvdsanalytics → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → posefadedrawerwithtracker{N} → nvosdbin{N}
 //             │     → queue_enc{N} → detlogger{N} → nvv4l2h264enc{N} → h264parse{N} → rtspclientsink{N}
 class VisSahiPoseRtspGenerator : public VisSahiRtspGenerator {
 public:

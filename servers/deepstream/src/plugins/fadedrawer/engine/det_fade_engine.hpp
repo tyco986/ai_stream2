@@ -16,13 +16,6 @@
 // '2' yellow, otherwise green.
 class DetFadeEngine {
 public:
-    DetFadeEngine(int interval, int fadeTime, bool showLabel);
-    virtual ~DetFadeEngine() = default;
-
-    virtual void processFrame(NvDsBatchMeta* batch, NvDsFrameMeta* frame);
-    virtual void dropStream(int padIndex);
-
-protected:
     struct CachedObject {
         float left = 0.0f;
         float top = 0.0f;
@@ -39,6 +32,15 @@ protected:
         float maskThreshold = 0.0f;
     };
 
+    DetFadeEngine(int interval, int fadeTime, bool showLabel);
+    virtual ~DetFadeEngine() = default;
+
+    virtual void processFrame(NvDsBatchMeta* batch, NvDsFrameMeta* frame);
+    virtual void dropStream(int padIndex);
+    static NvOSD_ColorParams colorWithAlpha(const float rgb[4], float alpha);
+    void restoreMask(NvDsObjectMeta* object, const CachedObject& cached) const;
+
+protected:
     struct StreamState {
         int phase = 0;
         std::vector<CachedObject> objects;
@@ -48,11 +50,9 @@ protected:
     virtual void decorateObject(NvDsBatchMeta* batch, NvDsFrameMeta* frame, NvDsObjectMeta* object, float alpha);
     virtual void decorateCached(NvDsBatchMeta* batch, NvDsFrameMeta* frame, const CachedObject& cached, float alpha);
     virtual bool keepMask() const;
-    static NvOSD_ColorParams colorWithAlpha(const float rgb[4], float alpha);
     NvOSD_ColorParams boxColor(NvDsFrameMeta* frame, float alpha) const;
     void paint(NvDsBatchMeta* batch, NvDsFrameMeta* frame, NvDsObjectMeta* object, const NvOSD_ColorParams& border, float alpha);
     void cacheMask(CachedObject& cached, const NvOSD_MaskParams& mask) const;
-    void restoreMask(NvDsObjectMeta* object, const CachedObject& cached) const;
 
     std::unordered_map<int, StreamState> streams;
     std::vector<float> alphaLut;

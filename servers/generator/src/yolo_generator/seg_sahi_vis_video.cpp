@@ -41,7 +41,7 @@ void SegSahiVisVideoGenerator::add() {
         appendNode("nvurisrcbin", "nvurisrcbin" + std::to_string(index), addNvurisrcbin(fileUri(item.get<std::string>()), true));
         index += 1;
     }
-    YAML::Node mux = addNvstreammux(muxBatchSize, width, height, false, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId, false);
+    YAML::Node mux = addNvstreammux(muxBatchSize, width, height, true, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId, false);
     appendNode("nvstreammux", "nvstreammux", mux);
     const nlohmann::json& preprocess = sahi.at("nvsahipreprocess");
     appendNode(

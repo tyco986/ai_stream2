@@ -306,7 +306,7 @@ void EventVideoGenerator::appendInfer(int gpuId) {
     appendNode(
         "nvstreammux",
         "nvstreammux",
-        addNvstreammux(runtimeBatchSize, width, height, false, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId, false));
+        addNvstreammux(runtimeBatchSize, width, height, true, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId, false));
     appendNode("nvinfer", "pgie", addNvinfer(PGIE_CONFIG_NAME, pgieGenerator->config["property"]["batch-size"].as<int>(), gpuId));
 }
 

@@ -19,6 +19,7 @@ docker run \
   --name "${NAME}" \
   --network "${PROJECT_NAME}_default" \
   --gpus all \
+  --ulimit core=0 \
   -e GST_DEBUG=3 \
   -p 8094:8094 \
   -v /etc/localtime:/etc/localtime:ro \

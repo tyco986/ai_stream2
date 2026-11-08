@@ -3,8 +3,7 @@
 #include <cstdio>
 
 StgcnppFadeEngineWithTracker::StgcnppFadeEngineWithTracker(int interval, int fadeTime, bool showLabel, bool showPose, float poseThreshold, bool showSnap)
-    : DetFadeEngine(interval, fadeTime, showLabel),
-      PoseFadeEngineWithTracker(interval, fadeTime, showLabel, showPose, poseThreshold, showSnap),
+    : PoseFadeEngineWithTracker(interval, fadeTime, showLabel, showPose, poseThreshold, showSnap),
       actions() {
 }
 

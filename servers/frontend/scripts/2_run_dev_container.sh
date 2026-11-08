@@ -12,6 +12,7 @@ docker rm -f "${PROJECT_NAME}_frontend" 2>/dev/null || true
 
 docker run -d \
   --name "${PROJECT_NAME}_frontend" \
+  --ulimit core=0 \
   --network "${PROJECT_NAME}_default" \
   -p 8848:8848 \
   -v /etc/localtime:/etc/localtime:ro \

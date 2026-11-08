@@ -19,6 +19,7 @@ echo "Mode:        dev image=${IMAGE}"
 
 docker run \
   --name "${PROJECT_NAME}_backend" \
+  --ulimit core=0 \
   --gpus all \
   --network "${PROJECT_NAME}_default" \
   -p "${HOST_PORT}:8000" \

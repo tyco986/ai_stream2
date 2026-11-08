@@ -134,11 +134,12 @@ void EventSahiRtspGenerator::appendInfer(int gpuId) {
         SAHI_POSTPROCESS,
         addNvsahipostprocess(
             gieId,
-            pipeline::MATCH_METRIC_IOS,
+            postprocess.value("match_metric", pipeline::MATCH_METRIC_IOS),
             postprocess.at("match_threshold").get<double>(),
-            false,
+            postprocess.value("class_agnostic", false),
             postprocess.value("enable_merge", true),
-            true));
+            postprocess.value("two_phase_nmm", true),
+            postprocess.value("prefer_full_frame", true)));
 }
 
 void EventSahiRtspGenerator::linkInfer(YAML::Node edges) {

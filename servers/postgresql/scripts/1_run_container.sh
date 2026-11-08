@@ -9,6 +9,7 @@ docker rm -f "${PROJECT_NAME}_postgresql" 2>/dev/null || true
 
 docker run -d \
   --name "${PROJECT_NAME}_postgresql" \
+  --ulimit core=0 \
   --network "${PROJECT_NAME}_default" \
   -e POSTGRES_DB="${PROJECT_NAME}" \
   -e POSTGRES_USER="${PROJECT_NAME}" \

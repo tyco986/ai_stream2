@@ -28,7 +28,7 @@
 //     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → presenceeventcoder → tee_msg
 //       ─┬→ nvvideoconvert → tee_raw
 //       │     ─┬→ queue_raw → nvvideoconvert_raw → capsfilter_raw → rawcapturer → fakesink_raw
-//       │     └→ queue_osd → nvvideoconvert_osd → capsfilter_osd → nvosdbin → tee_vis
+//       │     └→ queue_osd → nvvideoconvert_osd → capsfilter_osd → detfadedrawerwithtracker → nvosdbin → tee_vis
 //       │           ─┬→ queue_vis → nvvideoconvert_vis → capsfilter_vis → viscapturer → fakesink_vis
 //       │           └→ queue_enc → presencelogger → fakesink
 //       └→ queue_msg → nvmsgconv → nvmsgbroker

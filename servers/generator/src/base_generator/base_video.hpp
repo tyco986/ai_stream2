@@ -20,9 +20,9 @@
 
 // Generate YOLO video pipeline YAML (headless, ends at fakesink).
 //
-// Reads a batch of video files. Width and height must match. A short file leaves
-// the batch on EOS; the pipeline ends when the longest file ends. sync-inputs is
-// off, so frames are not aligned by PTS.
+// Reads a batch of video files. Width and height must match. live-source is on, so a
+// finished file does not hold the batch. The pipeline ends when the longest file ends.
+// sync-inputs is off, so frames are not aligned by PTS.
 //
 // Set ``analyzer=None`` to disable nvdsanalytics rules. Set ``tracker=None`` to skip nvtracker.
 //

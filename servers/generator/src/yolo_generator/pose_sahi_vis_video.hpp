@@ -4,12 +4,12 @@
 
 // Generate YOLO SAHI pose video pipeline YAML with OSD and one mp4 per input.
 //
-// Postprocess element is nvsahipostprocesspose. Drawer is posefadedrawer.
+// Postprocess element is nvsahipostprocesspose. Drawer is posefadedrawerwithtracker.
 //
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocesspose
-//         → boxsnapshot → nvtracker → nvdsanalytics → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → posefadedrawer{N} → nvosdbin{N}
+//         → boxsnapshot → nvtracker → nvdsanalytics → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → posefadedrawerwithtracker{N} → nvosdbin{N}
 //         │     → detlogger{N} → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
 class PoseSahiVisVideoGenerator : public VisSahiPoseVideoGenerator {
 public:

@@ -4,11 +4,11 @@
 
 // Generate YOLO pose RTSP pipeline with OSD preview sink.
 //
-// Drawer is posefadedrawer. OSD displays bbox and text.
+// Drawer is posefadedrawerwithtracker. OSD displays bbox and text.
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → posefadedrawer{N} → nvosdbin{N}
+//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → posefadedrawerwithtracker{N} → nvosdbin{N}
 //           │                → queue_enc{N} → detlogger{N} → nvv4l2h264enc{N} → h264parse{N} → rtspclientsink{N}
 class PoseVisRtspGenerator : public VisRtspGenerator {
 public:

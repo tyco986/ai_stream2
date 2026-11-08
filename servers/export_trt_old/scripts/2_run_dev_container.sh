@@ -14,6 +14,7 @@ docker rm -f "${PROJECT_NAME}_export_trt" 2>/dev/null || true
 
 docker run -d \
   --name "${PROJECT_NAME}_export_trt" \
+  --ulimit core=0 \
   --network "${PROJECT_NAME}_default" \
   --gpus all \
   -p 9000:9000 \

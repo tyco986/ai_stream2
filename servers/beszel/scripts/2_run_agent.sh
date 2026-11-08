@@ -38,6 +38,7 @@ fi
 
 docker run -d \
   --name "${NAME}" \
+  --ulimit core=0 \
   --network "${NET}" \
   --restart unless-stopped \
   "${GPU_ARGS[@]}" \

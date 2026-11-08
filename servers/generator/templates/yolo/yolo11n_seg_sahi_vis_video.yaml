@@ -30,5 +30,11 @@ sahi:
     slice_height: 640
     overlap_width_ratio: 0.2
     overlap_height_ratio: 0.2
+    enable_full_frame: true
   nvsahipostprocess:
+    match_metric: 1
     match_threshold: 0.5
+    class_agnostic: false
+    enable_merge: true
+    two_phase_nmm: true
+    prefer_full_frame: true
