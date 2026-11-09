@@ -1,8 +1,8 @@
-# bash servers/generator/scripts/3_generate.sh --config yolo10x_smoke_fire_sahi_rtsp
+# bash servers/generator/scripts/3_generate.sh --config yolo10x_smoke_fire_sahi_vis_rtsp
 
-generator: DetSahiRTSPPresenceGenerator
-pipeline_name: yolo10x_smoke_fire_sahi_rtsp
-config_save_dir: /root/configs/generator/yolo10x_smoke_fire_sahi_rtsp
+generator: DetSahiVisRTSPPresenceGenerator
+pipeline_name: yolo10x_smoke_fire_sahi_vis_rtsp
+config_save_dir: /root/configs/generator/yolo10x_smoke_fire_sahi_vis_rtsp
 pgie:
   interval: 50
   model_zip: /root/history/export_trt/yolo10x-fire-smoke.zip
@@ -13,10 +13,12 @@ tracker: null
 analyzer: null
 logger:
   interval: 50
-drawer: null
+drawer:
+  interval: 50
+  fade_time: 1
+  show_label: true
 event_coder:
-  class_ids: [0, 1]
-  event_names: [Fire, Smoke]
+  class_event_map: "0:Fire;1:Smoke"
   length: 5
   threshold: 0.5
   mode: fold

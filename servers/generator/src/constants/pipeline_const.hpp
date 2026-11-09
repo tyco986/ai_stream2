@@ -4,6 +4,7 @@ namespace pipeline {
 
 inline constexpr const char* DEEPSTREAM_OUTPUT_ROOT = "/root/outputs/deepstream";
 inline constexpr const char* DEFAULT_CAPS = "video/x-raw(memory:NVMM), format=I420";
+inline constexpr const char* H264_CAPS = "video/x-raw(memory:NVMM), format=NV12";
 inline constexpr const char* POSE_MODE_COCO17 = "coco17";
 inline constexpr const char* PRESENCE_MODE_FOLD = "fold";
 inline constexpr const char* LABEL_TASK_DET = "det";

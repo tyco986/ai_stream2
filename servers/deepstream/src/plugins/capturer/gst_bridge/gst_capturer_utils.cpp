@@ -24,8 +24,21 @@ void capturerPrepare(GstBaseTransform* transform) {
     gst_base_transform_set_passthrough(transform, FALSE);
 }
 
+std::string capturerPipelineName(GstElement* element) {
+    GstObject* object = GST_OBJECT(element);
+    while (object != nullptr && !GST_IS_PIPELINE(object)) {
+        object = GST_OBJECT_PARENT(object);
+    }
+    const gchar* name = object != nullptr ? GST_OBJECT_NAME(object) : nullptr;
+    const std::string pipelineName = name != nullptr ? std::string(name) : std::string();
+    return pipelineName;
+}
+
 GstFlowReturn capturerTransform(GstBaseTransform* transform, GstBuffer* buffer, Capturer* engine) {
     nvds_set_input_system_timestamp(buffer, GST_ELEMENT_NAME(transform));
+    if (engine != nullptr) {
+        engine->setPipelineName(capturerPipelineName(GST_ELEMENT(transform)));
+    }
     GstFlowReturn flow = GST_FLOW_OK;
     GstMapInfo map;
     const bool mapped = gst_buffer_map(buffer, &map, GST_MAP_READ) != FALSE;

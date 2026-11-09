@@ -116,10 +116,14 @@ YAML::Node PipelineGenerator::addStgcnppactionlabel(int classifierUniqueId) {
     return properties;
 }
 
-YAML::Node PipelineGenerator::addNvsahipostprocessPose(const std::string& gieIds, bool classAgnostic, double oksThreshold, double visThreshold, int numKeypoints) {
+YAML::Node PipelineGenerator::addNvsahipostprocessPose(const std::string& gieIds, bool classAgnostic, int matchMetric, double matchThreshold, bool preferFullFrame, int maxDetections, double oksThreshold, double visThreshold, int numKeypoints) {
     YAML::Node properties;
     properties["gie-ids"] = gieIds;
     properties["class-agnostic"] = classAgnostic;
+    properties["match-metric"] = matchMetric;
+    properties["match-threshold"] = matchThreshold;
+    properties["prefer-full-frame"] = preferFullFrame;
+    properties["max-detections"] = maxDetections;
     properties["oks-threshold"] = oksThreshold;
     properties["vis-threshold"] = visThreshold;
     properties["num-keypoints"] = numKeypoints;
@@ -224,26 +228,23 @@ YAML::Node PipelineGenerator::addSegfadedrawerwithtracker(int interval, int fade
     return properties;
 }
 
-YAML::Node PipelineGenerator::addPresenceeventcoder(const std::string& classIds, const std::string& eventNames, int length, double threshold, const std::string& mode) {
+YAML::Node PipelineGenerator::addPresenceeventcoder(const std::string& classEventMap, int length, double threshold, const std::string& mode) {
     YAML::Node properties;
-    properties["class-ids"] = classIds;
-    properties["event-names"] = eventNames;
+    properties["class-event-map"] = classEventMap;
     properties["length"] = length;
     properties["threshold"] = threshold;
     properties["mode"] = mode;
     return properties;
 }
 
-YAML::Node PipelineGenerator::addRawcapturer(const std::string& outputDir, const std::string& captureCodes) {
+YAML::Node PipelineGenerator::addRawcapturer(const std::string& captureCodes) {
     YAML::Node properties;
-    properties["output-dir"] = outputDir;
     properties["capture-codes"] = captureCodes;
     return properties;
 }
 
-YAML::Node PipelineGenerator::addViscapturer(const std::string& outputDir, const std::string& captureCodes, const std::string& labelTask) {
+YAML::Node PipelineGenerator::addViscapturer(const std::string& captureCodes, const std::string& labelTask) {
     YAML::Node properties;
-    properties["output-dir"] = outputDir;
     properties["capture-codes"] = captureCodes;
     properties["label-task"] = labelTask;
     return properties;
@@ -294,9 +295,10 @@ YAML::Node PipelineGenerator::addNvosdbin(int gpuId, bool displayBbox, bool disp
     return properties;
 }
 
-YAML::Node PipelineGenerator::addNvvideoconvert(int gpuId) {
+YAML::Node PipelineGenerator::addNvvideoconvert(int gpuId, bool disablePassthrough) {
     YAML::Node properties;
     properties["gpu-id"] = gpuId;
+    properties["disable-passthrough"] = disablePassthrough;
     return properties;
 }
 

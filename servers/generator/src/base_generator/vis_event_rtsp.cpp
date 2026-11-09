@@ -20,13 +20,15 @@ void VisEventRtspGenerator::appendAfterOsd(int index, int gpuId) {
     appendNode("queue", "queue_vis" + suffix, addQueue());
     appendNode("nvvideoconvert", "nvvideoconvert_vis" + suffix, addNvvideoconvert(gpuId));
     appendNode("capsfilter", "capsfilter_vis" + suffix, addCapsfilter("video/x-raw(memory:NVMM), format=RGB"));
-    appendNode("viscapturer", "viscapturer" + suffix, addViscapturer(captureOutputDir(), capturerCodes()));
+    appendNode("viscapturer", "viscapturer" + suffix, addViscapturer(capturerCodes()));
     appendNode("fakesink", "fakesink_vis" + suffix, addFakesink(false, false));
     appendNode("queue", "queue_enc" + suffix, addQueue());
     appendNode(
         "presencelogger",
         "presencelogger" + suffix,
         addPresencelogger(logger.value("interval", 0)));
+    appendNode("nvvideoconvert", "nvvideoconvert_enc" + suffix, addNvvideoconvert(gpuId));
+    appendNode("capsfilter", "capsfilter_enc" + suffix, addCapsfilter(pipeline::H264_CAPS));
     appendNode(
         "nvv4l2h264enc",
         "nvv4l2h264enc" + suffix,
@@ -48,7 +50,9 @@ void VisEventRtspGenerator::linkAfterOsd(YAML::Node edges, int index) {
     edges["capsfilter_vis" + suffix] = "viscapturer" + suffix;
     edges["viscapturer" + suffix] = "fakesink_vis" + suffix;
     edges["queue_enc" + suffix] = "presencelogger" + suffix;
-    edges["presencelogger" + suffix] = "nvv4l2h264enc" + suffix;
+    edges["presencelogger" + suffix] = "nvvideoconvert_enc" + suffix;
+    edges["nvvideoconvert_enc" + suffix] = "capsfilter_enc" + suffix;
+    edges["capsfilter_enc" + suffix] = "nvv4l2h264enc" + suffix;
     edges["nvv4l2h264enc" + suffix] = "h264parse" + suffix;
     edges["h264parse" + suffix] = "rtspclientsink" + suffix;
 }

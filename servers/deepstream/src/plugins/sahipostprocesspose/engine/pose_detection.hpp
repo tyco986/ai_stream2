@@ -13,5 +13,6 @@ struct PoseDetection {
     int classId;
     float area;
     NvDsObjectMeta* objectMeta;
+    bool fromFullFrame;
     std::vector<float> keypoints;
 };

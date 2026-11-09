@@ -71,7 +71,7 @@ label:
 
 类型: 插件
 插件名称: nvsahipostprocesspose
-说明: 对 SAHI 姿态实例做 OKS-NMS，去掉重复框
+说明: 对 SAHI 姿态实例先按框重叠抑制，再按 OKS 抑制。整帧框在 `prefer-full-frame` 开启时只当锚点，不参与后续抑制
 
 ## nvdspreprocess/rtmposepreprocess
 

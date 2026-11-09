@@ -20,17 +20,16 @@
 
 // Generate YOLO event video pipeline YAML.
 //
-// Reads a batch of video files. Width and height must match. Capture branches stay on the
-// batched stream. The encode tail ends at fakesink.
+// Reads a batch of video files. Width and height must match. After demux each stream has its
+// own raw and vis capture branch. The headless tail ends at the vis capturer.
 //
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → presenceeventcoder → tee_msg
-//       ─┬→ nvvideoconvert → tee_raw
-//       │     ─┬→ queue_raw → nvvideoconvert_raw → capsfilter_raw → rawcapturer → fakesink_raw
-//       │     └→ queue_osd → nvvideoconvert_osd → capsfilter_osd → detfadedrawerwithtracker → nvosdbin → tee_vis
-//       │           ─┬→ queue_vis → nvvideoconvert_vis → capsfilter_vis → viscapturer → fakesink_vis
-//       │           └→ queue_enc → presencelogger → fakesink
+//       ─┬→ nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → tee_raw{N}
+//       │     ─┬→ queue_raw{N} → nvvideoconvert_raw{N} → capsfilter_raw{N} → rawcapturer{N} → fakesink_raw{N}
+//       │     └→ queue_osd{N} → nvvideoconvert_osd{N} → detfadedrawerwithtracker{N} → nvosdbin{N} → presencelogger{N}
+//       │           → queue_vis{N} → nvvideoconvert_vis{N} → capsfilter_vis{N} → viscapturer{N} → fakesink_vis{N}
 //       └→ queue_msg → nvmsgconv → nvmsgbroker
 class EventVideoGenerator : public BaseEventGenerator {
 public:
@@ -104,7 +103,7 @@ protected:
     static std::string fileUri(const std::filesystem::path& path);
     virtual void appendInfer(int gpuId);
     virtual void linkInfer(YAML::Node edges);
-    virtual void appendEncode(int gpuId);
-    virtual void linkEncode(YAML::Node edges);
     virtual std::string inferenceTail() const;
+    virtual void appendAfterOsd(int index, int gpuId);
+    virtual void linkAfterOsd(YAML::Node edges, int index);
 };

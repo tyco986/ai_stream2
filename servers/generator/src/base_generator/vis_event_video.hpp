@@ -4,15 +4,14 @@
 
 // Generate YOLO event video pipeline with one mp4 per input.
 //
-// Capture branches stay on the batched stream. Encode is demuxed per video.
+// OSD runs after demux, one surface per stream.
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → presenceeventcoder → tee_msg
-//       └→ … → tee_vis
-//             ─┬→ queue_vis → nvvideoconvert_vis → capsfilter_vis → viscapturer → fakesink_vis
-//             └→ queue_enc → presencelogger → nvstreamdemux
-//                   → queue_demux{N} → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
+//     nvosdbin{N} → tee_vis{N}
+//       ─┬→ queue_vis{N} → nvvideoconvert_vis{N} → capsfilter_vis{N} → viscapturer{N} → fakesink_vis{N}
+//       └→ queue_enc{N} → presencelogger{N} → nvvideoconvert_enc{N} → capsfilter_enc{N}
+//         → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
 class VisEventVideoGenerator : public EventVideoGenerator {
 public:
     VisEventVideoGenerator(
@@ -33,6 +32,6 @@ public:
     std::filesystem::path output;
 
 protected:
-    void appendEncode(int gpuId) override;
-    void linkEncode(YAML::Node edges) override;
+    void appendAfterOsd(int index, int gpuId) override;
+    void linkAfterOsd(YAML::Node edges, int index) override;
 };

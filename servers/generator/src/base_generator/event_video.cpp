@@ -314,13 +314,27 @@ void EventVideoGenerator::linkInfer(YAML::Node edges) {
     edges["nvstreammux"] = "pgie";
 }
 
-void EventVideoGenerator::appendEncode(int gpuId) {
-    (void)gpuId;
-    appendNode("fakesink", "fakesink", addFakesink(false, false));
+void EventVideoGenerator::appendAfterOsd(int index, int gpuId) {
+    const std::string suffix = std::to_string(index);
+    appendNode(
+        "presencelogger",
+        "presencelogger" + suffix,
+        addPresencelogger(logger.value("interval", 0)));
+    appendNode("queue", "queue_vis" + suffix, addQueue());
+    appendNode("nvvideoconvert", "nvvideoconvert_vis" + suffix, addNvvideoconvert(gpuId));
+    appendNode("capsfilter", "capsfilter_vis" + suffix, addCapsfilter("video/x-raw(memory:NVMM), format=RGB"));
+    appendNode("viscapturer", "viscapturer" + suffix, addViscapturer(capturerCodes()));
+    appendNode("fakesink", "fakesink_vis" + suffix, addFakesink(false, false));
 }
 
-void EventVideoGenerator::linkEncode(YAML::Node edges) {
-    edges["presencelogger"] = "fakesink";
+void EventVideoGenerator::linkAfterOsd(YAML::Node edges, int index) {
+    const std::string suffix = std::to_string(index);
+    edges["nvosdbin" + suffix] = "presencelogger" + suffix;
+    edges["presencelogger" + suffix] = "queue_vis" + suffix;
+    edges["queue_vis" + suffix] = "nvvideoconvert_vis" + suffix;
+    edges["nvvideoconvert_vis" + suffix] = "capsfilter_vis" + suffix;
+    edges["capsfilter_vis" + suffix] = "viscapturer" + suffix;
+    edges["viscapturer" + suffix] = "fakesink_vis" + suffix;
 }
 
 std::string EventVideoGenerator::inferenceTail() const {
@@ -354,32 +368,25 @@ void EventVideoGenerator::add() {
         "nvmsgbroker",
         "nvmsgbroker",
         addNvmsgbroker(subelement::KAFKA_PROTO_LIB, subelement::KAFKA_CONN_STR, kafkaTopic, KAFKA_CONFIG_NAME, false, false));
-    appendNode("nvvideoconvert", "nvvideoconvert", addNvvideoconvert(gpuId));
-    appendNode("tee", "tee_raw", addTee());
-    appendNode("queue", "queue_raw", addQueue());
-    appendNode("nvvideoconvert", "nvvideoconvert_raw", addNvvideoconvert(gpuId));
-    appendNode("capsfilter", "capsfilter_raw", addCapsfilter("video/x-raw(memory:NVMM), format=RGB"));
-    appendNode("rawcapturer", "rawcapturer", addRawcapturer(captureOutputDir(), capturerCodes()));
-    appendNode("fakesink", "fakesink_raw", addFakesink(false, false));
-    appendNode("queue", "queue_osd", addQueue());
-    appendNode("nvvideoconvert", "nvvideoconvert_osd", addNvvideoconvert(gpuId));
-    appendNode("capsfilter", "capsfilter_osd", addCapsfilter("video/x-raw(memory:NVMM), format=RGBA"));
-    if (drawer.has_value()) {
-        appendNode(nvdetDrawerElement(), nvdetDrawerElement(), nvdetDrawerProperties(*drawer));
+    appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
+    for (int streamIndex = 0; streamIndex < static_cast<int>(videos.size()); ++streamIndex) {
+        const std::string suffix = std::to_string(streamIndex);
+        appendNode("queue", "queue_demux" + suffix, addQueue());
+        appendNode("nvvideoconvert", "nvvideoconvert" + suffix, addNvvideoconvert(gpuId));
+        appendNode("tee", "tee_raw" + suffix, addTee());
+        appendNode("queue", "queue_raw" + suffix, addQueue());
+        appendNode("nvvideoconvert", "nvvideoconvert_raw" + suffix, addNvvideoconvert(gpuId));
+        appendNode("capsfilter", "capsfilter_raw" + suffix, addCapsfilter("video/x-raw(memory:NVMM), format=RGB"));
+        appendNode("rawcapturer", "rawcapturer" + suffix, addRawcapturer(capturerCodes()));
+        appendNode("fakesink", "fakesink_raw" + suffix, addFakesink(false, false));
+        appendNode("queue", "queue_osd" + suffix, addQueue());
+        appendNode("nvvideoconvert", "nvvideoconvert_osd" + suffix, addNvvideoconvert(gpuId, true));
+        if (drawer.has_value()) {
+            appendNode(nvdetDrawerElement(), nvdetDrawerElement() + suffix, nvdetDrawerProperties(*drawer));
+        }
+        appendNode("nvosdbin", "nvosdbin" + suffix, addNvosdbin(gpuId, true, true));
+        appendAfterOsd(streamIndex, gpuId);
     }
-    appendNode("nvosdbin", "nvosdbin", addNvosdbin(gpuId, true, true));
-    appendNode("tee", "tee_vis", addTee());
-    appendNode("queue", "queue_vis", addQueue());
-    appendNode("nvvideoconvert", "nvvideoconvert_vis", addNvvideoconvert(gpuId));
-    appendNode("capsfilter", "capsfilter_vis", addCapsfilter("video/x-raw(memory:NVMM), format=RGB"));
-    appendNode("viscapturer", "viscapturer", addViscapturer(captureOutputDir(), capturerCodes()));
-    appendNode("fakesink", "fakesink_vis", addFakesink(false, false));
-    appendNode("queue", "queue_enc", addQueue());
-    appendNode(
-        "presencelogger",
-        "presencelogger",
-        addPresencelogger(logger.value("interval", 0)));
-    appendEncode(gpuId);
 }
 
 void EventVideoGenerator::link() {
@@ -401,32 +408,27 @@ void EventVideoGenerator::link() {
     edges[inferenceTail] = "nvdsanalytics";
     edges["nvdsanalytics"] = afterAnalytics();
     linkEventCoder(edges);
-    edges["tee_msg"].push_back("nvvideoconvert");
+    edges["tee_msg"].push_back("nvstreamdemux");
     edges["tee_msg"].push_back("queue_msg");
     edges["queue_msg"] = "nvmsgconv";
     edges["nvmsgconv"] = "nvmsgbroker";
-    edges["nvvideoconvert"] = "tee_raw";
-    edges["tee_raw"].push_back("queue_raw");
-    edges["tee_raw"].push_back("queue_osd");
-    edges["queue_raw"] = "nvvideoconvert_raw";
-    edges["nvvideoconvert_raw"] = "capsfilter_raw";
-    edges["capsfilter_raw"] = "rawcapturer";
-    edges["rawcapturer"] = "fakesink_raw";
-    edges["queue_osd"] = "nvvideoconvert_osd";
-    edges["nvvideoconvert_osd"] = "capsfilter_osd";
-    const std::string osdPrev = drawer.has_value() ? nvdetDrawerElement() : "nvosdbin";
-    edges["capsfilter_osd"] = osdPrev;
-    if (drawer.has_value()) {
-        edges[nvdetDrawerElement()] = "nvosdbin";
+    for (int index = 0; index < static_cast<int>(videos.size()); ++index) {
+        const std::string suffix = std::to_string(index);
+        edges["queue_demux" + suffix] = "nvvideoconvert" + suffix;
+        edges["nvvideoconvert" + suffix] = "tee_raw" + suffix;
+        edges["tee_raw" + suffix].push_back("queue_raw" + suffix);
+        edges["tee_raw" + suffix].push_back("queue_osd" + suffix);
+        edges["queue_raw" + suffix] = "nvvideoconvert_raw" + suffix;
+        edges["nvvideoconvert_raw" + suffix] = "capsfilter_raw" + suffix;
+        edges["capsfilter_raw" + suffix] = "rawcapturer" + suffix;
+        edges["rawcapturer" + suffix] = "fakesink_raw" + suffix;
+        edges["queue_osd" + suffix] = "nvvideoconvert_osd" + suffix;
+        const std::string osdPrev = drawer.has_value() ? nvdetDrawerElement() + suffix : "nvosdbin" + suffix;
+        edges["nvvideoconvert_osd" + suffix] = osdPrev;
+        if (drawer.has_value()) {
+            edges[nvdetDrawerElement() + suffix] = "nvosdbin" + suffix;
+        }
+        linkAfterOsd(edges, index);
     }
-    edges["nvosdbin"] = "tee_vis";
-    edges["tee_vis"].push_back("queue_vis");
-    edges["tee_vis"].push_back("queue_enc");
-    edges["queue_vis"] = "nvvideoconvert_vis";
-    edges["nvvideoconvert_vis"] = "capsfilter_vis";
-    edges["capsfilter_vis"] = "viscapturer";
-    edges["viscapturer"] = "fakesink_vis";
-    edges["queue_enc"] = "presencelogger";
-    linkEncode(edges);
     pipeline["deepstream"]["edges"] = edges;
 }

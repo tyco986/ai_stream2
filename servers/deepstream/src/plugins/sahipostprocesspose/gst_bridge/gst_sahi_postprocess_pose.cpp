@@ -9,6 +9,10 @@
 enum {
     PROP_GIE_IDS = 1,
     PROP_CLASS_AGNOSTIC,
+    PROP_MATCH_METRIC,
+    PROP_MATCH_THRESHOLD,
+    PROP_PREFER_FULL_FRAME,
+    PROP_MAX_DETECTIONS,
     PROP_OKS_THRESHOLD,
     PROP_VIS_THRESHOLD,
     PROP_NUM_KEYPOINTS,
@@ -30,7 +34,7 @@ static SahiPoseNms* engineOf(GstSahiPostProcessPose* self) {
 
 static void renew(GstSahiPostProcessPose* self) {
     delete engineOf(self);
-    self->engine = new SahiPoseNms(self->gieIds, self->classAgnostic, self->oksThreshold, self->visThreshold, self->numKeypoints);
+    self->engine = new SahiPoseNms(self->gieIds, self->classAgnostic, self->matchMetric, self->matchThreshold, self->preferFullFrame, self->maxDetections, self->oksThreshold, self->visThreshold, self->numKeypoints);
 }
 
 static void gst_sahi_postprocess_pose_finalize(GObject* object);
@@ -73,6 +77,18 @@ static void gst_sahi_postprocess_pose_class_init(GstSahiPostProcessPoseClass* kl
         objectClass, PROP_CLASS_AGNOSTIC,
         g_param_spec_boolean("class-agnostic", "Class agnostic", "Match across different class IDs", sahipostprocesspose::DEFAULT_CLASS_AGNOSTIC, readWrite));
     g_object_class_install_property(
+        objectClass, PROP_MATCH_METRIC,
+        g_param_spec_int("match-metric", "Match metric", "0=IoU, 1=IoS", sahipostprocesspose::MATCH_METRIC_IOU, sahipostprocesspose::MATCH_METRIC_IOS, sahipostprocesspose::DEFAULT_MATCH_METRIC, readWrite));
+    g_object_class_install_property(
+        objectClass, PROP_MATCH_THRESHOLD,
+        g_param_spec_float("match-threshold", "Match threshold", "Box overlap at or above this suppresses the lower-score pose", 0.0f, 1.0f, sahipostprocesspose::DEFAULT_MATCH_THRESHOLD, readWrite));
+    g_object_class_install_property(
+        objectClass, PROP_PREFER_FULL_FRAME,
+        g_param_spec_boolean("prefer-full-frame", "Prefer full frame", "Keep full-frame poses and drop overlapping slice poses before OKS", sahipostprocesspose::DEFAULT_PREFER_FULL_FRAME, readWrite));
+    g_object_class_install_property(
+        objectClass, PROP_MAX_DETECTIONS,
+        g_param_spec_int("max-detections", "Max detections", "Max surviving poses per frame (-1=unlimited)", -1, G_MAXINT, sahipostprocesspose::DEFAULT_MAX_DETECTIONS, readWrite));
+    g_object_class_install_property(
         objectClass, PROP_OKS_THRESHOLD,
         g_param_spec_float("oks-threshold", "OKS threshold", "OKS above this suppresses the lower-score pose", 0.0f, 1.0f, sahipostprocesspose::DEFAULT_OKS_THRESHOLD, readWrite));
     g_object_class_install_property(
@@ -93,10 +109,14 @@ static void gst_sahi_postprocess_pose_init(GstSahiPostProcessPose* self) {
     gst_base_transform_set_passthrough(transform, FALSE);
     self->gieIds = g_strdup(sahipostprocesspose::DEFAULT_GIE_IDS);
     self->classAgnostic = sahipostprocesspose::DEFAULT_CLASS_AGNOSTIC;
+    self->matchMetric = sahipostprocesspose::DEFAULT_MATCH_METRIC;
+    self->matchThreshold = sahipostprocesspose::DEFAULT_MATCH_THRESHOLD;
+    self->preferFullFrame = sahipostprocesspose::DEFAULT_PREFER_FULL_FRAME;
+    self->maxDetections = sahipostprocesspose::DEFAULT_MAX_DETECTIONS;
     self->oksThreshold = sahipostprocesspose::DEFAULT_OKS_THRESHOLD;
     self->visThreshold = sahipostprocesspose::DEFAULT_VIS_THRESHOLD;
     self->numKeypoints = sahipostprocesspose::DEFAULT_NUM_KEYPOINTS;
-    self->engine = new SahiPoseNms(self->gieIds, self->classAgnostic, self->oksThreshold, self->visThreshold, self->numKeypoints);
+    self->engine = new SahiPoseNms(self->gieIds, self->classAgnostic, self->matchMetric, self->matchThreshold, self->preferFullFrame, self->maxDetections, self->oksThreshold, self->visThreshold, self->numKeypoints);
 }
 
 static void gst_sahi_postprocess_pose_finalize(GObject* object) {
@@ -119,6 +139,18 @@ static void gst_sahi_postprocess_pose_set_property(GObject* object, guint propId
     } else if (propId == PROP_CLASS_AGNOSTIC) {
         self->classAgnostic = g_value_get_boolean(value);
         renew(self);
+    } else if (propId == PROP_MATCH_METRIC) {
+        self->matchMetric = g_value_get_int(value);
+        renew(self);
+    } else if (propId == PROP_MATCH_THRESHOLD) {
+        self->matchThreshold = g_value_get_float(value);
+        renew(self);
+    } else if (propId == PROP_PREFER_FULL_FRAME) {
+        self->preferFullFrame = g_value_get_boolean(value);
+        renew(self);
+    } else if (propId == PROP_MAX_DETECTIONS) {
+        self->maxDetections = g_value_get_int(value);
+        renew(self);
     } else if (propId == PROP_OKS_THRESHOLD) {
         self->oksThreshold = g_value_get_float(value);
         renew(self);
@@ -139,6 +171,14 @@ static void gst_sahi_postprocess_pose_get_property(GObject* object, guint propId
         g_value_set_string(value, self->gieIds);
     } else if (propId == PROP_CLASS_AGNOSTIC) {
         g_value_set_boolean(value, self->classAgnostic);
+    } else if (propId == PROP_MATCH_METRIC) {
+        g_value_set_int(value, self->matchMetric);
+    } else if (propId == PROP_MATCH_THRESHOLD) {
+        g_value_set_float(value, self->matchThreshold);
+    } else if (propId == PROP_PREFER_FULL_FRAME) {
+        g_value_set_boolean(value, self->preferFullFrame);
+    } else if (propId == PROP_MAX_DETECTIONS) {
+        g_value_set_int(value, self->maxDetections);
     } else if (propId == PROP_OKS_THRESHOLD) {
         g_value_set_float(value, self->oksThreshold);
     } else if (propId == PROP_VIS_THRESHOLD) {

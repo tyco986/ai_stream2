@@ -299,7 +299,7 @@ void EventRtspGenerator::appendAfterOsd(int index, int gpuId) {
     appendNode("queue", "queue_vis" + suffix, addQueue());
     appendNode("nvvideoconvert", "nvvideoconvert_vis" + suffix, addNvvideoconvert(gpuId));
     appendNode("capsfilter", "capsfilter_vis" + suffix, addCapsfilter("video/x-raw(memory:NVMM), format=RGB"));
-    appendNode("viscapturer", "viscapturer" + suffix, addViscapturer(captureOutputDir(), capturerCodes()));
+    appendNode("viscapturer", "viscapturer" + suffix, addViscapturer(capturerCodes()));
     appendNode("fakesink", "fakesink_vis" + suffix, addFakesink(false, false));
 }
 
@@ -348,11 +348,10 @@ void EventRtspGenerator::add() {
         appendNode("queue", "queue_raw" + suffix, addQueue());
         appendNode("nvvideoconvert", "nvvideoconvert_raw" + suffix, addNvvideoconvert(gpuId));
         appendNode("capsfilter", "capsfilter_raw" + suffix, addCapsfilter("video/x-raw(memory:NVMM), format=RGB"));
-        appendNode("rawcapturer", "rawcapturer" + suffix, addRawcapturer(captureOutputDir(), capturerCodes()));
+        appendNode("rawcapturer", "rawcapturer" + suffix, addRawcapturer(capturerCodes()));
         appendNode("fakesink", "fakesink_raw" + suffix, addFakesink(false, false));
         appendNode("queue", "queue_osd" + suffix, addQueue());
-        appendNode("nvvideoconvert", "nvvideoconvert_osd" + suffix, addNvvideoconvert(gpuId));
-        appendNode("capsfilter", "capsfilter_osd" + suffix, addCapsfilter("video/x-raw(memory:NVMM), format=RGBA"));
+        appendNode("nvvideoconvert", "nvvideoconvert_osd" + suffix, addNvvideoconvert(gpuId, true));
         if (drawer.has_value()) {
             appendNode(nvdetDrawerElement(), nvdetDrawerElement() + suffix, nvdetDrawerProperties(*drawer));
         }
@@ -395,9 +394,8 @@ void EventRtspGenerator::link() {
         edges["capsfilter_raw" + suffix] = "rawcapturer" + suffix;
         edges["rawcapturer" + suffix] = "fakesink_raw" + suffix;
         edges["queue_osd" + suffix] = "nvvideoconvert_osd" + suffix;
-        edges["nvvideoconvert_osd" + suffix] = "capsfilter_osd" + suffix;
         const std::string osdPrev = drawer.has_value() ? nvdetDrawerElement() + suffix : "nvosdbin" + suffix;
-        edges["capsfilter_osd" + suffix] = osdPrev;
+        edges["nvvideoconvert_osd" + suffix] = osdPrev;
         if (drawer.has_value()) {
             edges[nvdetDrawerElement() + suffix] = "nvosdbin" + suffix;
         }

@@ -5,6 +5,6 @@ set -euo pipefail
 PROJECT_NAME="ai_stream2"
 CONTAINER="${PROJECT_NAME}_deepstream"
 
-docker exec "${CONTAINER}" cmake --build /tmp/build -j"$(nproc)"
+docker exec "${CONTAINER}" cmake --build /src/build -j"$(nproc)"
 docker restart "${CONTAINER}"
 echo "Restarted ${CONTAINER}"

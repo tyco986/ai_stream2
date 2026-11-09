@@ -127,8 +127,8 @@ bool VisCapturer::writeLabelme(
 
 bool VisCapturer::writeLabels(const CaptureJob& job) {
     const std::string stem = std::format("raw_{:03d}_{:08d}", job.padIndex, job.captureId);
-    const std::string yoloPath = std::format("{}/labels/{}.txt", capturer::OUTPUT_DIR, stem);
-    const std::string jsonPath = std::format("{}/labelme/{}.json", capturer::OUTPUT_DIR, stem);
+    const std::string yoloPath = std::format("{}/labels/{}.txt", outputRoot(), stem);
+    const std::string jsonPath = std::format("{}/labelme/{}.json", outputRoot(), stem);
     const std::string imagePath = std::format("../images/{}.png", stem);
     const bool yoloOk = writeYolo(yoloPath, job.boxes, job.width, job.height);
     const bool jsonOk = writeLabelme(jsonPath, job.boxes, job.width, job.height, imagePath);
@@ -137,7 +137,7 @@ bool VisCapturer::writeLabels(const CaptureJob& job) {
 }
 
 bool VisCapturer::save(const CaptureJob& job) {
-    const std::string path = std::format("{}/vis/vis_{:03d}_{:08d}.jpg", capturer::OUTPUT_DIR, job.padIndex, job.captureId);
+    const std::string path = std::format("{}/vis/vis_{:03d}_{:08d}.jpg", outputRoot(), job.padIndex, job.captureId);
     const bool imageOk = jpeg.write(path, job.rgb, job.width, job.height);
     const bool labelsOk = writeLabels(job);
     const bool ok = imageOk && labelsOk;

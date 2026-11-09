@@ -31,9 +31,13 @@ struct ScoreOrder {
 
 }
 
-SahiPoseNms::SahiPoseNms(const char* gieIdsText, bool classAgnostic, float oksThreshold, float visThreshold, int numKeypoints)
+SahiPoseNms::SahiPoseNms(const char* gieIdsText, bool classAgnostic, int matchMetric, float matchThreshold, bool preferFullFrame, int maxDetections, float oksThreshold, float visThreshold, int numKeypoints)
     : gieIdsText(gieIdsText != nullptr ? gieIdsText : sahipostprocesspose::DEFAULT_GIE_IDS),
       classAgnostic(classAgnostic),
+      matchMetric(matchMetric),
+      matchThreshold(matchThreshold),
+      preferFullFrame(preferFullFrame),
+      maxDetections(maxDetections),
       oksThreshold(oksThreshold),
       visThreshold(visThreshold),
       numKeypoints(numKeypoints),
@@ -91,6 +95,24 @@ std::vector<float> SahiPoseNms::keypointsOf(const NvDsObjectMeta* objectMeta) co
     return keypoints;
 }
 
+float SahiPoseNms::overlap(const PoseDetection& left, const PoseDetection& right) const {
+    const float interLeft = std::max(left.left, right.left);
+    const float interTop = std::max(left.top, right.top);
+    const float interRight = std::min(left.right, right.right);
+    const float interBottom = std::min(left.bottom, right.bottom);
+    const float width = interRight - interLeft;
+    const float height = interBottom - interTop;
+    float value = 0.0f;
+    if (width > 0.0f && height > 0.0f) {
+        const float inter = width * height;
+        const float unionArea = left.area + right.area - inter;
+        const float smaller = std::min(left.area, right.area);
+        const float denominator = matchMetric == sahipostprocesspose::MATCH_METRIC_IOU ? unionArea : smaller;
+        value = denominator > 0.0f ? inter / denominator : 0.0f;
+    }
+    return value;
+}
+
 float SahiPoseNms::keypointVar(unsigned int index, unsigned int keypointCount) const {
     const bool coco = keypointCount == static_cast<unsigned int>(sahipostprocesspose::COCO_KEYPOINT_COUNT) && index < static_cast<unsigned int>(sahipostprocesspose::COCO_KEYPOINT_COUNT);
     const float sigma = coco ? sahipostprocesspose::COCO17_SIGMAS[index] : sahipostprocesspose::DEFAULT_SIGMA;
@@ -122,18 +144,75 @@ float SahiPoseNms::oks(const PoseDetection& left, const PoseDetection& right) co
     return value;
 }
 
-void SahiPoseNms::suppressGroup(const SpatialGrid& grid, std::vector<PoseDetection>& detections, std::vector<char>& suppressed, const std::vector<unsigned int>& indexes) const {
+bool SahiPoseNms::anchored(const PoseDetection& detection) const {
+    const bool kept = preferFullFrame && detection.fromFullFrame;
+    return kept;
+}
+
+void SahiPoseNms::suppressAnchors(const std::vector<PoseDetection>& detections, std::vector<char>& suppressed) const {
+    std::vector<unsigned int> anchors;
+    for (unsigned int index = 0; index < detections.size(); index++) {
+        if (detections[index].fromFullFrame) {
+            anchors.push_back(index);
+        }
+    }
+    for (unsigned int index = 0; index < detections.size() && !anchors.empty(); index++) {
+        if (!detections[index].fromFullFrame && !suppressed[index]) {
+            for (unsigned int anchor : anchors) {
+                const bool sameClass = detections[index].classId == detections[anchor].classId;
+                if ((classAgnostic || sameClass) && overlap(detections[anchor], detections[index]) >= matchThreshold) {
+                    suppressed[index] = 1;
+                    break;
+                }
+            }
+        }
+    }
+}
+
+void SahiPoseNms::suppressByOverlap(const SpatialGrid& grid, const std::vector<PoseDetection>& detections, std::vector<char>& suppressed, const std::vector<unsigned int>& indexes) const {
     std::vector<unsigned int> candidates;
     for (unsigned int index : indexes) {
         if (!suppressed[index]) {
             grid.query({detections[index].left, detections[index].top, detections[index].right, detections[index].bottom}, candidates);
             for (unsigned int candidate : candidates) {
                 const bool sameClass = detections[index].classId == detections[candidate].classId;
-                const bool comparable = candidate != index && !suppressed[candidate] && (classAgnostic || sameClass) && !betterPose(detections, candidate, index);
+                const bool comparable = candidate != index && !suppressed[candidate] && !anchored(detections[candidate]) && (classAgnostic || sameClass) && !betterPose(detections, candidate, index);
+                if (comparable && overlap(detections[index], detections[candidate]) >= matchThreshold) {
+                    suppressed[candidate] = 1;
+                }
+            }
+        }
+    }
+}
+
+void SahiPoseNms::suppressByOks(const SpatialGrid& grid, const std::vector<PoseDetection>& detections, std::vector<char>& suppressed, const std::vector<unsigned int>& indexes) const {
+    std::vector<unsigned int> candidates;
+    for (unsigned int index : indexes) {
+        if (!suppressed[index]) {
+            grid.query({detections[index].left, detections[index].top, detections[index].right, detections[index].bottom}, candidates);
+            for (unsigned int candidate : candidates) {
+                const bool sameClass = detections[index].classId == detections[candidate].classId;
+                const bool comparable = candidate != index && !suppressed[candidate] && !anchored(detections[candidate]) && (classAgnostic || sameClass) && !betterPose(detections, candidate, index);
                 if (comparable && oks(detections[index], detections[candidate]) > oksThreshold) {
                     suppressed[candidate] = 1;
                 }
             }
+        }
+    }
+}
+
+void SahiPoseNms::capDetections(const std::vector<PoseDetection>& detections, std::vector<char>& suppressed) const {
+    std::vector<unsigned int> survivors;
+    for (unsigned int index = 0; index < detections.size(); index++) {
+        if (!suppressed[index]) {
+            survivors.push_back(index);
+        }
+    }
+    if (maxDetections >= 0 && static_cast<int>(survivors.size()) > maxDetections) {
+        const ScoreOrder scoreOrder{&detections};
+        std::sort(survivors.begin(), survivors.end(), scoreOrder);
+        for (unsigned int index = static_cast<unsigned int>(maxDetections); index < survivors.size(); index++) {
+            suppressed[survivors[index]] = 1;
         }
     }
 }
@@ -153,6 +232,7 @@ void SahiPoseNms::suppress(NvDsFrameMeta* frame) {
             detection.classId = objectMeta->class_id;
             detection.area = objectMeta->rect_params.width * objectMeta->rect_params.height;
             detection.objectMeta = objectMeta;
+            detection.fromFullFrame = objectMeta->misc_obj_info[0] == 1;
             detection.keypoints = std::move(keypoints);
             detections.push_back(std::move(detection));
         }
@@ -180,17 +260,29 @@ void SahiPoseNms::suppress(NvDsFrameMeta* frame) {
         SpatialGrid grid;
         grid.build(rects, frameWidth, frameHeight);
         std::vector<char> suppressed(detections.size(), 0);
+        if (preferFullFrame) {
+            suppressAnchors(detections, suppressed);
+        }
+        std::vector<unsigned int> participants;
+        for (unsigned int index : order) {
+            if (!anchored(detections[index])) {
+                participants.push_back(index);
+            }
+        }
         if (classAgnostic) {
-            suppressGroup(grid, detections, suppressed, order);
+            suppressByOverlap(grid, detections, suppressed, participants);
+            suppressByOks(grid, detections, suppressed, participants);
         } else {
             std::unordered_map<int, std::vector<unsigned int>> byClass;
-            for (unsigned int index : order) {
+            for (unsigned int index : participants) {
                 byClass[detections[index].classId].push_back(index);
             }
             for (const auto& entry : byClass) {
-                suppressGroup(grid, detections, suppressed, entry.second);
+                suppressByOverlap(grid, detections, suppressed, entry.second);
+                suppressByOks(grid, detections, suppressed, entry.second);
             }
         }
+        capDetections(detections, suppressed);
         for (unsigned int index = 0; index < detections.size(); index++) {
             if (suppressed[index]) {
                 nvds_remove_obj_meta_from_frame(frame, detections[index].objectMeta);

@@ -19,8 +19,7 @@ drawer:
   fade_time: 1
   show_label: true
 event_coder:
-  class_ids: [0, 1]
-  event_names: [Fire, Smoke]
+  class_event_map: "0:Fire;1:Smoke"
   length: 1
   threshold: 0.5
   mode: fold
@@ -28,4 +27,4 @@ capturer:
   capture_codes: "12"
 images:
   - /root/attachments/images/video1.png
-output: /root/outputs/deepstream/yolo10x_smoke_fire_image.jpg
+output: /root/outputs/deepstream/yolo10x_smoke_fire_image

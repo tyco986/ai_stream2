@@ -34,5 +34,13 @@ sahi:
     slice_height: 640
     overlap_width_ratio: 0.2
     overlap_height_ratio: 0.2
+    enable_full_frame: true
   nvsahipostprocesspose:
+    class_agnostic: false
+    match_metric: 1
+    match_threshold: 0.5
+    prefer_full_frame: true
+    max_detections: -1
     oks_threshold: 0.2
+    vis_threshold: 0.0
+    num_keypoints: 0

@@ -49,7 +49,8 @@ GstFlowReturn dsloggerTransform(GstBaseTransform* transform, GstBuffer* buffer, 
     }
     NvDsBatchMeta* batch = gst_buffer_get_nvds_batch_meta(buffer);
     if (batch != nullptr && engine != nullptr) {
-        auto* latencyInfo = static_cast<NvDsFrameLatencyInfo*>(g_malloc0(sizeof(NvDsFrameLatencyInfo) * batch->num_frames_in_batch));
+        const guint frameSlots = batch->max_frames_in_batch;
+        auto* latencyInfo = static_cast<NvDsFrameLatencyInfo*>(g_malloc0(sizeof(NvDsFrameLatencyInfo) * frameSlots));
         const guint latencyCount = nvds_measure_buffer_latency(buffer, latencyInfo);
         nvds_acquire_meta_lock(batch);
         for (NvDsMetaList* item = batch->frame_meta_list; item != nullptr; item = item->next) {

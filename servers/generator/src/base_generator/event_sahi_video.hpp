@@ -4,15 +4,15 @@
 #include "subelement_generator/nvsahipreprocess.hpp"
 #include "subelement_generator/utils/sahi.hpp"
 
-// Generate YOLO SAHI event video pipeline. Capture branches stay on the batched stream.
-// The encode tail ends at fakesink.
+// Generate YOLO SAHI event video pipeline. After demux each stream has its own capture branch.
+// The headless tail ends at the vis capturer.
 //
 // mux batch size is the video count. pgie batch size is the SAHI tile count.
 //
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
-//         → presenceeventcoder → tee_msg → … → presencelogger → fakesink
+//         → presenceeventcoder → tee_msg → nvstreamdemux → nvosdbin{N} → viscapturer{N}
 class EventSahiVideoGenerator : public EventVideoGenerator {
 public:
     static constexpr const char* SAHI_PREPROCESS_CONFIG_NAME = "nvsahipreprocess.ini";

@@ -16,6 +16,10 @@ struct _GstSahiPostProcessPose {
     gpointer engine;
     gchar* gieIds;
     gboolean classAgnostic;
+    gint matchMetric;
+    gfloat matchThreshold;
+    gboolean preferFullFrame;
+    gint maxDetections;
     gfloat oksThreshold;
     gfloat visThreshold;
     gint numKeypoints;

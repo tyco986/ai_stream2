@@ -293,11 +293,10 @@ void EventImageGenerator::add() {
     appendNode("queue", "queue_raw", addQueue());
     appendNode("nvvideoconvert", "nvvideoconvert_raw", addNvvideoconvert(gpuId));
     appendNode("capsfilter", "capsfilter_raw", addCapsfilter("video/x-raw(memory:NVMM), format=RGB"));
-    appendNode("rawcapturer", "rawcapturer", addRawcapturer(captureOutputDir(), capturerCodes()));
+    appendNode("rawcapturer", "rawcapturer", addRawcapturer(capturerCodes()));
     appendNode("fakesink", "fakesink_raw", addFakesink(false, false));
     appendNode("queue", "queue_osd", addQueue());
     appendNode("nvvideoconvert", "nvvideoconvert_osd", addNvvideoconvert(gpuId));
-    appendNode("capsfilter", "capsfilter_osd", addCapsfilter("video/x-raw(memory:NVMM), format=RGBA"));
     if (drawer.has_value()) {
         appendNode(nvdetDrawerElement(), nvdetDrawerElement(), nvdetDrawerProperties(*drawer));
     }
@@ -306,7 +305,7 @@ void EventImageGenerator::add() {
     appendNode("queue", "queue_vis", addQueue());
     appendNode("nvvideoconvert", "nvvideoconvert_vis", addNvvideoconvert(gpuId));
     appendNode("capsfilter", "capsfilter_vis", addCapsfilter("video/x-raw(memory:NVMM), format=RGB"));
-    appendNode("viscapturer", "viscapturer", addViscapturer(captureOutputDir(), capturerCodes()));
+    appendNode("viscapturer", "viscapturer", addViscapturer(capturerCodes()));
     appendNode("fakesink", "fakesink_vis", addFakesink(false, false));
     appendNode("queue", "queue_enc", addQueue());
     appendNode("nvvideoconvert", "nvvideoconvert_enc", addNvvideoconvert(gpuId));
@@ -347,9 +346,8 @@ void EventImageGenerator::link() {
     edges["capsfilter_raw"] = "rawcapturer";
     edges["rawcapturer"] = "fakesink_raw";
     edges["queue_osd"] = "nvvideoconvert_osd";
-    edges["nvvideoconvert_osd"] = "capsfilter_osd";
     const std::string osdPrev = drawer.has_value() ? nvdetDrawerElement() : "nvosdbin";
-    edges["capsfilter_osd"] = osdPrev;
+    edges["nvvideoconvert_osd"] = osdPrev;
     if (drawer.has_value()) {
         edges[nvdetDrawerElement()] = "nvosdbin";
     }

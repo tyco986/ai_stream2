@@ -21,10 +21,9 @@ void DetFadeEngineWithTracker::writeLabel(NvDsObjectMeta* object) const {
     g_free(text->display_text);
     text->display_text = nullptr;
     text->set_bg_clr = 0;
-    if (showLabel) {
-        const long long trackId = object->object_id == UNTRACKED_OBJECT_ID ? -1LL : static_cast<long long>(object->object_id);
+    if (showLabel && object->object_id != UNTRACKED_OBJECT_ID) {
         char line[fadedrawer::LABEL_LINE_SIZE];
-        std::snprintf(line, sizeof(line), "%s%c%.2f%c%lld", object->obj_label, fadedrawer::LABEL_SEP, object->confidence, fadedrawer::LABEL_SEP, trackId);
+        std::snprintf(line, sizeof(line), "%s%c%.2f%c%llu", object->obj_label, fadedrawer::LABEL_SEP, object->confidence, fadedrawer::LABEL_SEP, static_cast<unsigned long long>(object->object_id));
         text->display_text = g_strdup(line);
         text->x_offset = static_cast<unsigned int>(object->rect_params.left);
         const int y = static_cast<int>(object->rect_params.top) - fadedrawer::LABEL_Y_OFFSET;

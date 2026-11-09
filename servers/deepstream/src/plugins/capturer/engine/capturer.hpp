@@ -41,13 +41,16 @@ public:
     Capturer& operator=(const Capturer&) = delete;
 
     bool capture(NvBufSurface* surface, NvDsFrameMeta* frame);
+    void setPipelineName(const std::string& name);
 
 protected:
+    std::string outputRoot() const;
     virtual void prepare(CaptureJob* job, NvDsFrameMeta* frame);
     virtual bool save(const CaptureJob& job) = 0;
     void stop();
 
     std::string captureCodes;
+    std::string pipelineName;
 
 private:
     bool codesHit(const char* eventCodes, unsigned int numClasses) const;

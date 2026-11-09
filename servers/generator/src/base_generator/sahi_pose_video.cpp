@@ -29,7 +29,11 @@ YAML::Node SahiPoseVideoGenerator::sahiPostprocessProperties(const nlohmann::jso
     const std::string gieId = std::to_string(pgieGenerator->config["property"]["gie-unique-id"].as<int>());
     const YAML::Node properties = addNvsahipostprocessPose(
         gieId,
-        false,
+        postprocess.value("class_agnostic", false),
+        postprocess.value("match_metric", pipeline::MATCH_METRIC_IOS),
+        postprocess.value("match_threshold", pipeline::MATCH_THRESHOLD),
+        postprocess.value("prefer_full_frame", true),
+        postprocess.value("max_detections", -1),
         postprocess.value("oks_threshold", pipeline::OKS_THRESHOLD),
         postprocess.value("vis_threshold", 0.0),
         postprocess.value("num_keypoints", 0));

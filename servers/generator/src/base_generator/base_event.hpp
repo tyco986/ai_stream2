@@ -14,7 +14,6 @@ public:
     BaseEventGenerator(std::string pipelineName, nlohmann::json eventCoder, std::optional<nlohmann::json> capturer = std::nullopt);
 
     std::string capturerCodes() const;
-    std::string captureOutputDir() const;
     void appendEventCoder(const std::string& name = "presenceeventcoder");
     std::string afterAnalytics(const std::string& teeName = "tee_msg") const;
     void linkEventCoder(YAML::Node edges, const std::string& teeName = "tee_msg") const;

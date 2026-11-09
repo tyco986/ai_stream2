@@ -15,6 +15,7 @@ RUN printf '%s\n' \
         > /etc/apt/sources.list.d/ubuntu.sources
 
 ENV GST_PLUGIN_PATH=/opt/nvidia/deepstream/deepstream/lib/gst-plugins
+ENV LD_PRELOAD=/opt/ai_stream2/servers/deepstream/libs/libnvdsinfer_custom_impl_Yolo_seg.so
 ENV OMP_NUM_THREADS=1
 ENV OMP_WAIT_POLICY=PASSIVE
 ENV NVDS_ENABLE_LATENCY_MEASUREMENT=1
