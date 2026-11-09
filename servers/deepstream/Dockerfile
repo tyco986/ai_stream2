@@ -56,20 +56,20 @@ RUN unzip -o -q /tmp/nvdsinfer_custom_impl_Yolo_seg.zip -d /root/src \
     && cp /root/src/nvdsinfer_custom_impl_Yolo_seg/libnvdsinfer_custom_impl_Yolo_seg.so /opt/ai_stream2/servers/deepstream/libs/
 
 
-FROM toolchain AS dev
-
-WORKDIR /src
-EXPOSE 8094
-
-
 FROM toolchain AS build
 
-COPY CMakeLists.txt main.cpp /src/
-COPY src /src/src
+COPY CMakeLists.txt main.cpp /app/
+COPY src /app/src
 COPY scripts/5_install_artifacts.sh /tmp/5_install_artifacts.sh
-RUN cmake -S /src -B /tmp/build -DCMAKE_BUILD_TYPE=Release \
+RUN cmake -S /app -B /tmp/build -DCMAKE_BUILD_TYPE=Release \
     && cmake --build /tmp/build -j"$(nproc)" \
     && bash /tmp/5_install_artifacts.sh
+
+
+FROM build AS dev
+
+WORKDIR /app
+EXPOSE 8094
 
 
 FROM base AS prod
@@ -85,7 +85,7 @@ RUN apt-get update \
         ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-COPY --from=build /app/deepstream ./deepstream
+COPY --from=build /usr/local/bin/deepstream /usr/local/bin/deepstream
 COPY --from=build /opt/nvidia/deepstream/deepstream/lib/gst-plugins/libgstboxsnapshot.so /opt/nvidia/deepstream/deepstream/lib/gst-plugins/
 COPY --from=build /opt/nvidia/deepstream/deepstream/lib/gst-plugins/libgstfadedrawer.so /opt/nvidia/deepstream/deepstream/lib/gst-plugins/
 COPY --from=build /opt/nvidia/deepstream/deepstream/lib/gst-plugins/libgstpresenceeventcoder.so /opt/nvidia/deepstream/deepstream/lib/gst-plugins/
@@ -93,10 +93,11 @@ COPY --from=build /opt/nvidia/deepstream/deepstream/lib/gst-plugins/libgstcaptur
 COPY --from=build /opt/nvidia/deepstream/deepstream/lib/gst-plugins/libgstdslogger.so /opt/nvidia/deepstream/deepstream/lib/gst-plugins/
 COPY --from=build /opt/nvidia/deepstream/deepstream/lib/gst-plugins/libgststgcnppactionlabel.so /opt/nvidia/deepstream/deepstream/lib/gst-plugins/
 COPY --from=build /opt/nvidia/deepstream/deepstream/lib/gst-plugins/libgstnvsahipostprocesspose.so /opt/nvidia/deepstream/deepstream/lib/gst-plugins/
+COPY --from=build /opt/nvidia/deepstream/deepstream/lib/gst-plugins/libgstrtmposepostprocess.so /opt/nvidia/deepstream/deepstream/lib/gst-plugins/
 COPY --from=build /opt/nvidia/deepstream/deepstream/lib/gst-plugins/libnvdsgst_infer.so /opt/nvidia/deepstream/deepstream/lib/gst-plugins/
 COPY --from=build /opt/nvidia/deepstream/deepstream/lib/gst-plugins/libnvdsgst_sahipreprocess.so /opt/nvidia/deepstream/deepstream/lib/gst-plugins/
 COPY --from=build /opt/nvidia/deepstream/deepstream/lib/gst-plugins/libnvdsgst_sahipostprocess.so /opt/nvidia/deepstream/deepstream/lib/gst-plugins/
 COPY --from=build /opt/nvidia/deepstream/deepstream/lib/libnvds_infer_yolo.so /opt/nvidia/deepstream/deepstream/lib/
 COPY --from=build /opt/ai_stream2/servers/deepstream/libs /opt/ai_stream2/servers/deepstream/libs
 EXPOSE 8094
-CMD ["./deepstream"]
+CMD ["deepstream"]

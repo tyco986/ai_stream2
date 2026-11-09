@@ -12,6 +12,7 @@ struct BoxSnapshotBox {
     gfloat confidence;
     gint class_id;
     guint64 object_id;
+    gint64 snapshot_key;
     gchar label[64];
     guint mask_offset;
     guint mask_size;

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run from project root. Dev image + mount servers/deepstream -> /src.
+# Run from project root. Dev image + mount servers/deepstream -> /app.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
@@ -23,12 +23,13 @@ docker run \
   -e GST_DEBUG=3 \
   -p 8094:8094 \
   -v /etc/localtime:/etc/localtime:ro \
-  -v "${ROOT}/servers/deepstream:/src" \
+  -v "${ROOT}/servers/deepstream:/app" \
   -v "${ROOT}/models:/root/models" \
   -v "${ROOT}/history:/root/history" \
   -v "${ROOT}/logs:/root/logs" \
   -v "${ROOT}/outputs:/root/outputs" \
   -v "${ROOT}/attachments:/root/attachments" \
   -v "${ROOT}/media:/root/media" \
+  -e GST_REGISTRY=/tmp/gst-registry.bin \
   "${IMAGE}" \
-  bash /src/scripts/5_dev_start.sh
+  bash /app/scripts/5_dev_start.sh

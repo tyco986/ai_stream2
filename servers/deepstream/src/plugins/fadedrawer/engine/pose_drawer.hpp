@@ -13,6 +13,7 @@ public:
     bool keep() const;
     void drawObject(NvDsBatchMeta* batch, NvDsFrameMeta* frame, NvDsObjectMeta* object, float alpha) const;
     void drawCached(NvDsBatchMeta* batch, NvDsFrameMeta* frame, const DetFadeEngine::CachedObject& cached, float alpha) const;
+    void clearObject(NvDsObjectMeta* object) const;
 
 private:
     std::vector<float> decodeKeypoints(const float* data, unsigned int widthDim, unsigned int heightDim, float left, float top, float boxWidth, float boxHeight) const;

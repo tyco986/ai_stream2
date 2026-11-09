@@ -44,6 +44,8 @@ BoxSnapshotMeta* BoxSnapshot::create(NvDsFrameMeta* frame) {
                 box->confidence = object->confidence;
                 box->class_id = object->class_id;
                 box->object_id = object->object_id;
+                box->snapshot_key = static_cast<gint64>(index) + 1;
+                object->misc_obj_info[boxsnapshot::SNAPSHOT_KEY_FIELD] = box->snapshot_key;
                 g_strlcpy(box->label, object->obj_label, sizeof(box->label));
                 if (object->mask_params.data != nullptr && object->mask_params.size > 0) {
                     std::memcpy(reinterpret_cast<unsigned char*>(meta->masks) + offset, object->mask_params.data, object->mask_params.size);

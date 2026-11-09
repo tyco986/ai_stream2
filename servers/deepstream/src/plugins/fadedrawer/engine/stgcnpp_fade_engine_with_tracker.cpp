@@ -38,7 +38,7 @@ void StgcnppFadeEngineWithTracker::cacheLiveActions(NvDsFrameMeta* frame) {
         for (NvDsMetaList* item = frame->obj_meta_list; item != nullptr; item = item->next) {
             auto* object = static_cast<NvDsObjectMeta*>(item->data);
             const ActionMeta* action = actionMeta(object);
-            if (object != nullptr && action != nullptr && action->label[0] != '\0') {
+            if (object != nullptr && object->object_id != UNTRACKED_OBJECT_ID && action != nullptr && action->label[0] != '\0') {
                 LastAction& cached = actions[object->object_id];
                 cached.name = action->label;
                 cached.confidence = action->conf;
@@ -52,7 +52,7 @@ void StgcnppFadeEngineWithTracker::writeLabel(NvDsObjectMeta* object) const {
     g_free(text->display_text);
     text->display_text = nullptr;
     text->set_bg_clr = 0;
-    if (showLabel) {
+    if (showLabel && object->object_id != UNTRACKED_OBJECT_ID) {
         const ActionMeta* action = actionMeta(object);
         const ReadyMeta* ready = readyMeta(object);
         const auto cached = actions.find(object->object_id);
@@ -61,12 +61,11 @@ void StgcnppFadeEngineWithTracker::writeLabel(NvDsObjectMeta* object) const {
         const char* name = live ? action->label : (remembered ? cached->second.name.c_str() : "");
         const float actionConf = live ? action->conf : (remembered ? cached->second.confidence : fadedrawer::STGCNPP_ACTION_CONF_NONE);
         const int clipLength = ready != nullptr ? ready->length : 0;
-        const long long trackId = object->object_id == UNTRACKED_OBJECT_ID ? -1LL : static_cast<long long>(object->object_id);
         char line[fadedrawer::LABEL_LINE_SIZE];
         std::snprintf(
             line,
             sizeof(line),
-            "%s%c%.2f%c%d%c%.2f%c%lld",
+            "%s%c%.2f%c%d%c%.2f%c%llu",
             name,
             fadedrawer::LABEL_SEP,
             actionConf,
@@ -75,7 +74,7 @@ void StgcnppFadeEngineWithTracker::writeLabel(NvDsObjectMeta* object) const {
             fadedrawer::LABEL_SEP,
             object->confidence,
             fadedrawer::LABEL_SEP,
-            trackId);
+            static_cast<unsigned long long>(object->object_id));
         text->display_text = g_strdup(line);
         text->x_offset = static_cast<unsigned int>(object->rect_params.left);
         const int y = static_cast<int>(object->rect_params.top) - fadedrawer::LABEL_Y_OFFSET;

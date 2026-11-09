@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run from project root.
+# Run from project root. Dev image: toolchain, source, and /tmp/build kept in the image.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"

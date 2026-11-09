@@ -108,6 +108,10 @@ void PoseDrawer::drawCached(NvDsBatchMeta* batch, NvDsFrameMeta* frame, const De
     drawPose(batch, frame, keypoints, alpha);
 }
 
+void PoseDrawer::clearObject(NvDsObjectMeta* object) const {
+    clearMask(object);
+}
+
 void PoseDrawer::drawObject(NvDsBatchMeta* batch, NvDsFrameMeta* frame, NvDsObjectMeta* object, float alpha) const {
     const std::vector<float> keypoints = decodeKeypoints(
         object->mask_params.data,

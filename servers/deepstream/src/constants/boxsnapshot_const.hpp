@@ -5,6 +5,7 @@
 namespace boxsnapshot {
 
 inline constexpr NvDsMetaType USER_META = static_cast<NvDsMetaType>(NVDS_START_USER_META + 0x4253);
+inline constexpr int SNAPSHOT_KEY_FIELD = 1;
 inline constexpr const char* ELEMENT_NAME = "boxsnapshot";
 inline constexpr const char* ELEMENT_DETAIL = "Copy object boxes into frame user meta";
 inline constexpr const char* PLUGIN_DESCRIPTION = "DeepStream frame bbox snapshot";

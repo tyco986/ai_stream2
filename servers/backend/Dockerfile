@@ -55,17 +55,18 @@ WORKDIR /app
 EXPOSE 8000
 
 
-FROM base AS dev
-
-
 FROM base AS build
 
-COPY servers/backend /src
-WORKDIR /src
-RUN cmake -S . -B /tmp/build -DCMAKE_BUILD_TYPE=Release && cmake --build /tmp/build -j"$(nproc)"
+COPY servers/backend /app
+RUN cmake -S /app -B /tmp/build -DCMAKE_BUILD_TYPE=Release \
+    && cmake --build /tmp/build -j"$(nproc)" \
+    && cp /tmp/build/backend /usr/local/bin/backend
+
+
+FROM build AS dev
 
 
 FROM base AS prod
 
-COPY --from=build /tmp/build/backend /usr/local/bin/backend
+COPY --from=build /usr/local/bin/backend /usr/local/bin/backend
 CMD ["backend"]

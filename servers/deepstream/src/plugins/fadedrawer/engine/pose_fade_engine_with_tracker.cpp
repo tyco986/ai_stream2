@@ -6,7 +6,10 @@ PoseFadeEngineWithTracker::PoseFadeEngineWithTracker(int interval, int fadeTime,
 }
 
 void PoseFadeEngineWithTracker::decorateObject(NvDsBatchMeta* batch, NvDsFrameMeta* frame, NvDsObjectMeta* object, float alpha) {
-    pose.drawObject(batch, frame, object, alpha);
+    (void)batch;
+    (void)frame;
+    (void)alpha;
+    pose.clearObject(object);
 }
 
 void PoseFadeEngineWithTracker::decorateCached(NvDsBatchMeta* batch, NvDsFrameMeta* frame, const CachedObject& cached, float alpha) {

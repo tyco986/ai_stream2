@@ -88,7 +88,7 @@ void TopdownPoseSahiRtspGenerator::add() {
     }
     appendNode("nvdspreprocess", "nvdspreprocess_rtmpose", addNvdspreprocess(TopdownPose::RTMPOSE_PREPROCESS_CONFIG_NAME));
     appendNode("nvinfer", "sgie0", addNvinfer(TopdownPose::SGIE_CONFIG_NAME, pose->batchSize, pose->gpuId, true));
-    appendNode("nvrtmposepostprocess", "nvrtmposepostprocess", addNvrtmposepostprocess(pose->uniqueId));
+    appendNode("rtmposepostprocess", "nvrtmposepostprocess", addNvrtmposepostprocess(pose->uniqueId));
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     for (int streamIndex = 0; streamIndex < muxBatchSize; ++streamIndex) {

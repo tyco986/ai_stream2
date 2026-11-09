@@ -1,5 +1,4 @@
-# nvdspreprocess for RTMPose: expand object crop, letterbox to 192x256.
-# Tensor layout and ImageNet normalization stay on the built-in preparation path.
+# nvdspreprocess for RTMPose: expand object crop, letterbox to 192x256, NCHW RGB.
 
 [property]
 enable=1
@@ -22,13 +21,14 @@ scaling-filter=0
 maintain-aspect-ratio=0
 symmetric-padding=0
 custom-lib-path=/opt/ai_stream2/servers/deepstream/libs/libnvds_rtmpose_preprocess.so
-pixel-normalization-factor=0.017124753831663668
-offsets=123.675;116.28;103.53
+custom-tensor-preparation-function=CustomTensorPreparation
 
 [user-configs]
 padding=1.25
 infer-width=192
 infer-height=256
+pixel-normalization-factor=0.017124753831663668
+offsets=123.675;116.28;103.53
 
 [group-0]
 src-ids=0

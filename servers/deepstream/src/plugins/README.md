@@ -67,6 +67,17 @@ label:
 - ready 但该 SGIE 没有有效分类名：记 `Unknown`，`conf` 为 `0`，`classId` 为 `-1`。
 - ready 且有分类名：沿用分类器的 `label`、`conf`、`classId`。
 
+## rtmposepostprocess
+
+类型: 插件
+插件名称: rtmposepostprocess
+说明: 读取 RTMPose 的 `keypoints` 张量，按与预处理相同的扩展裁剪和 letterbox 映回检测框，写入对象 `mask_params`（宽 3、高为关节数，每点 x、y、score，相对框归一化）
+
+入参:
+
+- `sgie-unique-id`：姿态 SGIE 的 `unique-id`，默认 `2`。
+- `infer-width`、`infer-height`、`padding`：与 rtmpose 预处理一致，默认 `192`、`256`、`1.25`。
+
 ## sahipostprocesspose
 
 类型: 插件
@@ -78,7 +89,8 @@ label:
 类型: nvdspreprocess custom lib
 custom-lib-path: /opt/ai_stream2/servers/deepstream/libs/libnvds_rtmpose_preprocess.so
 custom-input-transformation-function: CustomTransformation
-说明: 按 padding 扩展目标裁剪并 letterbox 到 192x256，供 RTMPose 使用
+custom-tensor-preparation-function: CustomTensorPreparation
+说明: 按 padding 扩展目标裁剪并 letterbox 到 192x256；张量按 user-configs 的 pixel-normalization-factor 与 offsets 做成 NCHW RGB
 
 ## nvdspreprocess/stgcnpppreprocess
 

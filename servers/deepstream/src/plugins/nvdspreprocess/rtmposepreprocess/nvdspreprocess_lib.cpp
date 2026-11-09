@@ -1,4 +1,6 @@
 #include <cstdlib>
+#include <memory>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -6,6 +8,7 @@
 #include "nvbufsurface.h"
 #include "nvbufsurftransform.h"
 #include "nvdspreprocess_interface.h"
+#include "nvdspreprocess_impl.h"
 
 #include "constants/rtmpose_const.hpp"
 #include "plugins/nvdspreprocess/rtmposepreprocess/engine/rect_expand.hpp"
@@ -36,6 +39,25 @@ RectExpand expandFrom(const std::unordered_map<std::string, std::string>& config
         parseInt(configs, rtmpose::KEY_INFER_HEIGHT, rtmpose::INFER_HEIGHT),
         parseFloat(configs, rtmpose::KEY_PADDING, rtmpose::PADDING));
     return expand;
+}
+
+std::vector<float> parseOffsets(const std::unordered_map<std::string, std::string>& configs) {
+    std::vector<float> offsets{rtmpose::OFFSET_R, rtmpose::OFFSET_G, rtmpose::OFFSET_B};
+    auto it = configs.find(rtmpose::KEY_OFFSETS);
+    std::vector<float> parsed;
+    if (it != configs.end() && !it->second.empty()) {
+        std::stringstream stream(it->second);
+        std::string token;
+        while (std::getline(stream, token, ';')) {
+            if (!token.empty()) {
+                parsed.push_back(static_cast<float>(std::atof(token.c_str())));
+            }
+        }
+    }
+    if (parsed.size() >= 3) {
+        offsets = {parsed[0], parsed[1], parsed[2]};
+    }
+    return offsets;
 }
 
 }  // namespace
@@ -84,8 +106,11 @@ RectExpand RtmposeCrop::expand(rtmpose::INFER_WIDTH, rtmpose::INFER_HEIGHT, rtmp
 
 struct CustomCtx {
     RectExpand expand;
+    std::unique_ptr<NvDsPreProcessTensorImpl> tensor;
 
-    explicit CustomCtx(RectExpand rectExpand) : expand(rectExpand) {
+    CustomCtx(RectExpand rectExpand, std::unique_ptr<NvDsPreProcessTensorImpl> tensorImpl)
+        : expand(rectExpand),
+          tensor(std::move(tensorImpl)) {
     }
 };
 
@@ -106,10 +131,51 @@ extern "C" NvDsPreProcessStatus CustomAsyncTransformation(
     return status;
 }
 
+extern "C" NvDsPreProcessStatus CustomTensorPreparation(
+    CustomCtx* ctx,
+    NvDsPreProcessBatch* batch,
+    NvDsPreProcessCustomBuf*& buf,
+    CustomTensorParams& tensorParam,
+    NvDsPreProcessAcquirer* acquirer) {
+    NvDsPreProcessStatus status = NVDSPREPROCESS_CUSTOM_TENSOR_FAILED;
+    buf = nullptr;
+    if (ctx != nullptr && ctx->tensor != nullptr && acquirer != nullptr && batch != nullptr) {
+        buf = acquirer->acquire();
+    }
+    if (buf != nullptr) {
+        status = ctx->tensor->prepare_tensor(batch, tensorParam, buf->memory_ptr);
+    }
+    if (status == NVDSPREPROCESS_SUCCESS) {
+        status = ctx->tensor->syncStream();
+    }
+    if (status == NVDSPREPROCESS_SUCCESS && !tensorParam.params.network_input_shape.empty()) {
+        tensorParam.params.network_input_shape[0] = static_cast<int>(batch->units.size());
+    }
+    if (status != NVDSPREPROCESS_SUCCESS && buf != nullptr) {
+        acquirer->release(buf);
+    }
+    return status;
+}
+
 extern "C" CustomCtx* initLib(CustomInitParams initparams) {
     RectExpand expand = expandFrom(initparams.user_configs);
     RtmposeCrop::expand = expand;
-    CustomCtx* ctx = new CustomCtx(expand);
+    CustomMeanSubandNormParams meanNorm;
+    meanNorm.pixel_normalization_factor = parseFloat(
+        initparams.user_configs,
+        rtmpose::KEY_PIXEL_NORMALIZATION_FACTOR,
+        rtmpose::PIXEL_NORMALIZATION_FACTOR);
+    meanNorm.offsets = parseOffsets(initparams.user_configs);
+    std::unique_ptr<NvDsPreProcessTensorImpl> tensor;
+    NvDsPreProcessStatus status = normalization_mean_subtraction_impl_initialize(
+        &meanNorm,
+        &initparams.tensor_params,
+        tensor,
+        static_cast<int>(initparams.unique_id));
+    CustomCtx* ctx = nullptr;
+    if (status == NVDSPREPROCESS_SUCCESS) {
+        ctx = new CustomCtx(expand, std::move(tensor));
+    }
     return ctx;
 }
 

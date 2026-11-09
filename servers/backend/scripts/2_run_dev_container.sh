@@ -32,4 +32,4 @@ docker run \
   -v "${ROOT}/models:/root/models" \
   -v "${ROOT}/configs:/root/configs" \
   "${IMAGE}" \
-  sh -c 'cmake -S /app -B /tmp/build && cmake --build /tmp/build && /tmp/build/backend'
+  bash /app/scripts/4_dev_start.sh
