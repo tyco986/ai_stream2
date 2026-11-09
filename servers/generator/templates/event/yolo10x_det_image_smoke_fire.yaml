@@ -27,4 +27,5 @@ capturer:
   capture_codes: "12"
 images:
   - /root/attachments/images/video1.png
+  - /root/attachments/images/video2.png
 output: /root/outputs/deepstream/yolo10x_smoke_fire_image

@@ -19,17 +19,17 @@
 // Generate YOLO event image pipeline.
 //
 // Images must share width and height. Each image is one frame (num-buffers=1).
-// Capture stays on the batched stream. JPEG output is one file per image.
+// After demux each stream has its own raw, vis, and JPEG branch.
 //
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → pgie → nvdsanalytics → presenceeventcoder → tee_msg
-//       ─┬→ nvvideoconvert → tee_raw
-//       │     ─┬→ queue_raw → nvvideoconvert_raw → capsfilter_raw → rawcapturer → fakesink_raw
-//       │     └→ queue_osd → nvvideoconvert_osd → detfadedrawer → nvosdbin → tee_vis
-//       │           ─┬→ queue_vis → nvvideoconvert_vis → capsfilter_vis → viscapturer → fakesink_vis
-//       │           └→ queue_enc → nvvideoconvert_enc → capsfilter_jpeg → presencelogger
-//       │                 → nvstreamdemux → queue_demux{N} → nvjpegenc{N} → filesink{N}
+//       ─┬→ nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → tee_raw{N}
+//       │     ─┬→ queue_raw{N} → nvvideoconvert_raw{N} → capsfilter_raw{N} → rawcapturer{N} → fakesink_raw{N}
+//       │     └→ queue_osd{N} → nvvideoconvert_osd{N} → detfadedrawer{N} → nvosdbin{N} → tee_vis{N}
+//       │           ─┬→ queue_vis{N} → nvvideoconvert_vis{N} → capsfilter_vis{N} → viscapturer{N} → fakesink_vis{N}
+//       │           └→ queue_enc{N} → presencelogger{N} → nvvideoconvert_enc{N} → capsfilter_jpeg{N}
+//       │                 → nvjpegenc{N} → filesink{N}
 //       └→ queue_msg → nvmsgconv → nvmsgbroker
 class EventImageGenerator : public BaseEventGenerator {
 public:
