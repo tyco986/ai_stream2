@@ -11,9 +11,10 @@
 
 std::optional<PipelineRunner> PipelineService::runner;
 
-bool PipelineService::status() {
-    const bool alive = runner.has_value() && runner->status();
-    return alive;
+PipelineStatus PipelineService::status() {
+    PipelineStatus idle;
+    idle.status = pipeline::STATUS_STOPPED;
+    return runner.has_value() ? runner->status() : idle;
 }
 
 std::filesystem::path PipelineService::prepare(const httplib::FormData& config,
@@ -78,7 +79,6 @@ void PipelineService::stop() {
     if (runner.has_value()) {
         runner->stop();
     }
-    runner.reset();
 }
 
 void PipelineService::extract(const std::string& bytes, const std::filesystem::path& dest) {

@@ -6,6 +6,7 @@ namespace request_log {
 
 inline constexpr const char* PATH = "/ai_stream2/deepstream/logs";
 inline constexpr const char* ROOT = "/root/logs/deepstream";
+inline constexpr const char* ANONYMOUS_DIR = "/root/logs";
 inline constexpr const char* PAGE = "deepstream";
 inline constexpr const char* SUFFIX = ".jsonl";
 inline constexpr std::size_t MAX_BYTES = 10 * 1024 * 1024;

@@ -9,9 +9,5 @@ void TypesRoute::bind(httplib::Server& server) {
 }
 
 void TypesRoute::types(const httplib::Request&, httplib::Response& response) {
-    nlohmann::json data = nlohmann::json::object();
-    for (const auto& item : generator_pipeline::PIPELINE_GENERATOR_MAP) {
-        data[item.first] = item.second;
-    }
-    Response::ok(response, data);
+    Response::ok(response, generator_pipeline::PIPELINE_TYPES);
 }

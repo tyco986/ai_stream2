@@ -13,7 +13,7 @@ void GenerateRoute::bind(httplib::Server& server) {
 }
 
 void GenerateRoute::generate(const httplib::Request& request, httplib::Response& response) {
-    const httplib::FormData yamlFile = request.form.get_file(generate::FIELD_YAML);
+    const httplib::FormData yamlFile = request.form.get_file(generate::FIELD_INPUT);
     const nlohmann::json payload = History::yaml2json(YAML::Load(yamlFile.content));
     const std::string type = payload.at(generate::KEY_GENERATOR).get<std::string>();
     const std::filesystem::path stem = std::filesystem::path(yamlFile.filename).stem();

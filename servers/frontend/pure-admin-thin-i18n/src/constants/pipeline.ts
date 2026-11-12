@@ -1,3 +1,25 @@
+export const PIPELINE_CREATE_DIALOG_WIDTH = "50%";
+export const PIPELINE_LIST_PAGE_SIZE = 20;
+export const PIPELINE_OPTION_PAGE_SIZE = 200;
+export const PIPELINE_SOURCE_PAGE_SIZE = 20;
+export const PIPELINE_OUTPUT_DIR = "/root/outputs/deepstream";
+
+export const PIPELINE_SOURCE_COLUMN_PERCENTS = {
+  selection: 8,
+  name: 52,
+  width: 20,
+  height: 20
+};
+
+export const PIPELINE_TIMED_SOURCE_COLUMN_PERCENTS = {
+  selection: 8,
+  name: 40,
+  width: 16,
+  height: 16,
+  fps: 20
+};
+
+export const GIE_INTERVAL_MIN = 1;
 export const GIE_DIALOG_WIDTH = "60%";
 export const GIE_ATTR_DIALOG_WIDTH = "40%";
 export const GIE_FORM_DIALOG_WIDTH = "70%";
@@ -98,16 +120,14 @@ export const ANALYZER_LIST_COLUMN_PERCENTS = {
   ops: 15
 };
 
-export const PIPELINE_FORM_DIALOG_WIDTH = "70%";
-export const PIPELINE_STREAM_DIALOG_WIDTH = "70%";
-export const PIPELINE_CLASS_DIALOG_WIDTH = "40%";
-
 export const PIPELINE_LIST_COLUMN_PERCENTS = {
   selection: 4,
-  name: 16,
-  type: 12,
-  status: 12,
-  gie: 22,
-  analyzer: 22,
+  name: 12,
+  type: 8,
+  status: 8,
+  gie: 14,
+  startTime: 16,
+  endTime: 16,
+  duration: 10,
   ops: 12
 };

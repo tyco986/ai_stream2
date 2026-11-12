@@ -6,7 +6,22 @@
 
 #include "nlohmann/json.hpp"
 
+#include <chrono>
+#include <ctime>
+#include <optional>
 #include <stdexcept>
+
+nlohmann::json formatTime(const std::optional<std::chrono::system_clock::time_point>& time) {
+    std::time_t seconds = 0;
+    std::tm local{};
+    char buffer[40] = {};
+    if (time.has_value()) {
+        seconds = std::chrono::system_clock::to_time_t(*time);
+        localtime_r(&seconds, &local);
+        std::strftime(buffer, sizeof(buffer), pipeline::TIME_FORMAT, &local);
+    }
+    return time.has_value() ? nlohmann::json(buffer) : nlohmann::json(nullptr);
+}
 
 void PipelineRoute::bind(httplib::Server& server) {
     server.Post(pipeline::START_PATH, start);
@@ -16,7 +31,7 @@ void PipelineRoute::bind(httplib::Server& server) {
 }
 
 void PipelineRoute::start(const httplib::Request& request, httplib::Response& response) {
-    const bool running = PipelineService::status();
+    const bool running = PipelineService::status().status == pipeline::STATUS_RUNNING;
     if (running) {
         Response::error(response, pipeline::STATUS_CONFLICT, pipeline::ERR_RUNNING);
     }
@@ -31,7 +46,7 @@ void PipelineRoute::start(const httplib::Request& request, httplib::Response& re
 }
 
 void PipelineRoute::startLocal(const httplib::Request& request, httplib::Response& response) {
-    const bool running = PipelineService::status();
+    const bool running = PipelineService::status().status == pipeline::STATUS_RUNNING;
     if (running) {
         Response::error(response, pipeline::STATUS_CONFLICT, pipeline::ERR_RUNNING);
     }
@@ -48,12 +63,18 @@ void PipelineRoute::startLocal(const httplib::Request& request, httplib::Respons
 }
 
 void PipelineRoute::status(const httplib::Request&, httplib::Response& response) {
-    const nlohmann::json data = {{pipeline::KEY_RUNNING, PipelineService::status()}};
+    const PipelineStatus report = PipelineService::status();
+    const nlohmann::json data = {
+        {pipeline::KEY_STATUS, report.status},
+        {pipeline::KEY_START_TIME, formatTime(report.startTime)},
+        {pipeline::KEY_END_TIME, formatTime(report.endTime)},
+        {pipeline::KEY_DURATION, report.duration.has_value() ? nlohmann::json(*report.duration) : nlohmann::json(nullptr)},
+    };
     Response::ok(response, data);
 }
 
 void PipelineRoute::stop(const httplib::Request&, httplib::Response& response) {
-    const bool running = PipelineService::status();
+    const bool running = PipelineService::status().status == pipeline::STATUS_RUNNING;
     if (!running) {
         Response::error(response, pipeline::STATUS_CONFLICT, pipeline::ERR_IDLE);
     }

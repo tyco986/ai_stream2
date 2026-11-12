@@ -20,19 +20,18 @@ drawer:
   show_label: true
   show_pose: true
   pose_threshold: 0.5
-  mode: coco17
 images:
   - /root/attachments/images/video1.png
   - /root/attachments/images/video2.png
 output: /root/outputs/deepstream/yolo26n_pose_sahi_image
 sahi:
-  nvsahipreprocess:
+  preprocess:
     slice_width: 640
     slice_height: 640
     overlap_width_ratio: 0.2
     overlap_height_ratio: 0.2
     enable_full_frame: true
-  nvsahipostprocesspose:
+  postprocess:
     class_agnostic: false
     match_metric: 1
     match_threshold: 0.5

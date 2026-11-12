@@ -15,13 +15,13 @@ LogEngine::LogEngine(int interval)
       pipelineName(),
       counters(),
       loggers() {
-    logInterval = logInterval < 0 ? 0 : logInterval;
+    logInterval = logInterval < 1 ? 1 : logInterval;
 }
 
 LogEngine::~LogEngine() = default;
 
 void LogEngine::setInterval(int interval) {
-    logInterval = interval < 0 ? 0 : interval;
+    logInterval = interval < 1 ? 1 : interval;
     counters.clear();
 }
 

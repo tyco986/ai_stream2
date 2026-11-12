@@ -139,7 +139,12 @@ pipeline:
   pureRuleRequired: 至少有一条规则
   pureType: 类型
   pureStatus: 状态
+  pureStartTime: 开始时间
+  pureEndTime: 结束时间
+  pureDuration: 时长
   pureStart: 启动
+  pureStop: 停止
+  pureProbe: 探测
   pureEdit: 编辑
   pureOps: 操作
   pureModel: 模型
@@ -170,13 +175,49 @@ pipeline:
   pureLineCrossing: Line crossing
   pureExtendEdge: 延长到边缘
   pureDirection: Direction detection
-  purePgie: PGIE
+  pureOff: 关
+  pureOn: 开
+  pureLogger: 日志
   pureDrawer: 绘制
-  pureFadeTime: 淡出时间
-  pureShowLabel: 显示标签
-  pureStreams: 流
+  pureSahi: 切片
+  purePreprocess: 预处理
+  purePostprocess: 后处理
+  pureEventCoder: 事件
+  pureCapturer: 抓拍
   pureTracker: 跟踪
-  pureSelect: 选择
+  pureClassId: 类别
+  purePgie: 主推理
+  pureSgie: 次推理
+  pureStgcnpp: 动作
+  pureFadeTime: 淡出
+  pureShowLabel: 标签
+  pureShowMask: 掩码
+  pureShowPose: 姿态
+  purePoseThreshold: 姿态阈值
+  pureShowSnap: 快照
+  pureSliceWidth: 切片宽
+  pureSliceHeight: 切片高
+  pureOverlapWidthRatio: 横向重叠
+  pureOverlapHeightRatio: 纵向重叠
+  pureEnableFullFrame: 全图
+  pureMatchMetric: 匹配度量
+  pureMatchThreshold: 匹配阈值
+  pureClassAgnostic: 忽略类别
+  pureEnableMerge: 合并
+  pureTwoPhaseNmm: 两阶段
+  purePreferFullFrame: 优先全图
+  pureMaxDetections: 最大检测
+  pureOksThreshold: OKS
+  pureVisThreshold: 可见阈值
+  pureNumKeypoints: 关键点数
+  pureClassEventMap: 类别事件
+  pureLength: 长度
+  pureThreshold: 阈值
+  pureMode: 模式
+  pureCaptureCodes: 抓拍码
+  pureSource: 源
+  pureSizeMatch: 宽高必须一致
+  pureStreamMatch: 宽、高、帧率必须一致
 model:
   pureCreate: 新建
   pureRemove: 移除

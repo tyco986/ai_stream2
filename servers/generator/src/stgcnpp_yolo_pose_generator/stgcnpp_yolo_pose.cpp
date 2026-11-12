@@ -4,6 +4,7 @@
 #include "subelement_generator/utils/default_gie/stgcnpp.hpp"
 #include "subelement_generator/utils/nvtracker_parser.hpp"
 
+#include <stdexcept>
 #include <utility>
 
 StgcnppYoloPose::StgcnppYoloPose(nlohmann::json stgcnpp, int streamCount)
@@ -75,7 +76,11 @@ void StgcnppYoloPose::applySavePaths(YAML::Node pipelineDocument, const std::fil
 
 YAML::Node StgcnppYoloPose::drawerProperties(const nlohmann::json& drawer) {
     YAML::Node properties(YAML::NodeType::Map);
-    properties["interval"] = drawer.value("interval", 0);
+    const int interval = drawer.value("interval", 1);
+    if (interval < 1) {
+        throw std::invalid_argument("interval must be >= 1");
+    }
+    properties["interval"] = interval;
     properties["fade-time"] = drawer.value("fade_time", 0);
     properties["show-label"] = drawer.value("show_label", false);
     properties["show-pose"] = drawer.value("show_pose", true);

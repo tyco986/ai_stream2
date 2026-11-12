@@ -15,11 +15,8 @@ RUN printf '%s\n' \
         > /etc/apt/sources.list.d/ubuntu.sources
 
 ENV GST_PLUGIN_PATH=/opt/nvidia/deepstream/deepstream/lib/gst-plugins
-ENV LD_PRELOAD=/opt/ai_stream2/servers/deepstream/libs/libnvdsinfer_custom_impl_Yolo_seg.so
 ENV OMP_NUM_THREADS=1
 ENV OMP_WAIT_POLICY=PASSIVE
-ENV NVDS_ENABLE_LATENCY_MEASUREMENT=1
-ENV NVDS_ENABLE_COMPONENT_LATENCY_MEASUREMENT=1
 
 
 FROM base AS toolchain
@@ -68,6 +65,7 @@ RUN cmake -S /app -B /tmp/build -DCMAKE_BUILD_TYPE=Release \
 
 FROM build AS dev
 
+ENV LD_PRELOAD=/opt/ai_stream2/servers/deepstream/libs/libnvdsinfer_custom_impl_Yolo_seg.so
 WORKDIR /app
 EXPOSE 8094
 
@@ -99,5 +97,6 @@ COPY --from=build /opt/nvidia/deepstream/deepstream/lib/gst-plugins/libnvdsgst_s
 COPY --from=build /opt/nvidia/deepstream/deepstream/lib/gst-plugins/libnvdsgst_sahipostprocess.so /opt/nvidia/deepstream/deepstream/lib/gst-plugins/
 COPY --from=build /opt/nvidia/deepstream/deepstream/lib/libnvds_infer_yolo.so /opt/nvidia/deepstream/deepstream/lib/
 COPY --from=build /opt/ai_stream2/servers/deepstream/libs /opt/ai_stream2/servers/deepstream/libs
+ENV LD_PRELOAD=/opt/ai_stream2/servers/deepstream/libs/libnvdsinfer_custom_impl_Yolo_seg.so
 EXPOSE 8094
 CMD ["deepstream"]

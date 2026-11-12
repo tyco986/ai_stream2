@@ -70,7 +70,7 @@ void StgcnppRtmposeSahiVisRtspGenerator::add() {
         "nvstreammux",
         "nvstreammux",
         addNvstreammux(muxBatchSize, width, height, true, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId));
-    const nlohmann::json& preprocess = sahi.at("nvsahipreprocess");
+    const nlohmann::json& preprocess = sahi.at("preprocess");
     appendNode(
         "nvsahipreprocess",
         "nvsahipreprocess",
@@ -87,7 +87,7 @@ void StgcnppRtmposeSahiVisRtspGenerator::add() {
         "pgie",
         addNvinfer(PGIE_CONFIG_NAME, pgieGenerator->config["property"]["batch-size"].as<int>(), gpuId, true));
     appendNode("queue", "queue_sahi", addQueue());
-    appendNode(sahiPostprocess, sahiPostprocess, sahiPostprocessProperties(sahi.at(sahiPostprocess)));
+    appendNode(sahiPostprocess, sahiPostprocess, sahiPostprocessProperties(sahi.at("postprocess")));
     if (enableNvtracker) {
         if (drawer.has_value()) {
             appendNode("boxsnapshot", "boxsnapshot", addBoxsnapshot());
@@ -119,7 +119,7 @@ void StgcnppRtmposeSahiVisRtspGenerator::add() {
         appendNode(
             "stgcnpplogger",
             "stgcnpplogger" + suffix,
-            addStgcnpplogger(logger.value("interval", 0)));
+            addStgcnpplogger(logger.value("interval", 1)));
         appendNode(
             "nvv4l2h264enc",
             "nvv4l2h264enc" + suffix,

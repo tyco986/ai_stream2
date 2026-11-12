@@ -79,7 +79,7 @@ void StgcnppYoloPoseRtspGenerator::add() {
         appendNode(
             "stgcnpplogger",
             "stgcnpplogger" + suffix,
-            addStgcnpplogger(logger.value("interval", 0)));
+            addStgcnpplogger(logger.value("interval", 1)));
         appendNode("fakesink", "fakesink" + suffix, addFakesink(false, false));
     }
 }

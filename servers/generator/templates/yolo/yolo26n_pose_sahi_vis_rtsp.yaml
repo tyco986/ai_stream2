@@ -18,7 +18,6 @@ drawer:
   show_label: true
   show_pose: true
   pose_threshold: 0.5
-  mode: coco17
 streams:
   video1:
     url: rtsp://ai_stream2_mediamtx:8554/video1
@@ -31,13 +30,13 @@ streams:
     height: 1080
     fps: 25
 sahi:
-  nvsahipreprocess:
+  preprocess:
     slice_width: 640
     slice_height: 640
     overlap_width_ratio: 0.2
     overlap_height_ratio: 0.2
     enable_full_frame: true
-  nvsahipostprocesspose:
+  postprocess:
     class_agnostic: false
     match_metric: 1
     match_threshold: 0.5

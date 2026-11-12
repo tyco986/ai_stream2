@@ -59,7 +59,7 @@ void TopdownPoseSahiImageGenerator::add() {
         "nvstreammux",
         "nvstreammux",
         addNvstreammux(muxBatchSize, width, height, false, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId, false));
-    const nlohmann::json& preprocess = sahi.at("nvsahipreprocess");
+    const nlohmann::json& preprocess = sahi.at("preprocess");
     appendNode(
         "nvsahipreprocess",
         "nvsahipreprocess",
@@ -76,7 +76,7 @@ void TopdownPoseSahiImageGenerator::add() {
         "pgie",
         addNvinfer(PGIE_CONFIG_NAME, pgieGenerator->config["property"]["batch-size"].as<int>(), gpuId, true));
     appendNode("queue", "queue_sahi", addQueue());
-    appendNode(sahiPostprocess, sahiPostprocess, sahiPostprocessProperties(sahi.at(sahiPostprocess)));
+    appendNode(sahiPostprocess, sahiPostprocess, sahiPostprocessProperties(sahi.at("postprocess")));
     appendNode("nvdspreprocess", "nvdspreprocess_rtmpose", addNvdspreprocess(TopdownPose::RTMPOSE_PREPROCESS_CONFIG_NAME));
     appendNode("nvinfer", "sgie0", addNvinfer(TopdownPose::SGIE_CONFIG_NAME, pose->batchSize, pose->gpuId, true));
     appendNode("rtmposepostprocess", "nvrtmposepostprocess", addNvrtmposepostprocess(pose->uniqueId));
@@ -97,7 +97,7 @@ void TopdownPoseSahiImageGenerator::add() {
         appendNode(
             "detlogger",
             "detlogger" + suffix,
-            addDetlogger(logger.value("interval", 0)));
+            addDetlogger(logger.value("interval", 1)));
         appendNode("nvjpegenc", "nvjpegenc" + suffix, addNvjpegenc());
         appendNode("filesink", "filesink" + suffix, addFilesink(sink, false, false));
     }

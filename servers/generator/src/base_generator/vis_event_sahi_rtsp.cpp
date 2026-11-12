@@ -26,7 +26,7 @@ void VisEventSahiRtspGenerator::appendAfterOsd(int index, int gpuId) {
     appendNode(
         "presencelogger",
         "presencelogger" + suffix,
-        addPresencelogger(logger.value("interval", 0)));
+        addPresencelogger(logger.value("interval", 1)));
     appendNode("nvvideoconvert", "nvvideoconvert_enc" + suffix, addNvvideoconvert(gpuId));
     appendNode("capsfilter", "capsfilter_enc" + suffix, addCapsfilter(pipeline::H264_CAPS));
     appendNode(

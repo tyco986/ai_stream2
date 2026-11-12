@@ -213,6 +213,7 @@ CREATE TABLE pipeline (
   input JSONB,
   config_path TEXT,
   stream_ids UUID[] NOT NULL,
+  media_ids UUID[] NOT NULL,
   gie_ids UUID[] NOT NULL,
   analyzer_ids UUID[] NOT NULL,
   start_time TIMESTAMPTZ,
@@ -222,6 +223,7 @@ CREATE TABLE pipeline (
 );
 
 CREATE INDEX pipeline_stream_ids_idx ON pipeline USING GIN (stream_ids);
+CREATE INDEX pipeline_media_ids_idx ON pipeline USING GIN (media_ids);
 CREATE INDEX pipeline_gie_ids_idx ON pipeline USING GIN (gie_ids);
 CREATE INDEX pipeline_analyzer_ids_idx ON pipeline USING GIN (analyzer_ids);
 

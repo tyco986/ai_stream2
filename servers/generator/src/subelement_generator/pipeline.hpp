@@ -23,7 +23,7 @@ protected:
     void appendNode(const std::string& elementType, const std::string& name, const YAML::Node& properties);
 
     YAML::Node addNvurisrcbin(const std::string& uri, bool disableAudio = true, std::optional<int> numBuffers = std::nullopt, int selectRtpProtocol = pipeline::RTP_PROTOCOL_TCP);
-    YAML::Node addNvstreammux(int batchSize, int width, int height, bool liveSource = true, bool enablePadding = false, int batchedPushTimeout = pipeline::BATCHED_PUSH_TIMEOUT_US, int gpuId = 0, bool syncInputs = true);
+    YAML::Node addNvstreammux(int batchSize, int width, int height, bool liveSource = true, bool enablePadding = false, int batchedPushTimeout = pipeline::BATCHED_PUSH_TIMEOUT_US, int gpuId = 0, bool syncInputs = false);
     YAML::Node addNvinfer(const std::string& configFilePath, int batchSize, int gpuId = 0, bool inputTensorMeta = false);
     YAML::Node addNvsahipreprocess(const std::string& configFile, int sliceWidth = pipeline::SLICE_SIZE, int sliceHeight = pipeline::SLICE_SIZE, double overlapWidthRatio = pipeline::OVERLAP_RATIO, double overlapHeightRatio = pipeline::OVERLAP_RATIO, bool enableFullFrame = true, int gpuId = 0, int uniqueId = pipeline::PREPROCESS_UNIQUE_ID, const std::string& targetUniqueIds = pipeline::TARGET_UNIQUE_IDS_DEFAULT);
     YAML::Node addNvdspreprocess(const std::string& configFile);
@@ -34,16 +34,17 @@ protected:
     YAML::Node addNvtracker(const std::string& llLibFile, const std::string& llConfigFile, int trackerWidth, int trackerHeight, int gpuId = 0, const std::string& operateOnClassIds = "");
     YAML::Node addBoxsnapshot();
     YAML::Node addNvdsanalytics(const std::string& configFile);
-    YAML::Node addDetlogger(int interval = 0);
-    YAML::Node addPresencelogger(int interval = 0);
-    YAML::Node addStgcnpplogger(int interval = 0);
-    YAML::Node addDetfadedrawer(int interval = 0, int fadeTime = 0, bool showLabel = false);
-    YAML::Node addDetfadedrawerwithtracker(int interval = 0, int fadeTime = 0, bool showLabel = false, bool showSnap = true);
-    YAML::Node addPosefadedrawer(int interval = 0, int fadeTime = 0, bool showLabel = false, bool showPose = true, double poseThreshold = 0.0, const std::string& mode = pipeline::POSE_MODE_COCO17);
-    YAML::Node addPosefadedrawerwithtracker(int interval = 0, int fadeTime = 0, bool showLabel = false, bool showPose = true, double poseThreshold = 0.0, const std::string& mode = pipeline::POSE_MODE_COCO17, bool showSnap = true);
-    YAML::Node addStgcnppfadedrawerwithtracker(int interval = 0, int fadeTime = 0, bool showLabel = false, bool showPose = true, double poseThreshold = 0.0, const std::string& mode = pipeline::POSE_MODE_COCO17, bool showSnap = true);
-    YAML::Node addSegfadedrawer(int interval = 0, int fadeTime = 0, bool showLabel = false, bool showMask = true);
-    YAML::Node addSegfadedrawerwithtracker(int interval = 0, int fadeTime = 0, bool showLabel = false, bool showMask = true, bool showSnap = true);
+    int userInterval(int interval);
+    YAML::Node addDetlogger(int interval = 1);
+    YAML::Node addPresencelogger(int interval = 1);
+    YAML::Node addStgcnpplogger(int interval = 1);
+    YAML::Node addDetfadedrawer(int interval = 1, int fadeTime = 0, bool showLabel = false);
+    YAML::Node addDetfadedrawerwithtracker(int interval = 1, int fadeTime = 0, bool showLabel = false, bool showSnap = true);
+    YAML::Node addPosefadedrawer(int interval = 1, int fadeTime = 0, bool showLabel = false, bool showPose = true, double poseThreshold = 0.0, const std::string& mode = pipeline::POSE_MODE_COCO17);
+    YAML::Node addPosefadedrawerwithtracker(int interval = 1, int fadeTime = 0, bool showLabel = false, bool showPose = true, double poseThreshold = 0.0, const std::string& mode = pipeline::POSE_MODE_COCO17, bool showSnap = true);
+    YAML::Node addStgcnppfadedrawerwithtracker(int interval = 1, int fadeTime = 0, bool showLabel = false, bool showPose = true, double poseThreshold = 0.0, const std::string& mode = pipeline::POSE_MODE_COCO17, bool showSnap = true);
+    YAML::Node addSegfadedrawer(int interval = 1, int fadeTime = 0, bool showLabel = false, bool showMask = true);
+    YAML::Node addSegfadedrawerwithtracker(int interval = 1, int fadeTime = 0, bool showLabel = false, bool showMask = true, bool showSnap = true);
     YAML::Node addPresenceeventcoder(const std::string& classEventMap = "", int length = pipeline::PRESENCE_LENGTH, double threshold = pipeline::PRESENCE_THRESHOLD, const std::string& mode = pipeline::PRESENCE_MODE_FOLD);
     YAML::Node addRawcapturer(const std::string& captureCodes = pipeline::CAPTURE_CODES_DEFAULT);
     YAML::Node addViscapturer(const std::string& captureCodes = pipeline::CAPTURE_CODES_DEFAULT, const std::string& labelTask = pipeline::LABEL_TASK_DET);

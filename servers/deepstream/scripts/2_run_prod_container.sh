@@ -5,7 +5,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 PROJECT_NAME="ai_stream2"
 NAME="${PROJECT_NAME}_deepstream"
-IMAGE="${PROJECT_NAME}_deepstream_prod"
+IMAGE="${PROJECT_NAME}_deepstream"
 
 mkdir -p "${ROOT}/models" "${ROOT}/history" "${ROOT}/logs" "${ROOT}/outputs" "${ROOT}/attachments" "${ROOT}/media"
 
@@ -17,7 +17,6 @@ docker run -d \
   --ulimit core=0 \
   --network "${PROJECT_NAME}_default" \
   --gpus all \
-  -e GST_DEBUG=3 \
   -p 8094:8094 \
   -v /etc/localtime:/etc/localtime:ro \
   -v "${ROOT}/models:/root/models" \

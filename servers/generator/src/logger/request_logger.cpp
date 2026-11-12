@@ -17,10 +17,10 @@
 std::shared_ptr<spdlog::logger> RequestLogger::logger;
 
 nlohmann::json RequestLogger::requestInput(const httplib::Request& request) {
-    const httplib::FormData yamlFile = request.form.get_file(generate::FIELD_YAML);
+    const httplib::FormData yamlFile = request.form.get_file(generate::FIELD_INPUT);
     nlohmann::json input = nlohmann::json::object();
     if (!yamlFile.filename.empty()) {
-        input[generate::FIELD_YAML] = "multipart(" + yamlFile.filename + ")";
+        input[generate::FIELD_INPUT] = "multipart(" + yamlFile.filename + ")";
     }
     return input.empty() ? nlohmann::json("") : input;
 }

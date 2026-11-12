@@ -1,6 +1,9 @@
 #include "pipeline_runner/pipeline_runner.hpp"
 
+#include "constants/pipeline_const.hpp"
 #include "constants/pipeline_runner_const.hpp"
+
+#include <chrono>
 
 #include <algorithm>
 #include <cctype>
@@ -18,7 +21,16 @@
 
 PipelineRunner::PipelineRunner(std::string configDir)
     : configDir(std::move(configDir)),
-      pid(-1) {
+      pipelineName(),
+      pid(-1),
+      started(std::nullopt),
+      ended(std::nullopt) {
+}
+
+void PipelineRunner::recordEnded(std::chrono::system_clock::time_point time) {
+    if (!ended.has_value()) {
+        ended = time;
+    }
 }
 
 std::string PipelineRunner::loadPipelineName() const {
@@ -97,8 +109,10 @@ void PipelineRunner::prepareOutputs(const YAML::Node& pipelineYaml) const {
 }
 
 void PipelineRunner::redirectLog() const {
-    std::filesystem::create_directories(pipeline_runner::LOG_DIR);
-    const int fd = ::open(pipeline_runner::LOG_FILE, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    const std::filesystem::path directory = std::filesystem::path(pipeline_runner::LOG_DIR) / pipelineName;
+    std::filesystem::create_directories(directory);
+    const std::filesystem::path file = directory / pipeline_runner::LOG_FILE;
+    const int fd = ::open(file.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
     const bool opened = fd >= 0;
     if (opened) {
         ::dup2(fd, STDOUT_FILENO);
@@ -110,7 +124,6 @@ void PipelineRunner::redirectLog() const {
 }
 
 void PipelineRunner::runPipeline() const {
-    const std::string pipelineName = loadPipelineName();
     const YAML::Node pipelineYaml = loadPipelineYaml();
     const std::filesystem::path pipelinePath =
         std::filesystem::path(configDir) / pipeline_runner::PIPELINE_FILE;
@@ -126,6 +139,7 @@ void PipelineRunner::run() {
     if (child == 0) {
         // The child inherits the HTTP server. An exception must exit here, otherwise
         // it is reported as a second /start/local response and the child stays alive.
+        pipelineName = loadPipelineName();
         redirectLog();
         try {
             runPipeline();
@@ -138,14 +152,30 @@ void PipelineRunner::run() {
         _exit(code);
     }
     pid = child;
+    if (child > 0) {
+        started = std::chrono::system_clock::now();
+        ended = std::nullopt;
+    }
 }
 
-bool PipelineRunner::status() {
+PipelineStatus PipelineRunner::status() {
     int processStatus = 0;
     const pid_t result = pid > 0 ? waitpid(pid, &processStatus, WNOHANG) : -1;
     const bool alive = result == 0;
+    const auto now = std::chrono::system_clock::now();
+    if (pid > 0 && !alive) {
+        recordEnded(now);
+    }
     pid = alive ? pid : -1;
-    return alive;
+    const auto end = ended.value_or(now);
+    PipelineStatus report;
+    report.status = alive ? pipeline::STATUS_RUNNING : pipeline::STATUS_STOPPED;
+    report.startTime = started;
+    report.endTime = ended;
+    report.duration = started.has_value()
+        ? std::optional<std::int64_t>(std::chrono::duration_cast<std::chrono::seconds>(end - *started).count())
+        : std::nullopt;
+    return report;
 }
 
 void PipelineRunner::stop() {
@@ -153,6 +183,8 @@ void PipelineRunner::stop() {
         kill(pid, SIGKILL);
         int processStatus = 0;
         waitpid(pid, &processStatus, 0);
+        recordEnded(std::chrono::system_clock::now());
         pid = -1;
     }
 }
+

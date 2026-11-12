@@ -78,7 +78,7 @@ void TopdownPoseRtspGenerator::add() {
         appendNode(
             "detlogger",
             "detlogger" + suffix,
-            addDetlogger(logger.value("interval", 0)));
+            addDetlogger(logger.value("interval", 1)));
         appendNode("fakesink", "fakesink" + suffix, addFakesink(false, false));
     }
 }

@@ -139,7 +139,12 @@ pipeline:
   pureRuleRequired: At least one rule
   pureType: Type
   pureStatus: Status
+  pureStartTime: Start Time
+  pureEndTime: End Time
+  pureDuration: Duration
   pureStart: Start
+  pureStop: Stop
+  pureProbe: Probe
   pureEdit: Edit
   pureOps: Ops
   pureModel: Model
@@ -170,13 +175,49 @@ pipeline:
   pureLineCrossing: Line crossing
   pureExtendEdge: Extend to edges
   pureDirection: Direction detection
-  purePgie: PGIE
+  pureOff: Off
+  pureOn: On
+  pureLogger: Logger
   pureDrawer: Drawer
-  pureFadeTime: Fade Time
-  pureShowLabel: Show Label
-  pureStreams: Streams
+  pureSahi: SAHI
+  purePreprocess: Preprocess
+  purePostprocess: Postprocess
+  pureEventCoder: Event
+  pureCapturer: Capturer
   pureTracker: Tracker
-  pureSelect: Select
+  pureClassId: Class
+  purePgie: PGIE
+  pureSgie: SGIE
+  pureStgcnpp: STGCNPP
+  pureFadeTime: Fade
+  pureShowLabel: Label
+  pureShowMask: Mask
+  pureShowPose: Pose
+  purePoseThreshold: Pose threshold
+  pureShowSnap: Snap
+  pureSliceWidth: Slice width
+  pureSliceHeight: Slice height
+  pureOverlapWidthRatio: Overlap width
+  pureOverlapHeightRatio: Overlap height
+  pureEnableFullFrame: Full frame
+  pureMatchMetric: Match metric
+  pureMatchThreshold: Match threshold
+  pureClassAgnostic: Class agnostic
+  pureEnableMerge: Merge
+  pureTwoPhaseNmm: Two phase
+  purePreferFullFrame: Prefer full frame
+  pureMaxDetections: Max det
+  pureOksThreshold: OKS
+  pureVisThreshold: Vis threshold
+  pureNumKeypoints: Keypoints
+  pureClassEventMap: Class events
+  pureLength: Length
+  pureThreshold: Threshold
+  pureMode: Mode
+  pureCaptureCodes: Capture codes
+  pureSource: Source
+  pureSizeMatch: Width and height must match
+  pureStreamMatch: Width, height and fps must match
 model:
   pureCreate: Create
   pureRemove: Remove

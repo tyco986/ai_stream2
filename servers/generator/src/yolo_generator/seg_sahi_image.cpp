@@ -43,7 +43,7 @@ void SegSahiImageGenerator::add() {
         "nvstreammux",
         "nvstreammux",
         addNvstreammux(muxBatchSize, width, height, false, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId, false));
-    const nlohmann::json& preprocess = sahi.at("nvsahipreprocess");
+    const nlohmann::json& preprocess = sahi.at("preprocess");
     appendNode(
         "nvsahipreprocess",
         "nvsahipreprocess",
@@ -60,7 +60,7 @@ void SegSahiImageGenerator::add() {
         "pgie",
         addNvinfer(PGIE_CONFIG_NAME, pgieGenerator->config["property"]["batch-size"].as<int>(), gpuId, true));
     appendNode("queue", "queue_sahi", addQueue());
-    appendNode(sahiPostprocess, sahiPostprocess, sahiPostprocessProperties(sahi.at(sahiPostprocess)));
+    appendNode(sahiPostprocess, sahiPostprocess, sahiPostprocessProperties(sahi.at("postprocess")));
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     const std::string drawerElement = nvsegDrawerElement();
@@ -78,7 +78,7 @@ void SegSahiImageGenerator::add() {
         appendNode(
             "detlogger",
             "detlogger" + suffix,
-            addDetlogger(logger.value("interval", 0)));
+            addDetlogger(logger.value("interval", 1)));
         appendNode("nvjpegenc", "nvjpegenc" + suffix, addNvjpegenc());
         appendNode("filesink", "filesink" + suffix, addFilesink(sink, false, false));
     }

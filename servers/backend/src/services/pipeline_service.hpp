@@ -20,6 +20,7 @@ class PipelineService {
                         const Json::Value& type,
                         const Json::Value& analyzerIds,
                         const Json::Value& streamIds,
+                        const Json::Value& mediaIds,
                         const Json::Value& gieIds,
                         const Json::Value& input);
   Json::Value update(const std::string& pipelineId,
@@ -28,6 +29,8 @@ class PipelineService {
                         const Json::Value& name,
                         const Json::Value& type,
                         const Json::Value& analyzerIds,
+                        const Json::Value& streamIds,
+                        const Json::Value& mediaIds,
                         const Json::Value& gieIds,
                         const Json::Value& input);
   Json::Value remove(const std::string& pipelineId);

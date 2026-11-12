@@ -20,6 +20,8 @@ docker run \
   --network "${PROJECT_NAME}_default" \
   --gpus all \
   --ulimit core=0 \
+  -e NVDS_ENABLE_LATENCY_MEASUREMENT=1 \
+  -e NVDS_ENABLE_COMPONENT_LATENCY_MEASUREMENT=1 \
   -e GST_DEBUG=3 \
   -p 8094:8094 \
   -v /etc/localtime:/etc/localtime:ro \

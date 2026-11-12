@@ -13,6 +13,7 @@
 
 #include <spdlog/sinks/rotating_file_sink.h>
 
+std::string RequestLogger::pipelineName;
 std::shared_ptr<spdlog::logger> RequestLogger::logger;
 
 nlohmann::json RequestLogger::requestInput(const httplib::Request& request) {
@@ -74,13 +75,20 @@ void RequestLogger::release() {
     logger.reset();
 }
 
+void RequestLogger::setPipelineName(const std::string& name) {
+    pipelineName = pipelineName.empty() ? name : pipelineName;
+}
+
 std::shared_ptr<spdlog::logger> RequestLogger::instance() {
-    const bool missing = !logger;
-    if (missing) {
-        std::filesystem::create_directories(request_log::ROOT);
-        const std::string path = std::filesystem::path(request_log::ROOT) / (std::string(request_log::PAGE) + request_log::SUFFIX);
-        auto sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(path, request_log::MAX_BYTES, request_log::MAX_FILES);
-        logger = std::make_shared<spdlog::logger>(request_log::PAGE, sink);
+    const bool anonymous = pipelineName.empty();
+    const std::string name = anonymous ? std::string(request_log::PAGE) : pipelineName;
+    const bool switched = !logger || logger->name() != name;
+    if (switched) {
+        const std::filesystem::path directory = anonymous ? std::filesystem::path(request_log::ANONYMOUS_DIR) : std::filesystem::path(request_log::ROOT) / pipelineName;
+        std::filesystem::create_directories(directory);
+        const std::filesystem::path path = directory / (std::string(request_log::PAGE) + request_log::SUFFIX);
+        auto sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(path.string(), request_log::MAX_BYTES, request_log::MAX_FILES);
+        logger = std::make_shared<spdlog::logger>(name, sink);
         logger->set_pattern("%v");
         logger->flush_on(spdlog::level::info);
     }
@@ -130,5 +138,8 @@ void RequestLogger::write(const httplib::Request& request, const httplib::Respon
     if (at != std::string::npos) {
         text.replace(at, placeholder.size(), "\"latency\":" + latency.str());
     }
-    instance()->info(text);
+    const std::shared_ptr<spdlog::logger> current = instance();
+    if (current) {
+        current->info(text);
+    }
 }

@@ -68,7 +68,7 @@ void StgcnppRtmposeSahiVideoGenerator::add() {
     }
     YAML::Node mux = addNvstreammux(muxBatchSize, width, height, true, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId, false);
     appendNode("nvstreammux", "nvstreammux", mux);
-    const nlohmann::json& preprocess = sahi.at("nvsahipreprocess");
+    const nlohmann::json& preprocess = sahi.at("preprocess");
     appendNode(
         "nvsahipreprocess",
         "nvsahipreprocess",
@@ -85,7 +85,7 @@ void StgcnppRtmposeSahiVideoGenerator::add() {
         "pgie",
         addNvinfer(PGIE_CONFIG_NAME, pgieGenerator->config["property"]["batch-size"].as<int>(), gpuId, true));
     appendNode("queue", "queue_sahi", addQueue());
-    appendNode(sahiPostprocess, sahiPostprocess, sahiPostprocessProperties(sahi.at(sahiPostprocess)));
+    appendNode(sahiPostprocess, sahiPostprocess, sahiPostprocessProperties(sahi.at("postprocess")));
     if (enableNvtracker) {
         if (drawer.has_value()) {
             appendNode("boxsnapshot", "boxsnapshot", addBoxsnapshot());
@@ -105,7 +105,7 @@ void StgcnppRtmposeSahiVideoGenerator::add() {
     appendNode(
         "stgcnpplogger",
         "stgcnpplogger",
-        addStgcnpplogger(logger.value("interval", 0)));
+        addStgcnpplogger(logger.value("interval", 1)));
     appendNode("fakesink", "fakesink", addFakesink(false, false));
 }
 

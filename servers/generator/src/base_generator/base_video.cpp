@@ -92,7 +92,7 @@ BaseVideoGenerator::BaseVideoGenerator(
       analyzer(std::move(analyzer)),
       tracker(std::move(tracker)),
       pgie(std::move(pgie)),
-      logger({{"interval", 0}}),
+      logger({{"interval", 1}}),
       drawer(std::move(drawer)) {
     if (logger.has_value()) {
         this->logger.update(*logger);
@@ -134,14 +134,14 @@ void BaseVideoGenerator::initVideos() {
 }
 
 void BaseVideoGenerator::initParams() {
-    const auto pipelineType = generator_pipeline::GENERATOR_PIPELINE_MAP.find(generator);
-    if (pipelineType == generator_pipeline::GENERATOR_PIPELINE_MAP.end()) {
+    const auto pipelineType = generator_pipeline::pipelineOf(generator);
+    if (!pipelineType) {
         throw std::invalid_argument("unknown generator: " + generator);
     }
     YAML::Node params(YAML::NodeType::Map);
     params["pipeline_name"] = pipelineName;
     params["videos"] = jsonToYaml(videos);
-    params["type"] = pipelineType->second;
+    params["type"] = *pipelineType;
     params["generator"] = generator;
     params["pgie"] = jsonToYaml(pgie);
     params["analyzer"] = analyzer.has_value() ? jsonToYaml(*analyzer) : YAML::Node(YAML::NodeType::Null);
@@ -289,7 +289,7 @@ std::string BaseVideoGenerator::nvsegDrawerElement() const {
 }
 
 YAML::Node BaseVideoGenerator::nvdetDrawerProperties(const nlohmann::json& drawerNode) {
-    const int interval = drawerNode.value("interval", 0);
+    const int interval = drawerNode.value("interval", 1);
     const int fadeTime = drawerNode.value("fade_time", 0);
     const bool showLabel = drawerNode.value("show_label", false);
     YAML::Node properties = addDetfadedrawer(interval, fadeTime, showLabel);
@@ -300,7 +300,7 @@ YAML::Node BaseVideoGenerator::nvdetDrawerProperties(const nlohmann::json& drawe
 }
 
 YAML::Node BaseVideoGenerator::nvposeDrawerProperties(const nlohmann::json& drawerNode) {
-    const int interval = drawerNode.value("interval", 0);
+    const int interval = drawerNode.value("interval", 1);
     const int fadeTime = drawerNode.value("fade_time", 0);
     const bool showLabel = drawerNode.value("show_label", false);
     const bool showPose = drawerNode.value("show_pose", true);
@@ -314,7 +314,7 @@ YAML::Node BaseVideoGenerator::nvposeDrawerProperties(const nlohmann::json& draw
 }
 
 YAML::Node BaseVideoGenerator::nvsegDrawerProperties(const nlohmann::json& drawerNode) {
-    const int interval = drawerNode.value("interval", 0);
+    const int interval = drawerNode.value("interval", 1);
     const int fadeTime = drawerNode.value("fade_time", 0);
     const bool showLabel = drawerNode.value("show_label", false);
     const bool showMask = drawerNode.value("show_mask", true);
@@ -348,7 +348,7 @@ void BaseVideoGenerator::add() {
     appendNode(
         "detlogger",
         "detlogger",
-        addDetlogger(logger.value("interval", 0)));
+        addDetlogger(logger.value("interval", 1)));
     appendNode("fakesink", "fakesink", addFakesink(false, false));
 }
 

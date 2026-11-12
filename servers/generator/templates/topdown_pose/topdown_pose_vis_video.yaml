@@ -24,7 +24,6 @@ drawer:
   show_label: true
   show_pose: true
   pose_threshold: 0.5
-  mode: coco17
 videos:
   - /root/attachments/videos/video1.mp4
   - /root/attachments/videos/video2.mp4

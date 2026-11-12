@@ -107,6 +107,7 @@ Json::Value PipelineService::createEnd(const Json::Value& status,
                                         const Json::Value& type,
                                         const Json::Value& analyzerIds,
                                         const Json::Value& streamIds,
+                                        const Json::Value& mediaIds,
                                         const Json::Value& gieIds,
                                         const Json::Value& input) {
   Json::Value data = pipeline::ROW();
@@ -116,16 +117,18 @@ Json::Value PipelineService::createEnd(const Json::Value& status,
   data[pipeline::KEY_INPUT] = input.isNull() ? data[pipeline::KEY_INPUT] : input;
   data[pipeline::KEY_CONFIG_PATH] = configPath.isNull() ? data[pipeline::KEY_CONFIG_PATH] : configPath;
   data[pipeline::KEY_STREAM_IDS] = streamIds.isNull() ? Json::Value(Json::arrayValue) : streamIds;
+  data[pipeline::KEY_MEDIA_IDS] = mediaIds.isNull() ? Json::Value(Json::arrayValue) : mediaIds;
   data[pipeline::KEY_GIE_IDS] = gieIds.isNull() ? data[pipeline::KEY_GIE_IDS] : gieIds;
   data[pipeline::KEY_ANALYZER_IDS] = analyzerIds.isNull() ? data[pipeline::KEY_ANALYZER_IDS] : analyzerIds;
   Json::StreamWriterBuilder builder;
   builder["indentation"] = "";
   const auto rows = Sql::sync({}, dbClient, 
-      "INSERT INTO pipeline (id, name, type, status, input, config_path, stream_ids, gie_ids, analyzer_ids, updated_at) "
+      "INSERT INTO pipeline (id, name, type, status, input, config_path, stream_ids, media_ids, gie_ids, analyzer_ids, updated_at) "
       "VALUES (gen_random_uuid(), $1, $2, $3, $4::jsonb, $5, "
       "ARRAY(SELECT jsonb_array_elements_text($6::jsonb)::uuid), "
       "ARRAY(SELECT jsonb_array_elements_text($7::jsonb)::uuid), "
-      "ARRAY(SELECT jsonb_array_elements_text($8::jsonb)::uuid), now()) " +
+      "ARRAY(SELECT jsonb_array_elements_text($8::jsonb)::uuid), "
+      "ARRAY(SELECT jsonb_array_elements_text($9::jsonb)::uuid), now()) " +
       std::string("RETURNING id::text AS id, name, type, status, input::text AS input, config_path, ") +
       pipeline::SQL_REF_COLUMNS +
       "start_time, end_time, duration, updated_at",
@@ -135,6 +138,7 @@ Json::Value PipelineService::createEnd(const Json::Value& status,
       Json::writeString(builder, data[pipeline::KEY_INPUT]),
       data[pipeline::KEY_CONFIG_PATH].asString(),
       Json::writeString(builder, data[pipeline::KEY_STREAM_IDS]),
+      Json::writeString(builder, data[pipeline::KEY_MEDIA_IDS]),
       Json::writeString(builder, data[pipeline::KEY_GIE_IDS]),
       Json::writeString(builder, data[pipeline::KEY_ANALYZER_IDS]));
   if (rows.empty()) {
@@ -150,19 +154,25 @@ Json::Value PipelineService::update(const std::string& pipelineId,
                                         const Json::Value& name,
                                         const Json::Value& type,
                                         const Json::Value& analyzerIds,
+                                        const Json::Value& streamIds,
+                                        const Json::Value& mediaIds,
                                         const Json::Value& gieIds,
                                         const Json::Value& input) {
   const Json::Value current = get(pipelineId);
   const bool hasPath = current[pipeline::KEY_CONFIG_PATH].isString();
   const std::string oldPath = hasPath ? current[pipeline::KEY_CONFIG_PATH].asString() : "";
+  const Json::Value streams = streamIds.isNull() ? Json::Value(Json::arrayValue) : streamIds;
+  const Json::Value medias = mediaIds.isNull() ? Json::Value(Json::arrayValue) : mediaIds;
   Json::StreamWriterBuilder builder;
   builder["indentation"] = "";
   const auto rows = Sql::sync({}, dbClient, 
       "UPDATE pipeline SET name = $2, type = $3, status = $4, input = $5::jsonb, config_path = $6, "
-      "gie_ids = ARRAY(SELECT jsonb_array_elements_text($7::jsonb)::uuid), "
-      "analyzer_ids = ARRAY(SELECT jsonb_array_elements_text($8::jsonb)::uuid), "
+      "stream_ids = ARRAY(SELECT jsonb_array_elements_text($7::jsonb)::uuid), "
+      "media_ids = ARRAY(SELECT jsonb_array_elements_text($8::jsonb)::uuid), "
+      "gie_ids = ARRAY(SELECT jsonb_array_elements_text($9::jsonb)::uuid), "
+      "analyzer_ids = ARRAY(SELECT jsonb_array_elements_text($10::jsonb)::uuid), "
       "start_time = NULL, end_time = NULL, duration = NULL, updated_at = now() "
-      "WHERE id = $1::uuid AND status <> $9 " +
+      "WHERE id = $1::uuid AND status <> $11 " +
       std::string("RETURNING id::text AS id, name, type, status, input::text AS input, config_path, ") +
       pipeline::SQL_REF_COLUMNS +
       "start_time, end_time, duration, updated_at",
@@ -172,6 +182,8 @@ Json::Value PipelineService::update(const std::string& pipelineId,
       status.asString(),
       Json::writeString(builder, input),
       configPath.asString(),
+      Json::writeString(builder, streams),
+      Json::writeString(builder, medias),
       Json::writeString(builder, gieIds),
       Json::writeString(builder, analyzerIds),
       std::string(pipeline::STATUS_STARTING));
@@ -396,6 +408,8 @@ Json::Value PipelineService::row2json(const drogon::orm::Row& row) {
   node[pipeline::KEY_CONFIG_PATH] = row["config_path"].isNull() ? Json::Value() : row["config_path"].as<std::string>();
   node[pipeline::KEY_STREAM_IDS] = json2array(row["stream_ids"].as<std::string>());
   node[pipeline::KEY_STREAM_NAMES] = json2array(row["stream_names"].as<std::string>());
+  node[pipeline::KEY_MEDIA_IDS] = json2array(row["media_ids"].as<std::string>());
+  node[pipeline::KEY_MEDIA_NAMES] = json2array(row["media_names"].as<std::string>());
   node[pipeline::KEY_GIE_IDS] = json2array(row["gie_ids"].as<std::string>());
   node[pipeline::KEY_GIE_NAMES] = json2array(row["gie_names"].as<std::string>());
   node[pipeline::KEY_ANALYZER_IDS] = json2array(row["analyzer_ids"].as<std::string>());

@@ -9,5 +9,5 @@ CONTEXT="${ROOT}/servers/deepstream"
 docker build \
   --target prod \
   -f "${CONTEXT}/Dockerfile" \
-  -t "${PROJECT_NAME}_deepstream_prod" \
+  -t "${PROJECT_NAME}_deepstream" \
   "${CONTEXT}"

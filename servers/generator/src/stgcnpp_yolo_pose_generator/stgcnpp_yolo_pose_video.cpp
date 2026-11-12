@@ -73,7 +73,7 @@ void StgcnppYoloPoseVideoGenerator::add() {
     appendNode(
         "stgcnpplogger",
         "stgcnpplogger",
-        addStgcnpplogger(logger.value("interval", 0)));
+        addStgcnpplogger(logger.value("interval", 1)));
     appendNode("fakesink", "fakesink", addFakesink(false, false));
 }
 

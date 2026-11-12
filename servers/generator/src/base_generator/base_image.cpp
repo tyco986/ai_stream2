@@ -89,7 +89,7 @@ BaseImageGenerator::BaseImageGenerator(
       output(std::filesystem::absolute(std::move(output))),
       analyzer(std::move(analyzer)),
       pgie(std::move(pgie)),
-      logger({{"interval", 0}}),
+      logger({{"interval", 1}}),
       drawer(std::move(drawer)) {
     if (logger.has_value()) {
         this->logger.update(*logger);
@@ -127,15 +127,15 @@ void BaseImageGenerator::initImages() {
 }
 
 void BaseImageGenerator::initParams() {
-    const auto pipelineType = generator_pipeline::GENERATOR_PIPELINE_MAP.find(generator);
-    if (pipelineType == generator_pipeline::GENERATOR_PIPELINE_MAP.end()) {
+    const auto pipelineType = generator_pipeline::pipelineOf(generator);
+    if (!pipelineType) {
         throw std::invalid_argument("unknown generator: " + generator);
     }
     YAML::Node params(YAML::NodeType::Map);
     params["pipeline_name"] = pipelineName;
     params["images"] = jsonToYaml(images);
     params["output"] = output.string();
-    params["type"] = pipelineType->second;
+    params["type"] = *pipelineType;
     params["generator"] = generator;
     params["pgie"] = jsonToYaml(pgie);
     params["analyzer"] = analyzer.has_value() ? jsonToYaml(*analyzer) : YAML::Node(YAML::NodeType::Null);
@@ -259,13 +259,13 @@ std::string BaseImageGenerator::nvsegDrawerElement() const {
 }
 
 YAML::Node BaseImageGenerator::nvdetDrawerProperties(const nlohmann::json& drawerNode) {
-    const YAML::Node properties = addDetfadedrawer(drawerNode.value("interval", 0), drawerNode.value("fade_time", 0), drawerNode.value("show_label", false));
+    const YAML::Node properties = addDetfadedrawer(drawerNode.value("interval", 1), drawerNode.value("fade_time", 0), drawerNode.value("show_label", false));
     return properties;
 }
 
 YAML::Node BaseImageGenerator::nvposeDrawerProperties(const nlohmann::json& drawerNode) {
     const YAML::Node properties = addPosefadedrawer(
-        drawerNode.value("interval", 0),
+        drawerNode.value("interval", 1),
         drawerNode.value("fade_time", 0),
         drawerNode.value("show_label", false),
         drawerNode.value("show_pose", true),
@@ -276,7 +276,7 @@ YAML::Node BaseImageGenerator::nvposeDrawerProperties(const nlohmann::json& draw
 
 YAML::Node BaseImageGenerator::nvsegDrawerProperties(const nlohmann::json& drawerNode) {
     const YAML::Node properties = addSegfadedrawer(
-        drawerNode.value("interval", 0),
+        drawerNode.value("interval", 1),
         drawerNode.value("fade_time", 0),
         drawerNode.value("show_label", false),
         drawerNode.value("show_mask", true));
@@ -308,7 +308,7 @@ void BaseImageGenerator::add() {
         appendNode(
             "detlogger",
             "detlogger" + suffix,
-            addDetlogger(logger.value("interval", 0)));
+            addDetlogger(logger.value("interval", 1)));
         appendNode("nvjpegenc", "nvjpegenc" + suffix, addNvjpegenc());
         appendNode("filesink", "filesink" + suffix, addFilesink(sink, false, false));
     }

@@ -4,8 +4,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 
-# shellcheck source=../../../scripts/load_project_env.sh
-source "${ROOT}/scripts/load_project_env.sh"
+PROJECT_NAME=ai_stream2
+mkdir -p "${ROOT}/logs/docker_socket_proxy"
 NAME="${DOCKER_SOCKET_PROXY_NAME:-${PROJECT_NAME}_docker_socket_proxy}"
 NET="${DOCKER_SOCKET_PROXY_NETWORK:-${PROJECT_NAME}_default}"
 IMG="${DOCKER_SOCKET_PROXY_IMAGE:-tecnativa/docker-socket-proxy:latest}"
@@ -21,8 +21,10 @@ docker run -d \
   --restart unless-stopped \
   -v /etc/localtime:/etc/localtime:ro \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
+  -v "${ROOT}/logs/docker_socket_proxy:/logs/docker_socket_proxy" \
   -p "${HOST_PORT}:2375" \
-  -e LOG_LEVEL=info \
+  --entrypoint sh \
+  -e LOG_LEVEL=debug \
   -e CONTAINERS=1 \
   -e POST=1 \
   -e ALLOW_START=1 \
@@ -33,7 +35,8 @@ docker run -d \
   -e IMAGES=1 \
   -e INFO=1 \
   -e VOLUMES=1 \
-  "${IMG}"
+  "${IMG}" \
+  -c 'sed -i "s|\${LOG_LEVEL}|debug|g" /usr/local/etc/haproxy/haproxy.cfg.template && exec /usr/local/bin/docker-entrypoint.sh haproxy -f /tmp/haproxy.cfg >> /logs/docker_socket_proxy/docker_socket_proxy.log 2>&1'
 
 cat <<EOF
 ${NAME} (${NET})

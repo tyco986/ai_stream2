@@ -8,3 +8,9 @@ export const formatLocalTime = (value: string | null) => {
       : (value ?? "");
   return text;
 };
+
+export const formatDuration = (seconds: number | null) => {
+  const total = seconds ?? 0;
+  const text = seconds === null ? "" : `${pad(Math.floor(total / 3600))}:${pad(Math.floor(total / 60) % 60)}:${pad(total % 60)}`;
+  return text;
+};

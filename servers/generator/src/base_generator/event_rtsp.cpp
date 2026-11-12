@@ -55,7 +55,7 @@ EventRtspGenerator::EventRtspGenerator(
       analyzer(std::move(analyzer)),
       tracker(std::move(tracker)),
       pgie(std::move(pgie)),
-      logger({{"interval", 0}}),
+      logger({{"interval", 1}}),
       drawer(std::move(drawer)) {
     if (logger.has_value()) {
         this->logger.update(*logger);
@@ -101,14 +101,14 @@ void EventRtspGenerator::initStreams() {
 }
 
 void EventRtspGenerator::initParams() {
-    const auto pipelineType = generator_pipeline::GENERATOR_PIPELINE_MAP.find(generator);
-    if (pipelineType == generator_pipeline::GENERATOR_PIPELINE_MAP.end()) {
+    const auto pipelineType = generator_pipeline::pipelineOf(generator);
+    if (!pipelineType) {
         throw std::invalid_argument("unknown generator: " + generator);
     }
     YAML::Node params(YAML::NodeType::Map);
     params["pipeline_name"] = pipelineName;
     params["streams"] = jsonToYaml(streams);
-    params["type"] = pipelineType->second;
+    params["type"] = *pipelineType;
     params["generator"] = generator;
     params["pgie"] = jsonToYaml(pgie);
     params["analyzer"] = analyzer.has_value() ? jsonToYaml(*analyzer) : YAML::Node(YAML::NodeType::Null);
@@ -258,7 +258,7 @@ std::string EventRtspGenerator::nvdetDrawerElement() const {
 }
 
 YAML::Node EventRtspGenerator::nvdetDrawerProperties(const nlohmann::json& drawerNode) {
-    const int interval = drawerNode.value("interval", 0);
+    const int interval = drawerNode.value("interval", 1);
     const int fadeTime = drawerNode.value("fade_time", 0);
     const bool showLabel = drawerNode.value("show_label", false);
     YAML::Node properties = addDetfadedrawer(interval, fadeTime, showLabel);
@@ -295,7 +295,7 @@ void EventRtspGenerator::appendAfterOsd(int index, int gpuId) {
     appendNode(
         "presencelogger",
         "presencelogger" + suffix,
-        addPresencelogger(logger.value("interval", 0)));
+        addPresencelogger(logger.value("interval", 1)));
     appendNode("queue", "queue_vis" + suffix, addQueue());
     appendNode("nvvideoconvert", "nvvideoconvert_vis" + suffix, addNvvideoconvert(gpuId));
     appendNode("capsfilter", "capsfilter_vis" + suffix, addCapsfilter("video/x-raw(memory:NVMM), format=RGB"));

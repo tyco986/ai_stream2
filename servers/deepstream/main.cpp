@@ -7,7 +7,11 @@
 
 #include "libs/httplib.h"
 
-int main() {
+#include <string>
+
+int main(int argc, char** argv) {
+    const std::string pipelineName = argc > 1 && argv[1] != nullptr ? std::string(argv[1]) : "";
+    RequestLogger::setPipelineName(pipelineName);
     httplib::Server server;
     server.set_payload_max_length(pipeline::PAYLOAD_MAX);
     server.set_pre_routing_handler(RequestLogger::before);

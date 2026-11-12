@@ -1,0 +1,11 @@
+.create-dialog.el-dialog {
+  padding: 12px;
+}
+
+.create-dialog .el-dialog__header {
+  padding-bottom: 8px;
+}
+
+.create-dialog .el-dialog__body {
+  padding: 0;
+}

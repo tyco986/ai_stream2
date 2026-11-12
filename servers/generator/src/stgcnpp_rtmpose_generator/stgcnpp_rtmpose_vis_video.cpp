@@ -100,7 +100,7 @@ void StgcnppRtmposeVisVideoGenerator::add() {
         appendNode(
             "stgcnpplogger",
             "stgcnpplogger" + suffix,
-            addStgcnpplogger(logger.value("interval", 0)));
+            addStgcnpplogger(logger.value("interval", 1)));
         appendNode(
             "nvv4l2h264enc",
             "nvv4l2h264enc" + suffix,

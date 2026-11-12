@@ -67,7 +67,7 @@ void PoseVisRtspGenerator::add() {
         appendNode(
             "detlogger",
             "detlogger" + suffix,
-            addDetlogger(logger.value("interval", 0)));
+            addDetlogger(logger.value("interval", 1)));
         appendNode(
             "nvv4l2h264enc",
             "nvv4l2h264enc" + suffix,

@@ -85,7 +85,7 @@ static void gst_det_fade_drawer_with_tracker_class_init(GstDetFadeDrawerWithTrac
     objectClass->set_property = gst_det_fade_drawer_with_tracker_set_property;
     objectClass->get_property = gst_det_fade_drawer_with_tracker_get_property;
     transformClass->transform_ip = gst_det_fade_drawer_with_tracker_transform_ip;
-    g_object_class_install_property(objectClass, PROP_INTERVAL, g_param_spec_int("interval", "Interval", "Inference period", 0, G_MAXINT, 0, readWrite));
+    g_object_class_install_property(objectClass, PROP_INTERVAL, g_param_spec_int("interval", "Interval", "Inference period", 1, G_MAXINT, 1, readWrite));
     g_object_class_install_property(objectClass, PROP_FADE_TIME, g_param_spec_int("fade-time", "Fade time", "Fade LUT repeats", 0, G_MAXINT, 0, readWrite));
     g_object_class_install_property(objectClass, PROP_SHOW_LABEL, g_param_spec_boolean("show-label", "Show label", "Show label text", FALSE, readWrite));
     g_object_class_install_property(objectClass, PROP_SHOW_SNAP, g_param_spec_boolean("show-snap", "Show snap", "Fade snapshot boxes", TRUE, readWrite));
@@ -94,7 +94,7 @@ static void gst_det_fade_drawer_with_tracker_class_init(GstDetFadeDrawerWithTrac
 }
 
 static void gst_det_fade_drawer_with_tracker_init(GstDetFadeDrawerWithTracker* self) {
-    self->interval = 0;
+    self->interval = 1;
     self->fadeTime = 0;
     self->showLabel = FALSE;
     self->showSnap = TRUE;

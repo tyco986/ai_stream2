@@ -28,17 +28,21 @@ drawer:
   show_label: true
   show_pose: true
   pose_threshold: 0.5
-  mode: coco17
 videos:
   - /root/attachments/videos/video1.mp4
   - /root/attachments/videos/video2.mp4
 output: /root/outputs/deepstream/stgcnpp_rtmpose_sahi_vis_video
 sahi:
-  nvsahipreprocess:
+  preprocess:
     slice_width: 640
     slice_height: 640
     overlap_width_ratio: 0.2
     overlap_height_ratio: 0.2
     enable_full_frame: true
-  nvsahipostprocess:
+  postprocess:
+    match_metric: 1
     match_threshold: 0.5
+    class_agnostic: false
+    enable_merge: true
+    two_phase_nmm: true
+    prefer_full_frame: true

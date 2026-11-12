@@ -68,7 +68,7 @@ static void gst_presence_logger_class_init(GstPresenceLoggerClass* klass) {
     transformClass->transform_ip = gst_presence_logger_transform_ip;
     g_object_class_install_property(
         objectClass, PROP_INTERVAL,
-        g_param_spec_int("interval", "Interval", "Log period in frames; 0 means every frame", 0, G_MAXINT, dslogger::DEFAULT_INTERVAL, readWrite));
+        g_param_spec_int("interval", "Interval", "Log period in frames", 1, G_MAXINT, dslogger::DEFAULT_INTERVAL, readWrite));
     dsloggerAddPads(elementClass);
     gst_element_class_set_details_simple(
         elementClass, "PresenceLogger", "Filter/Metadata", dslogger::ELEMENT_PRESENCE_DETAIL, dslogger::PLUGIN_PACKAGE);

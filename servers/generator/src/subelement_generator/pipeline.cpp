@@ -1,6 +1,7 @@
 #include "subelement_generator/pipeline.hpp"
 
 #include <fstream>
+#include <stdexcept>
 
 PipelineGenerator::PipelineGenerator() {
     pipeline["deepstream"]["nodes"] = YAML::Node(YAML::NodeType::Sequence);
@@ -151,9 +152,17 @@ YAML::Node PipelineGenerator::addNvdsanalytics(const std::string& configFile) {
     return properties;
 }
 
+int PipelineGenerator::userInterval(int interval) {
+    if (interval < 1) {
+        throw std::invalid_argument("interval must be >= 1");
+    }
+    const int accepted = interval;
+    return accepted;
+}
+
 YAML::Node PipelineGenerator::addDetlogger(int interval) {
     YAML::Node properties;
-    properties["interval"] = interval;
+    properties["interval"] = userInterval(interval);
     return properties;
 }
 
@@ -167,7 +176,7 @@ YAML::Node PipelineGenerator::addStgcnpplogger(int interval) {
 
 YAML::Node PipelineGenerator::addDetfadedrawer(int interval, int fadeTime, bool showLabel) {
     YAML::Node properties;
-    properties["interval"] = interval;
+    properties["interval"] = userInterval(interval);
     properties["fade-time"] = fadeTime;
     properties["show-label"] = showLabel;
     return properties;
@@ -175,7 +184,7 @@ YAML::Node PipelineGenerator::addDetfadedrawer(int interval, int fadeTime, bool 
 
 YAML::Node PipelineGenerator::addDetfadedrawerwithtracker(int interval, int fadeTime, bool showLabel, bool showSnap) {
     YAML::Node properties;
-    properties["interval"] = interval;
+    properties["interval"] = userInterval(interval);
     properties["fade-time"] = fadeTime;
     properties["show-label"] = showLabel;
     properties["show-snap"] = showSnap;
@@ -184,7 +193,7 @@ YAML::Node PipelineGenerator::addDetfadedrawerwithtracker(int interval, int fade
 
 YAML::Node PipelineGenerator::addPosefadedrawer(int interval, int fadeTime, bool showLabel, bool showPose, double poseThreshold, const std::string& mode) {
     YAML::Node properties;
-    properties["interval"] = interval;
+    properties["interval"] = userInterval(interval);
     properties["fade-time"] = fadeTime;
     properties["show-label"] = showLabel;
     properties["show-pose"] = showPose;
@@ -195,7 +204,7 @@ YAML::Node PipelineGenerator::addPosefadedrawer(int interval, int fadeTime, bool
 
 YAML::Node PipelineGenerator::addPosefadedrawerwithtracker(int interval, int fadeTime, bool showLabel, bool showPose, double poseThreshold, const std::string& mode, bool showSnap) {
     YAML::Node properties;
-    properties["interval"] = interval;
+    properties["interval"] = userInterval(interval);
     properties["fade-time"] = fadeTime;
     properties["show-label"] = showLabel;
     properties["show-pose"] = showPose;
@@ -211,7 +220,7 @@ YAML::Node PipelineGenerator::addStgcnppfadedrawerwithtracker(int interval, int 
 
 YAML::Node PipelineGenerator::addSegfadedrawer(int interval, int fadeTime, bool showLabel, bool showMask) {
     YAML::Node properties;
-    properties["interval"] = interval;
+    properties["interval"] = userInterval(interval);
     properties["fade-time"] = fadeTime;
     properties["show-label"] = showLabel;
     properties["show-mask"] = showMask;
@@ -220,7 +229,7 @@ YAML::Node PipelineGenerator::addSegfadedrawer(int interval, int fadeTime, bool 
 
 YAML::Node PipelineGenerator::addSegfadedrawerwithtracker(int interval, int fadeTime, bool showLabel, bool showMask, bool showSnap) {
     YAML::Node properties;
-    properties["interval"] = interval;
+    properties["interval"] = userInterval(interval);
     properties["fade-time"] = fadeTime;
     properties["show-label"] = showLabel;
     properties["show-mask"] = showMask;

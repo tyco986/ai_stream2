@@ -22,6 +22,6 @@ trap 'rm -f "${RESPONSE_BODY}"' EXIT
 HTTP_CODE="$(curl -sS --connect-timeout 2 -o "${RESPONSE_BODY}" -w "%{http_code}" \
   -X POST "${ENDPOINT}" \
   -H "Accept-Language: en" \
-  -F "yaml=@${YAML}")"
+  -F "input=@${YAML}")"
 printf '{"request":{"method":"POST","url":"%s","headers":{"Accept-Language":"en"},"content":{"yaml":"%s"}},"response":{"code":%s,"content":"multipart(zip)"}}\n' "${ENDPOINT}" "${YAML}" "${HTTP_CODE}"
 [[ "${HTTP_CODE}" == "200" ]]

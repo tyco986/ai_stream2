@@ -23,7 +23,7 @@ JSON 成功外壳：`{success, message, data}`。全库只有一行，`id` = `00
 
 ### POST `/backend/server/probe`
 
-按 pipeline 名探测 `http://puskas_{name}:9000/health`，结果写入 `deepstream`。同时探测 generator、export_onnx、export_trt、mediamtx、kafka、frontend、backend 的健康地址，以及执行 `SELECT 1` 判断 postgresql。超时 3 秒。写回 `probed_at=now()` 和各布尔值。
+按 pipeline 名探测 `http://ai_stream2_{name}:9000/health`，结果写入 `deepstream`。同时探测 generator、export_onnx、export_trt、mediamtx、kafka、frontend、backend 的健康地址，以及执行 `SELECT 1` 判断 postgresql。超时 3 秒。写回 `probed_at=now()` 和各布尔值。
 
 入参：无。
 

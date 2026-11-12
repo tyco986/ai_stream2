@@ -55,7 +55,7 @@ BaseRtspGenerator::BaseRtspGenerator(
       analyzer(std::move(analyzer)),
       tracker(std::move(tracker)),
       pgie(std::move(pgie)),
-      logger({{"interval", 0}}),
+      logger({{"interval", 1}}),
       drawer(std::move(drawer)) {
     if (logger.has_value()) {
         this->logger.update(*logger);
@@ -100,14 +100,14 @@ void BaseRtspGenerator::initStreams() {
 }
 
 void BaseRtspGenerator::initParams() {
-    const auto pipelineType = generator_pipeline::GENERATOR_PIPELINE_MAP.find(generator);
-    if (pipelineType == generator_pipeline::GENERATOR_PIPELINE_MAP.end()) {
+    const auto pipelineType = generator_pipeline::pipelineOf(generator);
+    if (!pipelineType) {
         throw std::invalid_argument("unknown generator: " + generator);
     }
     YAML::Node params(YAML::NodeType::Map);
     params["pipeline_name"] = pipelineName;
     params["streams"] = jsonToYaml(streams);
-    params["type"] = pipelineType->second;
+    params["type"] = *pipelineType;
     params["generator"] = generator;
     params["pgie"] = jsonToYaml(pgie);
     params["analyzer"] = analyzer.has_value() ? jsonToYaml(*analyzer) : YAML::Node(YAML::NodeType::Null);
@@ -255,7 +255,7 @@ std::string BaseRtspGenerator::nvsegDrawerElement() const {
 }
 
 YAML::Node BaseRtspGenerator::nvdetDrawerProperties(const nlohmann::json& drawerNode) {
-    const int interval = drawerNode.value("interval", 0);
+    const int interval = drawerNode.value("interval", 1);
     const int fadeTime = drawerNode.value("fade_time", 0);
     const bool showLabel = drawerNode.value("show_label", false);
     YAML::Node properties = addDetfadedrawer(interval, fadeTime, showLabel);
@@ -266,7 +266,7 @@ YAML::Node BaseRtspGenerator::nvdetDrawerProperties(const nlohmann::json& drawer
 }
 
 YAML::Node BaseRtspGenerator::nvposeDrawerProperties(const nlohmann::json& drawerNode) {
-    const int interval = drawerNode.value("interval", 0);
+    const int interval = drawerNode.value("interval", 1);
     const int fadeTime = drawerNode.value("fade_time", 0);
     const bool showLabel = drawerNode.value("show_label", false);
     const bool showPose = drawerNode.value("show_pose", true);
@@ -280,7 +280,7 @@ YAML::Node BaseRtspGenerator::nvposeDrawerProperties(const nlohmann::json& drawe
 }
 
 YAML::Node BaseRtspGenerator::nvsegDrawerProperties(const nlohmann::json& drawerNode) {
-    const int interval = drawerNode.value("interval", 0);
+    const int interval = drawerNode.value("interval", 1);
     const int fadeTime = drawerNode.value("fade_time", 0);
     const bool showLabel = drawerNode.value("show_label", false);
     const bool showMask = drawerNode.value("show_mask", true);
@@ -327,7 +327,7 @@ void BaseRtspGenerator::add() {
         appendNode(
             "detlogger",
             "detlogger" + std::to_string(streamIndex),
-            addDetlogger(logger.value("interval", 0)));
+            addDetlogger(logger.value("interval", 1)));
         appendNode("fakesink", "fakesink" + std::to_string(streamIndex), addFakesink(false, false));
     }
 }

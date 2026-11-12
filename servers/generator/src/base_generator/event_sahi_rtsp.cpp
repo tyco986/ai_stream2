@@ -33,7 +33,7 @@ EventSahiRtspGenerator::EventSahiRtspGenerator(
 void EventSahiRtspGenerator::initStreams() {
     EventRtspGenerator::initStreams();
     muxBatchSize = runtimeBatchSize;
-    const nlohmann::json& preprocess = sahi.at("nvsahipreprocess");
+    const nlohmann::json& preprocess = sahi.at("preprocess");
     sahiInfo = Sahi().boxes(
         width,
         height,
@@ -110,7 +110,7 @@ void EventSahiRtspGenerator::appendInfer(int gpuId) {
         "nvstreammux",
         "nvstreammux",
         addNvstreammux(muxBatchSize, width, height, true, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId));
-    const nlohmann::json& preprocess = sahi.at("nvsahipreprocess");
+    const nlohmann::json& preprocess = sahi.at("preprocess");
     appendNode(
         "nvsahipreprocess",
         "nvsahipreprocess",
@@ -127,7 +127,7 @@ void EventSahiRtspGenerator::appendInfer(int gpuId) {
         "pgie",
         addNvinfer(PGIE_CONFIG_NAME, pgieGenerator->config["property"]["batch-size"].as<int>(), gpuId, true));
     appendNode("queue", "queue_sahi", addQueue());
-    const nlohmann::json& postprocess = sahi.at(SAHI_POSTPROCESS);
+    const nlohmann::json& postprocess = sahi.at("postprocess");
     const std::string gieId = std::to_string(pgieGenerator->config["property"]["gie-unique-id"].as<int>());
     appendNode(
         SAHI_POSTPROCESS,

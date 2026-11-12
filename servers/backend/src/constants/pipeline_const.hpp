@@ -24,6 +24,8 @@ inline const char* KEY_GIE_ID = "gie_id";
 inline const char* KEY_ANALYZER_ID = "analyzer_id";
 inline const char* KEY_STREAM_IDS = "stream_ids";
 inline const char* KEY_STREAM_NAMES = "stream_names";
+inline const char* KEY_MEDIA_IDS = "media_ids";
+inline const char* KEY_MEDIA_NAMES = "media_names";
 inline const char* KEY_GIE_IDS = "gie_ids";
 inline const char* KEY_GIE_NAMES = "gie_names";
 inline const char* KEY_ANALYZER_IDS = "analyzer_ids";
@@ -67,24 +69,34 @@ inline const char* STATUS_STOPPED = "stopped";
 inline const char* STATUS_STARTING = "starting";
 inline const char* STATUS_RUNNING = "running";
 inline const char* ERR_BUSY = "pipeline_err_busy";
+inline const char* ERR_IDLE = "pipeline is not running";
 
-inline const char* DOCKER_BASE_URL = "http://puskas_docker_socket_proxy:2375";
+inline const char* DOCKER_BASE_URL = "http://ai_stream2_docker_socket_proxy:2375";
 inline const char* DOCKER_CREATE_PATH = "/containers/create";
 inline const char* DOCKER_STOP_PATH = "/stop";
 inline const char* DOCKER_RESTART_PATH = "/restart";
 inline const char* DOCKER_JSON_PATH = "/json";
-inline const char* DOCKER_NETWORK = "puskas_default";
-inline const char* DEEPSTREAM_IMAGE = "puskas_deepstream";
-inline const char* CONTAINER_PREFIX = "puskas_";
-inline const int DEEPSTREAM_PORT = 9000;
-inline const char* DEEPSTREAM_HEALTH_PATH = "/health";
+inline const char* DOCKER_NETWORK = "ai_stream2_default";
+inline const char* DOCKER_RUNTIME = "nvidia";
+inline const char* LOGS_DIR = "/root/logs";
+inline const char* LOCALTIME_BIND = "/etc/localtime:/etc/localtime:ro";
+inline const char* MOUNTINFO_PATH = "/proc/self/mountinfo";
+inline const char* DOCKER_GPU_DRIVER = "nvidia";
+inline const char* DOCKER_GPU_CAPABILITY = "gpu";
+inline const int DOCKER_GPU_COUNT = -1;
+inline const char* DEEPSTREAM_IMAGE = "ai_stream2_deepstream";
+inline const char* DEEPSTREAM_BIN = "deepstream";
+inline const char* CONTAINER_PREFIX = "ai_stream2_";
+inline const int DEEPSTREAM_PORT = 8094;
+inline const char* DEEPSTREAM_HEALTH_PATH = "/ai_stream2/deepstream/health";
 inline const char* DEEPSTREAM_START_PATH = "/start";
+inline const char* DEEPSTREAM_STOP_PATH = "/stop";
 inline const char* DEEPSTREAM_STATUS_PATH = "/status";
 inline const int HEALTH_ATTEMPTS = 15;
 inline const int STATUS_ATTEMPTS = 15;
 inline const double HEALTH_INTERVAL_SECONDS = 1.0;
 inline const double GENERATE_TIMEOUT_SECONDS = 3.0;
-inline const double DOCKER_TIMEOUT_SECONDS = 5.0;
+inline const double DOCKER_TIMEOUT_SECONDS = 20.0;
 inline const double HEALTH_TIMEOUT_SECONDS = 3.0;
 inline const double START_TIMEOUT_SECONDS = 5.0;
 inline const double STATUS_TIMEOUT_SECONDS = 3.0;
@@ -98,6 +110,7 @@ inline Json::Value ROW() {
   node[KEY_INPUT] = Json::Value();
   node[KEY_CONFIG_PATH] = Json::Value();
   node[KEY_STREAM_IDS] = Json::Value(Json::arrayValue);
+  node[KEY_MEDIA_IDS] = Json::Value(Json::arrayValue);
   node[KEY_GIE_IDS] = Json::Value(Json::arrayValue);
   node[KEY_ANALYZER_IDS] = Json::Value(Json::arrayValue);
   node[KEY_START_TIME] = Json::Value();
@@ -132,6 +145,9 @@ inline const char* SQL_REF_COLUMNS =
     "array_to_json(stream_ids)::text AS stream_ids, "
     "COALESCE((SELECT json_agg(stream.name ORDER BY item.ord) FROM unnest(pipeline.stream_ids) WITH ORDINALITY AS item(id, ord) "
     "LEFT JOIN stream ON stream.id = item.id), '[]'::json)::text AS stream_names, "
+    "array_to_json(media_ids)::text AS media_ids, "
+    "COALESCE((SELECT json_agg(media.name ORDER BY item.ord) FROM unnest(pipeline.media_ids) WITH ORDINALITY AS item(id, ord) "
+    "LEFT JOIN media ON media.id = item.id), '[]'::json)::text AS media_names, "
     "array_to_json(gie_ids)::text AS gie_ids, "
     "COALESCE((SELECT json_agg(pipeline_gie.name ORDER BY item.ord) FROM unnest(pipeline.gie_ids) WITH ORDINALITY AS item(id, ord) "
     "LEFT JOIN pipeline_gie ON pipeline_gie.id = item.id), '[]'::json)::text AS gie_names, "

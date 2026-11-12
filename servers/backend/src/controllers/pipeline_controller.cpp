@@ -14,6 +14,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 
@@ -118,7 +119,7 @@ drogon::Task<Json::Value> PipelineController::postGenerate(const std::string& ya
   auto generateRequest = drogon::HttpRequest::newHttpRequest();
   generateRequest->setMethod(drogon::Post);
   generateRequest->setPath(pipeline::PATH_GENERATE);
-  generateRequest->addHeader("content-type", pipeline::MULTIPART_CONTENT_TYPE);
+  generateRequest->setContentTypeString(pipeline::MULTIPART_CONTENT_TYPE);
   generateRequest->setBody(yaml2Multipart(yaml));
   auto client = drogon::HttpClient::newHttpClient(generator::DES_BASE_URL);
   const auto generated = co_await client->sendRequestCoro(generateRequest, pipeline::GENERATE_TIMEOUT_SECONDS);
@@ -139,18 +140,75 @@ drogon::Task<Json::Value> PipelineController::postGenerate(const std::string& ya
   co_return data;
 }
 
-drogon::Task<bool> PipelineController::runDeepstreamContainer(const std::string& containerName) {
+std::string PipelineController::logsBind() {
+  std::ifstream mounts(pipeline::MOUNTINFO_PATH);
+  std::string host;
+  std::string line;
+  const std::string logsDir = pipeline::LOGS_DIR;
+  while (std::getline(mounts, line)) {
+    std::istringstream row(line);
+    std::string mountId;
+    std::string parent;
+    std::string device;
+    std::string root;
+    std::string point;
+    row >> mountId >> parent >> device >> root >> point;
+    const bool matched = point == logsDir || point.rfind(logsDir + "/", 0) == 0;
+    const std::size_t extra = matched ? point.size() - logsDir.size() : 0;
+    const bool usable = matched && root.size() >= extra;
+    host = usable ? root.substr(0, root.size() - extra) : host;
+  }
+  if (host.empty()) {
+    throw std::runtime_error("logs mount missing");
+  }
+  return host + ":" + logsDir;
+}
+
+drogon::Task<bool> PipelineController::runDeepstreamContainer(const std::string& containerName,
+                                                                       const std::string& pipelineName) {
   auto docker = drogon::HttpClient::newHttpClient(pipeline::DOCKER_BASE_URL);
+  const std::string baseUrl = "http://" + containerName + ":" + std::to_string(pipeline::DEEPSTREAM_PORT);
   auto inspectRequest = drogon::HttpRequest::newHttpRequest();
   inspectRequest->setMethod(drogon::Get);
   inspectRequest->setPath("/containers/" + containerName + pipeline::DOCKER_JSON_PATH);
   const auto inspected = co_await docker->sendRequestCoro(inspectRequest, pipeline::DOCKER_TIMEOUT_SECONDS);
   const bool exists = inspected->statusCode() == drogon::k200OK;
+  bool running = false;
+  if (exists) {
+    try {
+      auto statusRequest = drogon::HttpRequest::newHttpRequest();
+      statusRequest->setMethod(drogon::Get);
+      statusRequest->setPath(pipeline::DEEPSTREAM_STATUS_PATH);
+      auto deepstream = drogon::HttpClient::newHttpClient(baseUrl);
+      const auto polled = co_await deepstream->sendRequestCoro(statusRequest, pipeline::STATUS_TIMEOUT_SECONDS);
+      Json::Value statusBody;
+      const bool parsed = polled->statusCode() >= drogon::k200OK && polled->statusCode() < drogon::k300MultipleChoices &&
+                          Json::Reader().parse(std::string(polled->getBody()), statusBody);
+      const Json::Value payload = parsed && statusBody.isObject() && statusBody.isMember("data") && statusBody["data"].isObject() ? statusBody["data"] : statusBody;
+      const bool known = parsed && payload.isObject() && payload.isMember(pipeline::KEY_STATUS) && payload[pipeline::KEY_STATUS].isString();
+      running = known && payload[pipeline::KEY_STATUS].asString() == pipeline::STATUS_RUNNING;
+    } catch (const std::exception&) {
+      running = false;
+    }
+  }
+  if (running) {
+    throw std::runtime_error(pipeline::ERR_BUSY);
+  }
   bool ready = exists;
   if (!exists) {
+    Json::Value gpu;
+    gpu["Driver"] = pipeline::DOCKER_GPU_DRIVER;
+    gpu["Count"] = pipeline::DOCKER_GPU_COUNT;
+    gpu["Capabilities"][0][0] = pipeline::DOCKER_GPU_CAPABILITY;
     Json::Value body;
     body["Image"] = pipeline::DEEPSTREAM_IMAGE;
+    body["Cmd"][0] = pipeline::DEEPSTREAM_BIN;
+    body["Cmd"][1] = pipelineName;
     body["HostConfig"]["NetworkMode"] = pipeline::DOCKER_NETWORK;
+    body["HostConfig"]["Runtime"] = pipeline::DOCKER_RUNTIME;
+    body["HostConfig"]["Binds"][0] = logsBind();
+    body["HostConfig"]["Binds"][1] = pipeline::LOCALTIME_BIND;
+    body["HostConfig"]["DeviceRequests"][0] = gpu;
     auto createRequest = drogon::HttpRequest::newHttpJsonRequest(body);
     createRequest->setMethod(drogon::Post);
     createRequest->setPath(std::string(pipeline::DOCKER_CREATE_PATH) + "?name=" + containerName);
@@ -166,7 +224,6 @@ drogon::Task<bool> PipelineController::runDeepstreamContainer(const std::string&
     restarted = restartedResponse->statusCode() == drogon::k204NoContent;
   }
   bool healthy = false;
-  const std::string baseUrl = "http://" + containerName + ":" + std::to_string(pipeline::DEEPSTREAM_PORT);
   for (int attempt = 0; restarted && attempt < pipeline::HEALTH_ATTEMPTS && !healthy; ++attempt) {
     co_await drogon::sleepCoro(drogon::app().getLoop(), pipeline::HEALTH_INTERVAL_SECONDS);
     try {
@@ -212,7 +269,7 @@ drogon::Task<Json::Value> PipelineController::postDeepstreamStart(const std::str
     auto startRequest = drogon::HttpRequest::newHttpRequest();
     startRequest->setMethod(drogon::Post);
     startRequest->setPath(pipeline::DEEPSTREAM_START_PATH);
-    startRequest->addHeader("content-type", pipeline::MULTIPART_CONTENT_TYPE);
+    startRequest->setContentTypeString(pipeline::MULTIPART_CONTENT_TYPE);
     startRequest->setBody(zips2Multipart(files));
     auto deepstream = drogon::HttpClient::newHttpClient(baseUrl);
     const auto started = co_await deepstream->sendRequestCoro(startRequest, pipeline::START_TIMEOUT_SECONDS);
@@ -274,6 +331,7 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::create(drogon::HttpReq
                                                     body[pipeline::KEY_TYPE],
                                                     body[pipeline::KEY_ANALYZER_IDS],
                                                     body[pipeline::KEY_STREAM_IDS],
+                                                    body[pipeline::KEY_MEDIA_IDS],
                                                     body[pipeline::KEY_GIE_IDS],
                                                     body[pipeline::KEY_INPUT]),
                                   pipeline::MSG_CREATE_OK);
@@ -326,6 +384,8 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::update(drogon::HttpReq
                                                     body[pipeline::KEY_NAME],
                                                     body[pipeline::KEY_TYPE],
                                                     body[pipeline::KEY_ANALYZER_IDS],
+                                                    body[pipeline::KEY_STREAM_IDS],
+                                                    body[pipeline::KEY_MEDIA_IDS],
                                                     body[pipeline::KEY_GIE_IDS],
                                                     body[pipeline::KEY_INPUT]),
                                   pipeline::MSG_UPDATE_OK);
@@ -348,32 +408,21 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::start(drogon::HttpRequ
     const Json::Value current = service.get(pipeline_id);
     const std::string containerName = std::string(pipeline::CONTAINER_PREFIX) + current[pipeline::KEY_NAME].asString();
     const std::string configPath = current[pipeline::KEY_CONFIG_PATH].asString();
-    const std::string baseUrl = "http://" + containerName + ":" + std::to_string(pipeline::DEEPSTREAM_PORT);
-    bool running = false;
-    try {
-      auto statusRequest = drogon::HttpRequest::newHttpRequest();
-      statusRequest->setMethod(drogon::Get);
-      statusRequest->setPath(pipeline::DEEPSTREAM_STATUS_PATH);
-      auto deepstream = drogon::HttpClient::newHttpClient(baseUrl);
-      const auto polled = co_await deepstream->sendRequestCoro(statusRequest, pipeline::STATUS_TIMEOUT_SECONDS);
-      Json::Value body;
-      const bool parsed = polled->statusCode() >= drogon::k200OK && polled->statusCode() < drogon::k300MultipleChoices &&
-                          Json::Reader().parse(std::string(polled->getBody()), body);
-      const Json::Value payload = parsed && body.isObject() && body.isMember("data") && body["data"].isObject() ? body["data"] : body;
-      const bool known = parsed && payload.isObject() && payload.isMember(pipeline::KEY_STATUS) && payload[pipeline::KEY_STATUS].isString();
-      running = known && payload[pipeline::KEY_STATUS].asString() == pipeline::STATUS_RUNNING;
-    } catch (const std::exception&) {
-      running = false;
-    }
-    const bool starting = current[pipeline::KEY_STATUS].asString() == pipeline::STATUS_STARTING;
-    if (running || starting) {
+    const std::string previous = current[pipeline::KEY_STATUS].asString();
+    const bool starting = previous == pipeline::STATUS_STARTING;
+    if (starting) {
       throw std::runtime_error(pipeline::ERR_BUSY);
     }
     service.setStatus(pipeline_id, pipeline::STATUS_STARTING);
     bool up = false;
     try {
-      up = co_await runDeepstreamContainer(containerName);
-    } catch (const std::exception&) {
+      up = co_await runDeepstreamContainer(containerName, current[pipeline::KEY_NAME].asString());
+    } catch (const std::exception& error) {
+      const bool busy = std::string(error.what()) == pipeline::ERR_BUSY;
+      if (busy) {
+        service.setStatus(pipeline_id, previous);
+        throw;
+      }
       up = false;
     }
     Json::Value data = service.setStatus(pipeline_id, pipeline::STATUS_STOPPED);
@@ -472,10 +521,14 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::stop(drogon::HttpReque
     }
     auto stopRequest = drogon::HttpRequest::newHttpRequest();
     stopRequest->setMethod(drogon::Post);
-    stopRequest->setPath("/containers/" + containerName + pipeline::DOCKER_STOP_PATH);
-    auto docker = drogon::HttpClient::newHttpClient(pipeline::DOCKER_BASE_URL);
-    const auto stopped = co_await docker->sendRequestCoro(stopRequest, pipeline::DOCKER_TIMEOUT_SECONDS);
-    const bool ok = stopped->statusCode() == drogon::k204NoContent || stopped->statusCode() == drogon::k304NotModified;
+    stopRequest->setPath(pipeline::DEEPSTREAM_STOP_PATH);
+    auto deepstream = drogon::HttpClient::newHttpClient(baseUrl);
+    const auto stopped = co_await deepstream->sendRequestCoro(stopRequest, pipeline::DOCKER_TIMEOUT_SECONDS);
+    const bool idle = stopped->statusCode() == drogon::k409Conflict;
+    const bool ok = stopped->statusCode() >= drogon::k200OK && stopped->statusCode() < drogon::k300MultipleChoices;
+    if (idle) {
+      throw std::runtime_error(pipeline::ERR_IDLE);
+    }
     if (!ok) {
       throw std::runtime_error("stop failed");
     }
@@ -487,7 +540,9 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::stop(drogon::HttpReque
     response = http::Response::ok(service.probe(pipeline_id, pipeline::STATUS_STOPPED, startTime, Json::Value(endBuffer), duration),
                                   pipeline::MSG_STOP_OK);
   } catch (const std::exception& error) {
-    response = http::Response::error(drogon::k500InternalServerError, pipeline::MSG_STOP_ERROR);
+    const bool idle = std::string(error.what()) == pipeline::ERR_IDLE;
+    response = http::Response::error(idle ? drogon::k409Conflict : drogon::k500InternalServerError,
+                                     idle ? pipeline::ERR_IDLE : pipeline::MSG_STOP_ERROR);
     errorText = error.what();
   }
   logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, errorText);

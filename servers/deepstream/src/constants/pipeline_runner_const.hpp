@@ -14,6 +14,6 @@ inline constexpr const char* DEMUX_SRC_PAD = "src_%u";
 inline constexpr const char* FILE_SINK = "filesink";
 inline constexpr const char* LOCATION_KEY = "location";
 inline constexpr const char* LOG_DIR = "/root/logs/deepstream";
-inline constexpr const char* LOG_FILE = "/root/logs/deepstream/pipeline.log";
+inline constexpr const char* LOG_FILE = "pipeline.log";
 
 }

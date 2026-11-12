@@ -40,7 +40,7 @@ JSON 成功外壳：`{success, message, data}`。`export` 例外，直接返回 
 
 ### POST `/backend/streams`
 
-省略时：`group_id` = All，`mount` = `true`，`record` = `false`，`status` = `offline`，宽高 / fps / `probed_at` = `null`。`mount` 为真时先 `MediaMTX replacePath`（path = `name`，record = `record`）。`url` 的路径等于 `name` 且主机为 `puskas_mediamtx`、`127.0.0.1` 或 `localhost` 时，source 为 `publisher`，否则 source 为 `url`。成功后再入库。
+省略时：`group_id` = All，`mount` = `true`，`record` = `false`，`status` = `offline`，宽高 / fps / `probed_at` = `null`。`mount` 为真时先 `MediaMTX replacePath`（path = `name`，record = `record`）。`url` 的路径等于 `name` 且主机为 `ai_stream2_mediamtx`、`127.0.0.1` 或 `localhost` 时，source 为 `publisher`，否则 source 为 `url`。成功后再入库。
 
 入参：`name`、`group_id`、`url`、`mount`、`record`、`status`、`width`、`height`、`fps`、`probed_at`。
 

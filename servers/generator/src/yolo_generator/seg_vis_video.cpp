@@ -64,7 +64,7 @@ void SegVisVideoGenerator::add() {
             appendNode(drawerElement, drawerElement + suffix, nvsegDrawerProperties(*drawer));
         }
         appendNode("nvosdbin", "nvosdbin" + suffix, addNvosdbin(gpuId, true, true, true));
-        appendNode("detlogger", "detlogger" + suffix, addDetlogger(logger.value("interval", 0)));
+        appendNode("detlogger", "detlogger" + suffix, addDetlogger(logger.value("interval", 1)));
         appendNode(
             "nvv4l2h264enc",
             "nvv4l2h264enc" + std::to_string(streamIndex),

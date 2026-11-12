@@ -766,8 +766,8 @@ Json::Value ModelService::row2json(const drogon::orm::Row& row) {
   node[model::KEY_STATIC_PLUGIN] =
       row["static_plugin"].isNull() ? Json::Value() : row["static_plugin"].as<std::string>();
   node[model::KEY_MAX_DET] = row["max_det"].isNull() ? Json::Value() : row["max_det"].as<int>();
-  node[model::KEY_CONF] = row["conf"].isNull() ? Json::Value() : row["conf"].as<std::string>();
-  node[model::KEY_IOU] = row["iou"].isNull() ? Json::Value() : row["iou"].as<std::string>();
+  node[model::KEY_CONF] = row["conf"].isNull() ? Json::Value() : std::stod(row["conf"].as<std::string>());
+  node[model::KEY_IOU] = row["iou"].isNull() ? Json::Value() : std::stod(row["iou"].as<std::string>());
   node[model::KEY_NUM_CLASS] = row["num_class"].isNull() ? Json::Value() : row["num_class"].as<int>();
   node[model::KEY_CLASSES] = parsed ? classes : Json::Value();
   node[model::KEY_SOURCE_PATH] =
