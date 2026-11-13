@@ -19,7 +19,7 @@ drawer:
   fade_time: 1
   show_label: true
 event_coder:
-  class_event_map: "0:Fire;1:Smoke"
+  event_slot_map: "0:0:Fire;1:1:Smoke"
   length: 1
   threshold: 0.5
   mode: fold

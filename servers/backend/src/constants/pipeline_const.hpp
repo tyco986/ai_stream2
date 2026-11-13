@@ -59,7 +59,6 @@ inline const char* KEY_MODEL_ZIP = "model_zip";
 inline const char* KEY_VIDEOS = "videos";
 inline const char* KEY_IMAGES = "images";
 inline const char* PARAMS_YML = "params.yml";
-inline const char* CONFIG_FILENAME = "input.yaml";
 inline const char* MULTIPART_BOUNDARY = "ai_stream2_pipeline_generate";
 inline const char* MULTIPART_CONTENT_TYPE = "multipart/form-data; boundary=ai_stream2_pipeline_generate";
 

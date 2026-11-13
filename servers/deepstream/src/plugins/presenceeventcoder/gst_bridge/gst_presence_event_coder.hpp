@@ -14,8 +14,8 @@ typedef struct _GstPresenceEventCoderClass GstPresenceEventCoderClass;
 struct _GstPresenceEventCoder {
     GstBaseTransform base;
     gpointer engine;
-    // Model class id to event name. Example: "0:smoke;1:fire"
-    gchar* classEventMap;
+    // Slot, class id, event name. Example: "0:0:Fire;1:1:Smoke"
+    gchar* eventSlotMap;
     gint length;
     gfloat threshold;
     gchar* mode;

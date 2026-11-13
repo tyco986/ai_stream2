@@ -28,7 +28,7 @@ import {
   PATH_STREAM_BATCH_UNMOUNT,
   PATH_STREAM_BATCH_UNRECORD
 } from "@/constants/path";
-import { STREAM_CREATE_COLUMN_PERCENTS, STREAM_DIALOG_WIDTH, STREAM_LIST_COLUMN_PERCENTS } from "@/constants/stream";
+import { STREAM_COLUMN_ALIGNS, STREAM_CREATE_COLUMN_ALIGNS, STREAM_CREATE_COLUMN_PERCENTS, STREAM_CREATE_COLUMN_RESIZABLE, STREAM_DIALOG_WIDTH, STREAM_EDIT_COLUMN_RESIZABLE, STREAM_LIST_COLUMN_PERCENTS, STREAM_LIST_COLUMN_RESIZABLE, STREAM_ROW_HEIGHT, STREAM_STATUS_LABEL } from "@/constants/stream";
 import { ALL_GROUP_ID } from "@/constants/streamGroup";
 import { $t, transformI18n } from "@/plugins/i18n";
 import { message } from "@/utils/message";
@@ -41,12 +41,16 @@ defineOptions({
 
 type DraftRow = StreamDraft;
 
+const statusLabel = (status?: string) =>
+  STREAM_STATUS_LABEL[status as keyof typeof STREAM_STATUS_LABEL] ?? status ?? "";
+
 const blankRow = (): DraftRow => ({
   name: "",
   url: "",
   group_id: ALL_GROUP_ID
 });
 
+const treeRef = ref<{ load: () => Promise<unknown> }>();
 const listRef = ref();
 const listWidth = ref(0);
 const listObserver = new ResizeObserver(entries => {
@@ -76,6 +80,7 @@ const editing = ref(false);
 const editId = ref("");
 const editRow = ref<DraftRow>(blankRow());
 const rows = ref<DraftRow[]>([blankRow()]);
+const namesReady = computed(() => rows.value.every(row => row.name.trim()));
 const picked = ref<DraftRow[]>([]);
 const groups = ref<Record<string, string>>({});
 const probing = ref(false);
@@ -89,10 +94,15 @@ const loadStreams = () => {
   });
 };
 
+const reloadTree = () => {
+  treeRef.value?.load();
+};
+
 const onBatch = (path: string) => {
   batchStreams(path, selected.value.map(row => row.id)).then(res => {
     message(res.message, { type: "success" });
     loadStreams();
+    path === PATH_STREAM_BATCH_REMOVE && reloadTree();
   });
 };
 
@@ -166,11 +176,15 @@ const onEditConfirm = () => {
   }).then(res => {
     editing.value = false;
     done(res.message);
+    reloadTree();
   });
 };
 
 const onRemoveItem = (row: StreamItem) => {
-  removeStream(row.id).then(res => done(res.message));
+  removeStream(row.id).then(res => {
+    done(res.message);
+    reloadTree();
+  });
 };
 
 const onCreate = () => {
@@ -230,6 +244,7 @@ const onConfirm = () => {
     message(res.message, { type: res.success ? "success" : "warning" });
     visible.value = false;
     loadStreams();
+    reloadTree();
   });
 };
 
@@ -252,7 +267,7 @@ onUnmounted(() => {
 <template>
   <div class="stream-page">
     <aside class="stream-tree">
-      <StreamGroupTree />
+      <StreamGroupTree ref="treeRef" />
     </aside>
     <div class="stream-main">
     <div class="stream-toolbar">
@@ -297,7 +312,7 @@ onUnmounted(() => {
       :width="STREAM_DIALOG_WIDTH"
     >
       <div class="stream-toolbar">
-        <BarButton :loading="probingRows.length > 0" @click="onProbeSelected">
+        <BarButton @click="onProbeSelected">
           {{ transformI18n($t("stream.pureProbe")) }}
         </BarButton>
         <el-button type="primary" @click="onRemoveSelected">
@@ -305,40 +320,40 @@ onUnmounted(() => {
         </el-button>
       </div>
       <el-table ref="createRef" class="create-table" :data="rows" table-layout="fixed" border @selection-change="onSelect">
-        <el-table-column type="selection" :width="createWidths.selection" />
-        <el-table-column :label="transformI18n($t('stream.pureName'))" :width="createWidths.name">
+        <el-table-column type="selection" :resizable="STREAM_CREATE_COLUMN_RESIZABLE" :width="createWidths.selection" :header-align="STREAM_CREATE_COLUMN_ALIGNS.selection.header" :align="STREAM_CREATE_COLUMN_ALIGNS.selection.content" />
+        <el-table-column :label="transformI18n($t('stream.pureName'))" :resizable="STREAM_CREATE_COLUMN_RESIZABLE" :width="createWidths.name" :header-align="STREAM_CREATE_COLUMN_ALIGNS.name.header" :align="STREAM_CREATE_COLUMN_ALIGNS.name.content">
           <template #default="{ row }">
             <el-input v-model="row.name" />
           </template>
         </el-table-column>
-        <el-table-column :label="transformI18n($t('stream.pureUrl'))" :width="createWidths.url">
+        <el-table-column :label="transformI18n($t('stream.pureUrl'))" :resizable="STREAM_CREATE_COLUMN_RESIZABLE" :width="createWidths.url" :header-align="STREAM_CREATE_COLUMN_ALIGNS.url.header" :align="STREAM_CREATE_COLUMN_ALIGNS.url.content">
           <template #default="{ row }">
             <el-input v-model="row.url" />
           </template>
         </el-table-column>
-        <el-table-column :label="transformI18n($t('stream.pureGroup'))" :width="createWidths.group">
+        <el-table-column :label="transformI18n($t('stream.pureGroup'))" :resizable="STREAM_CREATE_COLUMN_RESIZABLE" :width="createWidths.group" :header-align="STREAM_CREATE_COLUMN_ALIGNS.group.header" :align="STREAM_CREATE_COLUMN_ALIGNS.group.content">
           <template #default="{ row }">
             <el-select v-model="row.group_id">
               <el-option v-for="(id, name) in groups" :key="id" :label="name" :value="id" />
             </el-select>
           </template>
         </el-table-column>
-        <el-table-column :label="transformI18n($t('stream.pureWidth'))" :width="createWidths.width">
+        <el-table-column :label="transformI18n($t('stream.pureWidth'))" :resizable="STREAM_CREATE_COLUMN_RESIZABLE" :width="createWidths.width" :header-align="STREAM_CREATE_COLUMN_ALIGNS.width.header" :align="STREAM_CREATE_COLUMN_ALIGNS.width.content">
           <template #default="{ row }">{{ row.width ?? "" }}</template>
         </el-table-column>
-        <el-table-column :label="transformI18n($t('stream.pureHeight'))" :width="createWidths.height">
+        <el-table-column :label="transformI18n($t('stream.pureHeight'))" :resizable="STREAM_CREATE_COLUMN_RESIZABLE" :width="createWidths.height" :header-align="STREAM_CREATE_COLUMN_ALIGNS.height.header" :align="STREAM_CREATE_COLUMN_ALIGNS.height.content">
           <template #default="{ row }">{{ row.height ?? "" }}</template>
         </el-table-column>
-        <el-table-column :label="transformI18n($t('stream.pureFps'))" :width="createWidths.fps">
+        <el-table-column :label="transformI18n($t('stream.pureFps'))" :resizable="STREAM_CREATE_COLUMN_RESIZABLE" :width="createWidths.fps" :header-align="STREAM_CREATE_COLUMN_ALIGNS.fps.header" :align="STREAM_CREATE_COLUMN_ALIGNS.fps.content">
           <template #default="{ row }">{{ row.fps ?? "" }}</template>
         </el-table-column>
-        <el-table-column :label="transformI18n($t('stream.pureStatus'))" :width="createWidths.status">
-          <template #default="{ row }">{{ row.status ?? "" }}</template>
+        <el-table-column :label="transformI18n($t('stream.pureStatus'))" :resizable="STREAM_CREATE_COLUMN_RESIZABLE" :width="createWidths.status" :header-align="STREAM_CREATE_COLUMN_ALIGNS.status.header" :align="STREAM_CREATE_COLUMN_ALIGNS.status.content">
+          <template #default="{ row }"><span :class="row.status">{{ statusLabel(row.status) }}</span></template>
         </el-table-column>
-        <el-table-column :label="transformI18n($t('stream.pureProbedAt'))" :width="createWidths.probedAt">
+        <el-table-column :label="transformI18n($t('stream.pureProbedAt'))" :resizable="STREAM_CREATE_COLUMN_RESIZABLE" :width="createWidths.probedAt" :header-align="STREAM_CREATE_COLUMN_ALIGNS.probedAt.header" :align="STREAM_CREATE_COLUMN_ALIGNS.probedAt.content">
           <template #default="{ row }">{{ formatLocalTime(row.probed_at) }}</template>
         </el-table-column>
-        <el-table-column :label="transformI18n($t('stream.pureOps'))" :width="createWidths.ops" :show-overflow-tooltip="false">
+        <el-table-column :label="transformI18n($t('stream.pureOps'))" :resizable="STREAM_CREATE_COLUMN_RESIZABLE" :width="createWidths.ops" :show-overflow-tooltip="false" :header-align="STREAM_CREATE_COLUMN_ALIGNS.ops.header" :align="STREAM_CREATE_COLUMN_ALIGNS.ops.content">
           <template #default="{ row, $index }">
             <el-button link type="primary" :disabled="probingRows.includes(row)" :title="transformI18n($t('stream.pureProbe'))" @click="onProbe(row)">
               <IconifyIconOffline :icon="Search" />
@@ -354,7 +369,7 @@ onUnmounted(() => {
         <el-button @click="onCancel">
           {{ transformI18n($t("stream.pureCancel")) }}
         </el-button>
-        <el-button type="primary" @click="onConfirm">
+        <el-button type="primary" :disabled="!namesReady" @click="onConfirm">
           {{ transformI18n($t("stream.pureConfirm")) }}
         </el-button>
       </template>
@@ -366,36 +381,36 @@ onUnmounted(() => {
       :width="STREAM_DIALOG_WIDTH"
     >
       <el-table class="create-table" :data="[editRow]" table-layout="fixed" border>
-        <el-table-column :label="transformI18n($t('stream.pureName'))">
+        <el-table-column :resizable="STREAM_EDIT_COLUMN_RESIZABLE" :label="transformI18n($t('stream.pureName'))" :header-align="STREAM_COLUMN_ALIGNS.name.header" :align="STREAM_COLUMN_ALIGNS.name.content">
           <template #default="{ row }">
             <el-input v-model="row.name" />
           </template>
         </el-table-column>
-        <el-table-column :label="transformI18n($t('stream.pureUrl'))">
+        <el-table-column :resizable="STREAM_EDIT_COLUMN_RESIZABLE" :label="transformI18n($t('stream.pureUrl'))" :header-align="STREAM_COLUMN_ALIGNS.url.header" :align="STREAM_COLUMN_ALIGNS.url.content">
           <template #default="{ row }">
             <el-input v-model="row.url" />
           </template>
         </el-table-column>
-        <el-table-column :label="transformI18n($t('stream.pureGroup'))" width="100">
+        <el-table-column :resizable="STREAM_EDIT_COLUMN_RESIZABLE" :label="transformI18n($t('stream.pureGroup'))" width="100" :header-align="STREAM_COLUMN_ALIGNS.group.header" :align="STREAM_COLUMN_ALIGNS.group.content">
           <template #default="{ row }">
             <el-select v-model="row.group_id">
               <el-option v-for="(id, name) in groups" :key="id" :label="name" :value="id" />
             </el-select>
           </template>
         </el-table-column>
-        <el-table-column :label="transformI18n($t('stream.pureWidth'))" width="72">
+        <el-table-column :resizable="STREAM_EDIT_COLUMN_RESIZABLE" :label="transformI18n($t('stream.pureWidth'))" width="72" :header-align="STREAM_COLUMN_ALIGNS.width.header" :align="STREAM_COLUMN_ALIGNS.width.content">
           <template #default="{ row }">{{ row.width ?? "" }}</template>
         </el-table-column>
-        <el-table-column :label="transformI18n($t('stream.pureHeight'))" width="72">
+        <el-table-column :resizable="STREAM_EDIT_COLUMN_RESIZABLE" :label="transformI18n($t('stream.pureHeight'))" width="72" :header-align="STREAM_COLUMN_ALIGNS.height.header" :align="STREAM_COLUMN_ALIGNS.height.content">
           <template #default="{ row }">{{ row.height ?? "" }}</template>
         </el-table-column>
-        <el-table-column :label="transformI18n($t('stream.pureFps'))" width="72">
+        <el-table-column :resizable="STREAM_EDIT_COLUMN_RESIZABLE" :label="transformI18n($t('stream.pureFps'))" width="72" :header-align="STREAM_COLUMN_ALIGNS.fps.header" :align="STREAM_COLUMN_ALIGNS.fps.content">
           <template #default="{ row }">{{ row.fps ?? "" }}</template>
         </el-table-column>
-        <el-table-column :label="transformI18n($t('stream.pureStatus'))" width="88">
-          <template #default="{ row }">{{ row.status ?? "" }}</template>
+        <el-table-column :resizable="STREAM_EDIT_COLUMN_RESIZABLE" :label="transformI18n($t('stream.pureStatus'))" width="88" :header-align="STREAM_COLUMN_ALIGNS.status.header" :align="STREAM_COLUMN_ALIGNS.status.content">
+          <template #default="{ row }"><span :class="row.status">{{ statusLabel(row.status) }}</span></template>
         </el-table-column>
-        <el-table-column :label="transformI18n($t('stream.pureProbedAt'))" min-width="160">
+        <el-table-column :resizable="STREAM_EDIT_COLUMN_RESIZABLE" :label="transformI18n($t('stream.pureProbedAt'))" min-width="160" :header-align="STREAM_COLUMN_ALIGNS.probedAt.header" :align="STREAM_COLUMN_ALIGNS.probedAt.content">
           <template #default="{ row }">{{ formatLocalTime(row.probed_at) }}</template>
         </el-table-column>
       </el-table>
@@ -409,32 +424,32 @@ onUnmounted(() => {
       </template>
     </el-dialog>
     <el-table ref="listRef" class="stream-list" :data="items" table-layout="fixed" border show-overflow-tooltip @selection-change="onSelectStreams">
-      <el-table-column type="selection" :width="listWidths.selection" />
-      <el-table-column :label="transformI18n($t('stream.pureName'))" :width="listWidths.name">
+      <el-table-column type="selection" :resizable="STREAM_LIST_COLUMN_RESIZABLE" :width="listWidths.selection" :header-align="STREAM_COLUMN_ALIGNS.selection.header" :align="STREAM_COLUMN_ALIGNS.selection.content" />
+      <el-table-column :label="transformI18n($t('stream.pureName'))" :resizable="STREAM_LIST_COLUMN_RESIZABLE" :width="listWidths.name" :header-align="STREAM_COLUMN_ALIGNS.name.header" :align="STREAM_COLUMN_ALIGNS.name.content">
         <template #default="{ row }"><SearchHighlight :text="row.name" :query="searched" /></template>
       </el-table-column>
-      <el-table-column :label="transformI18n($t('stream.pureUrl'))" :width="listWidths.url">
+      <el-table-column :label="transformI18n($t('stream.pureUrl'))" :resizable="STREAM_LIST_COLUMN_RESIZABLE" :width="listWidths.url" :header-align="STREAM_COLUMN_ALIGNS.url.header" :align="STREAM_COLUMN_ALIGNS.url.content">
         <template #default="{ row }"><SearchHighlight :text="row.url" :query="searched" /></template>
       </el-table-column>
-      <el-table-column :label="transformI18n($t('stream.pureGroup'))" :width="listWidths.group">
+      <el-table-column :label="transformI18n($t('stream.pureGroup'))" :resizable="STREAM_LIST_COLUMN_RESIZABLE" :width="listWidths.group" :header-align="STREAM_COLUMN_ALIGNS.group.header" :align="STREAM_COLUMN_ALIGNS.group.content">
         <template #default="{ row }"><SearchHighlight :text="row.group_name" :query="searched" /></template>
       </el-table-column>
-      <el-table-column :label="transformI18n($t('stream.pureWidth'))" :width="listWidths.width">
+      <el-table-column :label="transformI18n($t('stream.pureWidth'))" :resizable="STREAM_LIST_COLUMN_RESIZABLE" :width="listWidths.width" :header-align="STREAM_COLUMN_ALIGNS.width.header" :align="STREAM_COLUMN_ALIGNS.width.content">
         <template #default="{ row }"><SearchHighlight :text="String(row.width ?? '')" :query="searched" /></template>
       </el-table-column>
-      <el-table-column :label="transformI18n($t('stream.pureHeight'))" :width="listWidths.height">
+      <el-table-column :label="transformI18n($t('stream.pureHeight'))" :resizable="STREAM_LIST_COLUMN_RESIZABLE" :width="listWidths.height" :header-align="STREAM_COLUMN_ALIGNS.height.header" :align="STREAM_COLUMN_ALIGNS.height.content">
         <template #default="{ row }"><SearchHighlight :text="String(row.height ?? '')" :query="searched" /></template>
       </el-table-column>
-      <el-table-column :label="transformI18n($t('stream.pureFps'))" :width="listWidths.fps">
+      <el-table-column :label="transformI18n($t('stream.pureFps'))" :resizable="STREAM_LIST_COLUMN_RESIZABLE" :width="listWidths.fps" :header-align="STREAM_COLUMN_ALIGNS.fps.header" :align="STREAM_COLUMN_ALIGNS.fps.content">
         <template #default="{ row }"><SearchHighlight :text="String(row.fps ?? '')" :query="searched" /></template>
       </el-table-column>
-      <el-table-column :label="transformI18n($t('stream.pureStatus'))" :width="listWidths.status">
-        <template #default="{ row }"><SearchHighlight :text="row.status ?? ''" :query="searched" /></template>
+      <el-table-column :label="transformI18n($t('stream.pureStatus'))" :resizable="STREAM_LIST_COLUMN_RESIZABLE" :width="listWidths.status" :header-align="STREAM_COLUMN_ALIGNS.status.header" :align="STREAM_COLUMN_ALIGNS.status.content">
+        <template #default="{ row }"><span :class="row.status"><SearchHighlight :text="statusLabel(row.status)" :query="searched" /></span></template>
       </el-table-column>
-      <el-table-column :label="transformI18n($t('stream.pureProbedAt'))" :width="listWidths.probedAt">
+      <el-table-column :label="transformI18n($t('stream.pureProbedAt'))" :resizable="STREAM_LIST_COLUMN_RESIZABLE" :width="listWidths.probedAt" :header-align="STREAM_COLUMN_ALIGNS.probedAt.header" :align="STREAM_COLUMN_ALIGNS.probedAt.content">
         <template #default="{ row }"><SearchHighlight :text="formatLocalTime(row.probed_at)" :query="searched" /></template>
       </el-table-column>
-      <el-table-column :label="transformI18n($t('stream.pureOps'))" :width="listWidths.ops" :show-overflow-tooltip="false">
+      <el-table-column :label="transformI18n($t('stream.pureOps'))" :resizable="STREAM_LIST_COLUMN_RESIZABLE" :width="listWidths.ops" :show-overflow-tooltip="false" :header-align="STREAM_COLUMN_ALIGNS.ops.header" :align="STREAM_COLUMN_ALIGNS.ops.content">
         <template #default="{ row }">
           <el-button
             link
@@ -513,7 +528,6 @@ onUnmounted(() => {
   align-items: center;
   padding: 8px;
   background: var(--el-bg-color);
-  border-bottom: 1px solid var(--el-border-color);
 }
 
 .stream-toolbar :deep(.el-button) {
@@ -528,6 +542,12 @@ onUnmounted(() => {
 .stream-list :deep(.el-button) {
   margin: 0;
   font-size: 16px;
+}
+
+.create-table :deep(.el-table__cell) {
+  height: v-bind('STREAM_ROW_HEIGHT + "px"');
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 .create-table :deep(.cell) {
@@ -551,6 +571,14 @@ onUnmounted(() => {
   padding: 0;
   background: transparent;
   box-shadow: none;
+}
+
+.online {
+  color: var(--el-color-success);
+}
+
+.offline {
+  color: var(--el-color-danger);
 }
 
 .add-row {

@@ -13,13 +13,13 @@ NvOSD_ColorParams DetFadeEngine::colorWithAlpha(const float rgb[4], float alpha)
     return color;
 }
 
-const DetFadeEngine::PresenceEventMeta* DetFadeEngine::presenceEvent(NvDsFrameMeta* frame) {
-    const PresenceEventMeta* event = nullptr;
+const EventMeta* DetFadeEngine::presenceEvent(NvDsFrameMeta* frame) {
+    const EventMeta* event = nullptr;
     if (frame != nullptr) {
         for (NvDsMetaList* item = frame->frame_user_meta_list; item != nullptr && event == nullptr; item = item->next) {
             auto* userMeta = static_cast<NvDsUserMeta*>(item->data);
             if (userMeta != nullptr && userMeta->base_meta.meta_type == fadedrawer::PRESENCE_EVENT_USER_META) {
-                event = static_cast<const PresenceEventMeta*>(userMeta->user_meta_data);
+                event = static_cast<const EventMeta*>(userMeta->user_meta_data);
             }
         }
     }
@@ -32,12 +32,12 @@ const float* DetFadeEngine::borderRgb(NvDsFrameMeta* frame) {
     if (event != nullptr) {
         bool hasAlert = false;
         bool hasTransit = false;
-        unsigned int count = event->numClasses;
-        if (count > fadedrawer::PRESENCE_EVENT_CODE_LEN) {
-            count = fadedrawer::PRESENCE_EVENT_CODE_LEN;
+        unsigned int count = event->slotCount;
+        if (count > static_cast<unsigned int>(eventmeta::SLOT_COUNT)) {
+            count = static_cast<unsigned int>(eventmeta::SLOT_COUNT);
         }
         for (unsigned int index = 0; index < count; index++) {
-            const char code = event->eventCodes[index];
+            const char code = event->slots[index].code;
             hasAlert = hasAlert || code == '1';
             hasTransit = hasTransit || code == '2';
         }

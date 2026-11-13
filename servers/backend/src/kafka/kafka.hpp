@@ -10,7 +10,7 @@ class Kafka {
   void run();
 
  private:
-  void dispatch(const Json::Value& message);
+  void dispatch(const Json::Value& message, const std::string& topic);
 
   EventService service;
 };

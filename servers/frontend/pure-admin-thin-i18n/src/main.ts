@@ -3,7 +3,12 @@ import router from "./router";
 import { setupStore } from "@/store";
 import { useI18n } from "@/plugins/i18n";
 import { getPlatformConfig } from "./config";
+import { FONT_FAMILY } from "@/constants/global";
 import { MotionPlugin } from "@vueuse/motion";
+import "@fontsource/noto-sans-sc/chinese-simplified-400.css";
+import "@fontsource/noto-sans-sc/chinese-simplified-500.css";
+
+document.documentElement.style.setProperty("--el-font-family", FONT_FAMILY);
 // import { useEcharts } from "@/plugins/echarts";
 import { createApp, type Directive } from "vue";
 import { useElementPlus } from "@/plugins/elementPlus";

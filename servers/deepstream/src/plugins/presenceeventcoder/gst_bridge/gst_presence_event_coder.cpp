@@ -8,7 +8,7 @@
 #include "nvds_latency_meta.h"
 
 enum {
-    PROP_CLASS_EVENT_MAP = 1,
+    PROP_EVENT_SLOT_MAP = 1,
     PROP_LENGTH,
     PROP_THRESHOLD,
     PROP_MODE,
@@ -30,7 +30,7 @@ static PresenceEventCoder* engineOf(GstPresenceEventCoder* self) {
 
 static void renew(GstPresenceEventCoder* self) {
     delete engineOf(self);
-    self->engine = new PresenceEventCoder(self->classEventMap, self->length, self->threshold, self->mode);
+    self->engine = new PresenceEventCoder(self->eventSlotMap, self->length, self->threshold, self->mode);
 }
 
 static void gst_presence_event_coder_finalize(GObject* object);
@@ -67,10 +67,10 @@ static void gst_presence_event_coder_class_init(GstPresenceEventCoderClass* klas
     objectClass->finalize = gst_presence_event_coder_finalize;
     transformClass->transform_ip = gst_presence_event_coder_transform_ip;
     g_object_class_install_property(
-        objectClass, PROP_CLASS_EVENT_MAP,
+        objectClass, PROP_EVENT_SLOT_MAP,
         g_param_spec_string(
-            "class-event-map", "Class event map",
-            "Model class id to event name, e.g. 0:smoke;1:fire", "", readWrite));
+            "event-slot-map", "Event slot map",
+            "Slot, class id, and event name, e.g. 0:0:Fire;1:1:Smoke", "", readWrite));
     g_object_class_install_property(
         objectClass, PROP_LENGTH,
         g_param_spec_int("length", "Length", "Presence window length", 1, G_MAXINT, presenceeventcoder::DEFAULT_LENGTH, readWrite));
@@ -90,20 +90,20 @@ static void gst_presence_event_coder_init(GstPresenceEventCoder* self) {
     GstBaseTransform* transform = GST_BASE_TRANSFORM(self);
     gst_base_transform_set_in_place(transform, TRUE);
     gst_base_transform_set_passthrough(transform, FALSE);
-    self->classEventMap = g_strdup("");
+    self->eventSlotMap = g_strdup("");
     self->length = presenceeventcoder::DEFAULT_LENGTH;
     self->threshold = presenceeventcoder::DEFAULT_THRESHOLD;
     self->mode = g_strdup(presenceeventcoder::DEFAULT_MODE);
-    self->engine = new PresenceEventCoder(self->classEventMap, self->length, self->threshold, self->mode);
+    self->engine = new PresenceEventCoder(self->eventSlotMap, self->length, self->threshold, self->mode);
 }
 
 static void gst_presence_event_coder_finalize(GObject* object) {
     GstPresenceEventCoder* self = GST_PRESENCE_EVENT_CODER(object);
     delete engineOf(self);
     self->engine = nullptr;
-    g_free(self->classEventMap);
+    g_free(self->eventSlotMap);
     g_free(self->mode);
-    self->classEventMap = nullptr;
+    self->eventSlotMap = nullptr;
     self->mode = nullptr;
     G_OBJECT_CLASS(parent_class)->finalize(object);
 }
@@ -111,10 +111,10 @@ static void gst_presence_event_coder_finalize(GObject* object) {
 static void gst_presence_event_coder_set_property(GObject* object, guint propId, const GValue* value, GParamSpec* pspec) {
     GstPresenceEventCoder* self = GST_PRESENCE_EVENT_CODER(object);
     const gchar* text = nullptr;
-    if (propId == PROP_CLASS_EVENT_MAP) {
+    if (propId == PROP_EVENT_SLOT_MAP) {
         text = g_value_get_string(value);
-        g_free(self->classEventMap);
-        self->classEventMap = g_strdup(text != nullptr ? text : "");
+        g_free(self->eventSlotMap);
+        self->eventSlotMap = g_strdup(text != nullptr ? text : "");
         renew(self);
     } else if (propId == PROP_LENGTH) {
         self->length = g_value_get_int(value);
@@ -134,8 +134,8 @@ static void gst_presence_event_coder_set_property(GObject* object, guint propId,
 
 static void gst_presence_event_coder_get_property(GObject* object, guint propId, GValue* value, GParamSpec* pspec) {
     GstPresenceEventCoder* self = GST_PRESENCE_EVENT_CODER(object);
-    if (propId == PROP_CLASS_EVENT_MAP) {
-        g_value_set_string(value, self->classEventMap);
+    if (propId == PROP_EVENT_SLOT_MAP) {
+        g_value_set_string(value, self->eventSlotMap);
     } else if (propId == PROP_LENGTH) {
         g_value_set_int(value, self->length);
     } else if (propId == PROP_THRESHOLD) {

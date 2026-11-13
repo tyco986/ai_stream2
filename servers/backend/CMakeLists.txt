@@ -41,6 +41,7 @@ add_executable(backend
   src/controllers/device_controller.cpp
   src/controllers/preview_controller.cpp
   src/controllers/event_controller.cpp
+  src/controllers/event_ws.cpp
   src/controllers/notice_controller.cpp
   src/controllers/media_controller.cpp
   src/controllers/media_batch_controller.cpp
@@ -61,6 +62,7 @@ add_executable(backend
   src/services/server_service.cpp
   src/services/preview_service.cpp
   src/services/event_service.cpp
+  src/services/event_hub.cpp
   src/services/notice_service.cpp
   src/services/media_service.cpp
   src/services/device_service.cpp

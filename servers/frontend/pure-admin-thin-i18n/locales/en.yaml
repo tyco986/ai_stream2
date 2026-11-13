@@ -210,7 +210,7 @@ pipeline:
   pureOksThreshold: OKS
   pureVisThreshold: Vis threshold
   pureNumKeypoints: Keypoints
-  pureClassEventMap: Class events
+  pureEventSlotMap: Event slots
   pureLength: Length
   pureThreshold: Threshold
   pureMode: Mode
@@ -254,6 +254,11 @@ preview:
   pureShot: Screenshot
   pureFullscreen: Fullscreen
   pureUnbind: Unbind
+event:
+  pureOccurredAt: Occurred at
+  pureEventCode: Code
+  pureEventLabel: Label
+  pureAnnotations: Annotations
 logger:
   pureTitle: Logs
 login:

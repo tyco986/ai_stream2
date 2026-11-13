@@ -4,11 +4,6 @@
 
 namespace presenceeventcoder {
 
-inline constexpr char ABSENT = '0';
-inline constexpr char ALERT = '1';
-inline constexpr char TRANSIT = '2';
-inline constexpr int CODE_LEN = 8;
-inline constexpr int NAME_LEN = 64;
 inline constexpr int CODE_BOUNDS = 3;
 inline constexpr int DEFAULT_LENGTH = 10;
 inline constexpr float DEFAULT_THRESHOLD = 0.5f;

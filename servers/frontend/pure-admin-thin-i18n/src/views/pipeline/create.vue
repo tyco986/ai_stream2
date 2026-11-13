@@ -81,7 +81,7 @@ const FIELD_LABELS: Record<string, string> = {
   oks_threshold: "pipeline.pureOksThreshold",
   vis_threshold: "pipeline.pureVisThreshold",
   num_keypoints: "pipeline.pureNumKeypoints",
-  class_event_map: "pipeline.pureClassEventMap",
+  event_slot_map: "pipeline.pureEventSlotMap",
   length: "pipeline.pureLength",
   threshold: "pipeline.pureThreshold",
   mode: "pipeline.pureMode",

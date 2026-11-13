@@ -91,11 +91,11 @@ PipelineController::ZipPart PipelineController::filePart(const std::string& body
   return part;
 }
 
-std::string PipelineController::yaml2Multipart(const std::string& yaml) {
+std::string PipelineController::yaml2Multipart(const std::string& name, const std::string& yaml) {
   const std::string boundary = pipeline::MULTIPART_BOUNDARY;
   const std::string body = "--" + boundary + "\r\n"
       "Content-Disposition: form-data; name=\"" + std::string(pipeline::FIELD_INPUT) +
-      "\"; filename=\"" + std::string(pipeline::CONFIG_FILENAME) + "\"\r\n"
+      "\"; filename=\"" + name + ".yaml\"\r\n"
       "Content-Type: application/yaml\r\n\r\n" +
       yaml + "\r\n--" + boundary + "--\r\n";
   return body;
@@ -115,12 +115,12 @@ std::string PipelineController::zips2Multipart(const std::vector<ZipPart>& files
   return body;
 }
 
-drogon::Task<Json::Value> PipelineController::postGenerate(const std::string& yaml) {
+drogon::Task<Json::Value> PipelineController::postGenerate(const std::string& name, const std::string& yaml) {
   auto generateRequest = drogon::HttpRequest::newHttpRequest();
   generateRequest->setMethod(drogon::Post);
   generateRequest->setPath(pipeline::PATH_GENERATE);
   generateRequest->setContentTypeString(pipeline::MULTIPART_CONTENT_TYPE);
-  generateRequest->setBody(yaml2Multipart(yaml));
+  generateRequest->setBody(yaml2Multipart(name, yaml));
   auto client = drogon::HttpClient::newHttpClient(generator::DES_BASE_URL);
   const auto generated = co_await client->sendRequestCoro(generateRequest, pipeline::GENERATE_TIMEOUT_SECONDS);
   const bool accepted = generated->statusCode() >= drogon::k200OK && generated->statusCode() < drogon::k300MultipleChoices;
@@ -324,7 +324,7 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::create(drogon::HttpReq
     if (!parsed) {
       throw std::runtime_error("invalid pipeline");
     }
-    const Json::Value data = co_await postGenerate(service.createStart(body[pipeline::KEY_INPUT]));
+    const Json::Value data = co_await postGenerate(body[pipeline::KEY_NAME].asString(), service.createStart(body[pipeline::KEY_INPUT]));
     response = http::Response::ok(service.createEnd(Json::Value(),
                                                     data[pipeline::KEY_CONFIG_PATH],
                                                     body[pipeline::KEY_NAME],
@@ -377,7 +377,7 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::update(drogon::HttpReq
     if (!parsed) {
       throw std::runtime_error("invalid pipeline");
     }
-    const Json::Value data = co_await postGenerate(service.createStart(body[pipeline::KEY_INPUT]));
+    const Json::Value data = co_await postGenerate(body[pipeline::KEY_NAME].asString(), service.createStart(body[pipeline::KEY_INPUT]));
     response = http::Response::ok(service.update(pipeline_id,
                                                     Json::Value(pipeline::STATUS_STOPPED),
                                                     data[pipeline::KEY_CONFIG_PATH],

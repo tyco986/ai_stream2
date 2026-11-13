@@ -1,3 +1,5 @@
+import { assertColumnPercents } from "@/utils/columnWidth";
+
 export const MEDIA_UPLOAD_ACCEPT = ".jpg,.jpeg,.png,.mp4";
 
 export const MEDIA_PAGE = 1;
@@ -14,6 +16,8 @@ export const MEDIA_UPLOAD_COLUMN_PERCENTS = {
   updatedAt: 12,
   ops: 13
 };
+
+assertColumnPercents(MEDIA_UPLOAD_COLUMN_PERCENTS);
 
 export const MEDIA_SECTION_RECORDING = "recording";
 export const MEDIA_SECTION_PIPELINE = "pipeline";

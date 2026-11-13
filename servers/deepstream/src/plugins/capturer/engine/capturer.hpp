@@ -13,6 +13,7 @@
 
 #include "gstnvdsmeta.h"
 #include "nvbufsurface.h"
+#include "plugins/eventmeta/event_meta.hpp"
 
 struct CaptureBox {
     float left;
@@ -53,7 +54,7 @@ protected:
     std::string pipelineName;
 
 private:
-    bool codesHit(const char* eventCodes, unsigned int numClasses) const;
+    bool codesHit(const EventMeta& event) const;
     bool shouldDump(NvDsFrameMeta* frame) const;
     unsigned int takeId(int padIndex);
     bool copyRgb(NvBufSurface* surface, unsigned int batchId, std::vector<std::uint8_t>* rgb, int* width, int* height);

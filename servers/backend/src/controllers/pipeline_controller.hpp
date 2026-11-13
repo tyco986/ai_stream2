@@ -49,9 +49,9 @@ class PipelineController : public drogon::HttpController<PipelineController> {
   };
 
   ZipPart filePart(const std::string& body);
-  std::string yaml2Multipart(const std::string& yaml);
+  std::string yaml2Multipart(const std::string& name, const std::string& yaml);
   std::string zips2Multipart(const std::vector<ZipPart>& files);
-  drogon::Task<Json::Value> postGenerate(const std::string& yaml);
+  drogon::Task<Json::Value> postGenerate(const std::string& name, const std::string& yaml);
   std::string logsBind();
   drogon::Task<bool> runDeepstreamContainer(const std::string& containerName, const std::string& pipelineName);
   drogon::Task<Json::Value> postDeepstreamStart(const std::string& containerName, const std::string& configPath);

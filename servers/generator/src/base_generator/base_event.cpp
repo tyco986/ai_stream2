@@ -26,7 +26,7 @@ void BaseEventGenerator::appendEventCoder(const std::string& name) {
         "presenceeventcoder",
         name,
         addPresenceeventcoder(
-            eventCoder.value("class_event_map", std::string()),
+            eventCoder.value("event_slot_map", std::string()),
             eventCoder.value("length", pipeline::PRESENCE_LENGTH),
             eventCoder.value("threshold", pipeline::PRESENCE_THRESHOLD),
             eventCoder.value("mode", std::string(pipeline::PRESENCE_MODE_FOLD))));

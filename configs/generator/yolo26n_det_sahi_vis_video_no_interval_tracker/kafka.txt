@@ -1,2 +1,0 @@
-[message-broker]
-#producer-proto-cfg = "queue.buffering.max.messages=200000;message.send.max.retries=3"

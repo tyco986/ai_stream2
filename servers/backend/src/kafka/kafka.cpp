@@ -1,8 +1,8 @@
 #include "kafka/kafka.hpp"
 
-#include "constants/event_const.hpp"
 #include "constants/kafka_const.hpp"
 #include "db/database.hpp"
+#include "services/event_hub.hpp"
 
 #include <drogon/drogon.h>
 #include <librdkafka/rdkafkacpp.h>
@@ -35,19 +35,10 @@ class KafkaRebalance : public RdKafka::RebalanceCb {
 
 Kafka::Kafka() : service(Database::client()) {}
 
-void Kafka::dispatch(const Json::Value& message) {
+void Kafka::dispatch(const Json::Value& message, const std::string& topic) {
   try {
-    service.create(message[event::KEY_OCCURRED_AT],
-                   message[event::KEY_STREAM_ID],
-                   message[event::KEY_STREAM_NAME],
-                   message[event::KEY_PIPELINE_ID],
-                   message[event::KEY_PIPELINE_NAME],
-                   message[event::KEY_EVENT_CODE],
-                   message[event::KEY_EVENT_LABEL],
-                   message[event::KEY_STATUS],
-                   message[event::KEY_RAW_PATH],
-                   message[event::KEY_VISUALIZATION_PATH],
-                   message[event::KEY_ANNOTATIONS]);
+    const Json::Value row = service.createFromKafka(message, topic);
+    EventHub::shared().publish(row);
   } catch (const std::exception& error) {
     spdlog::error("{}", error.what());
   }
@@ -82,8 +73,9 @@ void Kafka::run() {
       const std::string payload(static_cast<const char*>(message->payload()), message->len());
       std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
       const bool parsed = reader->parse(payload.data(), payload.data() + payload.size(), &body, &parseError);
-      if (parsed && body.isObject()) {
-        dispatch(body);
+      const std::string topicName = message->topic_name();
+      if (parsed && body.isObject() && !topicName.empty()) {
+        dispatch(body, topicName);
       }
     }
   }

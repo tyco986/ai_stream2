@@ -45,7 +45,7 @@ protected:
     YAML::Node addStgcnppfadedrawerwithtracker(int interval = 1, int fadeTime = 0, bool showLabel = false, bool showPose = true, double poseThreshold = 0.0, const std::string& mode = pipeline::POSE_MODE_COCO17, bool showSnap = true);
     YAML::Node addSegfadedrawer(int interval = 1, int fadeTime = 0, bool showLabel = false, bool showMask = true);
     YAML::Node addSegfadedrawerwithtracker(int interval = 1, int fadeTime = 0, bool showLabel = false, bool showMask = true, bool showSnap = true);
-    YAML::Node addPresenceeventcoder(const std::string& classEventMap = "", int length = pipeline::PRESENCE_LENGTH, double threshold = pipeline::PRESENCE_THRESHOLD, const std::string& mode = pipeline::PRESENCE_MODE_FOLD);
+    YAML::Node addPresenceeventcoder(const std::string& eventSlotMap = "", int length = pipeline::PRESENCE_LENGTH, double threshold = pipeline::PRESENCE_THRESHOLD, const std::string& mode = pipeline::PRESENCE_MODE_FOLD);
     YAML::Node addRawcapturer(const std::string& captureCodes = pipeline::CAPTURE_CODES_DEFAULT);
     YAML::Node addViscapturer(const std::string& captureCodes = pipeline::CAPTURE_CODES_DEFAULT, const std::string& labelTask = pipeline::LABEL_TASK_DET);
     YAML::Node addTee();

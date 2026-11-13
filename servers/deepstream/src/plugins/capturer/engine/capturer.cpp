@@ -85,14 +85,14 @@ void Capturer::stop() {
     }
 }
 
-bool Capturer::codesHit(const char* eventCodes, unsigned int numClasses) const {
+bool Capturer::codesHit(const EventMeta& event) const {
     bool hit = false;
-    unsigned int count = numClasses;
-    if (count > presenceeventcoder::CODE_LEN) {
-        count = presenceeventcoder::CODE_LEN;
+    unsigned int count = event.slotCount;
+    if (count > static_cast<unsigned int>(eventmeta::SLOT_COUNT)) {
+        count = static_cast<unsigned int>(eventmeta::SLOT_COUNT);
     }
     for (unsigned int index = 0; index < count; index++) {
-        if (codes.count(eventCodes[index]) > 0) {
+        if (codes.count(event.slots[index].code) > 0) {
             hit = true;
         }
     }
@@ -111,7 +111,7 @@ bool Capturer::shouldDump(NvDsFrameMeta* frame) const {
         }
     }
     if (frame != nullptr && frame->bInferDone && meta != nullptr) {
-        dump = codesHit(meta->eventCodes, meta->numClasses);
+        dump = codesHit(meta->event);
     }
     return dump;
 }

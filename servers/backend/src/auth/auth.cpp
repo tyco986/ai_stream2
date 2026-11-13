@@ -11,7 +11,8 @@
 void AuthFilter::doFilter(const drogon::HttpRequestPtr& request,
                           drogon::FilterCallback&& failed,
                           drogon::FilterChainCallback&& chain) {
-  const std::string token = request->getHeader("authorization");
+  const std::string header = request->getHeader("authorization");
+  const std::string token = header.empty() ? request->getCookie(auth::COOKIE_TOKEN) : header;
   const std::pair<drogon::HttpMethod, std::string> routeKey(request->method(),
                                                            request->matchedPathPattern());
   const auto route = auth::CRUD.find(routeKey);

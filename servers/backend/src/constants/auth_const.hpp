@@ -24,6 +24,7 @@ namespace auth {
 
 inline const char* ERR_UNAUTHORIZED = "auth_unauthorized";
 inline const char* ERR_FORBIDDEN = "auth_forbidden";
+inline const char* COOKIE_TOKEN = "authorized-token";
 
 inline const int CRUD_CREATE = 0;
 inline const int CRUD_READ = 1;
@@ -140,6 +141,7 @@ inline const std::map<std::pair<drogon::HttpMethod, std::string>, CrudGate> CRUD
     {{drogon::Put, user::PATH_MEMBERS}, {user::KEY_USER_CRUD, CRUD_UPDATE}},
     // event
     {{drogon::Get, event::PATH_LIST}, {user::KEY_EVENT_CRUD, CRUD_READ}},
+    {{drogon::Get, event::PATH_WS}, {user::KEY_EVENT_CRUD, CRUD_READ}},
     {{drogon::Post, event::PATH_STATUS}, {user::KEY_EVENT_CRUD, CRUD_UPDATE}},
     // log
     {{drogon::Get, service_log::PATH_LIST}, {user::KEY_EVENT_CRUD, CRUD_READ}},

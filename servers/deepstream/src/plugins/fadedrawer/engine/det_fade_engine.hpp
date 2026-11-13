@@ -7,6 +7,7 @@
 
 #include "constants/fadedrawer_const.hpp"
 #include "gstnvdsmeta.h"
+#include "plugins/eventmeta/event_meta.hpp"
 
 // Fade detection boxes between inference frames.
 //
@@ -59,13 +60,7 @@ protected:
     bool showLabel;
 
 private:
-    struct PresenceEventMeta {
-        char eventCodes[fadedrawer::PRESENCE_EVENT_CODE_LEN + 1];
-        char eventNames[fadedrawer::PRESENCE_EVENT_CODE_LEN][64];
-        unsigned int numClasses;
-    };
-
-    static const PresenceEventMeta* presenceEvent(NvDsFrameMeta* frame);
+    static const EventMeta* presenceEvent(NvDsFrameMeta* frame);
     static const float* borderRgb(NvDsFrameMeta* frame);
     std::vector<float> buildLut(int interval, int fadeTime) const;
     void renewCache(StreamState& state, NvDsFrameMeta* frame) const;

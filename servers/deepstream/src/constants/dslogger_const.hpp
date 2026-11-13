@@ -25,8 +25,6 @@ inline constexpr const char* JSON_NULL = "null";
 inline constexpr float ACTION_CONF_NONE = 0.0f;
 inline constexpr int ACTION_CLASS_NONE = -1;
 inline constexpr NvDsMetaType PRESENCE_EVENT_USER_META = static_cast<NvDsMetaType>(NVDS_START_USER_META + 0x5045);
-inline constexpr unsigned PRESENCE_EVENT_CODE_LEN = 8;
-inline constexpr unsigned PRESENCE_EVENT_NAME_LEN = 64;
 inline constexpr NvDsMetaType STGCNPP_ACTION_USER_META = static_cast<NvDsMetaType>(NVDS_START_USER_META + 0x5341);
 inline constexpr NvDsMetaType STGCNPP_READY_USER_META = static_cast<NvDsMetaType>(NVDS_START_USER_META + 0x5347);
 

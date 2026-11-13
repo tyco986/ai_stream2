@@ -9,7 +9,6 @@ import ListCheck from "~icons/ri/list-check";
 import {
   buildModel,
   createModels,
-  getDevices,
   getModelTypes,
   type ModelTypeDefaults,
   getModel,
@@ -25,12 +24,25 @@ import {
 import SearchHighlight from "@/components/SearchHighlight/index.vue";
 import {
   MODEL_BATCH_MODES,
+  MODEL_CLASSES_COLUMN_ALIGNS,
+  MODEL_CLASSES_COLUMN_RESIZABLE,
   MODEL_CLASSES_DIALOG_WIDTH,
-  MODEL_DIALOG_WIDTH,
+  MODEL_CLASSES_ID_COLUMN_WIDTH,
+  MODEL_CLASSES_ROW_HEIGHT,
+  MODEL_CLASSES_TABLE_MAX_HEIGHT,
+  MODEL_COLUMN_ALIGNS,
+  MODEL_CREATE_COLUMN_ALIGNS,
   MODEL_CREATE_COLUMN_PERCENTS,
+  MODEL_CREATE_COLUMN_RESIZABLE,
+  MODEL_DIALOG_WIDTH,
+  MODEL_EDIT_COLUMN_ALIGNS,
   MODEL_EDIT_COLUMN_PERCENTS,
+  MODEL_EDIT_COLUMN_RESIZABLE,
   MODEL_LIST_COLUMN_PERCENTS,
+  MODEL_LIST_COLUMN_RESIZABLE,
   MODEL_PRECISIONS,
+  MODEL_STATUS_LABEL,
+  MODEL_ROW_HEIGHT,
   MODEL_STATUS_FIRST_MS,
   MODEL_STATUS_POLL_MS
 } from "@/constants/model";
@@ -56,7 +68,6 @@ const blankRow = (): ModelDraft => ({
 });
 
 const types = ref<Record<string, ModelTypeDefaults>>({});
-const devices = ref<string[]>([]);
 const keyword = ref("");
 const searched = ref("");
 const fileInput = ref<HTMLInputElement>();
@@ -184,9 +195,6 @@ const onClasses = (row: ModelItem) => {
 };
 
 const onEdit = (row: ModelItem) => {
-  getDevices().then(res => {
-    devices.value = Object.keys(res.data);
-  });
   getModel(row.id).then(res => {
     const item = res.data;
     editItem.value = item;
@@ -230,6 +238,14 @@ const batchModeLabel = (value: string) => (value ? value[0].toUpperCase() + valu
 
 const precisionLabel = (value: string) => value.toUpperCase();
 
+const statusLabel = (value: string) => MODEL_STATUS_LABEL[value as keyof typeof MODEL_STATUS_LABEL] ?? value;
+
+const statusClass = (value: string) => ({
+  built: "model-status-built",
+  building: "model-status-building",
+  not_built: "model-status-not-built"
+}[value] ?? "");
+
 const locked = (type: string, key: "max_det" | "conf" | "iou") => types.value[type]?.[key] == null;
 
 const fillType = <T extends ModelDraft>(row: T, type: string): T => {
@@ -261,11 +277,6 @@ const onCreate = () => {
   picked.value = [];
   visible.value = true;
   loadTypes();
-  getDevices().then(res => {
-    devices.value = Object.keys(res.data);
-    const index = Number(devices.value[0] ?? 0);
-    rows.value = rows.value.map(row => ({ ...row, device: index }));
-  });
 };
 
 const onType = (row: ModelDraft, type: string) => {
@@ -274,7 +285,6 @@ const onType = (row: ModelDraft, type: string) => {
 
 const onAdd = () => {
   const row = fillType(blankRow(), typeNames()[0] ?? "");
-  row.device = Number(devices.value[0] ?? 0);
   rows.value = [...rows.value, row];
 };
 
@@ -296,6 +306,8 @@ const onRemoveSelected = () => {
 const onCancel = () => {
   visible.value = false;
 };
+
+const createReady = computed(() => rows.value.every(row => row.name.trim()));
 
 const onConfirm = () => {
   const drafts = rows.value.filter(row => row.name);
@@ -381,61 +393,54 @@ onUnmounted(() => {
         </el-button>
       </div>
       <el-table ref="createRef" class="create-table" :data="rows" table-layout="fixed" border show-overflow-tooltip @selection-change="onSelect">
-        <el-table-column :resizable="false" type="selection" :width="createWidths.selection" />
-        <el-table-column :resizable="false" :label="transformI18n($t('model.pureName'))" :width="createWidths.name">
+        <el-table-column type="selection" :resizable="MODEL_CREATE_COLUMN_RESIZABLE" :width="createWidths.selection" :header-align="MODEL_CREATE_COLUMN_ALIGNS.selection.header" :align="MODEL_CREATE_COLUMN_ALIGNS.selection.content" />
+        <el-table-column :label="transformI18n($t('model.pureName'))" :resizable="MODEL_CREATE_COLUMN_RESIZABLE" :width="createWidths.name" :header-align="MODEL_CREATE_COLUMN_ALIGNS.name.header" :align="MODEL_CREATE_COLUMN_ALIGNS.name.content">
           <template #default="{ row }">
             <el-input v-model="row.name" />
           </template>
         </el-table-column>
-        <el-table-column :resizable="false" :label="transformI18n($t('model.pureType'))" :width="createWidths.type">
+        <el-table-column :label="transformI18n($t('model.pureType'))" :resizable="MODEL_CREATE_COLUMN_RESIZABLE" :width="createWidths.type" :header-align="MODEL_CREATE_COLUMN_ALIGNS.type.header" :align="MODEL_CREATE_COLUMN_ALIGNS.type.content">
           <template #default="{ row }">
             <el-select v-model="row.type" @change="onType(row, $event)">
               <el-option v-for="item in typeNames()" :key="item" :label="item" :value="item" />
             </el-select>
           </template>
         </el-table-column>
-        <el-table-column :resizable="false" :label="transformI18n($t('model.pureBatchSize'))" :width="createWidths.batchSize">
+        <el-table-column :label="transformI18n($t('model.pureBatchSize'))" :resizable="MODEL_CREATE_COLUMN_RESIZABLE" :width="createWidths.batchSize" :header-align="MODEL_CREATE_COLUMN_ALIGNS.batchSize.header" :align="MODEL_CREATE_COLUMN_ALIGNS.batchSize.content">
           <template #default="{ row }">
             <el-input v-model.number="row.batch_size" />
           </template>
         </el-table-column>
-        <el-table-column :resizable="false" :label="transformI18n($t('model.pureBatchMode'))" :width="createWidths.batchMode">
+        <el-table-column :label="transformI18n($t('model.pureBatchMode'))" :resizable="MODEL_CREATE_COLUMN_RESIZABLE" :width="createWidths.batchMode" :header-align="MODEL_CREATE_COLUMN_ALIGNS.batchMode.header" :align="MODEL_CREATE_COLUMN_ALIGNS.batchMode.content">
           <template #default="{ row }">
             <el-select v-model="row.batch_mode">
               <el-option v-for="item in MODEL_BATCH_MODES" :key="item" :label="batchModeLabel(item)" :value="item" />
             </el-select>
           </template>
         </el-table-column>
-        <el-table-column :resizable="false" :label="transformI18n($t('model.purePrecision'))" :width="createWidths.precision">
+        <el-table-column :label="transformI18n($t('model.purePrecision'))" :resizable="MODEL_CREATE_COLUMN_RESIZABLE" :width="createWidths.precision" :header-align="MODEL_CREATE_COLUMN_ALIGNS.precision.header" :align="MODEL_CREATE_COLUMN_ALIGNS.precision.content">
           <template #default="{ row }">
             <el-select v-model="row.precision">
               <el-option v-for="item in MODEL_PRECISIONS" :key="item" :label="precisionLabel(item)" :value="item" />
             </el-select>
           </template>
         </el-table-column>
-        <el-table-column :resizable="false" :label="transformI18n($t('model.pureDevice'))" :width="createWidths.device">
-          <template #default="{ row }">
-            <el-select v-model.number="row.device">
-              <el-option v-for="item in devices" :key="item" :label="item" :value="Number(item)" />
-            </el-select>
-          </template>
-        </el-table-column>
-        <el-table-column :resizable="false" :label="transformI18n($t('model.pureMaxDet'))" :width="createWidths.maxDet">
+        <el-table-column :label="transformI18n($t('model.pureMaxDet'))" :resizable="MODEL_CREATE_COLUMN_RESIZABLE" :width="createWidths.maxDet" :header-align="MODEL_CREATE_COLUMN_ALIGNS.maxDet.header" :align="MODEL_CREATE_COLUMN_ALIGNS.maxDet.content">
           <template #default="{ row }">
             <el-input v-model.number="row.max_det" :disabled="locked(row.type, 'max_det')" />
           </template>
         </el-table-column>
-        <el-table-column :resizable="false" :label="transformI18n($t('model.pureConf'))" :width="createWidths.conf">
+        <el-table-column :label="transformI18n($t('model.pureConf'))" :resizable="MODEL_CREATE_COLUMN_RESIZABLE" :width="createWidths.conf" :header-align="MODEL_CREATE_COLUMN_ALIGNS.conf.header" :align="MODEL_CREATE_COLUMN_ALIGNS.conf.content">
           <template #default="{ row }">
             <el-input v-model.number="row.conf" :disabled="locked(row.type, 'conf')" />
           </template>
         </el-table-column>
-        <el-table-column :resizable="false" :label="transformI18n($t('model.pureIou'))" :width="createWidths.iou">
+        <el-table-column :label="transformI18n($t('model.pureIou'))" :resizable="MODEL_CREATE_COLUMN_RESIZABLE" :width="createWidths.iou" :header-align="MODEL_CREATE_COLUMN_ALIGNS.iou.header" :align="MODEL_CREATE_COLUMN_ALIGNS.iou.content">
           <template #default="{ row }">
             <el-input v-model.number="row.iou" :disabled="locked(row.type, 'iou')" />
           </template>
         </el-table-column>
-        <el-table-column :resizable="false" :label="transformI18n($t('model.pureOps'))" :width="createWidths.ops" :show-overflow-tooltip="false">
+        <el-table-column :label="transformI18n($t('model.pureOps'))" :resizable="MODEL_CREATE_COLUMN_RESIZABLE" :width="createWidths.ops" :show-overflow-tooltip="false" :header-align="MODEL_CREATE_COLUMN_ALIGNS.ops.header" :align="MODEL_CREATE_COLUMN_ALIGNS.ops.content">
           <template #default="{ $index }">
             <el-button link type="primary" :title="transformI18n($t('model.pureRemove'))" @click="onRemove($index)">
               <IconifyIconOffline :icon="DeleteBin" />
@@ -448,7 +453,7 @@ onUnmounted(() => {
         <el-button @click="onCancel">
           {{ transformI18n($t("model.pureCancel")) }}
         </el-button>
-        <el-button type="primary" @click="onConfirm">
+        <el-button type="primary" :disabled="!createReady" @click="onConfirm">
           {{ transformI18n($t("model.pureConfirm")) }}
         </el-button>
       </template>
@@ -460,59 +465,52 @@ onUnmounted(() => {
       :width="MODEL_DIALOG_WIDTH"
     >
       <el-table ref="editRef" class="create-table" :data="[editRow]" table-layout="fixed" border show-overflow-tooltip>
-        <el-table-column :resizable="false" :label="transformI18n($t('model.pureName'))" :width="editWidths.name">
+        <el-table-column :label="transformI18n($t('model.pureName'))" :resizable="MODEL_EDIT_COLUMN_RESIZABLE" :width="editWidths.name" :header-align="MODEL_EDIT_COLUMN_ALIGNS.name.header" :align="MODEL_EDIT_COLUMN_ALIGNS.name.content">
           <template #default="{ row }"><el-input v-model="row.name" /></template>
         </el-table-column>
-        <el-table-column :resizable="false" :label="transformI18n($t('model.pureSource'))" :width="editWidths.source">
+        <el-table-column :label="transformI18n($t('model.pureSource'))" :resizable="MODEL_EDIT_COLUMN_RESIZABLE" :width="editWidths.source" :header-align="MODEL_EDIT_COLUMN_ALIGNS.source.header" :align="MODEL_EDIT_COLUMN_ALIGNS.source.content">
           <template #default="{ row }">{{ row.source_name }}</template>
         </el-table-column>
-        <el-table-column :resizable="false" :label="transformI18n($t('model.pureType'))" :width="editWidths.type">
+        <el-table-column :label="transformI18n($t('model.pureType'))" :resizable="MODEL_EDIT_COLUMN_RESIZABLE" :width="editWidths.type" :header-align="MODEL_EDIT_COLUMN_ALIGNS.type.header" :align="MODEL_EDIT_COLUMN_ALIGNS.type.content">
           <template #default="{ row }">
             <el-select v-model="row.type" @change="onType(row, $event)">
               <el-option v-for="item in typeNames()" :key="item" :label="item" :value="item" />
             </el-select>
           </template>
         </el-table-column>
-        <el-table-column :resizable="false" :label="transformI18n($t('model.pureBatchSize'))" :width="editWidths.batchSize">
+        <el-table-column :label="transformI18n($t('model.pureBatchSize'))" :resizable="MODEL_EDIT_COLUMN_RESIZABLE" :width="editWidths.batchSize" :header-align="MODEL_EDIT_COLUMN_ALIGNS.batchSize.header" :align="MODEL_EDIT_COLUMN_ALIGNS.batchSize.content">
           <template #default="{ row }"><el-input v-model.number="row.batch_size" /></template>
         </el-table-column>
-        <el-table-column :resizable="false" :label="transformI18n($t('model.pureBatchMode'))" :width="editWidths.batchMode">
+        <el-table-column :label="transformI18n($t('model.pureBatchMode'))" :resizable="MODEL_EDIT_COLUMN_RESIZABLE" :width="editWidths.batchMode" :header-align="MODEL_EDIT_COLUMN_ALIGNS.batchMode.header" :align="MODEL_EDIT_COLUMN_ALIGNS.batchMode.content">
           <template #default="{ row }">
             <el-select v-model="row.batch_mode">
               <el-option v-for="item in MODEL_BATCH_MODES" :key="item" :label="batchModeLabel(item)" :value="item" />
             </el-select>
           </template>
         </el-table-column>
-        <el-table-column :resizable="false" :label="transformI18n($t('model.purePrecision'))" :width="editWidths.precision">
+        <el-table-column :label="transformI18n($t('model.purePrecision'))" :resizable="MODEL_EDIT_COLUMN_RESIZABLE" :width="editWidths.precision" :header-align="MODEL_EDIT_COLUMN_ALIGNS.precision.header" :align="MODEL_EDIT_COLUMN_ALIGNS.precision.content">
           <template #default="{ row }">
             <el-select v-model="row.precision">
               <el-option v-for="item in MODEL_PRECISIONS" :key="item" :label="precisionLabel(item)" :value="item" />
             </el-select>
           </template>
         </el-table-column>
-        <el-table-column :resizable="false" :label="transformI18n($t('model.pureDevice'))" :width="editWidths.device">
-          <template #default="{ row }">
-            <el-select v-model.number="row.device">
-              <el-option v-for="item in devices" :key="item" :label="item" :value="Number(item)" />
-            </el-select>
-          </template>
-        </el-table-column>
-        <el-table-column :resizable="false" :label="transformI18n($t('model.pureMaxDet'))" :width="editWidths.maxDet">
+        <el-table-column :label="transformI18n($t('model.pureMaxDet'))" :resizable="MODEL_EDIT_COLUMN_RESIZABLE" :width="editWidths.maxDet" :header-align="MODEL_EDIT_COLUMN_ALIGNS.maxDet.header" :align="MODEL_EDIT_COLUMN_ALIGNS.maxDet.content">
           <template #default="{ row }">
             <el-input v-model.number="row.max_det" :disabled="locked(row.type, 'max_det')" />
           </template>
         </el-table-column>
-        <el-table-column :resizable="false" :label="transformI18n($t('model.pureConf'))" :width="editWidths.conf">
+        <el-table-column :label="transformI18n($t('model.pureConf'))" :resizable="MODEL_EDIT_COLUMN_RESIZABLE" :width="editWidths.conf" :header-align="MODEL_EDIT_COLUMN_ALIGNS.conf.header" :align="MODEL_EDIT_COLUMN_ALIGNS.conf.content">
           <template #default="{ row }">
             <el-input v-model.number="row.conf" :disabled="locked(row.type, 'conf')" />
           </template>
         </el-table-column>
-        <el-table-column :resizable="false" :label="transformI18n($t('model.pureIou'))" :width="editWidths.iou">
+        <el-table-column :label="transformI18n($t('model.pureIou'))" :resizable="MODEL_EDIT_COLUMN_RESIZABLE" :width="editWidths.iou" :header-align="MODEL_EDIT_COLUMN_ALIGNS.iou.header" :align="MODEL_EDIT_COLUMN_ALIGNS.iou.content">
           <template #default="{ row }">
             <el-input v-model.number="row.iou" :disabled="locked(row.type, 'iou')" />
           </template>
         </el-table-column>
-        <el-table-column :resizable="false" :label="transformI18n($t('model.pureOps'))" :width="editWidths.ops" :show-overflow-tooltip="false">
+        <el-table-column :label="transformI18n($t('model.pureOps'))" :resizable="MODEL_EDIT_COLUMN_RESIZABLE" :width="editWidths.ops" :show-overflow-tooltip="false" :header-align="MODEL_EDIT_COLUMN_ALIGNS.ops.header" :align="MODEL_EDIT_COLUMN_ALIGNS.ops.content">
           <template #default>
             <el-button link type="primary" :title="transformI18n($t('model.pureUpload'))" @click="onEditUpload">
               <IconifyIconOffline :icon="Upload" />
@@ -530,48 +528,49 @@ onUnmounted(() => {
       </template>
     </el-dialog>
     <el-dialog v-model="classesOpen" :title="transformI18n($t('model.pureClasses'))" :width="MODEL_CLASSES_DIALOG_WIDTH">
-      <el-table :data="classes" border max-height="420" show-overflow-tooltip>
-        <el-table-column :label="transformI18n($t('model.pureClassId'))" prop="id" width="120" />
-        <el-table-column :label="transformI18n($t('model.pureClassName'))" prop="name" />
+      <el-table class="classes-table" :data="classes" border :max-height="MODEL_CLASSES_TABLE_MAX_HEIGHT" show-overflow-tooltip>
+        <el-table-column :label="transformI18n($t('model.pureClassId'))" prop="id" :resizable="MODEL_CLASSES_COLUMN_RESIZABLE" :width="MODEL_CLASSES_ID_COLUMN_WIDTH" :header-align="MODEL_CLASSES_COLUMN_ALIGNS.id.header" :align="MODEL_CLASSES_COLUMN_ALIGNS.id.content" />
+        <el-table-column :label="transformI18n($t('model.pureClassName'))" prop="name" :resizable="MODEL_CLASSES_COLUMN_RESIZABLE" :header-align="MODEL_CLASSES_COLUMN_ALIGNS.name.header" :align="MODEL_CLASSES_COLUMN_ALIGNS.name.content" />
       </el-table>
     </el-dialog>
     <el-table ref="listRef" class="model-list" :data="items" table-layout="fixed" border show-overflow-tooltip @selection-change="onSelectModels">
-      <el-table-column :resizable="false" type="selection" :width="listWidths.selection" />
-      <el-table-column :resizable="false" :label="transformI18n($t('model.pureName'))" :width="listWidths.name">
+      <el-table-column type="selection" :resizable="MODEL_LIST_COLUMN_RESIZABLE" :width="listWidths.selection" :header-align="MODEL_COLUMN_ALIGNS.selection.header" :align="MODEL_COLUMN_ALIGNS.selection.content" />
+      <el-table-column :label="transformI18n($t('model.pureName'))" :resizable="MODEL_LIST_COLUMN_RESIZABLE" :width="listWidths.name" :header-align="MODEL_COLUMN_ALIGNS.name.header" :align="MODEL_COLUMN_ALIGNS.name.content">
         <template #default="{ row }"><SearchHighlight :text="row.name" :query="searched" /></template>
       </el-table-column>
-      <el-table-column :resizable="false" :label="transformI18n($t('model.pureSource'))" :width="listWidths.source">
+      <el-table-column :label="transformI18n($t('model.pureSource'))" :resizable="MODEL_LIST_COLUMN_RESIZABLE" :width="listWidths.source" :header-align="MODEL_COLUMN_ALIGNS.source.header" :align="MODEL_COLUMN_ALIGNS.source.content">
         <template #default="{ row }"><SearchHighlight :text="row.source_name" :query="searched" /></template>
       </el-table-column>
-      <el-table-column :resizable="false" :label="transformI18n($t('model.pureType'))" :width="listWidths.type">
+      <el-table-column :label="transformI18n($t('model.pureType'))" :resizable="MODEL_LIST_COLUMN_RESIZABLE" :width="listWidths.type" :header-align="MODEL_COLUMN_ALIGNS.type.header" :align="MODEL_COLUMN_ALIGNS.type.content">
         <template #default="{ row }"><SearchHighlight :text="row.type" :query="searched" /></template>
       </el-table-column>
-      <el-table-column :resizable="false" :label="transformI18n($t('model.pureBatchSize'))" :width="listWidths.batchSize">
+      <el-table-column :label="transformI18n($t('model.pureBatchSize'))" :resizable="MODEL_LIST_COLUMN_RESIZABLE" :width="listWidths.batchSize" :header-align="MODEL_COLUMN_ALIGNS.batchSize.header" :align="MODEL_COLUMN_ALIGNS.batchSize.content">
         <template #default="{ row }"><SearchHighlight :text="row.batch_size" :query="searched" /></template>
       </el-table-column>
-      <el-table-column :resizable="false" :label="transformI18n($t('model.pureBatchMode'))" :width="listWidths.batchMode">
+      <el-table-column :label="transformI18n($t('model.pureBatchMode'))" :resizable="MODEL_LIST_COLUMN_RESIZABLE" :width="listWidths.batchMode" :header-align="MODEL_COLUMN_ALIGNS.batchMode.header" :align="MODEL_COLUMN_ALIGNS.batchMode.content">
         <template #default="{ row }"><SearchHighlight :text="batchModeLabel(row.batch_mode)" :query="searched" /></template>
       </el-table-column>
-      <el-table-column :resizable="false" :label="transformI18n($t('model.purePrecision'))" :width="listWidths.precision">
+      <el-table-column :label="transformI18n($t('model.purePrecision'))" :resizable="MODEL_LIST_COLUMN_RESIZABLE" :width="listWidths.precision" :header-align="MODEL_COLUMN_ALIGNS.precision.header" :align="MODEL_COLUMN_ALIGNS.precision.content">
         <template #default="{ row }"><SearchHighlight :text="precisionLabel(row.precision)" :query="searched" /></template>
       </el-table-column>
-      <el-table-column :resizable="false" :label="transformI18n($t('model.pureDevice'))" :width="listWidths.device">
-        <template #default="{ row }"><SearchHighlight :text="row.device" :query="searched" /></template>
-      </el-table-column>
-      <el-table-column :resizable="false" :label="transformI18n($t('model.pureClasses'))" :width="listWidths.classes" :show-overflow-tooltip="false">
+      <el-table-column :label="transformI18n($t('model.pureClasses'))" :resizable="MODEL_LIST_COLUMN_RESIZABLE" :width="listWidths.classes" :show-overflow-tooltip="false" :header-align="MODEL_COLUMN_ALIGNS.classes.header" :align="MODEL_COLUMN_ALIGNS.classes.content">
         <template #default="{ row }">
           <el-button link type="primary" :title="transformI18n($t('model.pureClasses'))" @click="onClasses(row)">
             <IconifyIconOffline :icon="ListCheck" />
           </el-button>
         </template>
       </el-table-column>
-      <el-table-column :resizable="false" :label="transformI18n($t('model.pureStatus'))" :width="listWidths.status">
-        <template #default="{ row }"><SearchHighlight :text="row.status" :query="searched" /></template>
+      <el-table-column :label="transformI18n($t('model.pureStatus'))" :resizable="MODEL_LIST_COLUMN_RESIZABLE" :width="listWidths.status" :header-align="MODEL_COLUMN_ALIGNS.status.header" :align="MODEL_COLUMN_ALIGNS.status.content">
+        <template #default="{ row }">
+          <span :class="statusClass(row.status)">
+            <SearchHighlight :text="statusLabel(row.status)" :query="searched" />
+          </span>
+        </template>
       </el-table-column>
-      <el-table-column :resizable="false" :label="transformI18n($t('model.pureBuiltAt'))" :width="listWidths.builtAt">
+      <el-table-column :label="transformI18n($t('model.pureBuiltAt'))" :resizable="MODEL_LIST_COLUMN_RESIZABLE" :width="listWidths.builtAt" :header-align="MODEL_COLUMN_ALIGNS.builtAt.header" :align="MODEL_COLUMN_ALIGNS.builtAt.content">
         <template #default="{ row }"><SearchHighlight :text="formatLocalTime(row.built_at)" :query="searched" /></template>
       </el-table-column>
-      <el-table-column :resizable="false" :label="transformI18n($t('model.pureOps'))" :width="listWidths.ops" :show-overflow-tooltip="false">
+      <el-table-column :label="transformI18n($t('model.pureOps'))" :resizable="MODEL_LIST_COLUMN_RESIZABLE" :width="listWidths.ops" :show-overflow-tooltip="false" :header-align="MODEL_COLUMN_ALIGNS.ops.header" :align="MODEL_COLUMN_ALIGNS.ops.content">
         <template #default="{ row }">
           <el-button link type="primary" :disabled="!row.source_path || opsLocked(row)" :title="transformI18n($t('model.pureBuild'))" @click="onBuild(row)">
             <IconifyIconOffline :icon="Hammer" />
@@ -634,9 +633,33 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
+.model-status-built {
+  color: var(--el-color-success);
+}
+
+.model-status-building {
+  color: var(--el-color-warning);
+}
+
+.model-status-not-built {
+  color: var(--el-color-danger);
+}
+
 .model-list :deep(.el-button) {
   margin: 0;
   font-size: 16px;
+}
+
+.classes-table :deep(.el-table__cell) {
+  height: v-bind('MODEL_CLASSES_ROW_HEIGHT + "px"');
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.create-table :deep(.el-table__cell) {
+  height: v-bind('MODEL_ROW_HEIGHT + "px"');
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 .create-table :deep(.cell) {
@@ -648,6 +671,13 @@ onUnmounted(() => {
 .create-table :deep(.el-button) {
   margin: 0;
   font-size: 16px;
+}
+
+.create-table :deep(.is-center .el-input__inner),
+.create-table :deep(.is-center .el-select__placeholder),
+.create-table :deep(.is-center .el-select__selected-item) {
+  text-align: center;
+  justify-content: center;
 }
 
 .create-table :deep(.el-input__wrapper),

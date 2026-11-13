@@ -6,26 +6,32 @@
 
 #include "constants/presenceeventcoder_const.hpp"
 #include "gstnvdsmeta.h"
+#include "plugins/eventmeta/event_meta.hpp"
 
-struct PresenceClassStat {
+struct PresenceDebouncerSlot {
     int classId;
     unsigned int counts[presenceeventcoder::CODE_BOUNDS];
     float ratio;
+    int filled;
+};
+
+struct PresenceDebouncer {
+    int length;
+    float threshold;
+    PresenceDebouncerSlot slots[eventmeta::SLOT_COUNT];
 };
 
 struct PresenceEventMeta {
-    char eventCodes[presenceeventcoder::CODE_LEN + 1];
-    char eventNames[presenceeventcoder::CODE_LEN][presenceeventcoder::NAME_LEN];
-    unsigned int numClasses;
-    PresenceClassStat classes[presenceeventcoder::CODE_LEN];
+    EventMeta event;
+    PresenceDebouncer debouncer;
 };
 
 class PresenceEventCoder {
 public:
-    // Ordered map from a model class id to its event name.
-    // Semicolon-separated; class id before the colon, event name after.
-    // Order is the event-code index, at most 8 entries. Example: "0:smoke;1:fire"
-    PresenceEventCoder(const char* classEventMap, int length, float threshold, const char* mode);
+    // Slot to model class and event name. Semicolon-separated.
+    // Slot, class id, then name. Name may be empty. At most 8 slots.
+    // Example: "0:0:Fire;1:1:Smoke"
+    PresenceEventCoder(const char* eventSlotMap, int length, float threshold, const char* mode);
 
     void attach(NvDsBatchMeta* batch, NvDsFrameMeta* frame);
 
@@ -33,16 +39,19 @@ public:
     static void release(PresenceEventMeta* meta);
 
 private:
+    struct SlotConfig {
+        bool used;
+        int classId;
+        std::string eventName;
+        std::string resolvedName;
+    };
+
     struct ClassTrack {
         std::vector<char> detectedWindow;
         std::vector<char> codeWindow;
         char eventCode;
         float ratio;
-    };
-
-    struct ClassEvent {
-        int classId;
-        std::string name;
+        int filled;
     };
 
     struct PadState {
@@ -51,14 +60,16 @@ private:
         bool hasLast;
     };
 
-    std::vector<ClassEvent> parseClassEventMap(const char* raw) const;
+    std::vector<SlotConfig> parseEventSlotMap(const char* raw) const;
+    void rememberNames(const std::unordered_map<int, std::string>& labels);
     void encode(PadState& pad, const std::vector<int>& detected, PresenceEventMeta* meta);
 
-    std::string classEventMap;
+    std::string eventSlotMap;
     int length;
     float threshold;
     std::string mode;
     bool slide;
-    std::vector<ClassEvent> classEvents;
+    std::vector<SlotConfig> slots;
+    unsigned int slotCount;
     std::unordered_map<int, PadState> pads;
 };

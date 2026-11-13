@@ -210,7 +210,7 @@ pipeline:
   pureOksThreshold: OKS
   pureVisThreshold: 可见阈值
   pureNumKeypoints: 关键点数
-  pureClassEventMap: 类别事件
+  pureEventSlotMap: 事件槽位
   pureLength: 长度
   pureThreshold: 阈值
   pureMode: 模式
@@ -254,6 +254,11 @@ preview:
   pureShot: 截图
   pureFullscreen: 全屏
   pureUnbind: 取消绑定
+event:
+  pureOccurredAt: 发生时间
+  pureEventCode: 事件码
+  pureEventLabel: 事件名称
+  pureAnnotations: 标注
 logger:
   pureTitle: 日志
 login:

@@ -9,11 +9,10 @@ class EventService {
  public:
   explicit EventService(drogon::orm::DbClientPtr dbClient);
   Json::Value get(const std::string& eventId);
+  Json::Value createFromKafka(const Json::Value& message, const std::string& topic);
   Json::Value create(const Json::Value& occurredAt,
                      const Json::Value& streamId,
-                     const Json::Value& streamName,
                      const Json::Value& pipelineId,
-                     const Json::Value& pipelineName,
                      const Json::Value& eventCode,
                      const Json::Value& eventLabel,
                      const Json::Value& status,

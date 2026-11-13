@@ -1,3 +1,5 @@
+import { assertColumnPercents } from "@/utils/columnWidth";
+
 export const PIPELINE_CREATE_DIALOG_WIDTH = "50%";
 export const PIPELINE_LIST_PAGE_SIZE = 20;
 export const PIPELINE_OPTION_PAGE_SIZE = 200;
@@ -131,3 +133,10 @@ export const PIPELINE_LIST_COLUMN_PERCENTS = {
   duration: 10,
   ops: 12
 };
+assertColumnPercents(PIPELINE_SOURCE_COLUMN_PERCENTS);
+assertColumnPercents(PIPELINE_TIMED_SOURCE_COLUMN_PERCENTS);
+assertColumnPercents(GIE_LIST_COLUMN_PERCENTS);
+assertColumnPercents(GIE_ATTR_COLUMN_PERCENTS);
+assertColumnPercents(ANALYZER_LIST_COLUMN_PERCENTS);
+assertColumnPercents(PIPELINE_LIST_COLUMN_PERCENTS);
+

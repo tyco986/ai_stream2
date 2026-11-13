@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import ArrowLeft from "~icons/ri/arrow-left-s-line";
 import ArrowRight from "~icons/ri/arrow-right-s-line";
 import More from "~icons/ri/more-2-fill";
@@ -20,8 +20,9 @@ import {
   type GroupTreeNode,
   type TreeNode
 } from "@/api/streamGroup";
-import { ALL_GROUP_ID, STREAM_GROUP_DIALOG_WIDTH } from "@/constants/streamGroup";
+import { ALL_GROUP_ID, STREAM_GROUP_COLUMN_ALIGNS, STREAM_GROUP_COLUMN_PERCENTS, STREAM_GROUP_COLUMN_RESIZABLE, STREAM_GROUP_DIALOG_WIDTH, STREAM_GROUP_ROW_HEIGHT, STREAM_GROUP_TREE_INDENT } from "@/constants/streamGroup";
 import { $t, transformI18n } from "@/plugins/i18n";
+import { useColumnWidths } from "@/views/pipeline/columnWidth";
 
 defineOptions({
   name: "StreamGroupTree"
@@ -45,6 +46,10 @@ const parentId = ref("");
 const parentOptions = ref<{ id: string; name: string }[]>([]);
 const left = ref<PickerRow[]>([]);
 const right = ref<PickerRow[]>([]);
+const canMoveRight = computed(() => left.value.some(row => row.checked));
+const canMoveLeft = computed(() => right.value.some(row => row.checked));
+const { target: leftRef, widths: leftWidths, observe: observeLeft } = useColumnWidths(STREAM_GROUP_COLUMN_PERCENTS);
+const { target: rightRef, widths: rightWidths, observe: observeRight } = useColumnWidths(STREAM_GROUP_COLUMN_PERCENTS);
 
 const blockedParents = computed(() => {
   const node = mode.value === "edit" && target.value ? groupById(target.value.id, data.value) : null;
@@ -138,6 +143,28 @@ const onParentOpen = (opened: boolean) => {
 
 const currentGroupName = () => name.value || target.value?.name || "";
 
+const markChecked = (rows: PickerRow[], selected: PickerRow[]) => {
+  const ids = new Set(selected.map(row => row.id));
+  rows.forEach(row => {
+    row.checked = ids.has(row.id);
+  });
+};
+
+const onLeftSelect = (selected: PickerRow[]) => {
+  markChecked(left.value, selected);
+};
+
+const onRightSelect = (selected: PickerRow[]) => {
+  markChecked(right.value, selected);
+};
+
+const rowClass = ({ row }: { row: PickerRow }) => (row.moved ? "moved" : "");
+
+const observePicker = () => {
+  observeLeft();
+  observeRight();
+};
+
 const moveRight = () => {
   const picked = left.value.filter(row => row.checked);
   left.value = left.value.filter(row => !row.checked);
@@ -193,12 +220,19 @@ const onCancel = () => {
   visible.value = false;
 };
 
+watch(visible, value => {
+  value && nextTick(observePicker);
+});
+
 onMounted(load);
+
+defineExpose({ load });
 </script>
 
 <template>
   <el-tree
     class="stream-group-tree"
+    :indent="STREAM_GROUP_TREE_INDENT"
     :data="data"
     node-key="id"
     default-expand-all
@@ -260,24 +294,20 @@ onMounted(load);
       </el-form-item>
     </el-form>
     <div class="picker">
-      <div class="pane">
-        <label v-for="row in left" :key="row.id" class="stream-row" :class="{ moved: row.moved }">
-          <el-checkbox v-model="row.checked" />
-          <span class="stream-name">{{ row.name }}</span>
-          <span class="stream-group">{{ row.group_name }}</span>
-        </label>
-      </div>
+      <el-table ref="leftRef" :data="left" border height="280" table-layout="fixed" class="pane picker-table" :row-class-name="rowClass" @selection-change="onLeftSelect">
+        <el-table-column type="selection" :resizable="STREAM_GROUP_COLUMN_RESIZABLE" :width="leftWidths.selection" :header-align="STREAM_GROUP_COLUMN_ALIGNS.selection.header" :align="STREAM_GROUP_COLUMN_ALIGNS.selection.content" />
+        <el-table-column prop="name" :label="transformI18n($t('stream.pureName'))" :resizable="STREAM_GROUP_COLUMN_RESIZABLE" :width="leftWidths.name" :header-align="STREAM_GROUP_COLUMN_ALIGNS.name.header" :align="STREAM_GROUP_COLUMN_ALIGNS.name.content" />
+        <el-table-column prop="group_name" :label="transformI18n($t('stream.pureGroup'))" :resizable="STREAM_GROUP_COLUMN_RESIZABLE" :width="leftWidths.group" :header-align="STREAM_GROUP_COLUMN_ALIGNS.group.header" :align="STREAM_GROUP_COLUMN_ALIGNS.group.content" />
+      </el-table>
       <div class="mover">
-        <el-button :icon="ArrowRight" @click="moveRight" />
-        <el-button :icon="ArrowLeft" @click="moveLeft" />
+        <el-button :icon="ArrowRight" :disabled="!canMoveRight" @click="moveRight" />
+        <el-button :icon="ArrowLeft" :disabled="!canMoveLeft" @click="moveLeft" />
       </div>
-      <div class="pane">
-        <label v-for="row in right" :key="row.id" class="stream-row" :class="{ moved: row.moved }">
-          <el-checkbox v-model="row.checked" />
-          <span class="stream-name">{{ row.name }}</span>
-          <span class="stream-group">{{ row.group_name }}</span>
-        </label>
-      </div>
+      <el-table ref="rightRef" :data="right" border height="280" table-layout="fixed" class="pane picker-table" :row-class-name="rowClass" @selection-change="onRightSelect">
+        <el-table-column type="selection" :resizable="STREAM_GROUP_COLUMN_RESIZABLE" :width="rightWidths.selection" :header-align="STREAM_GROUP_COLUMN_ALIGNS.selection.header" :align="STREAM_GROUP_COLUMN_ALIGNS.selection.content" />
+        <el-table-column prop="name" :label="transformI18n($t('stream.pureName'))" :resizable="STREAM_GROUP_COLUMN_RESIZABLE" :width="rightWidths.name" :header-align="STREAM_GROUP_COLUMN_ALIGNS.name.header" :align="STREAM_GROUP_COLUMN_ALIGNS.name.content" />
+        <el-table-column prop="group_name" :label="transformI18n($t('stream.pureGroup'))" :resizable="STREAM_GROUP_COLUMN_RESIZABLE" :width="rightWidths.group" :header-align="STREAM_GROUP_COLUMN_ALIGNS.group.header" :align="STREAM_GROUP_COLUMN_ALIGNS.group.content" />
+      </el-table>
     </div>
     <template #footer>
       <el-button @click="onCancel">
@@ -326,15 +356,12 @@ onMounted(load);
 .picker {
   display: flex;
   gap: 8px;
-  height: 280px;
   margin-top: 16px;
 }
 
 .pane {
   flex: 1;
-  overflow: auto;
-  border: 1px solid var(--el-border-color);
-  border-radius: 4px;
+  min-width: 0;
 }
 
 .mover {
@@ -348,22 +375,13 @@ onMounted(load);
   margin-left: 0;
 }
 
-.stream-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
+.picker-table :deep(.el-table__cell) {
+  height: v-bind('STREAM_GROUP_ROW_HEIGHT + "px"');
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
-.stream-name,
-.stream-group {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.moved {
+.pane :deep(.moved) {
   color: var(--el-color-success);
 }
 

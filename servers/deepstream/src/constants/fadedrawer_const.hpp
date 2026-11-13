@@ -30,7 +30,6 @@ inline constexpr char LABEL_SEP = '|';
 inline constexpr int LABEL_LINE_SIZE = 160;
 
 inline constexpr NvDsMetaType PRESENCE_EVENT_USER_META = static_cast<NvDsMetaType>(NVDS_START_USER_META + 0x5045);
-inline constexpr unsigned PRESENCE_EVENT_CODE_LEN = 8;
 inline constexpr NvDsMetaType STGCNPP_ACTION_USER_META = static_cast<NvDsMetaType>(NVDS_START_USER_META + 0x5341);
 inline constexpr NvDsMetaType STGCNPP_READY_USER_META = static_cast<NvDsMetaType>(NVDS_START_USER_META + 0x5347);
 inline constexpr float STGCNPP_ACTION_CONF_NONE = 0.0f;

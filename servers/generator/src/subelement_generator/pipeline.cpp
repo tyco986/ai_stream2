@@ -237,9 +237,9 @@ YAML::Node PipelineGenerator::addSegfadedrawerwithtracker(int interval, int fade
     return properties;
 }
 
-YAML::Node PipelineGenerator::addPresenceeventcoder(const std::string& classEventMap, int length, double threshold, const std::string& mode) {
+YAML::Node PipelineGenerator::addPresenceeventcoder(const std::string& eventSlotMap, int length, double threshold, const std::string& mode) {
     YAML::Node properties;
-    properties["class-event-map"] = classEventMap;
+    properties["event-slot-map"] = eventSlotMap;
     properties["length"] = length;
     properties["threshold"] = threshold;
     properties["mode"] = mode;
