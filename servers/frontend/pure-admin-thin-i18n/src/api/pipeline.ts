@@ -108,11 +108,12 @@ export const probePipeline = (id: string) => {
 };
 
 export const removePipeline = (id: string) => {
-  return http.request<PipelineResult>("delete", pipelinePath(id));
+  return http.request<PipelineResult>("delete", pipelinePath(id), { timeout: 0 });
 };
 
 export const removePipelines = (ids: string[]) => {
   return http.request<{ success: boolean; message: string }>("post", PATH_PIPELINE_BATCH_REMOVE, {
-    data: { ids }
+    data: { ids },
+    timeout: 0
   });
 };

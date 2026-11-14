@@ -68,7 +68,7 @@ drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchCreate(drogon:
       stream::MSG_BATCH_CREATE_PARTIAL};
   const char* message = messages[outcome];
   const drogon::HttpResponsePtr response = outcome == 0 ? http::Response::ok(data, message) : http::Response::partial(data, message);
-  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, "");
+  logger.record(request, response, started);
   co_return response;
 }
 
@@ -120,7 +120,7 @@ drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchRemove(drogon:
   data[stream::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_FAILED_ROWS].size());
   data[stream::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_SKIPPED_ROWS].size());
   const drogon::HttpResponsePtr response = http::Response::ok(data, stream::MSG_BATCH_DELETE_OK);
-  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, "");
+  logger.record(request, response, started);
   co_return response;
 }
 
@@ -170,7 +170,7 @@ drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchMount(drogon::
   data[stream::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_FAILED_ROWS].size());
   data[stream::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_SKIPPED_ROWS].size());
   const drogon::HttpResponsePtr response = http::Response::ok(data, stream::MSG_BATCH_MOUNT_OK);
-  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, "");
+  logger.record(request, response, started);
   co_return response;
 }
 
@@ -225,7 +225,7 @@ drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchUnmount(drogon
   data[stream::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_FAILED_ROWS].size());
   data[stream::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_SKIPPED_ROWS].size());
   const drogon::HttpResponsePtr response = http::Response::ok(data, stream::MSG_BATCH_UNMOUNT_OK);
-  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, "");
+  logger.record(request, response, started);
   co_return response;
 }
 
@@ -283,7 +283,7 @@ drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchRecord(drogon:
   data[stream::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_FAILED_ROWS].size());
   data[stream::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_SKIPPED_ROWS].size());
   const drogon::HttpResponsePtr response = http::Response::ok(data, stream::MSG_BATCH_RECORD_OK);
-  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, "");
+  logger.record(request, response, started);
   co_return response;
 }
 
@@ -339,7 +339,7 @@ drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchUnrecord(drogo
   data[stream::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_FAILED_ROWS].size());
   data[stream::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_SKIPPED_ROWS].size());
   const drogon::HttpResponsePtr response = http::Response::ok(data, stream::MSG_BATCH_UNRECORD_OK);
-  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, "");
+  logger.record(request, response, started);
   co_return response;
 }
 
@@ -391,6 +391,6 @@ drogon::Task<drogon::HttpResponsePtr> StreamBatchController::batchProbe(drogon::
   data[stream::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_FAILED_ROWS].size());
   data[stream::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[stream::KEY_SKIPPED_ROWS].size());
   const drogon::HttpResponsePtr response = http::Response::ok(data, stream::MSG_BATCH_PROBE_OK);
-  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, "");
+  logger.record(request, response, started);
   co_return response;
 }

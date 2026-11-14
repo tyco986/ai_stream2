@@ -23,22 +23,19 @@ void StreamController::list(
     const auto pageSizeText = request->getParameter(stream::QUERY_PAGE_SIZE);
     const int page = pageText.empty() ? stream::DEFAULT_PAGE : std::stoi(pageText);
     const int pageSize = pageSizeText.empty() ? stream::DEFAULT_PAGE_SIZE : std::stoi(pageSizeText);
-    logger.respond(request,
-            http::Response::ok(
+    const auto response = http::Response::ok(
                 service.list(request->getParameter(stream::QUERY_GROUP_ID),
                              request->getParameter(stream::QUERY_STREAM_ID),
                              request->getParameter(stream::QUERY_SEARCH),
                              page,
                              pageSize),
-                stream::MSG_LIST_OK),
-            started,
-            callback);
+                stream::MSG_LIST_OK);
+    logger.record(request, response, started);
+    callback(response);
   } catch (const std::exception& error) {
-    logger.respond(request,
-            http::Response::error(drogon::k500InternalServerError, stream::MSG_LIST_ERROR),
-            started,
-            callback,
-            error.what());
+    const auto response = http::Response::error(drogon::k500InternalServerError, stream::MSG_LIST_ERROR);
+    logger.record(request, response, started, error.what());
+    callback(response);
   }
 }
 
@@ -75,7 +72,7 @@ drogon::Task<drogon::HttpResponsePtr> StreamController::create(drogon::HttpReque
       errorText = error.what();
     }
   }
-  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, errorText);
+  logger.record(request, response, started, errorText);
   co_return response;
 }
 
@@ -151,7 +148,7 @@ drogon::Task<drogon::HttpResponsePtr> StreamController::update(drogon::HttpReque
       errorText = error.what();
     }
   }
-  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, errorText);
+  logger.record(request, response, started, errorText);
   co_return response;
 }
 
@@ -180,7 +177,7 @@ drogon::Task<drogon::HttpResponsePtr> StreamController::remove(drogon::HttpReque
       errorText = error.what();
     }
   }
-  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, errorText);
+  logger.record(request, response, started, errorText);
   co_return response;
 }
 
@@ -214,7 +211,7 @@ drogon::Task<drogon::HttpResponsePtr> StreamController::probe(drogon::HttpReques
       }
     }
   }
-  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, errorText);
+  logger.record(request, response, started, errorText);
   co_return response;
 }
 
@@ -243,7 +240,8 @@ void StreamController::importCSV(
                                      rejected ? reason.c_str() : stream::MSG_IMPORT_ERROR);
     errorText = reason;
   }
-  logger.respond(request, response, started, callback, errorText);
+  logger.record(request, response, started, errorText);
+  callback(response);
 }
 
 void StreamController::exportCSV(
@@ -267,7 +265,8 @@ void StreamController::exportCSV(
   } catch (const std::exception& error) {
     errorText = error.what();
   }
-  logger.respond(request, response, started, callback, errorText);
+  logger.record(request, response, started, errorText);
+  callback(response);
 }
 
 void StreamController::get(
@@ -276,12 +275,12 @@ void StreamController::get(
     const std::string& stream_id) {
   const auto started = std::chrono::steady_clock::now();
   try {
-    logger.respond(request, http::Response::ok(service.get(stream_id), stream::MSG_GET_OK), started, callback);
+    const auto response = http::Response::ok(service.get(stream_id), stream::MSG_GET_OK);
+    logger.record(request, response, started);
+    callback(response);
   } catch (const std::exception& error) {
-    logger.respond(request,
-            http::Response::error(drogon::k500InternalServerError, stream::MSG_GET_ERROR),
-            started,
-            callback,
-            error.what());
+    const auto response = http::Response::error(drogon::k500InternalServerError, stream::MSG_GET_ERROR);
+    logger.record(request, response, started, error.what());
+    callback(response);
   }
 }

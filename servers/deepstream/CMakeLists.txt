@@ -24,6 +24,7 @@ add_executable(deepstream
     src/services/pipeline_service.cpp
     src/services/logs_service.cpp
     src/pipeline_runner/pipeline_runner.cpp
+    src/probes/source_liveness_probe.cpp
 )
 
 target_include_directories(deepstream PRIVATE

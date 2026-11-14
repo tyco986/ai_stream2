@@ -18,16 +18,13 @@ void NoticeController::list(const drogon::HttpRequestPtr& request,
     const int page = pageText.empty() ? notice::DEFAULT_PAGE : std::stoi(pageText);
     const int pageSize = pageSizeText.empty() ? notice::DEFAULT_PAGE_SIZE : std::stoi(pageSizeText);
     const std::string userId = service.token2UserId(request->getHeader("authorization"));
-    logger.respond(request,
-            http::Response::ok(service.list(userId, page, pageSize), notice::MSG_LIST_OK),
-            started,
-            callback);
+    const auto response = http::Response::ok(service.list(userId, page, pageSize), notice::MSG_LIST_OK);
+    logger.record(request, response, started);
+    callback(response);
   } catch (const std::exception& error) {
-    logger.respond(request,
-            http::Response::error(drogon::k500InternalServerError, notice::MSG_LIST_ERROR),
-            started,
-            callback,
-            error.what());
+    const auto response = http::Response::error(drogon::k500InternalServerError, notice::MSG_LIST_ERROR);
+    logger.record(request, response, started, error.what());
+    callback(response);
   }
 }
 
@@ -38,13 +35,13 @@ void NoticeController::unread(const drogon::HttpRequestPtr& request,
     const std::string userId = service.token2UserId(request->getHeader("authorization"));
     Json::Value data;
     data[notice::KEY_TOTAL] = static_cast<Json::Int64>(service.countUnread(userId));
-    logger.respond(request, http::Response::ok(data, notice::MSG_UNREAD_OK), started, callback);
+    const auto response = http::Response::ok(data, notice::MSG_UNREAD_OK);
+    logger.record(request, response, started);
+    callback(response);
   } catch (const std::exception& error) {
-    logger.respond(request,
-            http::Response::error(drogon::k500InternalServerError, notice::MSG_UNREAD_ERROR),
-            started,
-            callback,
-            error.what());
+    const auto response = http::Response::error(drogon::k500InternalServerError, notice::MSG_UNREAD_ERROR);
+    logger.record(request, response, started, error.what());
+    callback(response);
   }
 }
 
@@ -55,17 +52,14 @@ void NoticeController::setReadAt(const drogon::HttpRequestPtr& request,
   const auto body = request->getJsonObject();
   const Json::Value payload = body ? *body : Json::Value(Json::objectValue);
   try {
-    logger.respond(request,
-            http::Response::ok(service.setReadAt(notice_id, payload[notice::KEY_READ_AT].asString()),
-                               notice::MSG_READ_AT_OK),
-            started,
-            callback);
+    const auto response = http::Response::ok(service.setReadAt(notice_id, payload[notice::KEY_READ_AT].asString()),
+                               notice::MSG_READ_AT_OK);
+    logger.record(request, response, started);
+    callback(response);
   } catch (const std::exception& error) {
-    logger.respond(request,
-            http::Response::error(drogon::k500InternalServerError, notice::MSG_READ_AT_ERROR),
-            started,
-            callback,
-            error.what());
+    const auto response = http::Response::error(drogon::k500InternalServerError, notice::MSG_READ_AT_ERROR);
+    logger.record(request, response, started, error.what());
+    callback(response);
   }
 }
 
@@ -74,15 +68,12 @@ void NoticeController::remove(const drogon::HttpRequestPtr& request,
                               const std::string& notice_id) {
   const auto started = std::chrono::steady_clock::now();
   try {
-    logger.respond(request,
-            http::Response::ok(service.remove(notice_id), notice::MSG_REMOVE_OK),
-            started,
-            callback);
+    const auto response = http::Response::ok(service.remove(notice_id), notice::MSG_REMOVE_OK);
+    logger.record(request, response, started);
+    callback(response);
   } catch (const std::exception& error) {
-    logger.respond(request,
-            http::Response::error(drogon::k500InternalServerError, notice::MSG_REMOVE_ERROR),
-            started,
-            callback,
-            error.what());
+    const auto response = http::Response::error(drogon::k500InternalServerError, notice::MSG_REMOVE_ERROR);
+    logger.record(request, response, started, error.what());
+    callback(response);
   }
 }

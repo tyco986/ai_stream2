@@ -217,11 +217,10 @@ void BaseLogger::write(const std::string& text) {
   }
 }
 
-void BaseLogger::respond(const drogon::HttpRequestPtr& request,
-                         const drogon::HttpResponsePtr& response,
-                         std::chrono::steady_clock::time_point started,
-                         const std::function<void(const drogon::HttpResponsePtr&)>& callback,
-                         const std::string& error) {
+void BaseLogger::record(const drogon::HttpRequestPtr& request,
+                        const drogon::HttpResponsePtr& response,
+                        std::chrono::steady_clock::time_point started,
+                        const std::string& error) {
   const auto elapsed = std::chrono::steady_clock::now() - started;
   const std::string query = request->query();
   Json::Value body(Json::objectValue);
@@ -245,5 +244,4 @@ void BaseLogger::respond(const drogon::HttpRequestPtr& request,
     }
   }
   write(formatLog(body));
-  callback(response);
 }

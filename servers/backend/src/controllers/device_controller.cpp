@@ -9,12 +9,12 @@ void DeviceController::list(
     std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
   const auto started = std::chrono::steady_clock::now();
   try {
-    logger.respond(request, http::Response::ok(service.list(), device::MSG_LIST_OK), started, callback);
+    const auto response = http::Response::ok(service.list(), device::MSG_LIST_OK);
+    logger.record(request, response, started);
+    callback(response);
   } catch (const std::exception& error) {
-    logger.respond(request,
-                   http::Response::error(drogon::k500InternalServerError, device::MSG_LIST_ERROR),
-                   started,
-                   callback,
-                   error.what());
+    const auto response = http::Response::error(drogon::k500InternalServerError, device::MSG_LIST_ERROR);
+    logger.record(request, response, started, error.what());
+    callback(response);
   }
 }

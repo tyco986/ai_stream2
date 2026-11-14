@@ -45,6 +45,11 @@ YAML::Node PipelineGenerator::addNvurisrcbin(const std::string& uri, bool disabl
     if (numBuffers.has_value()) {
         properties["num-buffers"] = *numBuffers;
     }
+    const bool rtsp = uri.rfind(pipeline::URI_RTSP, 0) == 0;
+    if (rtsp) {
+        properties[pipeline::RTSP_RECONNECT_INTERVAL_KEY] = pipeline::RTSP_RECONNECT_INTERVAL;
+        properties[pipeline::RTSP_RECONNECT_ATTEMPTS_KEY] = pipeline::RTSP_RECONNECT_ATTEMPTS;
+    }
     return properties;
 }
 

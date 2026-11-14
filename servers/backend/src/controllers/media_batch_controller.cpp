@@ -43,7 +43,9 @@ void MediaBatchController::batchCreate(const drogon::HttpRequestPtr& request,
   data[media::KEY_UPDATED_COUNT] = static_cast<Json::UInt64>(data[media::KEY_UPDATED_ROWS].size());
   data[media::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[media::KEY_FAILED_ROWS].size());
   data[media::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[media::KEY_SKIPPED_ROWS].size());
-  logger.respond(request, http::Response::ok(data, media::MSG_BATCH_CREATE_OK), started, callback);
+  const auto response = http::Response::ok(data, media::MSG_BATCH_CREATE_OK);
+  logger.record(request, response, started);
+  callback(response);
 }
 
 void MediaBatchController::batchUpload(const drogon::HttpRequestPtr& request,
@@ -78,7 +80,8 @@ void MediaBatchController::batchUpload(const drogon::HttpRequestPtr& request,
     response = http::Response::error(drogon::k500InternalServerError, media::MSG_BATCH_UPLOAD_ERROR);
     errorText = error.what();
   }
-  logger.respond(request, response, started, callback, errorText);
+  logger.record(request, response, started, errorText);
+  callback(response);
 }
 
 void MediaBatchController::batchRemove(const drogon::HttpRequestPtr& request,
@@ -104,7 +107,9 @@ void MediaBatchController::batchRemove(const drogon::HttpRequestPtr& request,
   data[media::KEY_UPDATED_COUNT] = static_cast<Json::UInt64>(data[media::KEY_UPDATED_ROWS].size());
   data[media::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[media::KEY_FAILED_ROWS].size());
   data[media::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[media::KEY_SKIPPED_ROWS].size());
-  logger.respond(request, http::Response::ok(data, media::MSG_BATCH_REMOVE_OK), started, callback);
+  const auto response = http::Response::ok(data, media::MSG_BATCH_REMOVE_OK);
+  logger.record(request, response, started);
+  callback(response);
 }
 
 std::filesystem::path MediaBatchController::zipPaths(
@@ -165,5 +170,6 @@ void MediaBatchController::batchDownload(const drogon::HttpRequestPtr& request,
     response = http::Response::error(drogon::k500InternalServerError, media::MSG_BATCH_DOWNLOAD_ERROR);
     errorText = error.what();
   }
-  logger.respond(request, response, started, callback, errorText);
+  logger.record(request, response, started, errorText);
+  callback(response);
 }

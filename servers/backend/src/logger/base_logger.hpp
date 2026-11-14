@@ -6,7 +6,6 @@
 #include <spdlog/logger.h>
 
 #include <chrono>
-#include <functional>
 #include <istream>
 #include <memory>
 #include <mutex>
@@ -20,11 +19,10 @@ class BaseLogger {
   static bool enabledValue();
   static Json::Value get(const std::string& page, const std::string& date);
   static Json::Value remove(const std::string& page);
-  void respond(const drogon::HttpRequestPtr& request,
-               const drogon::HttpResponsePtr& response,
-               std::chrono::steady_clock::time_point started,
-               const std::function<void(const drogon::HttpResponsePtr&)>& callback,
-               const std::string& error = "");
+  void record(const drogon::HttpRequestPtr& request,
+              const drogon::HttpResponsePtr& response,
+              std::chrono::steady_clock::time_point started,
+              const std::string& error = "");
 
  protected:
   virtual const char* name() const = 0;

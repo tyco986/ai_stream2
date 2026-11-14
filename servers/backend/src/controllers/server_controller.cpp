@@ -12,13 +12,13 @@ void ServerController::get(
     std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
   const auto started = std::chrono::steady_clock::now();
   try {
-    logger.respond(request, http::Response::ok(service.get(), server::MSG_GET_OK), started, callback);
+    const auto response = http::Response::ok(service.get(), server::MSG_GET_OK);
+    logger.record(request, response, started);
+    callback(response);
   } catch (const std::exception& error) {
-    logger.respond(request,
-            http::Response::error(drogon::k500InternalServerError, server::MSG_GET_ERROR),
-            started,
-            callback,
-            error.what());
+    const auto response = http::Response::error(drogon::k500InternalServerError, server::MSG_GET_ERROR);
+    logger.record(request, response, started, error.what());
+    callback(response);
   }
 }
 
@@ -32,6 +32,6 @@ drogon::Task<drogon::HttpResponsePtr> ServerController::probe(drogon::HttpReques
     response = http::Response::error(drogon::k500InternalServerError, server::MSG_PROBE_ERROR);
     errorText = error.what();
   }
-  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, errorText);
+  logger.record(request, response, started, errorText);
   co_return response;
 }

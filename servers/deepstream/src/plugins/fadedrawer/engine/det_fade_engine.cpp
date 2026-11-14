@@ -28,7 +28,7 @@ const EventMeta* DetFadeEngine::presenceEvent(NvDsFrameMeta* frame) {
 
 const float* DetFadeEngine::borderRgb(NvDsFrameMeta* frame) {
     const float* rgb = fadedrawer::COLOR_GREEN;
-    const PresenceEventMeta* event = presenceEvent(frame);
+    const EventMeta* event = presenceEvent(frame);
     if (event != nullptr) {
         bool hasAlert = false;
         bool hasTransit = false;

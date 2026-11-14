@@ -12,7 +12,13 @@ inline constexpr const char* CAPTURE_CODES_DEFAULT = "12";
 inline constexpr const char* TARGET_UNIQUE_IDS_DEFAULT = "1";
 inline constexpr const char* GIE_IDS_DEFAULT = "1";
 
+inline constexpr const char* URI_RTSP = "rtsp://";
+inline constexpr const char* RTSP_RECONNECT_INTERVAL_KEY = "rtsp-reconnect-interval";
+inline constexpr const char* RTSP_RECONNECT_ATTEMPTS_KEY = "rtsp-reconnect-attempts";
+
 inline constexpr int RTP_PROTOCOL_TCP = 4;
+inline constexpr int RTSP_RECONNECT_INTERVAL = 10;
+inline constexpr int RTSP_RECONNECT_ATTEMPTS = 18;
 inline constexpr int BATCHED_PUSH_TIMEOUT_US = 40000;
 inline constexpr int SLICE_SIZE = 640;
 inline constexpr double OVERLAP_RATIO = 0.2;

@@ -74,7 +74,9 @@ void ModelBatchController::batchCreate(
   data[model::KEY_UPDATED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_UPDATED_ROWS].size());
   data[model::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_FAILED_ROWS].size());
   data[model::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_SKIPPED_ROWS].size());
-  logger.respond(request, http::Response::ok(data, model::MSG_CREATE_OK), started, callback);
+  const auto response = http::Response::ok(data, model::MSG_CREATE_OK);
+  logger.record(request, response, started);
+  callback(response);
 }
 
 drogon::Task<drogon::HttpResponsePtr> ModelBatchController::batchBuild(drogon::HttpRequestPtr request) {
@@ -137,7 +139,7 @@ drogon::Task<drogon::HttpResponsePtr> ModelBatchController::batchBuild(drogon::H
   data[model::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_FAILED_ROWS].size());
   data[model::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_SKIPPED_ROWS].size());
   drogon::HttpResponsePtr response = http::Response::ok(data, model::MSG_BUILD_OK);
-  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {});
+  logger.record(request, response, started);
   co_return response;
 }
 
@@ -170,7 +172,9 @@ void ModelBatchController::batchStatus(
   data[model::KEY_UPDATED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_UPDATED_ROWS].size());
   data[model::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_FAILED_ROWS].size());
   data[model::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_SKIPPED_ROWS].size());
-  logger.respond(request, http::Response::ok(data, model::MSG_STATUS_OK), started, callback);
+  const auto response = http::Response::ok(data, model::MSG_STATUS_OK);
+  logger.record(request, response, started);
+  callback(response);
 }
 
 void ModelBatchController::batchRemove(
@@ -194,5 +198,7 @@ void ModelBatchController::batchRemove(
   data[model::KEY_UPDATED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_UPDATED_ROWS].size());
   data[model::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_FAILED_ROWS].size());
   data[model::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[model::KEY_SKIPPED_ROWS].size());
-  logger.respond(request, http::Response::ok(data, model::MSG_REMOVE_OK), started, callback);
+  const auto response = http::Response::ok(data, model::MSG_REMOVE_OK);
+  logger.record(request, response, started);
+  callback(response);
 }

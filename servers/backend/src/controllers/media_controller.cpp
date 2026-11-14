@@ -29,7 +29,8 @@ void MediaController::listUploadFile(const drogon::HttpRequestPtr& request,
     response = http::Response::error(drogon::k500InternalServerError, media::MSG_LIST_ERROR);
     errorText = error.what();
   }
-  logger.respond(request, response, started, callback, errorText);
+  logger.record(request, response, started, errorText);
+  callback(response);
 }
 
 void MediaController::listPipelineFile(const drogon::HttpRequestPtr& request,
@@ -52,7 +53,8 @@ void MediaController::listPipelineFile(const drogon::HttpRequestPtr& request,
     response = http::Response::error(drogon::k500InternalServerError, media::MSG_LIST_ERROR);
     errorText = error.what();
   }
-  logger.respond(request, response, started, callback, errorText);
+  logger.record(request, response, started, errorText);
+  callback(response);
 }
 
 void MediaController::listRecordingFile(const drogon::HttpRequestPtr& request,
@@ -76,7 +78,8 @@ void MediaController::listRecordingFile(const drogon::HttpRequestPtr& request,
     response = http::Response::error(drogon::k500InternalServerError, media::MSG_LIST_ERROR);
     errorText = error.what();
   }
-  logger.respond(request, response, started, callback, errorText);
+  logger.record(request, response, started, errorText);
+  callback(response);
 }
 
 void MediaController::listUploadFolder(const drogon::HttpRequestPtr& request,
@@ -90,7 +93,8 @@ void MediaController::listUploadFolder(const drogon::HttpRequestPtr& request,
     response = http::Response::error(drogon::k500InternalServerError, media::MSG_LIST_ERROR);
     errorText = error.what();
   }
-  logger.respond(request, response, started, callback, errorText);
+  logger.record(request, response, started, errorText);
+  callback(response);
 }
 
 void MediaController::listPipelineFolder(const drogon::HttpRequestPtr& request,
@@ -104,7 +108,8 @@ void MediaController::listPipelineFolder(const drogon::HttpRequestPtr& request,
     response = http::Response::error(drogon::k500InternalServerError, media::MSG_LIST_ERROR);
     errorText = error.what();
   }
-  logger.respond(request, response, started, callback, errorText);
+  logger.record(request, response, started, errorText);
+  callback(response);
 }
 
 void MediaController::listRecordingFolder(const drogon::HttpRequestPtr& request,
@@ -118,7 +123,8 @@ void MediaController::listRecordingFolder(const drogon::HttpRequestPtr& request,
     response = http::Response::error(drogon::k500InternalServerError, media::MSG_LIST_ERROR);
     errorText = error.what();
   }
-  logger.respond(request, response, started, callback, errorText);
+  logger.record(request, response, started, errorText);
+  callback(response);
 }
 
 void MediaController::get(const drogon::HttpRequestPtr& request,
@@ -133,7 +139,8 @@ void MediaController::get(const drogon::HttpRequestPtr& request,
     response = http::Response::error(drogon::k500InternalServerError, media::MSG_GET_ERROR);
     errorText = error.what();
   }
-  logger.respond(request, response, started, callback, errorText);
+  logger.record(request, response, started, errorText);
+  callback(response);
 }
 
 void MediaController::content(const drogon::HttpRequestPtr& request,
@@ -148,7 +155,8 @@ void MediaController::content(const drogon::HttpRequestPtr& request,
     response = http::Response::error(drogon::k500InternalServerError, media::MSG_GET_ERROR);
     errorText = error.what();
   }
-  logger.respond(request, response, started, callback, errorText);
+  logger.record(request, response, started, errorText);
+  callback(response);
 }
 
 void MediaController::download(const drogon::HttpRequestPtr& request,
@@ -164,5 +172,6 @@ void MediaController::download(const drogon::HttpRequestPtr& request,
     response = http::Response::error(drogon::k500InternalServerError, media::MSG_DOWNLOAD_ERROR);
     errorText = error.what();
   }
-  logger.respond(request, response, started, callback, errorText);
+  logger.record(request, response, started, errorText);
+  callback(response);
 }

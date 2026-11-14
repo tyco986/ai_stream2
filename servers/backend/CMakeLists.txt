@@ -82,7 +82,8 @@ add_executable(backend
   src/logger/notice_logger.cpp
   src/logger/media_logger.cpp
   src/logger/proxy_logger.cpp
-  src/logger/log_logger.cpp)
+  src/logger/log_logger.cpp
+  src/logger/kafka_logger.cpp)
 target_include_directories(backend PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${RDKAFKA_INCLUDE_DIRS} ${MEDIAINFO_INCLUDE_DIRS}
   /usr/local/cuda-13.4/targets/x86_64-linux/include)
 target_link_directories(backend PRIVATE /usr/local/cuda-13.4/targets/x86_64-linux/lib/stubs)

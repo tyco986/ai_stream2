@@ -14,4 +14,9 @@ inline const char* KEY_NUM = "num";
 inline const char* KEY_OBJECT = "object";
 inline const int POLL_MS = 1000;
 
+inline const char* LOG_DIR = "kafka";
+inline const char* LOG_NAME = "kafka";
+inline const char* KEY_TOPIC = "topic";
+inline const char* KEY_PAYLOAD = "payload";
+
 }

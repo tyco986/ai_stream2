@@ -71,5 +71,6 @@ void Proxy::complete(const drogon::HttpRequestPtr& request,
     }
   }
   const std::string error = ok ? "" : proxy::MSG_UPSTREAM_UNREACHABLE;
-  logger.respond(request, response, started, callback, error);
+  logger.record(request, response, started, error);
+  callback(response);
 }

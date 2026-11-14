@@ -54,17 +54,14 @@ void ModelController::list(
     const auto pageSizeText = request->getParameter(model::QUERY_PAGE_SIZE);
     const int page = pageText.empty() ? model::DEFAULT_PAGE : std::stoi(pageText);
     const int pageSize = pageSizeText.empty() ? model::DEFAULT_PAGE_SIZE : std::stoi(pageSizeText);
-    logger.respond(request,
-            http::Response::ok(service.list(request->getParameter(model::QUERY_SEARCH), page, pageSize),
-                               model::MSG_LIST_OK),
-            started,
-            callback);
+    const auto response = http::Response::ok(service.list(request->getParameter(model::QUERY_SEARCH), page, pageSize),
+                               model::MSG_LIST_OK);
+    logger.record(request, response, started);
+    callback(response);
   } catch (const std::exception& error) {
-    logger.respond(request,
-            http::Response::error(drogon::k500InternalServerError, model::MSG_LIST_ERROR),
-            started,
-            callback,
-            error.what());
+    const auto response = http::Response::error(drogon::k500InternalServerError, model::MSG_LIST_ERROR);
+    logger.record(request, response, started, error.what());
+    callback(response);
   }
 }
 
@@ -109,13 +106,12 @@ void ModelController::create(
                          iou),
           model::MSG_CREATE_OK);
     }
-    logger.respond(request, response, started, callback);
+    logger.record(request, response, started);
+    callback(response);
   } catch (const std::exception& error) {
-    logger.respond(request,
-            http::Response::error(drogon::k500InternalServerError, model::MSG_CREATE_ERROR),
-            started,
-            callback,
-            error.what());
+    const auto response = http::Response::error(drogon::k500InternalServerError, model::MSG_CREATE_ERROR);
+    logger.record(request, response, started, error.what());
+    callback(response);
   }
 }
 
@@ -125,13 +121,13 @@ void ModelController::get(
     const std::string& model_id) {
   const auto started = std::chrono::steady_clock::now();
   try {
-    logger.respond(request, http::Response::ok(service.get(model_id), model::MSG_GET_OK), started, callback);
+    const auto response = http::Response::ok(service.get(model_id), model::MSG_GET_OK);
+    logger.record(request, response, started);
+    callback(response);
   } catch (const std::exception& error) {
-    logger.respond(request,
-            http::Response::error(drogon::k500InternalServerError, model::MSG_GET_ERROR),
-            started,
-            callback,
-            error.what());
+    const auto response = http::Response::error(drogon::k500InternalServerError, model::MSG_GET_ERROR);
+    logger.record(request, response, started, error.what());
+    callback(response);
   }
 }
 
@@ -187,7 +183,8 @@ void ModelController::update(
     response = http::Response::error(conflict ? drogon::k409Conflict : drogon::k500InternalServerError, message);
     errorText = error.what();
   }
-  logger.respond(request, response, started, callback, errorText);
+  logger.record(request, response, started, errorText);
+  callback(response);
 }
 
 void ModelController::importModels(
@@ -216,7 +213,8 @@ void ModelController::importModels(
     response = http::Response::error(drogon::k500InternalServerError, model::MSG_IMPORT_ERROR);
     errorText = error.what();
   }
-  logger.respond(request, response, started, callback, errorText);
+  logger.record(request, response, started, errorText);
+  callback(response);
 }
 
 void ModelController::upload(
@@ -246,7 +244,8 @@ void ModelController::upload(
                                      conflict ? model::ERR_BUILDING : model::MSG_UPLOAD_ERROR);
     errorText = reason;
   }
-  logger.respond(request, response, started, callback, errorText);
+  logger.record(request, response, started, errorText);
+  callback(response);
 }
 
 void ModelController::remove(
@@ -266,7 +265,8 @@ void ModelController::remove(
     response = http::Response::error(conflict ? drogon::k409Conflict : drogon::k500InternalServerError, message);
     errorText = error.what();
   }
-  logger.respond(request, response, started, callback, errorText);
+  logger.record(request, response, started, errorText);
+  callback(response);
 }
 
 drogon::Task<drogon::HttpResponsePtr> ModelController::build(drogon::HttpRequestPtr request,
@@ -318,7 +318,7 @@ drogon::Task<drogon::HttpResponsePtr> ModelController::build(drogon::HttpRequest
                                      conflict ? model::ERR_BUILDING : model::MSG_BUILD_ERROR);
     errorText = reason;
   }
-  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, errorText);
+  logger.record(request, response, started, errorText);
   co_return response;
 }
 
@@ -336,13 +336,13 @@ void ModelController::status(
     data[model::KEY_VERSION] = model[model::KEY_VERSION];
     data[model::KEY_NUM_CLASS] = model[model::KEY_NUM_CLASS];
     data[model::KEY_CLASSES] = model[model::KEY_CLASSES];
-    logger.respond(request, http::Response::ok(data, model::MSG_STATUS_OK), started, callback);
+    const auto response = http::Response::ok(data, model::MSG_STATUS_OK);
+    logger.record(request, response, started);
+    callback(response);
   } catch (const std::exception& error) {
-    logger.respond(request,
-            http::Response::error(drogon::k500InternalServerError, model::MSG_STATUS_ERROR),
-            started,
-            callback,
-            error.what());
+    const auto response = http::Response::error(drogon::k500InternalServerError, model::MSG_STATUS_ERROR);
+    logger.record(request, response, started, error.what());
+    callback(response);
   }
 }
 
@@ -351,13 +351,13 @@ void ModelController::types(
     std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
   const auto started = std::chrono::steady_clock::now();
   try {
-    logger.respond(request, http::Response::ok(service.types(), model::MSG_TYPES_OK), started, callback);
+    const auto response = http::Response::ok(service.types(), model::MSG_TYPES_OK);
+    logger.record(request, response, started);
+    callback(response);
   } catch (const std::exception& error) {
-    logger.respond(request,
-            http::Response::error(drogon::k500InternalServerError, model::MSG_TYPES_ERROR),
-            started,
-            callback,
-            error.what());
+    const auto response = http::Response::error(drogon::k500InternalServerError, model::MSG_TYPES_ERROR);
+    logger.record(request, response, started, error.what());
+    callback(response);
   }
 }
 
@@ -366,12 +366,12 @@ void ModelController::map(
     std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
   const auto started = std::chrono::steady_clock::now();
   try {
-    logger.respond(request, http::Response::ok(service.map(), model::MSG_MAP_OK), started, callback);
+    const auto response = http::Response::ok(service.map(), model::MSG_MAP_OK);
+    logger.record(request, response, started);
+    callback(response);
   } catch (const std::exception& error) {
-    logger.respond(request,
-            http::Response::error(drogon::k500InternalServerError, model::MSG_MAP_ERROR),
-            started,
-            callback,
-            error.what());
+    const auto response = http::Response::error(drogon::k500InternalServerError, model::MSG_MAP_ERROR);
+    logger.record(request, response, started, error.what());
+    callback(response);
   }
 }

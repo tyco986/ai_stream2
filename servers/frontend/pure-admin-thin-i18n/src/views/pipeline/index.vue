@@ -30,6 +30,7 @@ const analyzerOpen = ref(false);
 const startingIds = ref<string[]>([]);
 const stoppingIds = ref<string[]>([]);
 const probingIds = ref<string[]>([]);
+const removingIds = ref<string[]>([]);
 
 const joined = (names: string[]) => names.join(", ");
 
@@ -91,17 +92,28 @@ const onEdit = (row: PipelineItem) => {
 };
 
 const onRemove = (row: PipelineItem) => {
-  removePipeline(row.id).then(res => {
-    message(res.message, { type: "success" });
-    loadPipelines();
-  });
+  removingIds.value = [...removingIds.value, row.id];
+  removePipeline(row.id)
+    .then(res => {
+      message(res.message, { type: "success" });
+    })
+    .finally(() => {
+      removingIds.value = removingIds.value.filter(id => id !== row.id);
+      loadPipelines();
+    });
 };
 
 const onRemoveBatch = () => {
-  removePipelines(selected.value.map(row => row.id)).then(res => {
-    message(res.message, { type: "success" });
-    loadPipelines();
-  });
+  const ids = selected.value.map(row => row.id);
+  removingIds.value = [...removingIds.value, ...ids];
+  removePipelines(ids)
+    .then(res => {
+      message(res.message, { type: "success" });
+    })
+    .finally(() => {
+      removingIds.value = removingIds.value.filter(id => !ids.includes(id));
+      loadPipelines();
+    });
 };
 
 onMounted(() => {
@@ -116,7 +128,7 @@ onMounted(() => {
       <el-button type="primary" @click="onCreate">
         {{ transformI18n($t("pipeline.pureCreate")) }}
       </el-button>
-      <el-button type="primary" :disabled="!selected.length" @click="onRemoveBatch">
+      <el-button type="primary" :disabled="!selected.length || selected.some(row => removingIds.includes(row.id))" @click="onRemoveBatch">
         {{ transformI18n($t("pipeline.pureRemove")) }}
       </el-button>
       <el-button type="primary" @click="gieOpen = true">
@@ -148,7 +160,7 @@ onMounted(() => {
       </el-table-column>
       <el-table-column :label="transformI18n($t('pipeline.pureOps'))" :width="listWidths.ops" :show-overflow-tooltip="false">
         <template #default="{ row }">
-          <el-button v-if="row.status === 'running'" link type="primary" :disabled="stoppingIds.includes(row.id)" :title="transformI18n($t('pipeline.pureStop'))" @click="onStop(row)">
+          <el-button v-if="row.status === 'running' || row.status === 'degraded'" link type="primary" :disabled="stoppingIds.includes(row.id)" :title="transformI18n($t('pipeline.pureStop'))" @click="onStop(row)">
             <IconifyIconOffline :icon="Stop" />
           </el-button>
           <el-button v-else link type="primary" :disabled="row.status === 'starting' || startingIds.includes(row.id)" :title="transformI18n($t('pipeline.pureStart'))" @click="onStart(row)">
@@ -160,7 +172,7 @@ onMounted(() => {
           <el-button link type="primary" :title="transformI18n($t('pipeline.pureEdit'))" @click="onEdit(row)">
             <IconifyIconOffline :icon="Edit" />
           </el-button>
-          <el-button link type="primary" :title="transformI18n($t('pipeline.pureRemove'))" @click="onRemove(row)">
+          <el-button link type="primary" :disabled="removingIds.includes(row.id)" :title="transformI18n($t('pipeline.pureRemove'))" @click="onRemove(row)">
             <IconifyIconOffline :icon="DeleteBin" />
           </el-button>
         </template>

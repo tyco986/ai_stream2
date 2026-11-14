@@ -30,5 +30,7 @@ void PipelineAnalyzerBatchController::batchRemove(
   data[pipeline_analyzer::KEY_UPDATED_COUNT] = static_cast<Json::UInt64>(data[pipeline_analyzer::KEY_UPDATED_ROWS].size());
   data[pipeline_analyzer::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[pipeline_analyzer::KEY_FAILED_ROWS].size());
   data[pipeline_analyzer::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[pipeline_analyzer::KEY_SKIPPED_ROWS].size());
-  logger.respond(request, http::Response::ok(data, pipeline_analyzer::MSG_REMOVE_OK), started, callback);
+  const auto response = http::Response::ok(data, pipeline_analyzer::MSG_REMOVE_OK);
+  logger.record(request, response, started);
+  callback(response);
 }

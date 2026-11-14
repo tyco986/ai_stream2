@@ -31,11 +31,11 @@ void PipelineRoute::bind(httplib::Server& server) {
 }
 
 void PipelineRoute::start(const httplib::Request& request, httplib::Response& response) {
-    const bool running = PipelineService::status().status == pipeline::STATUS_RUNNING;
-    if (running) {
+    const bool occupied = PipelineService::status().status != pipeline::STATUS_STOPPED;
+    if (occupied) {
         Response::error(response, pipeline::STATUS_CONFLICT, pipeline::ERR_RUNNING);
     }
-    if (!running) {
+    if (!occupied) {
         const httplib::FormData config = request.form.get_file(pipeline::FIELD_CONFIG);
         const std::vector<httplib::FormData> models = request.form.get_files(pipeline::FIELD_MODEL);
         const httplib::FormData media = request.form.get_file(pipeline::FIELD_MEDIA);
@@ -46,13 +46,13 @@ void PipelineRoute::start(const httplib::Request& request, httplib::Response& re
 }
 
 void PipelineRoute::startLocal(const httplib::Request& request, httplib::Response& response) {
-    const bool running = PipelineService::status().status == pipeline::STATUS_RUNNING;
-    if (running) {
+    const bool occupied = PipelineService::status().status != pipeline::STATUS_STOPPED;
+    if (occupied) {
         Response::error(response, pipeline::STATUS_CONFLICT, pipeline::ERR_RUNNING);
     }
     const nlohmann::json body = nlohmann::json::parse(request.body, nullptr, false);
-    const bool valid = !running && body.is_object() && body.contains(pipeline::FIELD_CONFIG) && body[pipeline::FIELD_CONFIG].is_string();
-    if (!running && !valid) {
+    const bool valid = !occupied && body.is_object() && body.contains(pipeline::FIELD_CONFIG) && body[pipeline::FIELD_CONFIG].is_string();
+    if (!occupied && !valid) {
         throw std::runtime_error("invalid config");
     }
     if (valid) {
@@ -64,21 +64,32 @@ void PipelineRoute::startLocal(const httplib::Request& request, httplib::Respons
 
 void PipelineRoute::status(const httplib::Request&, httplib::Response& response) {
     const PipelineStatus report = PipelineService::status();
+    nlohmann::json streams = nullptr;
+    if (report.streams.has_value()) {
+        streams = nlohmann::json::array();
+        for (const StreamStatus& item : *report.streams) {
+            streams.push_back({
+                {pipeline::KEY_SOURCE_ID, item.sourceId},
+                {pipeline::KEY_STATUS, item.status},
+            });
+        }
+    }
     const nlohmann::json data = {
         {pipeline::KEY_STATUS, report.status},
         {pipeline::KEY_START_TIME, formatTime(report.startTime)},
         {pipeline::KEY_END_TIME, formatTime(report.endTime)},
         {pipeline::KEY_DURATION, report.duration.has_value() ? nlohmann::json(*report.duration) : nlohmann::json(nullptr)},
+        {pipeline::KEY_STREAMS, streams},
     };
     Response::ok(response, data);
 }
 
 void PipelineRoute::stop(const httplib::Request&, httplib::Response& response) {
-    const bool running = PipelineService::status().status == pipeline::STATUS_RUNNING;
-    if (!running) {
+    const bool occupied = PipelineService::status().status != pipeline::STATUS_STOPPED;
+    if (!occupied) {
         Response::error(response, pipeline::STATUS_CONFLICT, pipeline::ERR_IDLE);
     }
-    if (running) {
+    if (occupied) {
         PipelineService::stop();
         Response::ok(response);
     }

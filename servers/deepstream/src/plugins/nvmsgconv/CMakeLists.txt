@@ -1,5 +1,6 @@
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GLIB REQUIRED glib-2.0)
+pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0)
 
 function(add_msgconv_payload target definition engine_src output_name)
     add_library(${target} SHARED
@@ -13,8 +14,9 @@ function(add_msgconv_payload target definition engine_src output_name)
         /opt/nvidia/deepstream/deepstream/sources/includes
         /opt/nvidia/deepstream/deepstream/sources/libs/nvmsgconv
         ${GLIB_INCLUDE_DIRS}
+        ${GSTREAMER_INCLUDE_DIRS}
     )
-    target_compile_options(${target} PRIVATE -Wall -Werror ${GLIB_CFLAGS_OTHER})
+    target_compile_options(${target} PRIVATE -Wall -Werror ${GLIB_CFLAGS_OTHER} ${GSTREAMER_CFLAGS_OTHER})
     target_link_directories(${target} PRIVATE
         /opt/nvidia/deepstream/deepstream/lib
     )

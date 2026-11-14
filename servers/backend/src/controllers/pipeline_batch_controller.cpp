@@ -92,7 +92,7 @@ drogon::Task<drogon::HttpResponsePtr> PipelineBatchController::batchStop(drogon:
   data[pipeline::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[pipeline::KEY_FAILED_ROWS].size());
   data[pipeline::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[pipeline::KEY_SKIPPED_ROWS].size());
   const drogon::HttpResponsePtr response = http::Response::ok(data, pipeline::MSG_BATCH_STOP_OK);
-  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, "");
+  logger.record(request, response, started);
   co_return response;
 }
 
@@ -164,6 +164,6 @@ drogon::Task<drogon::HttpResponsePtr> PipelineBatchController::batchRemove(drogo
   data[pipeline::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[pipeline::KEY_FAILED_ROWS].size());
   data[pipeline::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[pipeline::KEY_SKIPPED_ROWS].size());
   const drogon::HttpResponsePtr response = http::Response::ok(data, pipeline::MSG_BATCH_REMOVE_OK);
-  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, "");
+  logger.record(request, response, started);
   co_return response;
 }

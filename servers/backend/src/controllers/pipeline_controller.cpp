@@ -29,17 +29,14 @@ void PipelineController::list(
     const auto pageSizeText = request->getParameter(pipeline::QUERY_PAGE_SIZE);
     const int page = pageText.empty() ? pipeline::DEFAULT_PAGE : std::stoi(pageText);
     const int pageSize = pageSizeText.empty() ? pipeline::DEFAULT_PAGE_SIZE : std::stoi(pageSizeText);
-    logger.respond(request,
-            http::Response::ok(service.list(request->getParameter(pipeline::QUERY_SEARCH), page, pageSize),
-                               pipeline::MSG_LIST_OK),
-            started,
-            callback);
+    const auto response = http::Response::ok(service.list(request->getParameter(pipeline::QUERY_SEARCH), page, pageSize),
+                               pipeline::MSG_LIST_OK);
+    logger.record(request, response, started);
+    callback(response);
   } catch (const std::exception& error) {
-    logger.respond(request,
-            http::Response::error(drogon::k500InternalServerError, pipeline::MSG_LIST_ERROR),
-            started,
-            callback,
-            error.what());
+    const auto response = http::Response::error(drogon::k500InternalServerError, pipeline::MSG_LIST_ERROR);
+    logger.record(request, response, started, error.what());
+    callback(response);
   }
 }
 
@@ -48,13 +45,13 @@ void PipelineController::map(
     std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
   const auto started = std::chrono::steady_clock::now();
   try {
-    logger.respond(request, http::Response::ok(service.map(), pipeline::MSG_MAP_OK), started, callback);
+    const auto response = http::Response::ok(service.map(), pipeline::MSG_MAP_OK);
+    logger.record(request, response, started);
+    callback(response);
   } catch (const std::exception& error) {
-    logger.respond(request,
-            http::Response::error(drogon::k500InternalServerError, pipeline::MSG_MAP_ERROR),
-            started,
-            callback,
-            error.what());
+    const auto response = http::Response::error(drogon::k500InternalServerError, pipeline::MSG_MAP_ERROR);
+    logger.record(request, response, started, error.what());
+    callback(response);
   }
 }
 
@@ -64,13 +61,13 @@ void PipelineController::get(
     const std::string& pipeline_id) {
   const auto started = std::chrono::steady_clock::now();
   try {
-    logger.respond(request, http::Response::ok(service.get(pipeline_id), pipeline::MSG_GET_OK), started, callback);
+    const auto response = http::Response::ok(service.get(pipeline_id), pipeline::MSG_GET_OK);
+    logger.record(request, response, started);
+    callback(response);
   } catch (const std::exception& error) {
-    logger.respond(request,
-            http::Response::error(drogon::k500InternalServerError, pipeline::MSG_GET_ERROR),
-            started,
-            callback,
-            error.what());
+    const auto response = http::Response::error(drogon::k500InternalServerError, pipeline::MSG_GET_ERROR);
+    logger.record(request, response, started, error.what());
+    callback(response);
   }
 }
 
@@ -339,7 +336,7 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::create(drogon::HttpReq
     response = http::Response::error(drogon::k500InternalServerError, pipeline::MSG_CREATE_ERROR);
     errorText = error.what();
   }
-  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, errorText);
+  logger.record(request, response, started, errorText);
   co_return response;
 }
 
@@ -395,7 +392,7 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::update(drogon::HttpReq
                                      conflict ? pipeline::ERR_BUSY : pipeline::MSG_UPDATE_ERROR);
     errorText = error.what();
   }
-  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, errorText);
+  logger.record(request, response, started, errorText);
   co_return response;
 }
 
@@ -451,7 +448,7 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::start(drogon::HttpRequ
                                      conflict ? pipeline::ERR_BUSY : pipeline::MSG_START_ERROR);
     errorText = error.what();
   }
-  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, errorText);
+  logger.record(request, response, started, errorText);
   co_return response;
 }
 
@@ -486,7 +483,7 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::probe(drogon::HttpRequ
     response = http::Response::error(drogon::k500InternalServerError, pipeline::MSG_PROBE_ERROR);
     errorText = error.what();
   }
-  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, errorText);
+  logger.record(request, response, started, errorText);
   co_return response;
 }
 
@@ -545,7 +542,7 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::stop(drogon::HttpReque
                                      idle ? pipeline::ERR_IDLE : pipeline::MSG_STOP_ERROR);
     errorText = error.what();
   }
-  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, errorText);
+  logger.record(request, response, started, errorText);
   co_return response;
 }
 
@@ -588,6 +585,6 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::remove(drogon::HttpReq
     response = http::Response::error(drogon::k500InternalServerError, pipeline::MSG_REMOVE_ERROR);
     errorText = error.what();
   }
-  logger.respond(request, response, started, [](const drogon::HttpResponsePtr&) {}, errorText);
+  logger.record(request, response, started, errorText);
   co_return response;
 }

@@ -13,13 +13,13 @@ void PreviewController::map(
     std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
   const auto started = std::chrono::steady_clock::now();
   try {
-    logger.respond(request, http::Response::ok(service.map(service.token2UserId(request->getHeader("authorization"))), preview::MSG_MAP_OK), started, callback);
+    const auto response = http::Response::ok(service.map(service.token2UserId(request->getHeader("authorization"))), preview::MSG_MAP_OK);
+    logger.record(request, response, started);
+    callback(response);
   } catch (const std::exception& error) {
-    logger.respond(request,
-            http::Response::error(drogon::k500InternalServerError, preview::MSG_MAP_ERROR),
-            started,
-            callback,
-            error.what());
+    const auto response = http::Response::error(drogon::k500InternalServerError, preview::MSG_MAP_ERROR);
+    logger.record(request, response, started, error.what());
+    callback(response);
   }
 }
 
@@ -28,13 +28,13 @@ void PreviewController::tree(
     std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
   const auto started = std::chrono::steady_clock::now();
   try {
-    logger.respond(request, http::Response::ok(service.tree(), preview::MSG_TREE_OK), started, callback);
+    const auto response = http::Response::ok(service.tree(), preview::MSG_TREE_OK);
+    logger.record(request, response, started);
+    callback(response);
   } catch (const std::exception& error) {
-    logger.respond(request,
-            http::Response::error(drogon::k500InternalServerError, preview::MSG_TREE_ERROR),
-            started,
-            callback,
-            error.what());
+    const auto response = http::Response::error(drogon::k500InternalServerError, preview::MSG_TREE_ERROR);
+    logger.record(request, response, started, error.what());
+    callback(response);
   }
 }
 
@@ -43,16 +43,13 @@ void PreviewController::getActive(
     std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
   const auto started = std::chrono::steady_clock::now();
   try {
-    logger.respond(request,
-            http::Response::ok(service.getActive(service.token2UserId(request->getHeader("authorization"))), preview::MSG_ACTIVE_OK),
-            started,
-            callback);
+    const auto response = http::Response::ok(service.getActive(service.token2UserId(request->getHeader("authorization"))), preview::MSG_ACTIVE_OK);
+    logger.record(request, response, started);
+    callback(response);
   } catch (const std::exception& error) {
-    logger.respond(request,
-            http::Response::error(drogon::k500InternalServerError, preview::MSG_ACTIVE_ERROR),
-            started,
-            callback,
-            error.what());
+    const auto response = http::Response::error(drogon::k500InternalServerError, preview::MSG_ACTIVE_ERROR);
+    logger.record(request, response, started, error.what());
+    callback(response);
   }
 }
 
@@ -62,16 +59,13 @@ void PreviewController::get(
     const std::string& preset_id) {
   const auto started = std::chrono::steady_clock::now();
   try {
-    logger.respond(request,
-            http::Response::ok(service.get(preset_id, service.token2UserId(request->getHeader("authorization"))), preview::MSG_GET_OK),
-            started,
-            callback);
+    const auto response = http::Response::ok(service.get(preset_id, service.token2UserId(request->getHeader("authorization"))), preview::MSG_GET_OK);
+    logger.record(request, response, started);
+    callback(response);
   } catch (const std::exception& error) {
-    logger.respond(request,
-            http::Response::error(drogon::k500InternalServerError, preview::MSG_GET_ERROR),
-            started,
-            callback,
-            error.what());
+    const auto response = http::Response::error(drogon::k500InternalServerError, preview::MSG_GET_ERROR);
+    logger.record(request, response, started, error.what());
+    callback(response);
   }
 }
 
@@ -83,22 +77,19 @@ void PreviewController::create(
     const auto body = request->getJsonObject();
     const Json::Value empty;
     const Json::Value& json = body ? *body : empty;
-    logger.respond(request,
-            http::Response::ok(service.create(service.token2UserId(request->getHeader("authorization")),
+    const auto response = http::Response::ok(service.create(service.token2UserId(request->getHeader("authorization")),
                                               json[preview::KEY_NAME],
                                               json[preview::KEY_LAYOUT],
                                               json[preview::KEY_MODE],
                                               json[preview::KEY_SLOTS],
                                               json[preview::KEY_ACTIVE]),
-                               preview::MSG_CREATE_OK),
-            started,
-            callback);
+                               preview::MSG_CREATE_OK);
+    logger.record(request, response, started);
+    callback(response);
   } catch (const std::exception& error) {
-    logger.respond(request,
-            http::Response::error(drogon::k500InternalServerError, preview::MSG_CREATE_ERROR),
-            started,
-            callback,
-            error.what());
+    const auto response = http::Response::error(drogon::k500InternalServerError, preview::MSG_CREATE_ERROR);
+    logger.record(request, response, started, error.what());
+    callback(response);
   }
 }
 
@@ -111,23 +102,20 @@ void PreviewController::update(
     const auto body = request->getJsonObject();
     const Json::Value empty;
     const Json::Value& json = body ? *body : empty;
-    logger.respond(request,
-            http::Response::ok(service.update(preset_id,
+    const auto response = http::Response::ok(service.update(preset_id,
                                               service.token2UserId(request->getHeader("authorization")),
                                               json[preview::KEY_NAME],
                                               json[preview::KEY_LAYOUT],
                                               json[preview::KEY_MODE],
                                               json[preview::KEY_SLOTS],
                                               json[preview::KEY_ACTIVE]),
-                               preview::MSG_UPDATE_OK),
-            started,
-            callback);
+                               preview::MSG_UPDATE_OK);
+    logger.record(request, response, started);
+    callback(response);
   } catch (const std::exception& error) {
-    logger.respond(request,
-            http::Response::error(drogon::k500InternalServerError, preview::MSG_UPDATE_ERROR),
-            started,
-            callback,
-            error.what());
+    const auto response = http::Response::error(drogon::k500InternalServerError, preview::MSG_UPDATE_ERROR);
+    logger.record(request, response, started, error.what());
+    callback(response);
   }
 }
 
@@ -137,15 +125,12 @@ void PreviewController::remove(
     const std::string& preset_id) {
   const auto started = std::chrono::steady_clock::now();
   try {
-    logger.respond(request,
-            http::Response::ok(service.remove(preset_id, service.token2UserId(request->getHeader("authorization"))), preview::MSG_REMOVE_OK),
-            started,
-            callback);
+    const auto response = http::Response::ok(service.remove(preset_id, service.token2UserId(request->getHeader("authorization"))), preview::MSG_REMOVE_OK);
+    logger.record(request, response, started);
+    callback(response);
   } catch (const std::exception& error) {
-    logger.respond(request,
-            http::Response::error(drogon::k500InternalServerError, preview::MSG_REMOVE_ERROR),
-            started,
-            callback,
-            error.what());
+    const auto response = http::Response::error(drogon::k500InternalServerError, preview::MSG_REMOVE_ERROR);
+    logger.record(request, response, started, error.what());
+    callback(response);
   }
 }

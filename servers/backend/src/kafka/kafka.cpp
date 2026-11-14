@@ -2,6 +2,7 @@
 
 #include "constants/kafka_const.hpp"
 #include "db/database.hpp"
+#include "logger/kafka_logger.hpp"
 #include "services/event_hub.hpp"
 
 #include <drogon/drogon.h>
@@ -74,6 +75,8 @@ void Kafka::run() {
       std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
       const bool parsed = reader->parse(payload.data(), payload.data() + payload.size(), &body, &parseError);
       const std::string topicName = message->topic_name();
+      const Json::Value logged = parsed ? body : Json::Value(payload);
+      KafkaLogger::write(topicName, logged);
       if (parsed && body.isObject() && !topicName.empty()) {
         dispatch(body, topicName);
       }

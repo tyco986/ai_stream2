@@ -15,16 +15,28 @@
 
 #include <csignal>
 #include <fcntl.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+#include "buffer_probe.hpp"
 
 PipelineRunner::PipelineRunner(std::string configDir)
     : configDir(std::move(configDir)),
       pipelineName(),
       pid(-1),
+      table(nullptr),
       started(std::nullopt),
       ended(std::nullopt) {
+}
+
+PipelineRunner::~PipelineRunner() {
+    std::lock_guard<std::mutex> lock(mutex);
+    if (table != nullptr) {
+        munmap(table, sizeof(SourceLivenessTable));
+        table = nullptr;
+    }
 }
 
 void PipelineRunner::recordEnded(std::chrono::system_clock::time_point time) {
@@ -108,6 +120,65 @@ void PipelineRunner::prepareOutputs(const YAML::Node& pipelineYaml) const {
     }
 }
 
+void PipelineRunner::attachSourceProbes(deepstream::Pipeline& pipeline, const YAML::Node& pipelineYaml) {
+    const std::string sourcePrefix = pipeline_runner::SOURCE_PREFIX;
+    std::vector<std::pair<int, std::string>> sources;
+    for (const YAML::Node& node : pipelineYaml["deepstream"]["nodes"]) {
+        const std::string name = node["name"].as<std::string>();
+        const bool sourceExact = name == sourcePrefix;
+        const bool sourceIndexed = name.rfind(sourcePrefix, 0) == 0 && name.size() > sourcePrefix.size();
+        bool sourceSuffixDigits = sourceIndexed;
+        for (size_t index = sourcePrefix.size(); sourceSuffixDigits && index < name.size(); ++index) {
+            sourceSuffixDigits = std::isdigit(static_cast<unsigned char>(name[index])) != 0;
+        }
+        const YAML::Node properties = node["properties"];
+        const std::string uri = properties && properties[pipeline_runner::URI_KEY]
+            ? properties[pipeline_runner::URI_KEY].as<std::string>()
+            : "";
+        const bool rtsp = uri.rfind(pipeline_runner::URI_RTSP, 0) == 0;
+        if ((sourceExact || sourceSuffixDigits) && rtsp) {
+            const int order = sourceExact ? 0 : std::stoi(name.substr(sourcePrefix.size()));
+            sources.emplace_back(order, name);
+        }
+    }
+    std::sort(sources.begin(), sources.end());
+    unsigned configured = 0;
+    int count = 0;
+    for (const std::pair<int, std::string>& source : sources) {
+        deepstream::Element* element = pipeline.find(source.second);
+        const std::string queueName = std::string(pipeline_runner::DEMUX_QUEUE_PREFIX) + std::to_string(source.first);
+        deepstream::Element* queue = pipeline.find(queueName);
+        const bool room = element != nullptr && queue != nullptr && count < pipeline_runner::SLOT_COUNT && table != nullptr;
+        if (room && count == 0) {
+            element->getProperty(pipeline_runner::RECONNECT_INTERVAL, configured);
+        }
+        if (room) {
+            auto* handler = new SourceLivenessProbe(&table->slots[count]);
+            auto* probe = new deepstream::BufferProbe("source-liveness-" + std::to_string(count), handler);
+            queue->addProbe(probe, pipeline_runner::SRC_PAD);
+            count += 1;
+        }
+    }
+    const int interval = configured > 0 ? static_cast<int>(configured) : pipeline_runner::STALE_SEC;
+    if (table != nullptr) {
+        table->count.store(count, std::memory_order_relaxed);
+        table->reconnectIntervalSec.store(interval, std::memory_order_relaxed);
+    }
+}
+
+const char* PipelineRunner::slotStatus(const SourceLivenessSlot& slot, std::int64_t nowNs, int intervalSec) const {
+    const bool exceeded = slot.exceeded.load(std::memory_order_relaxed) != 0;
+    const std::int64_t last = slot.lastFrameNs.load(std::memory_order_relaxed);
+    const bool fresh = last > 0 && nowNs - last <= static_cast<std::int64_t>(intervalSec) * 1000000000LL;
+    const char* status = pipeline::STATUS_RUNNING;
+    if (exceeded) {
+        status = pipeline::STATUS_DEAD;
+    } else if (!fresh) {
+        status = pipeline::STATUS_RECONNECTING;
+    }
+    return status;
+}
+
 void PipelineRunner::redirectLog() const {
     const std::filesystem::path directory = std::filesystem::path(pipeline_runner::LOG_DIR) / pipelineName;
     std::filesystem::create_directories(directory);
@@ -123,17 +194,25 @@ void PipelineRunner::redirectLog() const {
     }
 }
 
-void PipelineRunner::runPipeline() const {
+void PipelineRunner::runPipeline() {
     const YAML::Node pipelineYaml = loadPipelineYaml();
     const std::filesystem::path pipelinePath =
         std::filesystem::path(configDir) / pipeline_runner::PIPELINE_FILE;
     prepareOutputs(pipelineYaml);
     deepstream::Pipeline pipeline(pipelineName.c_str(), pipelinePath.string());
     fixLink(pipeline, pipelineYaml);
+    attachSourceProbes(pipeline, pipelineYaml);
     pipeline.start().wait();
 }
 
 void PipelineRunner::run() {
+    table = static_cast<SourceLivenessTable*>(mmap(nullptr, sizeof(SourceLivenessTable), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0));
+    if (table == MAP_FAILED) {
+        table = nullptr;
+    }
+    if (table != nullptr) {
+        new (table) SourceLivenessTable();
+    }
     const pid_t child = fork();
     int code = 0;
     if (child == 0) {
@@ -159,6 +238,7 @@ void PipelineRunner::run() {
 }
 
 PipelineStatus PipelineRunner::status() {
+    std::lock_guard<std::mutex> lock(mutex);
     int processStatus = 0;
     const pid_t result = pid > 0 ? waitpid(pid, &processStatus, WNOHANG) : -1;
     const bool alive = result == 0;
@@ -168,8 +248,19 @@ PipelineStatus PipelineRunner::status() {
     }
     pid = alive ? pid : -1;
     const auto end = ended.value_or(now);
+    const auto nowNs = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
+    const int intervalSec = table != nullptr ? table->reconnectIntervalSec.load(std::memory_order_relaxed) : pipeline_runner::STALE_SEC;
+    const int count = table != nullptr ? table->count.load(std::memory_order_relaxed) : 0;
+    bool degraded = false;
+    std::vector<StreamStatus> streams;
+    for (int index = 0; alive && table != nullptr && index < count && index < pipeline_runner::SLOT_COUNT; ++index) {
+        const char* slot = slotStatus(table->slots[index], nowNs, intervalSec);
+        degraded = degraded || slot != pipeline::STATUS_RUNNING;
+        streams.push_back(StreamStatus{index, slot});
+    }
     PipelineStatus report;
-    report.status = alive ? pipeline::STATUS_RUNNING : pipeline::STATUS_STOPPED;
+    report.status = !alive ? pipeline::STATUS_STOPPED : (degraded ? pipeline::STATUS_DEGRADED : pipeline::STATUS_RUNNING);
+    report.streams = alive && table != nullptr ? std::optional<std::vector<StreamStatus>>(std::move(streams)) : std::nullopt;
     report.startTime = started;
     report.endTime = ended;
     report.duration = started.has_value()
