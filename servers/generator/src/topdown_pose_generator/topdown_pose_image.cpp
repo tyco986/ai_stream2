@@ -59,6 +59,8 @@ void TopdownPoseImageGenerator::add() {
     appendNode("nvinfer", "sgie0", addNvinfer(TopdownPose::SGIE_CONFIG_NAME, pose->batchSize, pose->gpuId, true));
     appendNode("rtmposepostprocess", "nvrtmposepostprocess", addNvrtmposepostprocess(pose->uniqueId));
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
+    appendNode("detcollector", "detcollector", addCollector());
+    appendNode("dslogger", "dslogger", addDslogger(logger.value("interval", 1), pipeline::PAGE_DET));
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     const std::string drawerElement = nvposeDrawerElement();
     for (int streamIndex = 0; streamIndex < runtimeBatchSize; ++streamIndex) {
@@ -72,10 +74,7 @@ void TopdownPoseImageGenerator::add() {
         appendNode("nvosdbin", "nvosdbin" + suffix, addNvosdbin(gpuId, true, true, false));
         appendNode("nvvideoconvert", "nvvideoconvert" + suffix, addNvvideoconvert(gpuId));
         appendNode("capsfilter", "capsfilter" + suffix, addCapsfilter());
-        appendNode(
-            "detlogger",
-            "detlogger" + suffix,
-            addDetlogger(logger.value("interval", 1)));
+
         appendNode("nvjpegenc", "nvjpegenc" + suffix, addNvjpegenc());
         appendNode("filesink", "filesink" + suffix, addFilesink(sink, false, false));
     }
@@ -91,7 +90,9 @@ void TopdownPoseImageGenerator::link() {
     edges["nvdspreprocess_rtmpose"] = "sgie0";
     edges["sgie0"] = "nvrtmposepostprocess";
     edges["nvrtmposepostprocess"] = "nvdsanalytics";
-    edges["nvdsanalytics"] = "nvstreamdemux";
+    edges["nvdsanalytics"] = "detcollector";
+    edges["detcollector"] = "dslogger";
+    edges["dslogger"] = "nvstreamdemux";
     const std::string drawerElement = nvposeDrawerElement();
     for (int index = 0; index < runtimeBatchSize; ++index) {
         const std::string suffix = std::to_string(index);
@@ -102,8 +103,7 @@ void TopdownPoseImageGenerator::link() {
         }
         edges["nvosdbin" + suffix] = "nvvideoconvert" + suffix;
         edges["nvvideoconvert" + suffix] = "capsfilter" + suffix;
-        edges["capsfilter" + suffix] = "detlogger" + suffix;
-        edges["detlogger" + suffix] = "nvjpegenc" + suffix;
+        edges["capsfilter" + suffix] = "nvjpegenc" + suffix;
         edges["nvjpegenc" + suffix] = "filesink" + suffix;
     }
     pipeline["deepstream"]["edges"] = edges;

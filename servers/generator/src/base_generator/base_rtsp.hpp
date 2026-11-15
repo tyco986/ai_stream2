@@ -24,7 +24,7 @@
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → nvstreamdemux → queue_demux{N} → detlogger{N} → fakesink{N}
+//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → detcollector → dslogger → nvstreamdemux → queue_demux{N} → fakesink{N}
 class BaseRtspGenerator : public PipelineGenerator {
 public:
     static constexpr const char* PIPELINE_CONFIG_NAME = "pipeline.yml";

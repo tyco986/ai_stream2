@@ -2,14 +2,9 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0 gstreamer-base-1.0 gstreamer-video-1.0)
 
 add_library(dslogger SHARED
-    engine/log_engine.cpp
-    engine/det_log_engine.cpp
-    engine/presence_log_engine.cpp
-    engine/stgcnpp_log_engine.cpp
+    engine/ds_logger.cpp
     gst_bridge/gst_logger_utils.cpp
-    gst_bridge/gst_det_logger.cpp
-    gst_bridge/gst_presence_logger.cpp
-    gst_bridge/gst_stgcnpp_logger.cpp
+    gst_bridge/gst_ds_logger.cpp
     register_plugin.cpp
 )
 

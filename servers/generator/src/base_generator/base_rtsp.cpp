@@ -321,13 +321,11 @@ void BaseRtspGenerator::add() {
                 operateOnClassIds));
     }
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
+    appendNode("detcollector", "detcollector", addCollector());
+    appendNode("dslogger", "dslogger", addDslogger(logger.value("interval", 1), pipeline::PAGE_DET));
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     for (int streamIndex = 0; streamIndex < runtimeBatchSize; ++streamIndex) {
         appendNode("queue", "queue_demux" + std::to_string(streamIndex), addQueue());
-        appendNode(
-            "detlogger",
-            "detlogger" + std::to_string(streamIndex),
-            addDetlogger(logger.value("interval", 1)));
         appendNode("fakesink", "fakesink" + std::to_string(streamIndex), addFakesink(false, false));
     }
 }
@@ -349,10 +347,11 @@ void BaseRtspGenerator::link() {
         inferenceTail = "nvtracker";
     }
     edges[inferenceTail] = "nvdsanalytics";
-    edges["nvdsanalytics"] = "nvstreamdemux";
+    edges["nvdsanalytics"] = "detcollector";
+    edges["detcollector"] = "dslogger";
+    edges["dslogger"] = "nvstreamdemux";
     for (int streamIndex = 0; streamIndex < runtimeBatchSize; ++streamIndex) {
-        edges["queue_demux" + std::to_string(streamIndex)] = "detlogger" + std::to_string(streamIndex);
-        edges["detlogger" + std::to_string(streamIndex)] = "fakesink" + std::to_string(streamIndex);
+        edges["queue_demux" + std::to_string(streamIndex)] = "fakesink" + std::to_string(streamIndex);
     }
     pipeline["deepstream"]["edges"] = edges;
 }

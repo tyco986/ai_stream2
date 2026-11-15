@@ -10,7 +10,7 @@
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocesspose
-//         → boxsnapshot → nvtracker → nvdsanalytics → detlogger → fakesink
+//         → boxsnapshot → nvtracker → nvdsanalytics → detcollector → dslogger → fakesink
 class PoseSahiVideoGenerator : public SahiPoseVideoGenerator {
 public:
     PoseSahiVideoGenerator(

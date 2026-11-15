@@ -83,10 +83,8 @@ void StgcnppRtmposeVideoGenerator::add() {
     appendNode("nvinfer", "sgie1", addNvinfer(StgcnppYoloPose::CONFIG_NAME, model->batchSize, model->gpuId, true));
     appendNode("stgcnppactionlabel", "stgcnppactionlabel", addStgcnppactionlabel(model->uniqueId));
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
-    appendNode(
-        "stgcnpplogger",
-        "stgcnpplogger",
-        addStgcnpplogger(logger.value("interval", 1)));
+    appendNode("stgcnppcollector", "stgcnppcollector", addCollector());
+    appendNode("dslogger", "dslogger", addDslogger(logger.value("interval", 1), pipeline::PAGE_STGCNPP));
     appendNode("fakesink", "fakesink", addFakesink(false, false));
 }
 
@@ -113,7 +111,8 @@ void StgcnppRtmposeVideoGenerator::link() {
     edges["nvdspreprocess"] = "sgie1";
     edges["sgie1"] = "stgcnppactionlabel";
     edges["stgcnppactionlabel"] = "nvdsanalytics";
-    edges["nvdsanalytics"] = "stgcnpplogger";
-    edges["stgcnpplogger"] = "fakesink";
+    edges["nvdsanalytics"] = "stgcnppcollector";
+    edges["stgcnppcollector"] = "dslogger";
+    edges["dslogger"] = "fakesink";
     pipeline["deepstream"]["edges"] = edges;
 }

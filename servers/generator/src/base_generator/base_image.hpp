@@ -26,8 +26,8 @@
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → nvdsanalytics → nvstreamdemux → queue_demux{N} → detfadedrawer{N} → nvosdbin{N} → nvvideoconvert{N}
-//         │     → capsfilter{N} → detlogger{N} → nvjpegenc{N} → filesink{N}
+//     nvurisrcbin{N} → nvstreammux → pgie → nvdsanalytics → detcollector → dslogger → nvstreamdemux → queue_demux{N} → detfadedrawer{N} → nvosdbin{N} → nvvideoconvert{N}
+//         │     → capsfilter{N} → nvjpegenc{N} → filesink{N}
 class BaseImageGenerator : public PipelineGenerator {
 public:
     static constexpr const char* PIPELINE_CONFIG_NAME = "pipeline.yml";

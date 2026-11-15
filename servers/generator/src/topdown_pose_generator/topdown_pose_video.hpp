@@ -12,7 +12,7 @@
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0
-//         → nvrtmposepostprocess → nvdsanalytics → detlogger → fakesink
+//         → nvrtmposepostprocess → nvdsanalytics → detcollector → dslogger → fakesink
 class TopdownPoseVideoGenerator : public BaseVideoGenerator {
 public:
     TopdownPoseVideoGenerator(

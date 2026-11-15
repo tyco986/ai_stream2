@@ -85,14 +85,13 @@ void StgcnppRtmposeRtspGenerator::add() {
     appendNode("nvinfer", "sgie1", addNvinfer(StgcnppYoloPose::CONFIG_NAME, model->batchSize, model->gpuId, true));
     appendNode("stgcnppactionlabel", "stgcnppactionlabel", addStgcnppactionlabel(model->uniqueId));
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
+    appendNode("stgcnppcollector", "stgcnppcollector", addCollector());
+    appendNode("dslogger", "dslogger", addDslogger(logger.value("interval", 1), pipeline::PAGE_STGCNPP));
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     for (int streamIndex = 0; streamIndex < runtimeBatchSize; ++streamIndex) {
         const std::string suffix = std::to_string(streamIndex);
         appendNode("queue", "queue_demux" + suffix, addQueue());
-        appendNode(
-            "stgcnpplogger",
-            "stgcnpplogger" + suffix,
-            addStgcnpplogger(logger.value("interval", 1)));
+
         appendNode("fakesink", "fakesink" + suffix, addFakesink(false, false));
     }
 }
@@ -120,11 +119,12 @@ void StgcnppRtmposeRtspGenerator::link() {
     edges["nvdspreprocess"] = "sgie1";
     edges["sgie1"] = "stgcnppactionlabel";
     edges["stgcnppactionlabel"] = "nvdsanalytics";
-    edges["nvdsanalytics"] = "nvstreamdemux";
+    edges["nvdsanalytics"] = "stgcnppcollector";
+    edges["stgcnppcollector"] = "dslogger";
+    edges["dslogger"] = "nvstreamdemux";
     for (int index = 0; index < runtimeBatchSize; ++index) {
         const std::string suffix = std::to_string(index);
-        edges["queue_demux" + suffix] = "stgcnpplogger" + suffix;
-        edges["stgcnpplogger" + suffix] = "fakesink" + suffix;
+        edges["queue_demux" + suffix] = "fakesink" + suffix;
     }
     pipeline["deepstream"]["edges"] = edges;
 }

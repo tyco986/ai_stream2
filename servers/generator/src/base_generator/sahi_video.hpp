@@ -16,7 +16,7 @@
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
-//         → boxsnapshot → nvtracker → nvdsanalytics → detlogger → fakesink
+//         → boxsnapshot → nvtracker → nvdsanalytics → detcollector → dslogger → fakesink
 class SahiVideoGenerator : public BaseVideoGenerator {
 public:
     static constexpr const char* SAHI_PREPROCESS_CONFIG_NAME = "nvsahipreprocess.ini";

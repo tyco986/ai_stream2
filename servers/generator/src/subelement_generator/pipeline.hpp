@@ -35,9 +35,8 @@ protected:
     YAML::Node addBoxsnapshot();
     YAML::Node addNvdsanalytics(const std::string& configFile);
     int userInterval(int interval);
-    YAML::Node addDetlogger(int interval = 1);
-    YAML::Node addPresencelogger(int interval = 1);
-    YAML::Node addStgcnpplogger(int interval = 1);
+    YAML::Node addCollector();
+    YAML::Node addDslogger(int interval, const std::string& page);
     YAML::Node addDetfadedrawer(int interval = 1, int fadeTime = 0, bool showLabel = false);
     YAML::Node addDetfadedrawerwithtracker(int interval = 1, int fadeTime = 0, bool showLabel = false, bool showSnap = true);
     YAML::Node addPosefadedrawer(int interval = 1, int fadeTime = 0, bool showLabel = false, bool showPose = true, double poseThreshold = 0.0, const std::string& mode = pipeline::POSE_MODE_COCO17);

@@ -13,7 +13,7 @@
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0
-//         → nvrtmposepostprocess → nvdspreprocess → sgie1 → stgcnppactionlabel → nvdsanalytics → stgcnpplogger → fakesink
+//         → nvrtmposepostprocess → nvdspreprocess → sgie1 → stgcnppactionlabel → nvdsanalytics → stgcnppcollector → dslogger → fakesink
 class StgcnppRtmposeVideoGenerator : public BaseVideoGenerator {
 public:
     StgcnppRtmposeVideoGenerator(

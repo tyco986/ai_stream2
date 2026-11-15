@@ -345,10 +345,8 @@ void BaseVideoGenerator::add() {
             addNvtracker(subelement::TRACKER_LL_LIB, TRACKER_CONFIG_NAME, trackerWidth, trackerHeight, gpuId, operateOnClassIds));
     }
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
-    appendNode(
-        "detlogger",
-        "detlogger",
-        addDetlogger(logger.value("interval", 1)));
+    appendNode("detcollector", "detcollector", addCollector());
+    appendNode("dslogger", "dslogger", addDslogger(logger.value("interval", 1), pipeline::PAGE_DET));
     appendNode("fakesink", "fakesink", addFakesink(false, false));
 }
 
@@ -369,7 +367,8 @@ void BaseVideoGenerator::link() {
         inferenceTail = "nvtracker";
     }
     edges[inferenceTail] = "nvdsanalytics";
-    edges["nvdsanalytics"] = "detlogger";
-    edges["detlogger"] = "fakesink";
+    edges["nvdsanalytics"] = "detcollector";
+    edges["detcollector"] = "dslogger";
+    edges["dslogger"] = "fakesink";
     pipeline["deepstream"]["edges"] = edges;
 }

@@ -10,8 +10,8 @@
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
-//         → nvdsanalytics → nvstreamdemux → queue_demux{N} → detfadedrawer{N} → nvosdbin{N} → nvvideoconvert{N}
-//         │     → capsfilter{N} → detlogger{N} → nvjpegenc{N} → filesink{N}
+//         → nvdsanalytics → detcollector → dslogger → nvstreamdemux → queue_demux{N} → detfadedrawer{N} → nvosdbin{N} → nvvideoconvert{N}
+//         │     → capsfilter{N} → nvjpegenc{N} → filesink{N}
 class DetSahiImageGenerator : public SahiImageGenerator {
 public:
     DetSahiImageGenerator(

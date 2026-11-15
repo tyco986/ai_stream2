@@ -13,7 +13,7 @@
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0
-//         → nvrtmposepostprocess → nvdspreprocess → sgie1 → stgcnppactionlabel → nvdsanalytics → nvstreamdemux → queue_demux{N} → stgcnpplogger{N} → fakesink{N}
+//         → nvrtmposepostprocess → nvdspreprocess → sgie1 → stgcnppactionlabel → nvdsanalytics → stgcnppcollector → dslogger → nvstreamdemux → queue_demux{N} → fakesink{N}
 class StgcnppRtmposeRtspGenerator : public BaseRtspGenerator {
 public:
     StgcnppRtmposeRtspGenerator(

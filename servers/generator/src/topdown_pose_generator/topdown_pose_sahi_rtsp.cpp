@@ -90,14 +90,13 @@ void TopdownPoseSahiRtspGenerator::add() {
     appendNode("nvinfer", "sgie0", addNvinfer(TopdownPose::SGIE_CONFIG_NAME, pose->batchSize, pose->gpuId, true));
     appendNode("rtmposepostprocess", "nvrtmposepostprocess", addNvrtmposepostprocess(pose->uniqueId));
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
+    appendNode("detcollector", "detcollector", addCollector());
+    appendNode("dslogger", "dslogger", addDslogger(logger.value("interval", 1), pipeline::PAGE_DET));
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     for (int streamIndex = 0; streamIndex < muxBatchSize; ++streamIndex) {
         const std::string suffix = std::to_string(streamIndex);
         appendNode("queue", "queue_demux" + suffix, addQueue());
-        appendNode(
-            "detlogger",
-            "detlogger" + suffix,
-            addDetlogger(logger.value("interval", 1)));
+
         appendNode("fakesink", "fakesink" + suffix, addFakesink(false, false));
     }
 }
@@ -125,11 +124,12 @@ void TopdownPoseSahiRtspGenerator::link() {
     edges["nvdspreprocess_rtmpose"] = "sgie0";
     edges["sgie0"] = "nvrtmposepostprocess";
     edges["nvrtmposepostprocess"] = "nvdsanalytics";
-    edges["nvdsanalytics"] = "nvstreamdemux";
+    edges["nvdsanalytics"] = "detcollector";
+    edges["detcollector"] = "dslogger";
+    edges["dslogger"] = "nvstreamdemux";
     for (int index = 0; index < muxBatchSize; ++index) {
         const std::string suffix = std::to_string(index);
-        edges["queue_demux" + suffix] = "detlogger" + suffix;
-        edges["detlogger" + suffix] = "fakesink" + suffix;
+        edges["queue_demux" + suffix] = "fakesink" + suffix;
     }
     pipeline["deepstream"]["edges"] = edges;
 }

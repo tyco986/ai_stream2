@@ -316,10 +316,7 @@ void EventVideoGenerator::linkInfer(YAML::Node edges) {
 
 void EventVideoGenerator::appendAfterOsd(int index, int gpuId) {
     const std::string suffix = std::to_string(index);
-    appendNode(
-        "presencelogger",
-        "presencelogger" + suffix,
-        addPresencelogger(logger.value("interval", 1)));
+
     appendNode("queue", "queue_vis" + suffix, addQueue());
     appendNode("nvvideoconvert", "nvvideoconvert_vis" + suffix, addNvvideoconvert(gpuId));
     appendNode("capsfilter", "capsfilter_vis" + suffix, addCapsfilter("video/x-raw(memory:NVMM), format=RGB"));
@@ -329,8 +326,7 @@ void EventVideoGenerator::appendAfterOsd(int index, int gpuId) {
 
 void EventVideoGenerator::linkAfterOsd(YAML::Node edges, int index) {
     const std::string suffix = std::to_string(index);
-    edges["nvosdbin" + suffix] = "presencelogger" + suffix;
-    edges["presencelogger" + suffix] = "queue_vis" + suffix;
+    edges["nvosdbin" + suffix] = "queue_vis" + suffix;
     edges["queue_vis" + suffix] = "nvvideoconvert_vis" + suffix;
     edges["nvvideoconvert_vis" + suffix] = "capsfilter_vis" + suffix;
     edges["capsfilter_vis" + suffix] = "viscapturer" + suffix;
@@ -360,7 +356,7 @@ void EventVideoGenerator::add() {
             addNvtracker(subelement::TRACKER_LL_LIB, TRACKER_CONFIG_NAME, trackerWidth, trackerHeight, gpuId, operateOnClassIds));
     }
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
-    appendEventCoder();
+    appendEventCoder(logger.value("interval", 1));
     appendNode("tee", "tee_msg", addTee());
     appendNode("queue", "queue_msg", addQueue());
     appendNode("nvmsgconv", "nvmsgconv", addNvmsgconv(MSGCONV_CONFIG_NAME, msg2pLib, pipeline::PAYLOAD_DEEPSTREAM_MINIMAL, true, pgie.at("interval").get<int>()));

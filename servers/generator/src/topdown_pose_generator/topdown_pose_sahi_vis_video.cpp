@@ -90,6 +90,8 @@ void TopdownPoseSahiVisVideoGenerator::add() {
     appendNode("nvinfer", "sgie0", addNvinfer(TopdownPose::SGIE_CONFIG_NAME, pose->batchSize, pose->gpuId, true));
     appendNode("rtmposepostprocess", "nvrtmposepostprocess", addNvrtmposepostprocess(pose->uniqueId));
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
+    appendNode("detcollector", "detcollector", addCollector());
+    appendNode("dslogger", "dslogger", addDslogger(logger.value("interval", 1), pipeline::PAGE_DET));
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     const std::string drawerElement = nvposeDrawerElement();
     for (int streamIndex = 0; streamIndex < muxBatchSize; ++streamIndex) {
@@ -102,10 +104,7 @@ void TopdownPoseSahiVisVideoGenerator::add() {
             appendNode(drawerElement, drawerElement + suffix, nvposeDrawerProperties(*drawer));
         }
         appendNode("nvosdbin", "nvosdbin" + suffix, addNvosdbin(gpuId, true, true, false));
-        appendNode(
-            "detlogger",
-            "detlogger" + suffix,
-            addDetlogger(logger.value("interval", 1)));
+
         appendNode(
             "nvv4l2h264enc",
             "nvv4l2h264enc" + suffix,
@@ -139,7 +138,9 @@ void TopdownPoseSahiVisVideoGenerator::link() {
     edges["nvdspreprocess_rtmpose"] = "sgie0";
     edges["sgie0"] = "nvrtmposepostprocess";
     edges["nvrtmposepostprocess"] = "nvdsanalytics";
-    edges["nvdsanalytics"] = "nvstreamdemux";
+    edges["nvdsanalytics"] = "detcollector";
+    edges["detcollector"] = "dslogger";
+    edges["dslogger"] = "nvstreamdemux";
     const std::string drawerElement = nvposeDrawerElement();
     for (int index = 0; index < muxBatchSize; ++index) {
         const std::string suffix = std::to_string(index);
@@ -149,8 +150,7 @@ void TopdownPoseSahiVisVideoGenerator::link() {
         if (drawer.has_value()) {
             edges[drawerElement + suffix] = "nvosdbin" + suffix;
         }
-        edges["nvosdbin" + suffix] = "detlogger" + suffix;
-        edges["detlogger" + suffix] = "nvv4l2h264enc" + suffix;
+        edges["nvosdbin" + suffix] = "nvv4l2h264enc" + suffix;
         edges["nvv4l2h264enc" + suffix] = "h264parse" + suffix;
         edges["h264parse" + suffix] = "mp4mux" + suffix;
         edges["mp4mux" + suffix] = "filesink" + suffix;

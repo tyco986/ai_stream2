@@ -91,6 +91,8 @@ void StgcnppYoloPoseSahiVisVideoGenerator::add() {
     appendNode("nvinfer", "sgie1", addNvinfer(StgcnppYoloPose::CONFIG_NAME, model->batchSize, model->gpuId, true));
     appendNode("stgcnppactionlabel", "stgcnppactionlabel", addStgcnppactionlabel(model->uniqueId));
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
+    appendNode("stgcnppcollector", "stgcnppcollector", addCollector());
+    appendNode("dslogger", "dslogger", addDslogger(logger.value("interval", 1), pipeline::PAGE_STGCNPP));
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     for (int streamIndex = 0; streamIndex < muxBatchSize; ++streamIndex) {
         const std::string suffix = std::to_string(streamIndex);
@@ -102,10 +104,7 @@ void StgcnppYoloPoseSahiVisVideoGenerator::add() {
             appendNode(StgcnppYoloPose::DRAWER_ELEMENT, std::string(StgcnppYoloPose::DRAWER_ELEMENT) + suffix, StgcnppYoloPose::drawerProperties(*drawer));
         }
         appendNode("nvosdbin", "nvosdbin" + suffix, addNvosdbin(gpuId, true, true, false));
-        appendNode(
-            "stgcnpplogger",
-            "stgcnpplogger" + suffix,
-            addStgcnpplogger(logger.value("interval", 1)));
+
         appendNode(
             "nvv4l2h264enc",
             "nvv4l2h264enc" + suffix,
@@ -139,7 +138,9 @@ void StgcnppYoloPoseSahiVisVideoGenerator::link() {
     edges["nvdspreprocess"] = "sgie1";
     edges["sgie1"] = "stgcnppactionlabel";
     edges["stgcnppactionlabel"] = "nvdsanalytics";
-    edges["nvdsanalytics"] = "nvstreamdemux";
+    edges["nvdsanalytics"] = "stgcnppcollector";
+    edges["stgcnppcollector"] = "dslogger";
+    edges["dslogger"] = "nvstreamdemux";
     for (int index = 0; index < muxBatchSize; ++index) {
         const std::string suffix = std::to_string(index);
         const std::string drawerName = std::string(StgcnppYoloPose::DRAWER_ELEMENT) + suffix;
@@ -149,8 +150,7 @@ void StgcnppYoloPoseSahiVisVideoGenerator::link() {
         if (drawer.has_value()) {
             edges[drawerName] = "nvosdbin" + suffix;
         }
-        edges["nvosdbin" + suffix] = "stgcnpplogger" + suffix;
-        edges["stgcnpplogger" + suffix] = "nvv4l2h264enc" + suffix;
+        edges["nvosdbin" + suffix] = "nvv4l2h264enc" + suffix;
         edges["nvv4l2h264enc" + suffix] = "h264parse" + suffix;
         edges["h264parse" + suffix] = "mp4mux" + suffix;
         edges["mp4mux" + suffix] = "filesink" + suffix;

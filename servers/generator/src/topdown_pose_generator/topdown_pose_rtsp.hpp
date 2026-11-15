@@ -12,7 +12,7 @@
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0
-//         → nvrtmposepostprocess → nvdsanalytics → nvstreamdemux → queue_demux{N} → detlogger{N} → fakesink{N}
+//         → nvrtmposepostprocess → nvdsanalytics → detcollector → dslogger → nvstreamdemux → queue_demux{N} → fakesink{N}
 class TopdownPoseRtspGenerator : public BaseRtspGenerator {
 public:
     TopdownPoseRtspGenerator(

@@ -52,6 +52,8 @@ void PoseVisRtspGenerator::add() {
             addNvtracker(subelement::TRACKER_LL_LIB, TRACKER_CONFIG_NAME, trackerWidth, trackerHeight, gpuId, operateOnClassIds));
     }
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
+    appendNode("detcollector", "detcollector", addCollector());
+    appendNode("dslogger", "dslogger", addDslogger(logger.value("interval", 1), pipeline::PAGE_DET));
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     const std::string drawerElement = nvposeDrawerElement();
     index = 0;
@@ -64,10 +66,7 @@ void PoseVisRtspGenerator::add() {
         }
         appendNode("nvosdbin", "nvosdbin" + suffix, addNvosdbin(gpuId, true, true, false));
         appendNode("queue", "queue_enc" + suffix, addQueue());
-        appendNode(
-            "detlogger",
-            "detlogger" + suffix,
-            addDetlogger(logger.value("interval", 1)));
+
         appendNode(
             "nvv4l2h264enc",
             "nvv4l2h264enc" + suffix,
@@ -98,7 +97,9 @@ void PoseVisRtspGenerator::link() {
         inferenceTail = "nvtracker";
     }
     edges[inferenceTail] = "nvdsanalytics";
-    edges["nvdsanalytics"] = "nvstreamdemux";
+    edges["nvdsanalytics"] = "detcollector";
+    edges["detcollector"] = "dslogger";
+    edges["dslogger"] = "nvstreamdemux";
     const std::string drawerElement = nvposeDrawerElement();
     for (int index = 0; index < runtimeBatchSize; ++index) {
         const std::string suffix = std::to_string(index);
@@ -109,8 +110,7 @@ void PoseVisRtspGenerator::link() {
             edges[drawerElement + suffix] = "nvosdbin" + suffix;
         }
         edges["nvosdbin" + suffix] = "queue_enc" + suffix;
-        edges["queue_enc" + suffix] = "detlogger" + suffix;
-        edges["detlogger" + suffix] = "nvv4l2h264enc" + suffix;
+        edges["queue_enc" + suffix] = "nvv4l2h264enc" + suffix;
         edges["nvv4l2h264enc" + suffix] = "h264parse" + suffix;
         edges["h264parse" + suffix] = "rtspclientsink" + suffix;
     }

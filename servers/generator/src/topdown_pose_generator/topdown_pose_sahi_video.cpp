@@ -88,10 +88,8 @@ void TopdownPoseSahiVideoGenerator::add() {
     appendNode("nvinfer", "sgie0", addNvinfer(TopdownPose::SGIE_CONFIG_NAME, pose->batchSize, pose->gpuId, true));
     appendNode("rtmposepostprocess", "nvrtmposepostprocess", addNvrtmposepostprocess(pose->uniqueId));
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
-    appendNode(
-        "detlogger",
-        "detlogger",
-        addDetlogger(logger.value("interval", 1)));
+    appendNode("detcollector", "detcollector", addCollector());
+    appendNode("dslogger", "dslogger", addDslogger(logger.value("interval", 1), pipeline::PAGE_DET));
     appendNode("fakesink", "fakesink", addFakesink(false, false));
 }
 
@@ -118,7 +116,8 @@ void TopdownPoseSahiVideoGenerator::link() {
     edges["nvdspreprocess_rtmpose"] = "sgie0";
     edges["sgie0"] = "nvrtmposepostprocess";
     edges["nvrtmposepostprocess"] = "nvdsanalytics";
-    edges["nvdsanalytics"] = "detlogger";
-    edges["detlogger"] = "fakesink";
+    edges["nvdsanalytics"] = "detcollector";
+    edges["detcollector"] = "dslogger";
+    edges["dslogger"] = "fakesink";
     pipeline["deepstream"]["edges"] = edges;
 }

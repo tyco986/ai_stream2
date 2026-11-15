@@ -13,7 +13,7 @@
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
 //         → boxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0 → nvrtmposepostprocess
-//         → nvdsanalytics → detlogger → fakesink
+//         → nvdsanalytics → detcollector → dslogger → fakesink
 class TopdownPoseSahiVideoGenerator : public SahiVideoGenerator {
 public:
     TopdownPoseSahiVideoGenerator(

@@ -49,10 +49,7 @@ void VisEventVideoGenerator::appendAfterOsd(int index, int gpuId) {
     appendNode("viscapturer", "viscapturer" + suffix, addViscapturer(capturerCodes()));
     appendNode("fakesink", "fakesink_vis" + suffix, addFakesink(false, false));
     appendNode("queue", "queue_enc" + suffix, addQueue());
-    appendNode(
-        "presencelogger",
-        "presencelogger" + suffix,
-        addPresencelogger(logger.value("interval", 1)));
+
     appendNode("nvvideoconvert", "nvvideoconvert_enc" + suffix, addNvvideoconvert(gpuId));
     appendNode("capsfilter", "capsfilter_enc" + suffix, addCapsfilter(pipeline::H264_CAPS));
     appendNode(
@@ -73,8 +70,7 @@ void VisEventVideoGenerator::linkAfterOsd(YAML::Node edges, int index) {
     edges["nvvideoconvert_vis" + suffix] = "capsfilter_vis" + suffix;
     edges["capsfilter_vis" + suffix] = "viscapturer" + suffix;
     edges["viscapturer" + suffix] = "fakesink_vis" + suffix;
-    edges["queue_enc" + suffix] = "presencelogger" + suffix;
-    edges["presencelogger" + suffix] = "nvvideoconvert_enc" + suffix;
+    edges["queue_enc" + suffix] = "nvvideoconvert_enc" + suffix;
     edges["nvvideoconvert_enc" + suffix] = "capsfilter_enc" + suffix;
     edges["capsfilter_enc" + suffix] = "nvv4l2h264enc" + suffix;
     edges["nvv4l2h264enc" + suffix] = "h264parse" + suffix;

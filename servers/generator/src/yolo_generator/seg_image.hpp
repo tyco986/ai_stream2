@@ -8,8 +8,8 @@
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → nvdsanalytics → nvstreamdemux → queue_demux{N} → segfadedrawer{N} → nvosdbin{N} → nvvideoconvert{N}
-//         │     → capsfilter{N} → detlogger{N} → nvjpegenc{N} → filesink{N}
+//     nvurisrcbin{N} → nvstreammux → pgie → nvdsanalytics → detcollector → dslogger → nvstreamdemux → queue_demux{N} → segfadedrawer{N} → nvosdbin{N} → nvvideoconvert{N}
+//         │     → capsfilter{N} → nvjpegenc{N} → filesink{N}
 class SegImageGenerator : public BaseImageGenerator {
 public:
     SegImageGenerator(

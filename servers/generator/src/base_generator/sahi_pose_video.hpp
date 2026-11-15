@@ -9,7 +9,7 @@
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocesspose
-//         → boxsnapshot → nvtracker → nvdsanalytics → detlogger → fakesink
+//         → boxsnapshot → nvtracker → nvdsanalytics → detcollector → dslogger → fakesink
 class SahiPoseVideoGenerator : public SahiVideoGenerator {
 public:
     static constexpr const char* SAHI_POSE_POSTPROCESS = "nvsahipostprocesspose";

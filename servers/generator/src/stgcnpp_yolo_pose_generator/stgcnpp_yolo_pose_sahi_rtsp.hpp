@@ -13,7 +13,7 @@
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocesspose
 //         → boxsnapshot → nvtracker → nvdspreprocess → sgie1 → stgcnppactionlabel
-//         → nvdsanalytics → nvstreamdemux → queue_demux{N} → stgcnpplogger{N} → fakesink{N}
+//         → nvdsanalytics → stgcnppcollector → dslogger → nvstreamdemux → queue_demux{N} → fakesink{N}
 class StgcnppYoloPoseSahiRtspGenerator : public SahiPoseRtspGenerator {
 public:
     StgcnppYoloPoseSahiRtspGenerator(

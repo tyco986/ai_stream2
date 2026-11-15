@@ -12,8 +12,8 @@
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0
-//         → nvrtmposepostprocess → nvdsanalytics → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → posefadedrawerwithtracker{N} → nvosdbin{N}
-//           │     → queue_enc{N} → detlogger{N} → nvv4l2h264enc{N} → h264parse{N} → rtspclientsink{N}
+//         → nvrtmposepostprocess → nvdsanalytics → detcollector → dslogger → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → posefadedrawerwithtracker{N} → nvosdbin{N}
+//           │     → queue_enc{N} → nvv4l2h264enc{N} → h264parse{N} → rtspclientsink{N}
 class TopdownPoseVisRtspGenerator : public VisRtspGenerator {
 public:
     TopdownPoseVisRtspGenerator(

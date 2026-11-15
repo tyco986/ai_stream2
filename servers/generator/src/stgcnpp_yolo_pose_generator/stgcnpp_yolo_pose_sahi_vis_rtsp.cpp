@@ -91,6 +91,8 @@ void StgcnppYoloPoseSahiVisRtspGenerator::add() {
     appendNode("nvinfer", "sgie1", addNvinfer(StgcnppYoloPose::CONFIG_NAME, model->batchSize, model->gpuId, true));
     appendNode("stgcnppactionlabel", "stgcnppactionlabel", addStgcnppactionlabel(model->uniqueId));
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
+    appendNode("stgcnppcollector", "stgcnppcollector", addCollector());
+    appendNode("dslogger", "dslogger", addDslogger(logger.value("interval", 1), pipeline::PAGE_STGCNPP));
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     index = 0;
     for (auto item = streams.begin(); item != streams.end(); ++item) {
@@ -102,10 +104,7 @@ void StgcnppYoloPoseSahiVisRtspGenerator::add() {
         }
         appendNode("nvosdbin", "nvosdbin" + suffix, addNvosdbin(gpuId, true, true, false));
         appendNode("queue", "queue_enc" + suffix, addQueue());
-        appendNode(
-            "stgcnpplogger",
-            "stgcnpplogger" + suffix,
-            addStgcnpplogger(logger.value("interval", 1)));
+
         appendNode(
             "nvv4l2h264enc",
             "nvv4l2h264enc" + suffix,
@@ -142,7 +141,9 @@ void StgcnppYoloPoseSahiVisRtspGenerator::link() {
     edges["nvdspreprocess"] = "sgie1";
     edges["sgie1"] = "stgcnppactionlabel";
     edges["stgcnppactionlabel"] = "nvdsanalytics";
-    edges["nvdsanalytics"] = "nvstreamdemux";
+    edges["nvdsanalytics"] = "stgcnppcollector";
+    edges["stgcnppcollector"] = "dslogger";
+    edges["dslogger"] = "nvstreamdemux";
     for (int index = 0; index < muxBatchSize; ++index) {
         const std::string suffix = std::to_string(index);
         const std::string drawerName = std::string(StgcnppYoloPose::DRAWER_ELEMENT) + suffix;
@@ -153,8 +154,7 @@ void StgcnppYoloPoseSahiVisRtspGenerator::link() {
             edges[drawerName] = "nvosdbin" + suffix;
         }
         edges["nvosdbin" + suffix] = "queue_enc" + suffix;
-        edges["queue_enc" + suffix] = "stgcnpplogger" + suffix;
-        edges["stgcnpplogger" + suffix] = "nvv4l2h264enc" + suffix;
+        edges["queue_enc" + suffix] = "nvv4l2h264enc" + suffix;
         edges["nvv4l2h264enc" + suffix] = "h264parse" + suffix;
         edges["h264parse" + suffix] = "rtspclientsink" + suffix;
     }

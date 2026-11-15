@@ -28,7 +28,7 @@
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → detlogger → fakesink
+//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → detcollector → dslogger → fakesink
 class BaseVideoGenerator : public PipelineGenerator {
 public:
     static constexpr const char* PIPELINE_CONFIG_NAME = "pipeline.yml";

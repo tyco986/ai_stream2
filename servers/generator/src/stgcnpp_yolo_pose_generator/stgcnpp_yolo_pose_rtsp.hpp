@@ -12,7 +12,7 @@
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdspreprocess → sgie1
-//         → stgcnppactionlabel → nvdsanalytics → nvstreamdemux → queue_demux{N} → stgcnpplogger{N} → fakesink{N}
+//         → stgcnppactionlabel → nvdsanalytics → stgcnppcollector → dslogger → nvstreamdemux → queue_demux{N} → fakesink{N}
 class StgcnppYoloPoseRtspGenerator : public BaseRtspGenerator {
 public:
     StgcnppYoloPoseRtspGenerator(

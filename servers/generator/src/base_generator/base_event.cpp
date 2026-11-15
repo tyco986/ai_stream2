@@ -21,7 +21,7 @@ std::string BaseEventGenerator::capturerCodes() const {
     return codes;
 }
 
-void BaseEventGenerator::appendEventCoder(const std::string& name) {
+void BaseEventGenerator::appendEventCoder(int logInterval, const std::string& name) {
     appendNode(
         "presenceeventcoder",
         name,
@@ -30,6 +30,8 @@ void BaseEventGenerator::appendEventCoder(const std::string& name) {
             eventCoder.value("length", pipeline::PRESENCE_LENGTH),
             eventCoder.value("threshold", pipeline::PRESENCE_THRESHOLD),
             eventCoder.value("mode", std::string(pipeline::PRESENCE_MODE_FOLD))));
+    appendNode("presencecollector", "presencecollector", addCollector());
+    appendNode("dslogger", "dslogger", addDslogger(logInterval, pipeline::PAGE_PRESENCE));
 }
 
 std::string BaseEventGenerator::afterAnalytics(const std::string& teeName) const {
@@ -39,5 +41,7 @@ std::string BaseEventGenerator::afterAnalytics(const std::string& teeName) const
 }
 
 void BaseEventGenerator::linkEventCoder(YAML::Node edges, const std::string& teeName) const {
-    edges["presenceeventcoder"] = teeName;
+    edges["presenceeventcoder"] = "presencecollector";
+    edges["presencecollector"] = "dslogger";
+    edges["dslogger"] = teeName;
 }

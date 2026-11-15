@@ -9,8 +9,8 @@
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocesspose
-//         → nvdsanalytics → nvstreamdemux → queue_demux{N} → posefadedrawer{N} → nvosdbin{N} → nvvideoconvert{N}
-//         │     → capsfilter{N} → detlogger{N} → nvjpegenc{N} → filesink{N}
+//         → nvdsanalytics → detcollector → dslogger → nvstreamdemux → queue_demux{N} → posefadedrawer{N} → nvosdbin{N} → nvvideoconvert{N}
+//         │     → capsfilter{N} → nvjpegenc{N} → filesink{N}
 class PoseSahiImageGenerator : public SahiPoseImageGenerator {
 public:
     PoseSahiImageGenerator(

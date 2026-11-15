@@ -25,6 +25,8 @@ void VisRtspGenerator::add() {
             addNvtracker(subelement::TRACKER_LL_LIB, TRACKER_CONFIG_NAME, trackerWidth, trackerHeight, gpuId, operateOnClassIds));
     }
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
+    appendNode("detcollector", "detcollector", addCollector());
+    appendNode("dslogger", "dslogger", addDslogger(logger.value("interval", 1), pipeline::PAGE_DET));
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     index = 0;
     for (auto item = streams.begin(); item != streams.end(); ++item) {
@@ -37,10 +39,7 @@ void VisRtspGenerator::add() {
         }
         appendNode("nvosdbin", "nvosdbin" + suffix, addNvosdbin(gpuId, true, true));
         appendNode("queue", "queue_enc" + suffix, addQueue());
-        appendNode(
-            "detlogger",
-            "detlogger" + suffix,
-            addDetlogger(logger.value("interval", 1)));
+
         appendNode(
             "nvv4l2h264enc",
             "nvv4l2h264enc" + suffix,
@@ -71,7 +70,9 @@ void VisRtspGenerator::link() {
         inferenceTail = "nvtracker";
     }
     edges[inferenceTail] = "nvdsanalytics";
-    edges["nvdsanalytics"] = "nvstreamdemux";
+    edges["nvdsanalytics"] = "detcollector";
+    edges["detcollector"] = "dslogger";
+    edges["dslogger"] = "nvstreamdemux";
     for (int index = 0; index < runtimeBatchSize; ++index) {
         const std::string suffix = std::to_string(index);
         edges["queue_demux" + suffix] = "nvvideoconvert" + suffix;
@@ -82,8 +83,7 @@ void VisRtspGenerator::link() {
             edges[drawerName] = "nvosdbin" + suffix;
         }
         edges["nvosdbin" + suffix] = "queue_enc" + suffix;
-        edges["queue_enc" + suffix] = "detlogger" + suffix;
-        edges["detlogger" + suffix] = "nvv4l2h264enc" + suffix;
+        edges["queue_enc" + suffix] = "nvv4l2h264enc" + suffix;
         edges["nvv4l2h264enc" + suffix] = "h264parse" + suffix;
         edges["h264parse" + suffix] = "rtspclientsink" + suffix;
     }

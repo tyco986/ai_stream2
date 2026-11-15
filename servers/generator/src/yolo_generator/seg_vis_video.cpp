@@ -52,6 +52,8 @@ void SegVisVideoGenerator::add() {
             addNvtracker(subelement::TRACKER_LL_LIB, TRACKER_CONFIG_NAME, trackerWidth, trackerHeight, gpuId, operateOnClassIds));
     }
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
+    appendNode("detcollector", "detcollector", addCollector());
+    appendNode("dslogger", "dslogger", addDslogger(logger.value("interval", 1), pipeline::PAGE_DET));
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     const std::string drawerElement = nvsegDrawerElement();
     for (int streamIndex = 0; streamIndex < runtimeBatchSize; ++streamIndex) {
@@ -64,7 +66,7 @@ void SegVisVideoGenerator::add() {
             appendNode(drawerElement, drawerElement + suffix, nvsegDrawerProperties(*drawer));
         }
         appendNode("nvosdbin", "nvosdbin" + suffix, addNvosdbin(gpuId, true, true, true));
-        appendNode("detlogger", "detlogger" + suffix, addDetlogger(logger.value("interval", 1)));
+
         appendNode(
             "nvv4l2h264enc",
             "nvv4l2h264enc" + std::to_string(streamIndex),
@@ -92,7 +94,9 @@ void SegVisVideoGenerator::link() {
         inferenceTail = "nvtracker";
     }
     edges[inferenceTail] = "nvdsanalytics";
-    edges["nvdsanalytics"] = "nvstreamdemux";
+    edges["nvdsanalytics"] = "detcollector";
+    edges["detcollector"] = "dslogger";
+    edges["dslogger"] = "nvstreamdemux";
     const std::string drawerElement = nvsegDrawerElement();
     for (int index = 0; index < runtimeBatchSize; ++index) {
         const std::string suffix = std::to_string(index);
@@ -102,8 +106,7 @@ void SegVisVideoGenerator::link() {
         if (drawer.has_value()) {
             edges[drawerElement + suffix] = "nvosdbin" + suffix;
         }
-        edges["nvosdbin" + suffix] = "detlogger" + suffix;
-        edges["detlogger" + suffix] = "nvv4l2h264enc" + suffix;
+        edges["nvosdbin" + suffix] = "nvv4l2h264enc" + suffix;
         edges["nvv4l2h264enc" + suffix] = "h264parse" + suffix;
         edges["h264parse" + suffix] = "mp4mux" + suffix;
         edges["mp4mux" + suffix] = "filesink" + suffix;

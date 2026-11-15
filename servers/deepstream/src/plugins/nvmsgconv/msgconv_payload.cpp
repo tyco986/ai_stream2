@@ -1,49 +1,50 @@
 #include "plugins/nvmsgconv/msgconv_payload.hpp"
 
 #include <cstring>
-#include <memory>
 
-#include "constants/dslogger_const.hpp"
+#include "constants/event_meta_const.hpp"
+#include "constants/presenceeventcoder_const.hpp"
 #include "nvmsgconv.h"
+#include "plugins/dscollector/engine/collector_line.hpp"
+#include "plugins/presenceeventcoder/engine/presence_event_coder.hpp"
 
-#if defined(MSGCONV_DET)
-#include "plugins/dslogger/engine/det_log_engine.hpp"
-#elif defined(MSGCONV_PRESENCE)
-#include "plugins/dslogger/engine/presence_log_engine.hpp"
-#elif defined(MSGCONV_STGCNPP)
-#include "plugins/dslogger/engine/stgcnpp_log_engine.hpp"
-#else
-#error MSGCONV_DET, MSGCONV_PRESENCE, or MSGCONV_STGCNPP is required
+#if defined(MSGCONV_PRESENCE)
+static bool presencePublishable(NvDsFrameMeta* frame) {
+    const PresenceEventMeta* event = nullptr;
+    if (frame != nullptr) {
+        for (NvDsMetaList* item = frame->frame_user_meta_list; item != nullptr && event == nullptr; item = item->next) {
+            auto* userMeta = static_cast<NvDsUserMeta*>(item->data);
+            if (userMeta != nullptr && userMeta->base_meta.meta_type == presenceeventcoder::USER_META) {
+                event = static_cast<const PresenceEventMeta*>(userMeta->user_meta_data);
+            }
+        }
+    }
+    unsigned count = 0;
+    if (event != nullptr) {
+        count = event->event.slotCount;
+        if (count > static_cast<unsigned>(eventmeta::SLOT_COUNT)) {
+            count = static_cast<unsigned>(eventmeta::SLOT_COUNT);
+        }
+    }
+    bool found = false;
+    for (unsigned index = 0; index < count && !found; index++) {
+        found = event->event.slots[index].code != eventmeta::ABSENT;
+    }
+    return found;
+}
 #endif
-
-namespace {
-
-std::unique_ptr<LogEngine> makeEngine() {
-#if defined(MSGCONV_DET)
-    return std::make_unique<DetLogEngine>(0);
-#elif defined(MSGCONV_PRESENCE)
-    return std::make_unique<PresenceLogEngine>(0);
-#else
-    return std::make_unique<StgcnppLogEngine>(0);
-#endif
-}
-
-}
-
-MsgconvPayload::MsgconvPayload()
-    : engine(makeEngine()) {
-}
 
 bool MsgconvPayload::publishable(NvDsFrameMeta* frame) const {
 #if defined(MSGCONV_PRESENCE)
-    return static_cast<PresenceLogEngine*>(engine.get())->active(frame);
+    return presencePublishable(frame);
 #else
     return frame != nullptr;
 #endif
 }
 
 std::string MsgconvPayload::line(NvDsFrameMeta* frame) const {
-    return engine->buildLine(frame, dslogger::LATENCY_NONE);
+    const char* collected = collectorLine(frame);
+    return collected != nullptr ? std::string(collected) : std::string();
 }
 
 extern "C" NvDsMsg2pCtx* nvds_msg2p_ctx_create(const gchar*, NvDsPayloadType type) {
@@ -76,11 +77,11 @@ extern "C" NvDsPayload* nvds_msg2p_generate_new(NvDsMsg2pCtx* ctx, void* metadat
     auto* info = static_cast<NvDsMsg2pMetaInfo*>(metadataInfo);
     auto* state = ctx != nullptr ? static_cast<MsgconvPayload*>(ctx->privData) : nullptr;
     auto* frame = info != nullptr ? static_cast<NvDsFrameMeta*>(info->frameMeta) : nullptr;
-    if (state != nullptr && frame != nullptr && state->publishable(frame)) {
-        const std::string line = state->line(frame);
+    const std::string line = state != nullptr && frame != nullptr && state->publishable(frame) ? state->line(frame) : std::string();
+    if (!line.empty()) {
         payload = static_cast<NvDsPayload*>(g_malloc0(sizeof(NvDsPayload)));
         payload->payload = g_malloc(line.size());
-        memcpy(payload->payload, line.data(), line.size());
+        std::memcpy(payload->payload, line.data(), line.size());
         payload->payloadSize = static_cast<guint>(line.size());
     }
     return payload;

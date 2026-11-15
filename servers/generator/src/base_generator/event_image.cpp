@@ -280,7 +280,7 @@ void EventImageGenerator::add() {
         addNvstreammux(runtimeBatchSize, width, height, false, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId, false));
     appendNode("nvinfer", "pgie", addNvinfer(PGIE_CONFIG_NAME, pgieGenerator->config["property"]["batch-size"].as<int>(), gpuId));
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
-    appendEventCoder();
+    appendEventCoder(logger.value("interval", 1));
     appendNode("tee", "tee_msg", addTee());
     appendNode("queue", "queue_msg", addQueue());
     appendNode("nvmsgconv", "nvmsgconv", addNvmsgconv(MSGCONV_CONFIG_NAME, msg2pLib, pipeline::PAYLOAD_DEEPSTREAM_MINIMAL, true, pgie.at("interval").get<int>()));
@@ -314,10 +314,7 @@ void EventImageGenerator::add() {
         appendNode("viscapturer", "viscapturer" + suffix, addViscapturer(capturerCodes()));
         appendNode("fakesink", "fakesink_vis" + suffix, addFakesink(false, false));
         appendNode("queue", "queue_enc" + suffix, addQueue());
-        appendNode(
-            "presencelogger",
-            "presencelogger" + suffix,
-            addPresencelogger(logger.value("interval", 1)));
+
         appendNode("nvvideoconvert", "nvvideoconvert_enc" + suffix, addNvvideoconvert(gpuId));
         appendNode("capsfilter", "capsfilter_jpeg" + suffix, addCapsfilter());
         appendNode("nvjpegenc", "nvjpegenc" + suffix, addNvjpegenc());
@@ -361,8 +358,7 @@ void EventImageGenerator::link() {
         edges["nvvideoconvert_vis" + suffix] = "capsfilter_vis" + suffix;
         edges["capsfilter_vis" + suffix] = "viscapturer" + suffix;
         edges["viscapturer" + suffix] = "fakesink_vis" + suffix;
-        edges["queue_enc" + suffix] = "presencelogger" + suffix;
-        edges["presencelogger" + suffix] = "nvvideoconvert_enc" + suffix;
+        edges["queue_enc" + suffix] = "nvvideoconvert_enc" + suffix;
         edges["nvvideoconvert_enc" + suffix] = "capsfilter_jpeg" + suffix;
         edges["capsfilter_jpeg" + suffix] = "nvjpegenc" + suffix;
         edges["nvjpegenc" + suffix] = "filesink" + suffix;

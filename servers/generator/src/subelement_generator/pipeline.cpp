@@ -165,18 +165,15 @@ int PipelineGenerator::userInterval(int interval) {
     return accepted;
 }
 
-YAML::Node PipelineGenerator::addDetlogger(int interval) {
+YAML::Node PipelineGenerator::addCollector() {
+    return YAML::Node(YAML::NodeType::Map);
+}
+
+YAML::Node PipelineGenerator::addDslogger(int interval, const std::string& page) {
     YAML::Node properties;
     properties["interval"] = userInterval(interval);
+    properties["page"] = page;
     return properties;
-}
-
-YAML::Node PipelineGenerator::addPresencelogger(int interval) {
-    return addDetlogger(interval);
-}
-
-YAML::Node PipelineGenerator::addStgcnpplogger(int interval) {
-    return addDetlogger(interval);
 }
 
 YAML::Node PipelineGenerator::addDetfadedrawer(int interval, int fadeTime, bool showLabel) {

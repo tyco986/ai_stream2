@@ -1,24 +1,18 @@
+#include "plugins/dscollector/engine/presence_collector_engine.hpp"
+
 #include <iomanip>
 #include <string>
 
-#include "constants/dslogger_const.hpp"
+#include "constants/collector_const.hpp"
 #include "constants/event_meta_const.hpp"
-#include "plugins/dslogger/engine/presence_log_engine.hpp"
+#include "constants/presenceeventcoder_const.hpp"
 
-PresenceLogEngine::PresenceLogEngine(int interval)
-    : LogEngine(interval) {
-}
-
-const char* PresenceLogEngine::page() const {
-    return dslogger::PAGE_PRESENCE;
-}
-
-const PresenceEventMeta* PresenceLogEngine::eventMeta(NvDsFrameMeta* frame) const {
+const PresenceEventMeta* PresenceCollectorEngine::eventMeta(NvDsFrameMeta* frame) const {
     const PresenceEventMeta* event = nullptr;
     if (frame != nullptr) {
         for (NvDsMetaList* item = frame->frame_user_meta_list; item != nullptr && event == nullptr; item = item->next) {
             auto* userMeta = static_cast<NvDsUserMeta*>(item->data);
-            if (userMeta != nullptr && userMeta->base_meta.meta_type == dslogger::PRESENCE_EVENT_USER_META) {
+            if (userMeta != nullptr && userMeta->base_meta.meta_type == presenceeventcoder::USER_META) {
                 event = static_cast<const PresenceEventMeta*>(userMeta->user_meta_data);
             }
         }
@@ -26,7 +20,7 @@ const PresenceEventMeta* PresenceLogEngine::eventMeta(NvDsFrameMeta* frame) cons
     return event;
 }
 
-unsigned PresenceLogEngine::slotCount(const PresenceEventMeta* event) const {
+unsigned PresenceCollectorEngine::slotCount(const PresenceEventMeta* event) const {
     unsigned count = 0;
     if (event != nullptr) {
         count = event->event.slotCount;
@@ -37,21 +31,11 @@ unsigned PresenceLogEngine::slotCount(const PresenceEventMeta* event) const {
     return count;
 }
 
-bool PresenceLogEngine::active(NvDsFrameMeta* frame) const {
-    const PresenceEventMeta* event = eventMeta(frame);
-    const unsigned count = slotCount(event);
-    bool found = false;
-    for (unsigned index = 0; index < count && !found; index++) {
-        found = event->event.slots[index].code != eventmeta::ABSENT;
-    }
-    return found;
-}
-
-void PresenceLogEngine::appendExtra(std::ostringstream& json, NvDsFrameMeta* frame) const {
+void PresenceCollectorEngine::appendExtra(std::ostringstream& json, NvDsFrameMeta* frame) const {
     const PresenceEventMeta* event = eventMeta(frame);
     json << ",\"event\":";
     if (event == nullptr) {
-        json << dslogger::JSON_NULL;
+        json << collector::JSON_NULL;
     } else {
         const unsigned count = slotCount(event);
         std::string label;
@@ -70,7 +54,7 @@ void PresenceLogEngine::appendExtra(std::ostringstream& json, NvDsFrameMeta* fra
         }
         json << "\",\"event_label\":\"" << escapeLabel(label.c_str())
              << "\",\"debouncer\":{\"max_length\":" << event->debouncer.length
-             << ",\"ratio_threshold\":" << std::fixed << std::setprecision(dslogger::CONF_DIGITS) << event->debouncer.threshold
+             << ",\"ratio_threshold\":" << std::fixed << std::setprecision(collector::CONF_DIGITS) << event->debouncer.threshold
              << ",\"current_length\":[";
         for (unsigned index = 0; index < count; index++) {
             if (index > 0) {
@@ -100,9 +84,9 @@ void PresenceLogEngine::appendExtra(std::ostringstream& json, NvDsFrameMeta* fra
             }
             const PresenceDebouncerSlot& slot = event->debouncer.slots[index];
             if (slot.filled == event->debouncer.length) {
-                json << std::fixed << std::setprecision(dslogger::CONF_DIGITS) << slot.ratio;
+                json << std::fixed << std::setprecision(collector::CONF_DIGITS) << slot.ratio;
             } else {
-                json << dslogger::JSON_NULL;
+                json << collector::JSON_NULL;
             }
         }
         json << "]}}";

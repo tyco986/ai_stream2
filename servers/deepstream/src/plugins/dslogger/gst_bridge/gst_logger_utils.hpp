@@ -4,9 +4,9 @@
 
 #include <string>
 
-class LogEngine;
+class DsLogger;
 
 void dsloggerAddPads(GstElementClass* elementClass);
 void dsloggerPrepare(GstBaseTransform* transform);
 std::string dsloggerPipelineName(GstElement* element);
-GstFlowReturn dsloggerTransform(GstBaseTransform* transform, GstBuffer* buffer, LogEngine* engine);
+GstFlowReturn dsloggerTransform(GstBaseTransform* transform, GstBuffer* buffer, DsLogger* logger);

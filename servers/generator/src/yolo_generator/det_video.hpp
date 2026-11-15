@@ -6,7 +6,7 @@
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → detlogger → fakesink
+//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → detcollector → dslogger → fakesink
 class DetVideoGenerator : public BaseVideoGenerator {
 public:
     DetVideoGenerator(
