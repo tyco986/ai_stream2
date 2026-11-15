@@ -37,6 +37,11 @@ docker run -d \
   -c "set -euo pipefail
 /usr/bin/rpk redpanda start --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092 --advertise-kafka-addr internal://${PROJECT_NAME}_kafka:9092,external://localhost:${HOST_PORT} --mode dev-container --smp 1 >/dev/null 2>&1 &
 until /usr/bin/rpk cluster info >/dev/null 2>&1; do sleep 0.2; done
+while read -r name rest; do
+  case \"\$name\" in
+    ai_stream2_*) /usr/bin/rpk topic delete \"\$name\" ;;
+  esac
+done < <(/usr/bin/rpk topic list)
 : > /logs/kafka/kafka.log
 declare -A seen=()
 while true; do

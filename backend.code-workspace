@@ -1,0 +1,10 @@
+{
+    "folders": [
+        {
+            "path": "servers/backend"
+        },
+        {
+            "path": "servers/ffmpeg"
+        }
+    ]
+}

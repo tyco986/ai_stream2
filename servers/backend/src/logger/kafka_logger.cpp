@@ -1,6 +1,7 @@
 #include "logger/kafka_logger.hpp"
 
 #include "constants/kafka_const.hpp"
+#include "constants/response_const.hpp"
 #include "constants/service_log.hpp"
 #include "logger/base_logger.hpp"
 
@@ -49,7 +50,9 @@ void KafkaLogger::write(const std::string& topic, const Json::Value& payload) {
     entry[kafka::KEY_TOPIC] = topic;
     entry[kafka::KEY_PAYLOAD] = payload;
     Json::StreamWriterBuilder writer;
-    writer["indentation"] = "";
+    writer[http::JSON_INDENTATION] = "";
+    writer[http::JSON_PRECISION_TYPE] = http::JSON_PRECISION_DECIMAL;
+    writer[http::JSON_PRECISION] = http::JSON_PRECISION_DIGITS;
     std::string line = Json::writeString(writer, entry);
     if (!line.empty() && line.back() == '\n') {
       line.pop_back();

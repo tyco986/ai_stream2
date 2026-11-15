@@ -4,6 +4,7 @@
 
 #include "constants/event_const.hpp"
 #include "constants/kafka_const.hpp"
+#include "constants/response_const.hpp"
 #include "searcher/searcher.hpp"
 
 #include <stdexcept>
@@ -82,7 +83,9 @@ Json::Value EventService::create(const Json::Value& occurredAt,
       visualizationPath.isNull() ? data[event::KEY_VISUALIZATION_PATH] : visualizationPath;
   data[event::KEY_ANNOTATIONS] = annotations.isNull() ? data[event::KEY_ANNOTATIONS] : annotations;
   Json::StreamWriterBuilder builder;
-  builder["indentation"] = "";
+  builder[http::JSON_INDENTATION] = "";
+  builder[http::JSON_PRECISION_TYPE] = http::JSON_PRECISION_DECIMAL;
+  builder[http::JSON_PRECISION] = http::JSON_PRECISION_DIGITS;
   const std::string annotationsText =
       data[event::KEY_ANNOTATIONS].isNull() ? "" : Json::writeString(builder, data[event::KEY_ANNOTATIONS]);
   const auto rows = Sql::sync({}, dbClient, 

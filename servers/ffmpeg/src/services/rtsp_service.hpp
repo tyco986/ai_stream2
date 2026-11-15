@@ -24,3 +24,4 @@ private:
     static std::mutex publishersMutex;
     static std::map<std::string, nlohmann::json> publishers;
 };
+`

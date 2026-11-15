@@ -26,4 +26,5 @@ docker run -d \
   -p "${HOST_PORT}:9092" \
   -v /etc/localtime:/etc/localtime:ro \
   -v "${PROJECT_NAME}_kafka_data:/var/lib/redpanda/data" \
-  "${IMAGE}"
+  "${IMAGE}" \
+  redpanda start --overprovisioned --smp 1
