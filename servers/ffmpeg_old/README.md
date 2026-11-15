@@ -18,7 +18,7 @@ FastAPI 封装 `ffmpeg` / `ffprobe`：RTSP 推流、探测、截图、抽帧、�
 ./servers/ffmpeg/scripts/0_pull_base_image.sh      # 可选
 ./servers/ffmpeg/scripts/1_build_dev_image.sh      # 或 1_build_prod_image.sh
 ./servers/ffmpeg/scripts/2_run_dev_container.sh    # 或 2_run_prod_container.sh
-./servers/mediamtx/scripts/1_run_container.sh      # publishers 需要
+./servers/mediamtx/scripts/1_run_dev_container.sh  # publishers 需要
 ```
 
 健康检查：`http://127.0.0.1:8080/ai_stream2/ffmpeg/health`（前缀随 `${PROJECT_NAME}`）  

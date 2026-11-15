@@ -45,6 +45,18 @@ inline constexpr const char* SPEC = R"json({
         }
       }
     },
+    "/ai_stream2/export_trt/history/enable": {
+      "post": {
+        "summary": "Enable history",
+        "responses": {"200": {"description": "OK", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Envelope"}}}}}
+      }
+    },
+    "/ai_stream2/export_trt/history/disable": {
+      "post": {
+        "summary": "Disable history",
+        "responses": {"200": {"description": "OK", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Envelope"}}}}}
+      }
+    },
     "/ai_stream2/export_trt/history": {
       "get": {
         "summary": "List history meta",
@@ -71,6 +83,18 @@ inline constexpr const char* SPEC = R"json({
     "/ai_stream2/export_trt/logs": {
       "delete": {
         "summary": "Remove request logs",
+        "responses": {"200": {"description": "OK", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Envelope"}}}}}
+      }
+    },
+    "/ai_stream2/export_trt/logs/enable": {
+      "post": {
+        "summary": "Enable request logs",
+        "responses": {"200": {"description": "OK", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Envelope"}}}}}
+      }
+    },
+    "/ai_stream2/export_trt/logs/disable": {
+      "post": {
+        "summary": "Disable request logs",
         "responses": {"200": {"description": "OK", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Envelope"}}}}}
       }
     }

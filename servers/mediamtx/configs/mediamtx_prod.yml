@@ -1,0 +1,48 @@
+# MediaMTX for ai_stream2. Mount as /mediamtx.yml.
+# Ingest: RTSP publisher (ffmpeg /rtsp/publishers, DeepStream rtspclientsink, etc.).
+# Play:  rtsp://<host>:8554/<path>  or  http://<host>:8889/<path>/  (WebRTC)
+# API:   http://<host>:9997/v3/...  (Control API, hot-reload via PATCH /v3/config/paths/...)
+# Playback: http://<host>:9996/get?path=&start=&duration=
+logLevel: info
+logDestinations: [stdout]
+
+rtspAddress: :8554
+webrtcAddress: :8889
+# WebRTC media (ICE). Docker must publish 8189/udp (and preferably 8189/tcp).
+webrtcLocalUDPAddress: :8189
+webrtcLocalTCPAddress: :8189
+# Host-reachable address for browser ICE candidates (WSL/local: 127.0.0.1).
+webrtcAdditionalHosts: [127.0.0.1]
+webrtcAllowOrigins: ["*"]
+
+api: yes
+apiAddress: :9997
+
+playback: yes
+playbackAddress: :9996
+
+# Allow API from host and other containers on ai_stream2_default (not localhost-only).
+authInternalUsers:
+  - user: any
+    pass:
+    ips: []
+    permissions:
+      - action: publish
+        path:
+      - action: read
+        path:
+      - action: playback
+        path:
+  - user: any
+    pass:
+    ips: []
+    permissions:
+      - action: api
+
+# recordPath must match streams upsert so Playback can find on-disk segments.
+pathDefaults:
+  recordPath: /recordings/%path/%Y-%m-%d_%H-%M-%S-%f
+
+paths:
+  all_others:
+    source: publisher

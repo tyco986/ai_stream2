@@ -2,6 +2,7 @@
 #include "logger/request_logger.hpp"
 #include "routes/generate_route.hpp"
 #include "routes/health_route.hpp"
+#include "routes/openapi_route.hpp"
 #include "routes/history_route.hpp"
 #include "routes/logs_route.hpp"
 #include "routes/types_route.hpp"
@@ -13,6 +14,7 @@ int main() {
     server.set_pre_routing_handler(RequestLogger::before);
     server.set_exception_handler(RequestLogger::onException);
     server.set_logger(RequestLogger::write);
+    OpenApiRoute::bind(server);
     HealthRoute::bind(server);
     TypesRoute::bind(server);
     GenerateRoute::bind(server);

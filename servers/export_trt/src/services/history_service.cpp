@@ -11,12 +11,21 @@
 
 #include <zip.h>
 
+std::atomic<bool> History::enabled{false};
+
+void History::setEnabled(bool value) {
+    enabled.store(value);
+}
+
 void History::save(const std::string& fileName, const std::string& fileContent) {
-    const std::filesystem::path root = history::ROOT;
-    std::filesystem::create_directories(root);
-    const std::filesystem::path path = root / std::filesystem::path(fileName).filename();
-    std::ofstream output(path, std::ios::binary | std::ios::trunc);
-    output.write(fileContent.data(), static_cast<std::streamsize>(fileContent.size()));
+    const bool active = enabled.load();
+    if (active) {
+        const std::filesystem::path root = history::ROOT;
+        std::filesystem::create_directories(root);
+        const std::filesystem::path path = root / std::filesystem::path(fileName).filename();
+        std::ofstream output(path, std::ios::binary | std::ios::trunc);
+        output.write(fileContent.data(), static_cast<std::streamsize>(fileContent.size()));
+    }
 }
 
 nlohmann::json History::meta(const std::string& fileName) {

@@ -79,6 +79,7 @@ class OnnxExportConfig(BaseModel):
 
 
 class ExportOnnxService:
+    history_enabled = False
     def parse_config(self, upload: UploadFile) -> OnnxExportConfig:
         payload = yaml.safe_load(upload.file.read())
         if not isinstance(payload, dict):
@@ -132,18 +133,23 @@ class ExportOnnxService:
         meta_path = work_dir / "meta.json"
         if not onnx_path.is_file() or not labels_path.is_file():
             raise AppError("export did not produce onnx and labels.txt")
-        zip_path = HISTORY_ROOT / f"{stem}.zip"
-        HISTORY_ROOT.mkdir(parents=True, exist_ok=True)
-        zip_path.unlink(missing_ok=True)
+        built = work_dir / f"{stem}.zip"
         completed = subprocess.run(
-            ["zip", "-j", str(zip_path), str(onnx_path), str(labels_path), str(meta_path)],
+            ["zip", "-j", str(built), str(onnx_path), str(labels_path), str(meta_path)],
             capture_output=True,
             text=True,
         )
-        if completed.returncode != 0 or not zip_path.is_file():
+        if completed.returncode != 0 or not built.is_file():
             raise AppError(completed.stderr.strip() or "zip failed")
         meta = json.loads(meta_path.read_text(encoding="utf-8"))
-        shutil.rmtree(work_dir)
+        zip_path = built
+        if ExportOnnxService.history_enabled:
+            HISTORY_ROOT.mkdir(parents=True, exist_ok=True)
+            stored = HISTORY_ROOT / built.name
+            stored.unlink(missing_ok=True)
+            shutil.move(built, stored)
+            shutil.rmtree(work_dir)
+            zip_path = stored
         return zip_path, meta
 
     def export(self, upload: UploadFile, config_file: UploadFile) -> Response:
@@ -186,6 +192,8 @@ class ExportOnnxService:
         )
         zip_path, meta = self.pack(work_dir, stem)
         body = multipart_body(meta, "", zip_path, MULTIPART_BOUNDARY)
+        if not ExportOnnxService.history_enabled:
+            shutil.rmtree(work_dir)
         payload = Response(
             content=body,
             media_type=f"multipart/form-data; boundary={MULTIPART_BOUNDARY}",

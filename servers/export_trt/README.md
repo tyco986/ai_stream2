@@ -4,7 +4,7 @@
 
 JSON 成功外壳：`{success, message, data, file}`。`file` 无附件时为 `null`。`POST /export` 与 `POST /history` 成功时不套这层 JSON，改为 `multipart/form-data`，字段为 `success`、`message`、`data`（JSON）、`file`（zip）。
 
-历史目录为容器内 `/root/history/export_trt`，只认 `.zip`。
+历史目录为容器内 `/root/history/export_trt`，只认 `.zip`。历史落盘和请求日志默认关闭，分别由 `/history/enable`、`/logs/enable` 打开。
 
 构建结果键：`type`、`batch_size`、`batch_mode`、`input_tensors`、`output_tensors`、`precision`、`opt_level`、`device`、`workspace`、`static_plugin`、`max_det`、`conf`、`iou`、`num_class`、`classes`、`source_path`、`source_name`、`engine_path`、`engine_name`、`status`、`built_at`、`trt_version`。`source_path` 取自输入包 `meta.json`。`source_name` 为该路径的文件名。`engine_path` 为 `/root/history/export_trt/<上传主名>.zip`。`engine_name` 为 zip 内 `.engine` 的文件名，取 `source_path` 的主名加 `.engine`。`type`：`YOLO10-DET`、`YOLO11-DET`、`YOLO11-SEG`、`YOLO26-DET`、`YOLO26-POSE`、`YOLO26-SEG`、`RTMPOSE`、`STGCNPP`。`batch_mode`：`static` | `dynamic`。`precision`、`batch_size`、`device` 取自 config。`workspace` 默认 `8192`。`status` 成功为 `built`。
 
@@ -19,9 +19,13 @@ JSON 成功外壳：`{success, message, data, file}`。`file` 无附件时为 `n
 | `GET` | `/ai_stream2/export_trt/health` | 无 | 空对象 | 健康检查 |
 | `GET` | `/ai_stream2/export_trt/types` | 无 | `items` | 可导出的模型类型 |
 | `POST` | `/ai_stream2/export_trt/export` | multipart：`input`、`config` | 构建结果对象 | 把 ONNX 包编成 TensorRT engine zip |
+| `POST` | `/ai_stream2/export_trt/history/enable` | 无 | 空对象 | 打开历史落盘 |
+| `POST` | `/ai_stream2/export_trt/history/disable` | 无 | 空对象 | 关闭历史落盘 |
 | `GET` | `/ai_stream2/export_trt/history` | query：`filename` | `{文件名: meta}` | 列出历史包的 meta |
 | `POST` | `/ai_stream2/export_trt/history` | query：`filename` | 每个文件一块 multipart | 下载 zip |
 | `DELETE` | `/ai_stream2/export_trt/history` | query：`filename` | 空对象 | 删除 zip |
+| `POST` | `/ai_stream2/export_trt/logs/enable` | 无 | 空对象 | 打开请求日志 |
+| `POST` | `/ai_stream2/export_trt/logs/disable` | 无 | 空对象 | 关闭请求日志 |
 | `DELETE` | `/ai_stream2/export_trt/logs` | 无 | 空对象 | 清空日志目录下的日志文件 |
 
 ### GET `/ai_stream2/export_trt/health`
@@ -38,7 +42,7 @@ JSON 成功外壳：`{success, message, data, file}`。`file` 无附件时为 `n
 
 ### POST `/ai_stream2/export_trt/export`
 
-成功时 `Content-Type` 为 `multipart/form-data; boundary=ai_stream2_export_trt`。zip 内含一个 `.engine`、`labels.txt`、`meta.json`。文件名是上传文件主名加 `.zip`。同时写入 `/root/history/export_trt`。
+成功时 `Content-Type` 为 `multipart/form-data; boundary=ai_stream2_export_trt`。zip 内含一个 `.engine`、`labels.txt`、`meta.json`。文件名是上传文件主名加 `.zip`。历史开关打开时同时写入 `/root/history/export_trt`，默认不写。
 
 multipart。`input` 是 zip 文件，内含一个 `.onnx`、`labels.txt`、`meta.json`。`config` 是 YAML 文件，至少含 `type`、`precision`、`batch_size`、`device`。`batch_mode`、张量、`max_det`、`conf`、`iou`、`num_class`、`classes` 取自 zip 内 `meta.json`。`opt_level` 可省略，省略时为 `null`。`device` 传给 `cudaSetDevice`。`batch_size` 在 `batch_mode` 为 `dynamic` 时作为 optimization profile 的 opt/max。
 
@@ -47,6 +51,18 @@ multipart。`input` 是 zip 文件，内含一个 `.onnx`、`labels.txt`、`meta
 入参：`input`、`config`。
 
 出参 `data`：构建结果对象。`file`：engine zip。构建失败抛出运行时错误，连接中断。
+
+### POST `/ai_stream2/export_trt/history/enable`
+
+入参：无。之后 `POST /export` 成功时把 zip 写入 `/root/history/export_trt`。进程重启后恢复为关闭。
+
+出参 `data`：`{}`。`message`：空。`file`：`null`。
+
+### POST `/ai_stream2/export_trt/history/disable`
+
+入参：无。之后不再落盘历史。已有 zip 的查询、下载、删除不受影响。
+
+出参 `data`：`{}`。`message`：空。`file`：`null`。
 
 ### GET `/ai_stream2/export_trt/history`
 
@@ -72,6 +88,18 @@ multipart。`input` 是 zip 文件，内含一个 `.onnx`、`labels.txt`、`meta
 
 出参 `data`：`{}`。`message`：空。不存在 `400`。
 
+### POST `/ai_stream2/export_trt/logs/enable`
+
+入参：无。之后每个请求写入 `/root/logs/export_trt` 下的 jsonl。进程重启后恢复为关闭。
+
+出参 `data`：`{}`。`message`：空。`file`：`null`。
+
+### POST `/ai_stream2/export_trt/logs/disable`
+
+入参：无。之后不再写请求日志。已有日志文件保留。
+
+出参 `data`：`{}`。`message`：空。`file`：`null`。
+
 ### DELETE `/ai_stream2/export_trt/logs`
 
 入参：无。删除容器内 `/root/logs/export_trt` 下的日志文件，目录保留。
@@ -92,9 +120,13 @@ multipart。`input` 是 zip 文件，内含一个 `.onnx`、`labels.txt`、`meta
 | `scripts/3_health.sh` | 无 | `GET /health` |
 | `scripts/3_export.sh` | `--input`、`--config` | `POST /export` |
 | `scripts/3_export_all.sh` | 无 | 按模板把 `history/export_onnx` 里的 onnx zip 编成 engine |
+| `scripts/3_enable_history.sh` | 无 | `POST /history/enable` |
+| `scripts/3_disable_history.sh` | 无 | `POST /history/disable` |
 | `scripts/3_get_history.sh` | `--filename`（可省略） | `GET /history` |
 | `scripts/3_download_history.sh` | `--filename`（可省略） | `POST /history` |
 | `scripts/3_remove_history.sh` | `--filename`（可省略） | `DELETE /history` |
+| `scripts/3_enable_logs.sh` | 无 | `POST /logs/enable` |
+| `scripts/3_disable_logs.sh` | 无 | `POST /logs/disable` |
 | `scripts/3_remove_logs.sh` | 无 | `DELETE /logs` |
 
 ### `0_pull_base_image.sh`
@@ -121,6 +153,14 @@ multipart。`input` 是 zip 文件，内含一个 `.onnx`、`labels.txt`、`meta
 
 无参数。依次用 `history/export_onnx` 下对应 zip 和 `templates` 里的 yaml 调用 `3_export.sh`。用法：`scripts/3_export_all.sh`。
 
+### `3_enable_history.sh`
+
+无参数。用法：`scripts/3_enable_history.sh`。
+
+### `3_disable_history.sh`
+
+无参数。用法：`scripts/3_disable_history.sh`。
+
 ### `3_get_history.sh`
 
 `--filename` 可省略。省略时 `filename` 为 JSON `null`，列出全部 `.zip`。用法：`scripts/3_get_history.sh [--filename file.zip]`。
@@ -132,6 +172,14 @@ multipart。`input` 是 zip 文件，内含一个 `.onnx`、`labels.txt`、`meta
 ### `3_remove_history.sh`
 
 `--filename` 可省略。省略时删除全部 `.zip`。用法：`scripts/3_remove_history.sh [--filename file.zip]`。
+
+### `3_enable_logs.sh`
+
+无参数。用法：`scripts/3_enable_logs.sh`。
+
+### `3_disable_logs.sh`
+
+无参数。用法：`scripts/3_disable_logs.sh`。
 
 ### `3_remove_logs.sh`
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Run from project root. Redpanda dev container on the project network.
+# Consumes ai_stream2_* topics into logs/kafka/kafka.log.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"

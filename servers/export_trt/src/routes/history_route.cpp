@@ -16,9 +16,21 @@ std::string HistoryRoute::strip(const std::string& raw) {
 }
 
 void HistoryRoute::bind(httplib::Server& server) {
+    server.Post(history::PATH_ENABLE, enable);
+    server.Post(history::PATH_DISABLE, disable);
     server.Get(history::PATH, get);
     server.Post(history::PATH, download);
     server.Delete(history::PATH, remove);
+}
+
+void HistoryRoute::enable(const httplib::Request&, httplib::Response& response) {
+    History::setEnabled(true);
+    Response::ok(response);
+}
+
+void HistoryRoute::disable(const httplib::Request&, httplib::Response& response) {
+    History::setEnabled(false);
+    Response::ok(response);
 }
 
 void HistoryRoute::get(const httplib::Request& request, httplib::Response& response) {

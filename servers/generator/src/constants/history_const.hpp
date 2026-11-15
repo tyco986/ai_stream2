@@ -3,6 +3,8 @@
 namespace history {
 
 inline constexpr const char* PATH = "/ai_stream2/generator/history";
+inline constexpr const char* PATH_ENABLE = "/ai_stream2/generator/history/enable";
+inline constexpr const char* PATH_DISABLE = "/ai_stream2/generator/history/disable";
 inline constexpr const char* ROOT = "/root/history/generator";
 inline constexpr const char* FIELD_FILENAME = "filename";
 inline constexpr const char* BOUNDARY = "generator-history";

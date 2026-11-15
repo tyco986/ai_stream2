@@ -3,6 +3,8 @@
 namespace request_log {
 
 inline constexpr const char* PATH = "/ai_stream2/generator/logs";
+inline constexpr const char* PATH_ENABLE = "/ai_stream2/generator/logs/enable";
+inline constexpr const char* PATH_DISABLE = "/ai_stream2/generator/logs/disable";
 inline constexpr const char* ROOT = "/root/logs/generator";
 inline constexpr const char* PAGE = "generator";
 inline constexpr const char* SUFFIX = ".jsonl";

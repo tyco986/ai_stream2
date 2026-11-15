@@ -10,6 +10,7 @@ from utils.api.constants import (
     PROJECT_NAME,
     STATE_INPUT,
 )
+from utils.api.logger import RequestLogger
 from utils.api.response import ApiEnvelope
 from utils.api.services import ExportOnnxService
 from utils.manager.onnx_exporter_manager import OnnxExporterManager
@@ -34,6 +35,28 @@ def health() -> ApiEnvelope:
 )
 def types() -> ApiEnvelope:
     payload = ApiEnvelope.ok(data={"items": OnnxExporterManager.types()})
+    return payload
+
+
+@router.post(
+    "/history/enable",
+    response_model=ApiEnvelope,
+    summary="Enable history",
+)
+def enable_history() -> ApiEnvelope:
+    ExportOnnxService.history_enabled = True
+    payload = ApiEnvelope.ok()
+    return payload
+
+
+@router.post(
+    "/history/disable",
+    response_model=ApiEnvelope,
+    summary="Disable history",
+)
+def disable_history() -> ApiEnvelope:
+    ExportOnnxService.history_enabled = False
+    payload = ApiEnvelope.ok()
     return payload
 
 
@@ -63,6 +86,28 @@ def download_history(filename: str = Query(default="", alias=FIELD_FILENAME)) ->
 )
 def remove_history(filename: str = Query(default="", alias=FIELD_FILENAME)) -> ApiEnvelope:
     ExportOnnxService().remove_history(filename)
+    payload = ApiEnvelope.ok()
+    return payload
+
+
+@router.post(
+    "/logs/enable",
+    response_model=ApiEnvelope,
+    summary="Enable request logs",
+)
+def enable_logs() -> ApiEnvelope:
+    RequestLogger.enabled = True
+    payload = ApiEnvelope.ok()
+    return payload
+
+
+@router.post(
+    "/logs/disable",
+    response_model=ApiEnvelope,
+    summary="Disable request logs",
+)
+def disable_logs() -> ApiEnvelope:
+    RequestLogger.enabled = False
     payload = ApiEnvelope.ok()
     return payload
 

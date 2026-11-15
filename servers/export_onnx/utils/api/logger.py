@@ -12,6 +12,7 @@ from utils.api.constants import (
 
 class RequestLogger:
     logger = logging.getLogger("export_onnx")
+    enabled = False
 
     def __init__(self) -> None:
         self.logger = RequestLogger.logger
@@ -57,7 +58,8 @@ class RequestLogger:
             "header": header,
         }
         text = json.dumps(entry, ensure_ascii=False, separators=(",", ":"))
-        self.logger.info(text)
+        if RequestLogger.enabled:
+            self.logger.info(text)
 
     def output_value(self, output: bytes):
         marker = b'name="file"; filename="'

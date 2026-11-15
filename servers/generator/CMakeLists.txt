@@ -18,6 +18,7 @@ find_library(OPENCV_VIDEOIO NAMES opencv_videoio REQUIRED)
 add_executable(generator
     main.cpp
     src/routes/health_route.cpp
+    src/routes/openapi_route.cpp
     src/routes/types_route.cpp
     src/routes/generate_route.cpp
     src/routes/history_route.cpp
