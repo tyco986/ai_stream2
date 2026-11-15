@@ -98,5 +98,6 @@ COPY --from=build /opt/nvidia/deepstream/deepstream/lib/gst-plugins/libnvdsgst_s
 COPY --from=build /opt/nvidia/deepstream/deepstream/lib/libnvds_infer_yolo.so /opt/nvidia/deepstream/deepstream/lib/
 COPY --from=build /opt/ai_stream2/servers/deepstream/libs /opt/ai_stream2/servers/deepstream/libs
 ENV LD_PRELOAD=/opt/ai_stream2/servers/deepstream/libs/libnvdsinfer_custom_impl_Yolo_seg.so
+ENV NVDS_ENABLE_LATENCY_MEASUREMENT=1
 EXPOSE 8094
 CMD ["deepstream"]
