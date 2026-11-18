@@ -30,7 +30,7 @@ videos:
   - /root/attachments/videos/video1.mp4
   - /root/attachments/videos/video2.mp4
 filesink_output: /root/media/pipeline/yolo10x_smoke_fire_sahi_vis_video
-capturer_output: /root/event/yolo10x_smoke_fire_sahi_vis_video
+capturer_output: /root/events/yolo10x_smoke_fire_sahi_vis_video
 sahi:
   preprocess:
     slice_width: 640

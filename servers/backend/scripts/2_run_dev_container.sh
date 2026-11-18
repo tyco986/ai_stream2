@@ -8,7 +8,7 @@ ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 PROJECT_NAME=ai_stream2
 
 IMAGE="${PROJECT_NAME}_backend_dev"
-mkdir -p "${ROOT}/logs/backend" "${ROOT}/media" "${ROOT}/event" "${ROOT}/models" "${ROOT}/configs"
+mkdir -p "${ROOT}/logs/backend" "${ROOT}/media" "${ROOT}/events" "${ROOT}/models" "${ROOT}/configs"
 
 docker network create "${PROJECT_NAME}_default" 2>/dev/null || true
 docker rm -f "${PROJECT_NAME}_backend" 2>/dev/null || true
@@ -29,7 +29,7 @@ docker run -d \
   -v "${ROOT}/servers/backend:/app" \
   -v "${ROOT}/logs:/root/logs" \
   -v "${ROOT}/media:/root/media" \
-  -v "${ROOT}/event:/root/event" \
+  -v "${ROOT}/events:/root/events" \
   -v "${ROOT}/models:/root/models" \
   -v "${ROOT}/configs:/root/configs" \
   "${IMAGE}" \
