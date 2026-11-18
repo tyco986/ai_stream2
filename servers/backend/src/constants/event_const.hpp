@@ -7,6 +7,7 @@ namespace event {
 inline const char* KEY_ID = "id";
 inline const char* KEY_OCCURRED_AT = "occurred_at";
 inline const char* KEY_STREAM_ID = "stream_id";
+inline const char* KEY_MEDIA_ID = "media_id";
 inline const char* KEY_PIPELINE_ID = "pipeline_id";
 inline const char* KEY_EVENT_CODE = "event_code";
 inline const char* KEY_EVENT_LABEL = "event_label";
@@ -42,6 +43,7 @@ inline Json::Value ROW() {
   node[KEY_ID] = Json::Value();
   node[KEY_OCCURRED_AT] = Json::Value();
   node[KEY_STREAM_ID] = Json::Value();
+  node[KEY_MEDIA_ID] = Json::Value();
   node[KEY_PIPELINE_ID] = Json::Value();
   node[KEY_EVENT_CODE] = Json::Value();
   node[KEY_EVENT_LABEL] = Json::Value();

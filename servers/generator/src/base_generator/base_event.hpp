@@ -2,6 +2,7 @@
 
 #include "subelement_generator/pipeline.hpp"
 
+#include <filesystem>
 #include <optional>
 #include <string>
 
@@ -11,7 +12,7 @@
 // Always-on presence coder and capturer params for event generators.
 class BaseEventGenerator : public PipelineGenerator {
 public:
-    BaseEventGenerator(std::string pipelineName, nlohmann::json eventCoder, std::optional<nlohmann::json> capturer = std::nullopt);
+    BaseEventGenerator(std::string pipelineName, std::filesystem::path capturerOutput, nlohmann::json eventCoder, std::optional<nlohmann::json> capturer = std::nullopt);
 
     std::string capturerCodes() const;
     void appendEventCoder(int logInterval, const std::string& name = "presenceeventcoder");
@@ -19,6 +20,7 @@ public:
     void linkEventCoder(YAML::Node edges, const std::string& teeName = "tee_msg") const;
 
     std::string pipelineName;
+    std::filesystem::path capturerOutput;
     nlohmann::json eventCoder;
     nlohmann::json capturer;
 };

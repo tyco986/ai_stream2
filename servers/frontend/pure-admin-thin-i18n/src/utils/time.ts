@@ -9,6 +9,11 @@ export const formatLocalTime = (value: string | null) => {
   return text;
 };
 
+export const formatStamp = (date = new Date()) => {
+  const text = `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+  return text;
+};
+
 export const formatDuration = (seconds: number | null) => {
   const total = seconds ?? 0;
   const text = seconds === null ? "" : `${pad(Math.floor(total / 3600))}:${pad(Math.floor(total / 60) % 60)}:${pad(total % 60)}`;

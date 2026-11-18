@@ -9,6 +9,7 @@
 EventSahiVideoGenerator::EventSahiVideoGenerator(
     std::string pipelineName,
     nlohmann::json videos,
+    std::filesystem::path capturerOutput,
     std::optional<nlohmann::json> analyzer,
     nlohmann::json pgie,
     nlohmann::json sahi,
@@ -20,6 +21,7 @@ EventSahiVideoGenerator::EventSahiVideoGenerator(
     : EventVideoGenerator(
           std::move(pipelineName),
           std::move(videos),
+          std::move(capturerOutput),
           std::move(analyzer),
           std::move(pgie),
           std::move(eventCoder),

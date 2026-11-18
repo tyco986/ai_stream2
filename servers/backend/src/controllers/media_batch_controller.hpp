@@ -19,6 +19,7 @@ class MediaBatchController : public drogon::HttpController<MediaBatchController>
   ADD_METHOD_TO(MediaBatchController::batchCreate, media::PATH_BATCH_CREATE, drogon::Post, "AuthFilter");
   ADD_METHOD_TO(MediaBatchController::batchUpload, media::PATH_BATCH_UPLOAD, drogon::Post, "AuthFilter");
   ADD_METHOD_TO(MediaBatchController::batchRemove, media::PATH_BATCH_REMOVE, drogon::Post, "AuthFilter");
+  ADD_METHOD_TO(MediaBatchController::batchRemoveFolder, media::PATH_BATCH_REMOVE_FOLDER, drogon::Post, "AuthFilter");
   ADD_METHOD_TO(MediaBatchController::batchDownload, media::PATH_BATCH_DOWNLOAD, drogon::Post, "AuthFilter");
   METHOD_LIST_END
 
@@ -28,6 +29,8 @@ class MediaBatchController : public drogon::HttpController<MediaBatchController>
                    std::function<void(const drogon::HttpResponsePtr&)>&& callback);
   void batchRemove(const drogon::HttpRequestPtr& request,
                    std::function<void(const drogon::HttpResponsePtr&)>&& callback);
+  void batchRemoveFolder(const drogon::HttpRequestPtr& request,
+                         std::function<void(const drogon::HttpResponsePtr&)>&& callback);
   void batchDownload(const drogon::HttpRequestPtr& request,
                      std::function<void(const drogon::HttpResponsePtr&)>&& callback);
 

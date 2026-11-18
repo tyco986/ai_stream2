@@ -13,8 +13,8 @@ class MediaService {
  public:
   explicit MediaService(drogon::orm::DbClientPtr dbClient);
   Json::Value listUploadFile(int page, long pageSize, const std::string& userId, const std::string& type, const std::string& search);
-  Json::Value listPipelineFile(int page, long pageSize, const std::string& type, const std::string& search, const std::string& pipelineId);
-  Json::Value listRecordingFile(int page, long pageSize, const std::string& type, const std::string& search, const std::string& streamId, const std::string& date);
+  Json::Value listPipelineFile(int page, long pageSize, const std::string& type, const std::string& search, const std::string& folder);
+  Json::Value listRecordingFile(int page, long pageSize, const std::string& type, const std::string& search, const std::string& folder, const std::string& date);
   Json::Value listUploadFolder();
   Json::Value listPipelineFolder();
   Json::Value listRecordingFolder();
@@ -32,11 +32,10 @@ class MediaService {
                      const Json::Value& folder,
                      const Json::Value& createdAt,
                      const Json::Value& updatedAt,
-                     const Json::Value& userId,
-                     const Json::Value& streamId,
-                     const Json::Value& pipelineId);
+                     const Json::Value& userId);
   Json::Value removeFile(const std::string& mediaId);
   Json::Value remove(const std::string& mediaId);
+  Json::Value removeFolder(const std::string& folder);
   Json::Value update(const Json::Value& type,
                      const Json::Value& name,
                      const Json::Value& width,
@@ -50,8 +49,6 @@ class MediaService {
                      const Json::Value& createdAt,
                      const Json::Value& updatedAt,
                      const Json::Value& userId,
-                     const Json::Value& streamId,
-                     const Json::Value& pipelineId,
                      const std::string& mediaId);
   Json::Value upload(const std::string& userId, const std::string& fileName, const std::string& fileContent);
 
@@ -60,19 +57,16 @@ class MediaService {
   Json::Value fileNode(const std::filesystem::path& path, const std::string& folder);
   std::string fileMd5(const std::string& bytes);
   std::string userId2Name(const std::string& userId);
-  std::string streamId2Name(const std::string& streamId);
-  std::string pipelineId2Name(const std::string& pipelineId);
-  void reloadFile(const std::string& folder, const std::string& ownerColumn, const std::string& ownerId);
-  Json::Value listFolder(const std::string& folder, const std::string& sql);
+  void reloadFile(const std::string& folder, const std::string& userId);
+  Json::Value listStoredFolder(const std::string& folder);
   Json::Value listFile(const std::string& folder,
-                     const std::string& ownerColumn,
-                     const std::string& ownerId,
+                     const std::string& userId,
+                     const std::string& folderPath,
                      const std::string& type,
                      int page,
                      long pageSize,
                      const std::string& search,
                      const std::string& date);
-  std::optional<std::string> uuidOrEmpty(const Json::Value& value);
   std::filesystem::path createUploadFolder(const std::string& userName);
   void probeFile(const std::filesystem::path& path,
                  bool image,

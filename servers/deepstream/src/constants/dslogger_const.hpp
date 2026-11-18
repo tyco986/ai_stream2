@@ -5,12 +5,16 @@
 namespace dslogger {
 
 inline constexpr const char* ROOT = "/root/logs/deepstream";
+inline constexpr const char* PAD_DIR = "pad";
 inline constexpr const char* SUFFIX = ".jsonl";
+inline constexpr const char* DATE_FORMAT = "%Y-%m-%d";
+inline constexpr std::size_t DATE_SIZE = 11;
 inline constexpr const char* PAGE_DET = "det";
 inline constexpr const char* PAGE_PRESENCE = "presence";
 inline constexpr const char* PAGE_STGCNPP = "stgcnpp";
-inline constexpr std::size_t MAX_BYTES = 10 * 1024 * 1024;
-inline constexpr std::size_t MAX_FILES = 5;
+inline constexpr int ROTATION_HOUR = 0;
+inline constexpr int ROTATION_MINUTE = 0;
+inline constexpr std::size_t MAX_DAYS = 90;
 inline constexpr int PAD_WIDTH = 3;
 inline constexpr int DEFAULT_INTERVAL = 1;
 

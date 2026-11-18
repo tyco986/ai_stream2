@@ -14,7 +14,7 @@
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
 //         → boxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0 → nvrtmposepostprocess
-//         → nvdspreprocess → sgie1 → stgcnppactionlabel → nvdsanalytics → stgcnppcollector → dslogger → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → stgcnppfadedrawerwithtracker{N} → nvosdbin{N}
+//         → nvdspreprocess → sgie1 → stgcnppactionlabel → nvdsanalytics → stgcnppcollector → dslogger → stgcnppfadedrawerwithtracker → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → nvosdbin{N}
 //           │     → queue_enc{N} → nvv4l2h264enc{N} → h264parse{N} → rtspclientsink{N}
 class StgcnppRtmposeSahiVisRtspGenerator : public VisSahiRtspGenerator {
 public:

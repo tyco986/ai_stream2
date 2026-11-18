@@ -8,7 +8,7 @@ ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 PROJECT_NAME=ai_stream2
 
 IMAGE="${PROJECT_NAME}_backend_dev"
-mkdir -p "${ROOT}/logs/backend" "${ROOT}/media" "${ROOT}/models" "${ROOT}/configs"
+mkdir -p "${ROOT}/logs/backend" "${ROOT}/media" "${ROOT}/event" "${ROOT}/models" "${ROOT}/configs"
 
 docker network create "${PROJECT_NAME}_default" 2>/dev/null || true
 docker rm -f "${PROJECT_NAME}_backend" 2>/dev/null || true
@@ -17,7 +17,7 @@ HOST_PORT="${BACKEND_HOST_PORT:-8001}"
 echo "Backend API: http://127.0.0.1:${HOST_PORT}/health"
 echo "Mode:        dev image=${IMAGE}"
 
-docker run \
+docker run -d \
   --name "${PROJECT_NAME}_backend" \
   --ulimit core=0 \
   --gpus all \
@@ -29,6 +29,7 @@ docker run \
   -v "${ROOT}/servers/backend:/app" \
   -v "${ROOT}/logs:/root/logs" \
   -v "${ROOT}/media:/root/media" \
+  -v "${ROOT}/event:/root/event" \
   -v "${ROOT}/models:/root/models" \
   -v "${ROOT}/configs:/root/configs" \
   "${IMAGE}" \

@@ -17,7 +17,8 @@ public:
     VisEventVideoGenerator(
         std::string pipelineName,
         nlohmann::json videos,
-        std::filesystem::path output,
+        std::filesystem::path filesinkOutput,
+        std::filesystem::path capturerOutput,
         std::optional<nlohmann::json> analyzer,
         nlohmann::json pgie,
         nlohmann::json eventCoder,
@@ -29,9 +30,9 @@ public:
     void initVideos() override;
     void initParams() override;
 
-    std::filesystem::path output;
-
 protected:
     void appendAfterOsd(int index, int gpuId) override;
     void linkAfterOsd(YAML::Node edges, int index) override;
+
+    std::filesystem::path filesinkOutput;
 };

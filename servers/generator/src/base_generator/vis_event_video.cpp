@@ -7,7 +7,8 @@
 VisEventVideoGenerator::VisEventVideoGenerator(
     std::string pipelineName,
     nlohmann::json videos,
-    std::filesystem::path output,
+    std::filesystem::path filesinkOutput,
+    std::filesystem::path capturerOutput,
     std::optional<nlohmann::json> analyzer,
     nlohmann::json pgie,
     nlohmann::json eventCoder,
@@ -18,6 +19,7 @@ VisEventVideoGenerator::VisEventVideoGenerator(
     : EventVideoGenerator(
           std::move(pipelineName),
           std::move(videos),
+          std::move(capturerOutput),
           std::move(analyzer),
           std::move(pgie),
           std::move(eventCoder),
@@ -25,28 +27,29 @@ VisEventVideoGenerator::VisEventVideoGenerator(
           std::move(logger),
           std::move(drawer),
           std::move(capturer)),
-      output(std::move(output)) {
+      filesinkOutput(std::filesystem::absolute(std::move(filesinkOutput))) {
 }
 
 void VisEventVideoGenerator::initVideos() {
     EventVideoGenerator::initVideos();
-    std::filesystem::create_directories(output);
+    std::filesystem::create_directories(filesinkOutput);
+    std::filesystem::create_directories(capturerOutput);
 }
 
 void VisEventVideoGenerator::initParams() {
     EventVideoGenerator::initParams();
-    std::get<YAML::Node>(files.at(PARAMS_CONFIG_NAME))["output"] = output.string();
+    std::get<YAML::Node>(files.at(PARAMS_CONFIG_NAME))["filesink_output"] = filesinkOutput.string();
 }
 
 void VisEventVideoGenerator::appendAfterOsd(int index, int gpuId) {
     const std::string suffix = std::to_string(index);
     const std::filesystem::path source(videos.at(index).get<std::string>());
-    const std::filesystem::path sink = output / source.filename();
+    const std::filesystem::path sink = filesinkOutput / source.filename();
     appendNode("tee", "tee_vis" + suffix, addTee());
     appendNode("queue", "queue_vis" + suffix, addQueue());
     appendNode("nvvideoconvert", "nvvideoconvert_vis" + suffix, addNvvideoconvert(gpuId));
     appendNode("capsfilter", "capsfilter_vis" + suffix, addCapsfilter("video/x-raw(memory:NVMM), format=RGB"));
-    appendNode("viscapturer", "viscapturer" + suffix, addViscapturer(capturerCodes()));
+    appendNode("viscapturer", "viscapturer" + suffix, addViscapturer(capturerCodes(), capturerOutput.string()));
     appendNode("fakesink", "fakesink_vis" + suffix, addFakesink(false, false));
     appendNode("queue", "queue_enc" + suffix, addQueue());
 

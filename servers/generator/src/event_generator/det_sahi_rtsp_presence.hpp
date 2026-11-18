@@ -9,9 +9,9 @@
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
 //         → boxsnapshot → nvtracker → nvdsanalytics → presenceeventcoder → presencecollector → dslogger → tee_msg
-//       ─┬→ nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → tee_raw{N}
+//       ─┬→ detfadedrawerwithtracker → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → tee_raw{N}
 //       │     ─┬→ queue_raw{N} → nvvideoconvert_raw{N} → capsfilter_raw{N} → rawcapturer{N} → fakesink_raw{N}
-//       │     └→ queue_osd{N} → nvvideoconvert_osd{N} → detfadedrawerwithtracker{N} → nvosdbin{N}
+//       │     └→ queue_osd{N} → nvvideoconvert_osd{N} → nvosdbin{N}
 //       │           → queue_vis{N} → nvvideoconvert_vis{N} → capsfilter_vis{N} → viscapturer{N} → fakesink_vis{N}
 //       └→ queue_msg → nvmsgconv → nvmsgbroker
 class DetSahiRtspPresenceGenerator : public EventSahiRtspGenerator {
@@ -19,6 +19,7 @@ public:
     DetSahiRtspPresenceGenerator(
         std::string pipelineName,
         nlohmann::json streams,
+        std::filesystem::path capturerOutput,
         std::optional<nlohmann::json> analyzer,
         nlohmann::json pgie,
         nlohmann::json sahi,

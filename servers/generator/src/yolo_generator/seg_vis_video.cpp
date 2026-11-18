@@ -9,7 +9,7 @@
 SegVisVideoGenerator::SegVisVideoGenerator(
     std::string pipelineName,
     nlohmann::json videos,
-    std::filesystem::path output,
+    std::filesystem::path filesinkOutput,
     std::optional<nlohmann::json> analyzer,
     nlohmann::json pgie,
     std::optional<nlohmann::json> tracker,
@@ -18,7 +18,7 @@ SegVisVideoGenerator::SegVisVideoGenerator(
     : VisVideoGenerator(
           std::move(pipelineName),
           std::move(videos),
-          std::move(output),
+          std::move(filesinkOutput),
           std::move(analyzer),
           std::move(pgie),
           std::move(tracker),
@@ -54,17 +54,17 @@ void SegVisVideoGenerator::add() {
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
     appendNode("detcollector", "detcollector", addCollector());
     appendNode("dslogger", "dslogger", addDslogger(logger.value("interval", 1), pipeline::PAGE_DET));
-    appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     const std::string drawerElement = nvsegDrawerElement();
+    if (drawer.has_value()) {
+        appendNode(drawerElement, drawerElement, nvsegDrawerProperties(*drawer));
+    }
+    appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     for (int streamIndex = 0; streamIndex < runtimeBatchSize; ++streamIndex) {
         const std::string suffix = std::to_string(streamIndex);
         const std::filesystem::path source(videos.at(streamIndex).get<std::string>());
-        const std::filesystem::path sink = output / source.filename();
+        const std::filesystem::path sink = filesinkOutput / source.filename();
         appendNode("queue", "queue_demux" + suffix, addQueue());
         appendNode("nvvideoconvert", "nvvideoconvert" + suffix, addNvvideoconvert(gpuId));
-        if (drawer.has_value()) {
-            appendNode(drawerElement, drawerElement + suffix, nvsegDrawerProperties(*drawer));
-        }
         appendNode("nvosdbin", "nvosdbin" + suffix, addNvosdbin(gpuId, true, true, true));
 
         appendNode(
@@ -96,16 +96,16 @@ void SegVisVideoGenerator::link() {
     edges[inferenceTail] = "nvdsanalytics";
     edges["nvdsanalytics"] = "detcollector";
     edges["detcollector"] = "dslogger";
-    edges["dslogger"] = "nvstreamdemux";
     const std::string drawerElement = nvsegDrawerElement();
+    const std::string demuxSource = drawer.has_value() ? drawerElement : std::string("nvstreamdemux");
+    if (drawer.has_value()) {
+        edges[drawerElement] = "nvstreamdemux";
+    }
+    edges["dslogger"] = demuxSource;
     for (int index = 0; index < runtimeBatchSize; ++index) {
         const std::string suffix = std::to_string(index);
-        const std::string osdPrev = drawer.has_value() ? drawerElement + suffix : "nvosdbin" + suffix;
         edges["queue_demux" + suffix] = "nvvideoconvert" + suffix;
-        edges["nvvideoconvert" + suffix] = osdPrev;
-        if (drawer.has_value()) {
-            edges[drawerElement + suffix] = "nvosdbin" + suffix;
-        }
+        edges["nvvideoconvert" + suffix] = "nvosdbin" + suffix;
         edges["nvosdbin" + suffix] = "nvv4l2h264enc" + suffix;
         edges["nvv4l2h264enc" + suffix] = "h264parse" + suffix;
         edges["h264parse" + suffix] = "mp4mux" + suffix;

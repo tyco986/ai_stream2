@@ -19,10 +19,12 @@ class BaseLogger {
   static bool enabledValue();
   static Json::Value get(const std::string& page, const std::string& date);
   static Json::Value remove(const std::string& page);
+  static void write(const std::string& page, const std::string& text);
   void record(const drogon::HttpRequestPtr& request,
               const drogon::HttpResponsePtr& response,
               std::chrono::steady_clock::time_point started,
-              const std::string& error = "");
+              const std::string& error = "",
+              const Json::Value& steps = Json::Value());
 
  protected:
   virtual const char* name() const = 0;
@@ -31,6 +33,8 @@ class BaseLogger {
   static Json::StreamWriterBuilder makeWriter();
   static Json::Value readLines(std::istream& input);
   static std::string formatLog(const Json::Value& body);
+  static std::string formatSteps(const Json::Value& steps);
+  static void formatStepValues(Json::Value& steps);
   void write(const std::string& text);
 
   static Json::StreamWriterBuilder writer;

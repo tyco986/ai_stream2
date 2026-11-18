@@ -12,14 +12,14 @@
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → pgie → nvdspreprocess_rtmpose → sgie0 → nvrtmposepostprocess
-//         → nvdsanalytics → detcollector → dslogger → nvstreamdemux → queue_demux{N} → posefadedrawer{N} → nvosdbin{N} → nvvideoconvert{N}
+//         → nvdsanalytics → detcollector → dslogger → posefadedrawer → nvstreamdemux → queue_demux{N} → nvosdbin{N} → nvvideoconvert{N}
 //         │     → capsfilter{N} → nvjpegenc{N} → filesink{N}
 class TopdownPoseImageGenerator : public BaseImageGenerator {
 public:
     TopdownPoseImageGenerator(
         std::string pipelineName,
         nlohmann::json images,
-        std::filesystem::path output,
+        std::filesystem::path filesinkOutput,
         std::optional<nlohmann::json> analyzer,
         nlohmann::json pgie,
         nlohmann::json sgie,

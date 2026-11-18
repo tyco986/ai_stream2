@@ -4,7 +4,7 @@
 
 #include <glib.h>
 
-RawCapturer::RawCapturer(const char* captureCodes) : Capturer(captureCodes) {}
+RawCapturer::RawCapturer(const char* captureCodes, const char* output) : Capturer(captureCodes, output) {}
 
 RawCapturer::~RawCapturer() {
     stop();

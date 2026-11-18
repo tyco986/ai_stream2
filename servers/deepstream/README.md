@@ -17,7 +17,7 @@
 | `POST` | `/start/local` | `config` | `{}` | 用容器内配置 zip 启动 |
 | `GET` | `/status` | 无 | 状态对象 | 读运行状态 |
 | `POST` | `/stop` | 无 | `{}` | 结束管道进程 |
-| `DELETE` | `/ai_stream2/deepstream/logs` | 无 | `{}` | 清空请求日志文件 |
+| `DELETE` | `/ai_stream2/deepstream/logs` | 无 | `{}` | 子进程已退出时删除日志目录 |
 
 ### GET `/ai_stream2/deepstream/health`
 
@@ -43,7 +43,7 @@
 
 ### GET `/status`
 
-无运行实例时 `status` 为 `stopped`，时间为 `null`，`duration` 为 `null`。运行中 `end_time` 为 `null`，`duration` 为当前时间减去 `start_time`。子进程已退出时写入 `end_time`，`duration` 为结束时间减去 `start_time`。
+无运行实例时 `status` 为 `stopped`，时间为 `null`，`duration` 为 `null`。运行中 `end_time` 为 `null`，`duration` 为当前时间减去 `start_time`。子进程在管道返回后写下结束时间，此后 `status` 为 `stopped`，`end_time` 用该时间，`duration` 为结束时间减去 `start_time`。进程被杀掉且没有该时间时，`end_time` 为杀掉的时刻。
 
 入参：无。
 
@@ -59,7 +59,7 @@
 
 ### DELETE `/ai_stream2/deepstream/logs`
 
-先放开日志文件句柄，再删除 `/root/logs/deepstream` 下全部普通文件，目录保留。
+子进程还在时 `409`，`stop the pipeline before clearing logs`。已退出时先放开接口日志句柄，删除 `/root/logs/deepstream`，再把该目录建回来。
 
 入参：无。
 

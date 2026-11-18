@@ -15,7 +15,7 @@ docker rm -f "${NAME}" 2>/dev/null || true
 echo "DeepStream API: http://127.0.0.1:8094/${PROJECT_NAME}/deepstream/health"
 echo "Mode:           dev image=${IMAGE}"
 
-docker run \
+docker run -d \
   --name "${NAME}" \
   --network "${PROJECT_NAME}_default" \
   --gpus all \

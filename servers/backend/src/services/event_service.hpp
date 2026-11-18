@@ -12,6 +12,7 @@ class EventService {
   Json::Value createFromKafka(const Json::Value& message, const std::string& topic);
   Json::Value create(const Json::Value& occurredAt,
                      const Json::Value& streamId,
+                     const Json::Value& mediaId,
                      const Json::Value& pipelineId,
                      const Json::Value& eventCode,
                      const Json::Value& eventLabel,

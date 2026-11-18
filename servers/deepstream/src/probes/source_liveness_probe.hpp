@@ -14,6 +14,7 @@ struct SourceLivenessSlot {
 struct SourceLivenessTable {
     std::atomic<std::int32_t> count;
     std::atomic<std::int32_t> reconnectIntervalSec;
+    std::atomic<std::int64_t> endedNs;
     SourceLivenessSlot slots[pipeline_runner::SLOT_COUNT];
 };
 

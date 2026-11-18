@@ -45,8 +45,8 @@ protected:
     YAML::Node addSegfadedrawer(int interval = 1, int fadeTime = 0, bool showLabel = false, bool showMask = true);
     YAML::Node addSegfadedrawerwithtracker(int interval = 1, int fadeTime = 0, bool showLabel = false, bool showMask = true, bool showSnap = true);
     YAML::Node addPresenceeventcoder(const std::string& eventSlotMap = "", int length = pipeline::PRESENCE_LENGTH, double threshold = pipeline::PRESENCE_THRESHOLD, const std::string& mode = pipeline::PRESENCE_MODE_FOLD);
-    YAML::Node addRawcapturer(const std::string& captureCodes = pipeline::CAPTURE_CODES_DEFAULT);
-    YAML::Node addViscapturer(const std::string& captureCodes = pipeline::CAPTURE_CODES_DEFAULT, const std::string& labelTask = pipeline::LABEL_TASK_DET);
+    YAML::Node addRawcapturer(const std::string& captureCodes, const std::string& output);
+    YAML::Node addViscapturer(const std::string& captureCodes, const std::string& output, const std::string& labelTask = pipeline::LABEL_TASK_DET);
     YAML::Node addTee();
     YAML::Node addQueue(int leaky = pipeline::QUEUE_LEAKY_DOWNSTREAM, int maxSizeBuffers = pipeline::QUEUE_MAX_BUFFERS);
     YAML::Node addNvmsgconv(const std::string& config, const std::string& msg2pLib, int payloadType = pipeline::PAYLOAD_DEEPSTREAM_MINIMAL, bool msg2pNewapi = true, int frameInterval = pipeline::FRAME_INTERVAL);

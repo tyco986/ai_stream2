@@ -6,6 +6,10 @@ import {
   PATH_PIPELINE_START,
   PATH_PIPELINE_STOP,
   PATH_PIPELINE_PROBE,
+  PATH_PIPELINE_LOGS_API,
+  PATH_PIPELINE_LOGS_PAD,
+  PATH_PIPELINE_LOGS_GSTREAMER,
+  PATH_PIPELINE_LOGS,
   PATH_PIPELINE_LIST,
   PATH_PIPELINE_MAP
 } from "@/constants/path";
@@ -101,6 +105,39 @@ export const startPipeline = (id: string) => {
 
 export const stopPipeline = (id: string) => {
   return http.request<PipelineResult>("post", PATH_PIPELINE_STOP.replace("{pipeline_id}", id), { timeout: 0 });
+};
+
+const pipelineLogPath = (path: string, id: string) => path.replace("{pipeline_id}", id);
+
+export const getPipelineApiLogs = (id: string, date: string) => {
+  return http.request<{ success: boolean; message: string; data: Record<string, { content: unknown[] }> }>(
+    "get",
+    pipelineLogPath(PATH_PIPELINE_LOGS_API, id),
+    { params: { date } }
+  );
+};
+
+export const getPipelinePadLogs = (id: string, pad: string, date: string) => {
+  return http.request<{ success: boolean; message: string; data: { content: unknown[] } }>(
+    "get",
+    pipelineLogPath(PATH_PIPELINE_LOGS_PAD, id),
+    { params: { pad, date } }
+  );
+};
+
+export const removePipelineLogs = (id: string) => {
+  return http.request<{ success: boolean; message: string; data: Record<string, never> }>(
+    "delete",
+    pipelineLogPath(PATH_PIPELINE_LOGS, id)
+  );
+};
+
+export const getPipelineGstreamerLogs = (id: string, date: string) => {
+  return http.request<{ success: boolean; message: string; data: { content: string } }>(
+    "get",
+    pipelineLogPath(PATH_PIPELINE_LOGS_GSTREAMER, id),
+    { params: { date } }
+  );
 };
 
 export const probePipeline = (id: string) => {

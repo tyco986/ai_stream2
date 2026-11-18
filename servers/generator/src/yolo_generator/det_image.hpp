@@ -8,14 +8,14 @@
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → nvdsanalytics → detcollector → dslogger → nvstreamdemux → queue_demux{N} → detfadedrawer{N} → nvosdbin{N} → nvvideoconvert{N}
+//     nvurisrcbin{N} → nvstreammux → pgie → nvdsanalytics → detcollector → dslogger → detfadedrawer → nvstreamdemux → queue_demux{N} → nvosdbin{N} → nvvideoconvert{N}
 //         │     → capsfilter{N} → nvjpegenc{N} → filesink{N}
 class DetImageGenerator : public BaseImageGenerator {
 public:
     DetImageGenerator(
         std::string pipelineName,
         nlohmann::json images,
-        std::filesystem::path output,
+        std::filesystem::path filesinkOutput,
         std::optional<nlohmann::json> analyzer,
         nlohmann::json pgie,
         std::optional<nlohmann::json> logger = std::nullopt,

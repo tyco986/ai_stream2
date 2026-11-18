@@ -7,7 +7,7 @@
 DetImageGenerator::DetImageGenerator(
     std::string pipelineName,
     nlohmann::json images,
-    std::filesystem::path output,
+    std::filesystem::path filesinkOutput,
     std::optional<nlohmann::json> analyzer,
     nlohmann::json pgie,
     std::optional<nlohmann::json> logger,
@@ -15,7 +15,7 @@ DetImageGenerator::DetImageGenerator(
     : BaseImageGenerator(
           std::move(pipelineName),
           std::move(images),
-          std::move(output),
+          std::move(filesinkOutput),
           std::move(analyzer),
           std::move(pgie),
           std::move(logger),

@@ -151,7 +151,7 @@ std::string buildVisVideo(const nlohmann::json& payload, const std::filesystem::
     Generator generator(
         payload.at(generator_manager::KEY_PIPELINE_NAME).get<std::string>(),
         payload.at(generator_manager::KEY_VIDEOS),
-        payload.at(generator_manager::KEY_OUTPUT).get<std::string>(),
+        payload.at(generator_manager::KEY_FILESINK_OUTPUT).get<std::string>(),
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         optionalJson(payload, generator_manager::KEY_TRACKER),
@@ -183,7 +183,7 @@ std::string buildSahiVisVideo(const nlohmann::json& payload, const std::filesyst
     Generator generator(
         payload.at(generator_manager::KEY_PIPELINE_NAME).get<std::string>(),
         payload.at(generator_manager::KEY_VIDEOS),
-        payload.at(generator_manager::KEY_OUTPUT).get<std::string>(),
+        payload.at(generator_manager::KEY_FILESINK_OUTPUT).get<std::string>(),
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_SAHI),
@@ -231,7 +231,8 @@ std::string buildEventImage(const nlohmann::json& payload, const std::filesystem
     Generator generator(
         payload.at(generator_manager::KEY_PIPELINE_NAME).get<std::string>(),
         payload.at(generator_manager::KEY_IMAGES),
-        payload.at(generator_manager::KEY_OUTPUT).get<std::string>(),
+        payload.at(generator_manager::KEY_FILESINK_OUTPUT).get<std::string>(),
+        payload.at(generator_manager::KEY_CAPTURER_OUTPUT).get<std::string>(),
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_EVENT_CODER),
@@ -248,6 +249,7 @@ std::string buildEventVideo(const nlohmann::json& payload, const std::filesystem
     Generator generator(
         payload.at(generator_manager::KEY_PIPELINE_NAME).get<std::string>(),
         payload.at(generator_manager::KEY_VIDEOS),
+        payload.at(generator_manager::KEY_CAPTURER_OUTPUT).get<std::string>(),
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_EVENT_CODER),
@@ -265,7 +267,8 @@ std::string buildEventVisVideo(const nlohmann::json& payload, const std::filesys
     Generator generator(
         payload.at(generator_manager::KEY_PIPELINE_NAME).get<std::string>(),
         payload.at(generator_manager::KEY_VIDEOS),
-        payload.at(generator_manager::KEY_OUTPUT).get<std::string>(),
+        payload.at(generator_manager::KEY_FILESINK_OUTPUT).get<std::string>(),
+        payload.at(generator_manager::KEY_CAPTURER_OUTPUT).get<std::string>(),
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_EVENT_CODER),
@@ -283,7 +286,8 @@ std::string buildEventSahiVisVideo(const nlohmann::json& payload, const std::fil
     Generator generator(
         payload.at(generator_manager::KEY_PIPELINE_NAME).get<std::string>(),
         payload.at(generator_manager::KEY_VIDEOS),
-        payload.at(generator_manager::KEY_OUTPUT).get<std::string>(),
+        payload.at(generator_manager::KEY_FILESINK_OUTPUT).get<std::string>(),
+        payload.at(generator_manager::KEY_CAPTURER_OUTPUT).get<std::string>(),
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_SAHI),
@@ -302,6 +306,7 @@ std::string buildEventRtsp(const nlohmann::json& payload, const std::filesystem:
     Generator generator(
         payload.at(generator_manager::KEY_PIPELINE_NAME).get<std::string>(),
         payload.at(generator_manager::KEY_STREAMS),
+        payload.at(generator_manager::KEY_CAPTURER_OUTPUT).get<std::string>(),
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_EVENT_CODER),
@@ -319,6 +324,7 @@ std::string buildEventSahiRtsp(const nlohmann::json& payload, const std::filesys
     Generator generator(
         payload.at(generator_manager::KEY_PIPELINE_NAME).get<std::string>(),
         payload.at(generator_manager::KEY_STREAMS),
+        payload.at(generator_manager::KEY_CAPTURER_OUTPUT).get<std::string>(),
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_SAHI),
@@ -337,7 +343,7 @@ std::string buildImage(const nlohmann::json& payload, const std::filesystem::pat
     Generator generator(
         payload.at(generator_manager::KEY_PIPELINE_NAME).get<std::string>(),
         payload.at(generator_manager::KEY_IMAGES),
-        payload.at(generator_manager::KEY_OUTPUT).get<std::string>(),
+        payload.at(generator_manager::KEY_FILESINK_OUTPUT).get<std::string>(),
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         optionalJson(payload, generator_manager::KEY_LOGGER),
@@ -352,7 +358,7 @@ std::string buildSahiImage(const nlohmann::json& payload, const std::filesystem:
     Generator generator(
         payload.at(generator_manager::KEY_PIPELINE_NAME).get<std::string>(),
         payload.at(generator_manager::KEY_IMAGES),
-        payload.at(generator_manager::KEY_OUTPUT).get<std::string>(),
+        payload.at(generator_manager::KEY_FILESINK_OUTPUT).get<std::string>(),
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_SAHI),
@@ -384,7 +390,7 @@ std::string buildTopdownVisVideo(const nlohmann::json& payload, const std::files
     Generator generator(
         payload.at(generator_manager::KEY_PIPELINE_NAME).get<std::string>(),
         payload.at(generator_manager::KEY_VIDEOS),
-        payload.at(generator_manager::KEY_OUTPUT).get<std::string>(),
+        payload.at(generator_manager::KEY_FILESINK_OUTPUT).get<std::string>(),
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_SGIE),
@@ -418,7 +424,7 @@ std::string buildTopdownSahiVisVideo(const nlohmann::json& payload, const std::f
     Generator generator(
         payload.at(generator_manager::KEY_PIPELINE_NAME).get<std::string>(),
         payload.at(generator_manager::KEY_VIDEOS),
-        payload.at(generator_manager::KEY_OUTPUT).get<std::string>(),
+        payload.at(generator_manager::KEY_FILESINK_OUTPUT).get<std::string>(),
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_SGIE),
@@ -469,7 +475,7 @@ std::string buildTopdownImage(const nlohmann::json& payload, const std::filesyst
     Generator generator(
         payload.at(generator_manager::KEY_PIPELINE_NAME).get<std::string>(),
         payload.at(generator_manager::KEY_IMAGES),
-        payload.at(generator_manager::KEY_OUTPUT).get<std::string>(),
+        payload.at(generator_manager::KEY_FILESINK_OUTPUT).get<std::string>(),
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_SGIE),
@@ -485,7 +491,7 @@ std::string buildTopdownSahiImage(const nlohmann::json& payload, const std::file
     Generator generator(
         payload.at(generator_manager::KEY_PIPELINE_NAME).get<std::string>(),
         payload.at(generator_manager::KEY_IMAGES),
-        payload.at(generator_manager::KEY_OUTPUT).get<std::string>(),
+        payload.at(generator_manager::KEY_FILESINK_OUTPUT).get<std::string>(),
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_SGIE),
@@ -518,7 +524,7 @@ std::string buildStgcnppVisVideo(const nlohmann::json& payload, const std::files
     Generator generator(
         payload.at(generator_manager::KEY_PIPELINE_NAME).get<std::string>(),
         payload.at(generator_manager::KEY_VIDEOS),
-        payload.at(generator_manager::KEY_OUTPUT).get<std::string>(),
+        payload.at(generator_manager::KEY_FILESINK_OUTPUT).get<std::string>(),
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_STGCNPP),
@@ -552,7 +558,7 @@ std::string buildStgcnppSahiVisVideo(const nlohmann::json& payload, const std::f
     Generator generator(
         payload.at(generator_manager::KEY_PIPELINE_NAME).get<std::string>(),
         payload.at(generator_manager::KEY_VIDEOS),
-        payload.at(generator_manager::KEY_OUTPUT).get<std::string>(),
+        payload.at(generator_manager::KEY_FILESINK_OUTPUT).get<std::string>(),
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_STGCNPP),
@@ -620,7 +626,7 @@ std::string buildRtmposeVisVideo(const nlohmann::json& payload, const std::files
     Generator generator(
         payload.at(generator_manager::KEY_PIPELINE_NAME).get<std::string>(),
         payload.at(generator_manager::KEY_VIDEOS),
-        payload.at(generator_manager::KEY_OUTPUT).get<std::string>(),
+        payload.at(generator_manager::KEY_FILESINK_OUTPUT).get<std::string>(),
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_SGIE),
@@ -656,7 +662,7 @@ std::string buildRtmposeSahiVisVideo(const nlohmann::json& payload, const std::f
     Generator generator(
         payload.at(generator_manager::KEY_PIPELINE_NAME).get<std::string>(),
         payload.at(generator_manager::KEY_VIDEOS),
-        payload.at(generator_manager::KEY_OUTPUT).get<std::string>(),
+        payload.at(generator_manager::KEY_FILESINK_OUTPUT).get<std::string>(),
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_SGIE),

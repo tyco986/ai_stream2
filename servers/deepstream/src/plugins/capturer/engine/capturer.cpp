@@ -41,9 +41,9 @@ bool cudaMemory(NvBufSurfaceMemType memType) {
 
 }  // namespace
 
-Capturer::Capturer(const char* captureCodes) {
+Capturer::Capturer(const char* captureCodes, const char* output) {
     this->captureCodes = (captureCodes != nullptr && captureCodes[0] != '\0') ? captureCodes : capturer::DEFAULT_CAPTURE_CODES;
-    pipelineName = "";
+    this->output = output != nullptr ? output : "";
     stopWriter = false;
     for (char item : this->captureCodes) {
         if (item != ';' && item != ' ' && item != '\t') {
@@ -65,13 +65,8 @@ void Capturer::prepare(CaptureJob* job, NvDsFrameMeta* frame) {
     (void)frame;
 }
 
-void Capturer::setPipelineName(const std::string& name) {
-    pipelineName = pipelineName.empty() && !name.empty() ? name : pipelineName;
-}
-
 std::string Capturer::outputRoot() const {
-    const std::string root = std::string(capturer::OUTPUT_ROOT) + "/" + pipelineName;
-    return root;
+    return output;
 }
 
 void Capturer::stop() {
@@ -248,7 +243,7 @@ void Capturer::writerLoop() {
 
 bool Capturer::capture(NvBufSurface* surface, NvDsFrameMeta* frame) {
     bool ok = true;
-    if (!pipelineName.empty() && shouldDump(frame)) {
+    if (!output.empty() && shouldDump(frame)) {
         CaptureJob job;
         job.padIndex = static_cast<int>(frame->pad_index);
         job.captureId = takeId(job.padIndex);

@@ -1,0 +1,47 @@
+# bash servers/generator/scripts/3_generate.sh --config yolo10x_smoke_fire_sahi_vis_video_no_interval
+#
+# Artifacts: pipeline.yml, pgie.yml, params.yml, ... under config_save_dir.
+
+generator: DetSahiVisVideoPresenceGenerator
+pipeline_name: yolo10x_smoke_fire_sahi_vis_video_no_interval
+config_save_dir: /root/configs/generator/yolo10x_smoke_fire_sahi_vis_video_no_interval
+pgie:
+  interval: 1
+  model_zip: /root/history/export_trt/yolo10x-fire-smoke.zip
+  class_attrs:
+    all:
+      conf: 0.25
+tracker: null
+analyzer: null
+logger:
+  interval: 1
+drawer:
+  interval: 1
+  fade_time: 1
+  show_label: true
+event_coder:
+  event_slot_map: "0:0:Fire;1:1:Smoke"
+  length: 5
+  threshold: 0.5
+  mode: fold
+capturer:
+  capture_codes: "12"
+videos:
+  - /root/attachments/videos/video1.mp4
+  - /root/attachments/videos/video2.mp4
+filesink_output: /root/media/pipeline/yolo10x_smoke_fire_sahi_vis_video_no_interval
+capturer_output: /root/event/yolo10x_smoke_fire_sahi_vis_video_no_interval
+sahi:
+  preprocess:
+    slice_width: 640
+    slice_height: 640
+    overlap_width_ratio: 0.2
+    overlap_height_ratio: 0.2
+    enable_full_frame: true
+  postprocess:
+    match_metric: 1
+    match_threshold: 0.5
+    class_agnostic: false
+    enable_merge: true
+    two_phase_nmm: true
+    prefer_full_frame: true

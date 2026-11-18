@@ -3,9 +3,12 @@
 #include "constants/media_const.hpp"
 #include "logger/media_logger.hpp"
 #include "services/media_service.hpp"
+#include "services/stream_service.hpp"
 
 #include <drogon/HttpController.h>
+#include <drogon/utils/coroutine.h>
 
+#include <filesystem>
 #include <functional>
 
 class MediaController : public drogon::HttpController<MediaController> {
@@ -22,6 +25,9 @@ class MediaController : public drogon::HttpController<MediaController> {
   ADD_METHOD_TO(MediaController::get, media::PATH_ITEM, drogon::Get, "AuthFilter");
   ADD_METHOD_TO(MediaController::content, media::PATH_CONTENT, drogon::Get, "AuthFilter");
   ADD_METHOD_TO(MediaController::download, media::PATH_DOWNLOAD, drogon::Get, "AuthFilter");
+  ADD_METHOD_TO(MediaController::listPublished, media::PATH_PUBLISH_LIST, drogon::Get, "AuthFilter");
+  ADD_METHOD_TO(MediaController::publish, media::PATH_PUBLISH, drogon::Post, "AuthFilter");
+  ADD_METHOD_TO(MediaController::unpublish, media::PATH_PUBLISH, drogon::Delete, "AuthFilter");
   METHOD_LIST_END
 
   void listUploadFile(const drogon::HttpRequestPtr& request,
@@ -45,8 +51,14 @@ class MediaController : public drogon::HttpController<MediaController> {
   void download(const drogon::HttpRequestPtr& request,
                 std::function<void(const drogon::HttpResponsePtr&)>&& callback,
                 const std::string& media_id);
+  drogon::Task<drogon::HttpResponsePtr> listPublished(drogon::HttpRequestPtr request);
+  drogon::Task<drogon::HttpResponsePtr> publish(drogon::HttpRequestPtr request, std::string media_id);
+  drogon::Task<drogon::HttpResponsePtr> unpublish(drogon::HttpRequestPtr request, std::string media_id);
 
  private:
+  std::string publishName(const std::filesystem::path& file);
+
   MediaService service;
+  StreamService streams;
   MediaLogger logger;
 };

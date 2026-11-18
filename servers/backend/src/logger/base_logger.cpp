@@ -23,6 +23,8 @@ Json::StreamWriterBuilder BaseLogger::makeWriter() {
   Json::StreamWriterBuilder builder;
   builder[http::JSON_EMIT_UTF8] = true;
   builder[http::JSON_INDENTATION] = "";
+  builder[http::JSON_PRECISION_TYPE] = http::JSON_PRECISION_DECIMAL;
+  builder[http::JSON_PRECISION] = http::JSON_PRECISION_DIGITS;
   return builder;
 }
 
@@ -46,12 +48,16 @@ Json::Value BaseLogger::readLines(std::istream& input) {
   for (std::string line; std::getline(input, line); ) {
     Json::Value item;
     const bool parsed = !line.empty() && Json::Reader().parse(line, item);
-    const bool latencyField = parsed && item[service_log::KEY_LATENCY].isNumeric();
+    const bool latencyField = parsed && item.isMember(service_log::KEY_LATENCY) &&
+                              item[service_log::KEY_LATENCY].isNumeric();
     std::ostringstream latency;
     latency << std::fixed << std::setprecision(service_log::LATENCY_DIGITS)
             << (latencyField ? item[service_log::KEY_LATENCY].asDouble() : 0.0);
     if (latencyField) {
       item[service_log::KEY_LATENCY] = latency.str();
+    }
+    if (parsed && item.isMember(service_log::KEY_STEPS) && item[service_log::KEY_STEPS].isObject()) {
+      formatStepValues(item[service_log::KEY_STEPS]);
     }
     if (parsed) {
       lines.append(item);
@@ -188,6 +194,8 @@ std::string BaseLogger::formatLog(const Json::Value& body) {
     latency << std::fixed << std::setprecision(service_log::LATENCY_DIGITS)
             << (latencyField ? entry[key].asDouble() : 0.0);
     encoded = latencyField ? latency.str() : encoded;
+    const bool stepsField = key == service_log::KEY_STEPS && entry[key].isObject();
+    encoded = stepsField ? formatSteps(entry[key]) : encoded;
     text += "\"";
     text += key;
     text += "\":";
@@ -197,30 +205,65 @@ std::string BaseLogger::formatLog(const Json::Value& body) {
   return text;
 }
 
-void BaseLogger::write(const std::string& text) {
+void BaseLogger::formatStepValues(Json::Value& steps) {
+  for (const std::string& name : steps.getMemberNames()) {
+    const bool numeric = steps[name].isNumeric();
+    std::ostringstream value;
+    value << std::fixed << std::setprecision(service_log::LATENCY_DIGITS)
+          << (numeric ? steps[name].asDouble() : 0.0);
+    if (numeric) {
+      steps[name] = value.str();
+    }
+  }
+}
+
+std::string BaseLogger::formatSteps(const Json::Value& steps) {
+  std::string text = "{";
+  bool later = false;
+  for (const std::string& name : steps.getMemberNames()) {
+    if (later) {
+      text += ",";
+    }
+    later = true;
+    std::ostringstream value;
+    value << std::fixed << std::setprecision(service_log::LATENCY_DIGITS) << steps[name].asDouble();
+    text += "\"";
+    text += name;
+    text += "\":";
+    text += value.str();
+  }
+  text += "}";
+  return text;
+}
+
+void BaseLogger::write(const std::string& page, const std::string& text) {
   std::lock_guard<std::mutex> guard(mutex);
   if (enabled) {
-    const std::string loggerName = name();
-    const bool ready = loggers.find(loggerName) != loggers.end();
+    const bool ready = loggers.find(page) != loggers.end();
     if (!ready) {
-      const std::string directoryPath = std::string(service_log::DIR) + "/" + name();
+      const std::string directoryPath = std::string(service_log::DIR) + "/" + page;
       std::filesystem::create_directories(directoryPath);
-      const std::string path = directoryPath + "/" + name() + service_log::FILE_SUFFIX;
+      const std::string path = directoryPath + "/" + page + service_log::FILE_SUFFIX;
       auto sink = std::make_shared<spdlog::sinks::daily_file_sink_mt>(
           path, service_log::ROTATION_HOUR, service_log::ROTATION_MINUTE, false, service_log::MAX_DAYS);
-      auto created = std::make_shared<spdlog::logger>(loggerName, sink);
+      auto created = std::make_shared<spdlog::logger>(page, sink);
       created->set_pattern("%v");
       created->flush_on(spdlog::level::info);
-      loggers[loggerName] = created;
+      loggers[page] = created;
     }
-    loggers[loggerName]->info("{}", text);
+    loggers[page]->info("{}", text);
   }
+}
+
+void BaseLogger::write(const std::string& text) {
+  write(name(), text);
 }
 
 void BaseLogger::record(const drogon::HttpRequestPtr& request,
                         const drogon::HttpResponsePtr& response,
                         std::chrono::steady_clock::time_point started,
-                        const std::string& error) {
+                        const std::string& error,
+                        const Json::Value& steps) {
   const auto elapsed = std::chrono::steady_clock::now() - started;
   const std::string query = request->query();
   Json::Value body(Json::objectValue);
@@ -230,6 +273,7 @@ void BaseLogger::record(const drogon::HttpRequestPtr& request,
   body[service_log::KEY_INPUT] = std::string(request->getBody());
   body[service_log::KEY_OUTPUT] = std::string(response->getBody());
   body[service_log::KEY_LATENCY] = std::chrono::duration<double, std::milli>(elapsed).count();
+  body[service_log::KEY_STEPS] = steps;
   body[service_log::KEY_IP] = request->peerAddr().toIp();
   body[service_log::KEY_IN_BYTES] = static_cast<Json::UInt64>(request->bodyLength());
   body[service_log::KEY_OUT_BYTES] = static_cast<Json::UInt64>(response->getBody().size());

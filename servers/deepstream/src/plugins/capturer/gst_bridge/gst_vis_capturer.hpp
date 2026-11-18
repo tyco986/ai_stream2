@@ -15,6 +15,7 @@ struct _GstVisCapturer {
     gpointer engine;
     gchar* captureCodes;
     gchar* labelTask;
+    gchar* output;
 };
 
 struct _GstVisCapturerClass {

@@ -13,14 +13,14 @@
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0
-//         → nvrtmposepostprocess → nvdspreprocess → sgie1 → stgcnppactionlabel → nvdsanalytics → stgcnppcollector → dslogger → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → stgcnppfadedrawerwithtracker{N} → nvosdbin{N}
+//         → nvrtmposepostprocess → nvdspreprocess → sgie1 → stgcnppactionlabel → nvdsanalytics → stgcnppcollector → dslogger → stgcnppfadedrawerwithtracker → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → nvosdbin{N}
 //         │     → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
 class StgcnppRtmposeVisVideoGenerator : public VisVideoGenerator {
 public:
     StgcnppRtmposeVisVideoGenerator(
         std::string pipelineName,
         nlohmann::json videos,
-        std::filesystem::path output,
+        std::filesystem::path filesinkOutput,
         std::optional<nlohmann::json> analyzer,
         nlohmann::json pgie,
         nlohmann::json sgie,

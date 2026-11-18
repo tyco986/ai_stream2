@@ -3,6 +3,7 @@ import { onMounted, ref } from "vue";
 import Play from "~icons/ri/play-circle-line";
 import Stop from "~icons/ri/stop-circle-line";
 import Search from "~icons/ri/search-line";
+import FileText from "~icons/ri/file-text-line";
 import Edit from "~icons/ri/edit-line";
 import DeleteBin from "~icons/ri/delete-bin-line";
 import { getPipelines, probePipeline, removePipeline, removePipelines, startPipeline, stopPipeline, type PipelineItem } from "@/api/pipeline";
@@ -14,6 +15,7 @@ import AnalyzerDialog from "@/views/pipeline/analyzer/index.vue";
 import { useColumnWidths } from "@/views/pipeline/columnWidth";
 import PipelineCreate from "@/views/pipeline/create.vue";
 import GieDialog from "@/views/pipeline/gie/index.vue";
+import PipelineLogs from "@/views/pipeline/logs.vue";
 import "@/views/pipeline/dialog.css";
 
 defineOptions({
@@ -27,6 +29,9 @@ const createOpen = ref(false);
 const editId = ref("");
 const gieOpen = ref(false);
 const analyzerOpen = ref(false);
+const logsOpen = ref(false);
+const logsId = ref("");
+const logsName = ref("");
 const startingIds = ref<string[]>([]);
 const stoppingIds = ref<string[]>([]);
 const probingIds = ref<string[]>([]);
@@ -141,6 +146,7 @@ onMounted(() => {
     <PipelineCreate v-if="createOpen" :pipeline-id="editId" @close="createOpen = false" @created="onCreated" />
     <GieDialog v-if="gieOpen" @close="gieOpen = false" />
     <AnalyzerDialog v-if="analyzerOpen" @close="analyzerOpen = false" />
+    <PipelineLogs v-if="logsOpen" :id="logsId" :name="logsName" @close="logsOpen = false" />
     <el-table ref="listRef" class="pipeline-list" :data="items" table-layout="fixed" border show-overflow-tooltip @selection-change="selected = $event">
       <el-table-column type="selection" :width="listWidths.selection" />
       <el-table-column prop="name" :label="transformI18n($t('pipeline.pureName'))" :width="listWidths.name" />
@@ -165,6 +171,9 @@ onMounted(() => {
           </el-button>
           <el-button v-else link type="primary" :disabled="row.status === 'starting' || startingIds.includes(row.id)" :title="transformI18n($t('pipeline.pureStart'))" @click="onStart(row)">
             <IconifyIconOffline :icon="Play" />
+          </el-button>
+          <el-button link type="primary" :title="transformI18n($t('pipeline.pureLogs'))" @click="logsId = row.id; logsName = row.name; logsOpen = true">
+            <IconifyIconOffline :icon="FileText" />
           </el-button>
           <el-button link type="primary" :disabled="probingIds.includes(row.id)" :title="transformI18n($t('pipeline.pureProbe'))" @click="onProbe(row)">
             <IconifyIconOffline :icon="Search" />

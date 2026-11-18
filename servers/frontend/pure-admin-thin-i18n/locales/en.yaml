@@ -85,6 +85,7 @@ status:
   pureNoNotify: No Notify
   pureNoTodo: No Todo
 media:
+  pureAll: All
   pureRecording: Recording
   purePipeline: Pipeline
   pureUpload: Upload
@@ -145,6 +146,8 @@ pipeline:
   pureStart: Start
   pureStop: Stop
   pureProbe: Probe
+  pureLogs: Logs
+  pureClearLogs: Clear logs
   pureEdit: Edit
   pureOps: Ops
   pureModel: Model

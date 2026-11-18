@@ -1,8 +1,10 @@
 #include "services/pipeline_analyzer_service.hpp"
 
 #include "error_tracer/sql.hpp"
+#include "services/pipeline_service.hpp"
 
 #include "constants/pipeline_analyzer_const.hpp"
+#include "constants/pipeline_const.hpp"
 #include "searcher/searcher.hpp"
 
 #include <stdexcept>
@@ -96,6 +98,7 @@ Json::Value PipelineAnalyzerService::update(const std::string& analyzerId,
     throw std::runtime_error(pipeline_analyzer::ERR_NOT_FOUND);
   }
   data = row2json(rows[0]);
+  updatePipelineInput(data, getPipelineRefCurrentAnalyzer(analyzerId));
   return data;
 }
 
@@ -117,6 +120,30 @@ Json::Value PipelineAnalyzerService::remove(const std::string& analyzerId) {
   }
   Json::Value data = row2json(rows[0]);
   return data;
+}
+
+Json::Value PipelineAnalyzerService::getPipelineRefCurrentAnalyzer(const std::string& analyzerId) {
+  const auto rows = Sql::sync({}, dbClient,
+      "SELECT id::text AS id FROM pipeline WHERE $1::uuid = ANY(analyzer_ids)",
+      analyzerId);
+  Json::Value pipelines(Json::arrayValue);
+  for (const auto& row : rows) {
+    Json::Value item;
+    item[pipeline::KEY_ID] = row["id"].as<std::string>();
+    pipelines.append(item);
+  }
+  return pipelines;
+}
+
+void PipelineAnalyzerService::updatePipelineInput(const Json::Value& analyzer, const Json::Value& pipelines) {
+  PipelineService pipelinesService(dbClient);
+  for (const auto& item : pipelines) {
+    Json::Value input = pipelinesService.getInput(item[pipeline::KEY_ID].asString());
+    if (input.isObject()) {
+      input[pipeline::KEY_ANALYZER] = analyzer[pipeline_analyzer::KEY_ANNOTATIONS];
+      pipelinesService.setInput(item[pipeline::KEY_ID].asString(), input);
+    }
+  }
 }
 
 Json::Value PipelineAnalyzerService::row2json(const drogon::orm::Row& row) {

@@ -88,6 +88,7 @@ COPY --from=build /opt/nvidia/deepstream/deepstream/lib/gst-plugins/libgstboxsna
 COPY --from=build /opt/nvidia/deepstream/deepstream/lib/gst-plugins/libgstfadedrawer.so /opt/nvidia/deepstream/deepstream/lib/gst-plugins/
 COPY --from=build /opt/nvidia/deepstream/deepstream/lib/gst-plugins/libgstpresenceeventcoder.so /opt/nvidia/deepstream/deepstream/lib/gst-plugins/
 COPY --from=build /opt/nvidia/deepstream/deepstream/lib/gst-plugins/libgstcapturer.so /opt/nvidia/deepstream/deepstream/lib/gst-plugins/
+COPY --from=build /opt/nvidia/deepstream/deepstream/lib/gst-plugins/libgstdscollector.so /opt/nvidia/deepstream/deepstream/lib/gst-plugins/
 COPY --from=build /opt/nvidia/deepstream/deepstream/lib/gst-plugins/libgstdslogger.so /opt/nvidia/deepstream/deepstream/lib/gst-plugins/
 COPY --from=build /opt/nvidia/deepstream/deepstream/lib/gst-plugins/libgststgcnppactionlabel.so /opt/nvidia/deepstream/deepstream/lib/gst-plugins/
 COPY --from=build /opt/nvidia/deepstream/deepstream/lib/gst-plugins/libgstnvsahipostprocesspose.so /opt/nvidia/deepstream/deepstream/lib/gst-plugins/

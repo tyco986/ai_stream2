@@ -1,13 +1,19 @@
 import { http } from "@/utils/http";
 import {
-  PATH_FFMPEG_RTSP_PUBLISH,
+  PATH_MEDIA_PUBLISH,
+  PATH_MEDIA_PUBLISH_LIST,
   PATH_MEDIA_BATCH_DOWNLOAD,
   PATH_MEDIA_BATCH_REMOVE,
+  PATH_MEDIA_BATCH_REMOVE_FOLDER,
   PATH_MEDIA_BATCH_UPLOAD,
   PATH_MEDIA,
   PATH_MEDIA_CONTENT,
   PATH_MEDIA_DOWNLOAD,
-  PATH_MEDIA_UPLOAD_FILE
+  PATH_MEDIA_UPLOAD_FILE,
+  PATH_MEDIA_PIPELINE_FILE,
+  PATH_MEDIA_PIPELINE_FOLDER,
+  PATH_MEDIA_RECORDING_FILE,
+  PATH_MEDIA_RECORDING_FOLDER
 } from "@/constants/path";
 
 export type MediaItem = {
@@ -47,6 +53,12 @@ export type MediaListResult = {
   };
 };
 
+export type MediaFolderResult = {
+  success: boolean;
+  message: string;
+  data: Record<string, string>;
+};
+
 const mediaPath = (path: string, mediaId: string) => path.replace("{media_id}", mediaId);
 
 export const getMedia = (mediaId: string) => {
@@ -64,6 +76,26 @@ export const getUploadFiles = (params?: object) => {
   return http.request<MediaListResult>("get", PATH_MEDIA_UPLOAD_FILE, {
     params
   });
+};
+
+export const getPipelineFiles = (params?: object) => {
+  return http.request<MediaListResult>("get", PATH_MEDIA_PIPELINE_FILE, {
+    params
+  });
+};
+
+export const getRecordingFiles = (params?: object) => {
+  return http.request<MediaListResult>("get", PATH_MEDIA_RECORDING_FILE, {
+    params
+  });
+};
+
+export const getPipelineFolders = () => {
+  return http.request<MediaFolderResult>("get", PATH_MEDIA_PIPELINE_FOLDER);
+};
+
+export const getRecordingFolders = () => {
+  return http.request<MediaFolderResult>("get", PATH_MEDIA_RECORDING_FOLDER);
 };
 
 export const downloadMedia = (mediaId: string) => {
@@ -99,6 +131,12 @@ export const removeMedia = (ids: string[]) => {
   });
 };
 
+export const removeMediaFolder = (folders: string[]) => {
+  return http.request<MediaBatchResult>("post", PATH_MEDIA_BATCH_REMOVE_FOLDER, {
+    data: { folders }
+  });
+};
+
 export type RtspPublishItem = {
   path: string;
   url_docker: string;
@@ -115,18 +153,20 @@ export type RtspPublishResult = {
   data: Record<string, RtspPublishItem>;
 };
 
-export const publishRtsp = (paths: Record<string, string>) => {
-  return http.request<RtspPublishResult>("post", PATH_FFMPEG_RTSP_PUBLISH, {
-    data: { paths }
-  });
+export type RtspPublishResponse = {
+  success: boolean;
+  message: string;
+  data: RtspPublishItem;
 };
 
-export const getPublishedRtsp = () => {
-  return http.request<RtspPublishResult>("get", PATH_FFMPEG_RTSP_PUBLISH);
+export const publishMedia = (mediaId: string) => {
+  return http.request<RtspPublishResponse>("post", PATH_MEDIA_PUBLISH.replace("{media_id}", mediaId));
 };
 
-export const unpublishRtsp = (names: string[]) => {
-  const query = names.map(name => `names=${encodeURIComponent(name)}`).join("&");
-  const url = query ? `${PATH_FFMPEG_RTSP_PUBLISH}?${query}` : PATH_FFMPEG_RTSP_PUBLISH;
-  return http.request<RtspPublishResult>("delete", url);
+export const getPublishedMedia = () => {
+  return http.request<RtspPublishResult>("get", PATH_MEDIA_PUBLISH_LIST);
+};
+
+export const unpublishMedia = (mediaId: string) => {
+  return http.request<RtspPublishResponse>("delete", PATH_MEDIA_PUBLISH.replace("{media_id}", mediaId));
 };

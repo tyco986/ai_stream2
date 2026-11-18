@@ -18,7 +18,6 @@ import { getStreams, type StreamItem } from "@/api/stream";
 import {
   PIPELINE_CREATE_DIALOG_WIDTH,
   PIPELINE_OPTION_PAGE_SIZE,
-  PIPELINE_OUTPUT_DIR,
   PIPELINE_SOURCE_COLUMN_PERCENTS,
   PIPELINE_SOURCE_PAGE_SIZE,
   PIPELINE_TIMED_SOURCE_COLUMN_PERCENTS
@@ -366,7 +365,6 @@ const pipelineDraft = () => {
           sourceSelected.value.map(row => [row.name, { url: row.url, width: row.width, height: row.height, fps: row.fps }])
         )
       : sourceSelected.value.map(row => row.path);
-  const withOutput = spec?.source === "image" || (spec?.source === "video" && createType.value.includes("Vis"));
   const input = {
     generator: spec?.generator,
     pipeline_name: name,
@@ -375,8 +373,7 @@ const pipelineDraft = () => {
     analyzer: null,
     ...sections.value,
     drawer: sections.value.drawer ?? null,
-    [sourceKey]: sourceValue,
-    ...(withOutput ? { output: `${PIPELINE_OUTPUT_DIR}/${name}` } : {})
+    [sourceKey]: sourceValue
   };
   const draft = spec
     ? {

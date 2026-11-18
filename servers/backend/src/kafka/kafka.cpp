@@ -12,6 +12,8 @@
 #include <exception>
 
 #include <chrono>
+#include <cstdint>
+#include <limits>
 #include <memory>
 #include <string>
 #include <thread>
@@ -34,7 +36,39 @@ class KafkaRebalance : public RdKafka::RebalanceCb {
 
 }
 
-Kafka::Kafka() : service(Database::client()) {}
+Kafka::Kafka() : service(Database::client()), seen(std::numeric_limits<std::uint64_t>::max()), revision(0) {}
+
+Kafka& Kafka::shared() {
+  static Kafka kafka;
+  return kafka;
+}
+
+void Kafka::watch(const std::string& name) {
+  const std::string topic = std::string(kafka::TOPIC_PREFIX) + name;
+  std::lock_guard<std::mutex> guard(mutex);
+  const bool inserted = names.insert(topic).second;
+  revision += inserted ? 1 : 0;
+}
+
+void Kafka::apply(RdKafka::KafkaConsumer& consumer) {
+  std::vector<std::string> topics;
+  std::uint64_t current = 0;
+  {
+    std::lock_guard<std::mutex> guard(mutex);
+    current = revision;
+    topics.assign(names.begin(), names.end());
+  }
+  const bool changed = current != seen;
+  if (changed) {
+    topics.insert(topics.begin(), kafka::TOPIC_PATTERN);
+    const RdKafka::ErrorCode code = consumer.subscribe(topics);
+    const bool ok = code == RdKafka::ERR_NO_ERROR;
+    seen = ok ? current : seen;
+    if (!ok) {
+      spdlog::error("{}", RdKafka::err2str(code));
+    }
+  }
+}
 
 void Kafka::dispatch(const Json::Value& message, const std::string& topic) {
   try {
@@ -52,19 +86,17 @@ void Kafka::run() {
   conf->set("bootstrap.servers", kafka::BROKERS, err);
   conf->set("group.id", kafka::GROUP, err);
   conf->set("enable.auto.commit", "true", err);
-  conf->set("auto.offset.reset", "latest", err);
+  conf->set("auto.offset.reset", kafka::OFFSET_RESET, err);
   conf->set("rebalance_cb", &rebalance, err);
   auto consumer = std::unique_ptr<RdKafka::KafkaConsumer>(RdKafka::KafkaConsumer::create(conf.get(), err));
-  if (consumer) {
-    consumer->subscribe({kafka::TOPIC_PATTERN});
-  }
   while (true) {
     if (!consumer) {
       std::this_thread::sleep_for(std::chrono::milliseconds(kafka::POLL_MS));
       consumer.reset(RdKafka::KafkaConsumer::create(conf.get(), err));
-      if (consumer) {
-        consumer->subscribe({kafka::TOPIC_PATTERN});
-      }
+      seen = std::numeric_limits<std::uint64_t>::max();
+    }
+    if (consumer) {
+      apply(*consumer);
     }
     auto message = consumer ? std::unique_ptr<RdKafka::Message>(consumer->consume(kafka::POLL_MS)) : nullptr;
     if (message && message->err() == RdKafka::ERR_NO_ERROR && message->payload() != nullptr) {
@@ -89,8 +121,7 @@ class KafkaRunner {
   KafkaRunner() {
     drogon::app().registerBeginningAdvice([] {
       std::thread([] {
-        Kafka kafka;
-        kafka.run();
+        Kafka::shared().run();
       }).detach();
     });
   }

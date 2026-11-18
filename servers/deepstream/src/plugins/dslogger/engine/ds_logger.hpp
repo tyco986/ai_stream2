@@ -22,6 +22,7 @@ public:
 
 private:
     bool shouldLog(int pad);
+    std::string currentFileName() const;
     std::shared_ptr<spdlog::logger> loggerFor(int pad);
 
     int logInterval;

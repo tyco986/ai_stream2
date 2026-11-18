@@ -18,5 +18,6 @@ export const LOG_PAGES = [
   { page: "notice", label: "Notice" },
   { page: "media", label: "Media" },
   { page: "proxy", label: "Proxy" },
-  { page: "log", label: "Log" }
+  { page: "log", label: "Log" },
+  { page: "kafka", label: "Kafka" }
 ];

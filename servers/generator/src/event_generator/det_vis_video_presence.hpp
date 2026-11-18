@@ -7,9 +7,9 @@
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → presenceeventcoder → presencecollector → dslogger → tee_msg
-//       ─┬→ nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → tee_raw{N}
+//       ─┬→ detfadedrawerwithtracker → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → tee_raw{N}
 //       │     ─┬→ queue_raw{N} → nvvideoconvert_raw{N} → capsfilter_raw{N} → rawcapturer{N} → fakesink_raw{N}
-//       │     └→ queue_osd{N} → nvvideoconvert_osd{N} → detfadedrawerwithtracker{N} → nvosdbin{N} → tee_vis{N}
+//       │     └→ queue_osd{N} → nvvideoconvert_osd{N} → nvosdbin{N} → tee_vis{N}
 //       │           ─┬→ queue_vis{N} → nvvideoconvert_vis{N} → capsfilter_vis{N} → viscapturer{N} → fakesink_vis{N}
 //       │           └→ queue_enc{N} → nvvideoconvert_enc{N} → capsfilter_enc{N}
 //       │                 → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
@@ -19,7 +19,8 @@ public:
     DetVisVideoPresenceGenerator(
         std::string pipelineName,
         nlohmann::json videos,
-        std::filesystem::path output,
+        std::filesystem::path filesinkOutput,
+        std::filesystem::path capturerOutput,
         std::optional<nlohmann::json> analyzer,
         nlohmann::json pgie,
         nlohmann::json eventCoder,

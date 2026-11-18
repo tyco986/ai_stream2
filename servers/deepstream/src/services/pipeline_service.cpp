@@ -17,6 +17,10 @@ PipelineStatus PipelineService::status() {
     return runner.has_value() ? runner->status() : idle;
 }
 
+bool PipelineService::alive() {
+    return runner.has_value() && runner->alive();
+}
+
 std::filesystem::path PipelineService::prepare(const httplib::FormData& config,
                                                  const std::vector<httplib::FormData>& models,
                                                  const httplib::FormData& media) {

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+
 #include <json/json.h>
 
 namespace pipeline {
@@ -10,6 +12,10 @@ inline const char* PATH_ITEM = "/backend/pipelines/{pipeline_id}";
 inline const char* PATH_START = "/backend/pipelines/{pipeline_id}/start";
 inline const char* PATH_PROBE = "/backend/pipelines/{pipeline_id}/probe";
 inline const char* PATH_STOP = "/backend/pipelines/{pipeline_id}/stop";
+inline const char* PATH_LOGS_API = "/backend/pipelines/{pipeline_id}/logs/api";
+inline const char* PATH_LOGS_PAD = "/backend/pipelines/{pipeline_id}/logs/pad";
+inline const char* PATH_LOGS_GSTREAMER = "/backend/pipelines/{pipeline_id}/logs/gstreamer";
+inline const char* PATH_LOGS = "/backend/pipelines/{pipeline_id}/logs";
 inline const char* PATH_BATCH_STOP = "/backend/pipelines/batch/stop";
 inline const char* PATH_BATCH_REMOVE = "/backend/pipelines/batch/remove";
 inline const char* PATH_GENERATE = "/ai_stream2/generator/generate";
@@ -21,6 +27,7 @@ inline const char* KEY_STATUS = "status";
 inline const char* KEY_INPUT = "input";
 inline const char* KEY_CONFIG_PATH = "config_path";
 inline const char* KEY_GIE_ID = "gie_id";
+inline const char* KEY_ANALYZER = "analyzer";
 inline const char* KEY_ANALYZER_ID = "analyzer_id";
 inline const char* KEY_STREAM_IDS = "stream_ids";
 inline const char* KEY_STREAM_NAMES = "stream_names";
@@ -35,6 +42,17 @@ inline const char* KEY_GENERATOR = "generator";
 inline const char* KEY_START_TIME = "start_time";
 inline const char* KEY_END_TIME = "end_time";
 inline const char* KEY_DURATION = "duration";
+inline const char* STEP_GENERATE = "generate";
+inline const char* STEP_INSPECT = "inspect";
+inline const char* STEP_RUNNING = "running";
+inline const char* STEP_CREATE = "create";
+inline const char* STEP_RESTART = "restart";
+inline const char* STEP_HEALTH = "health";
+inline const char* STEP_PACK = "pack";
+inline const char* STEP_POST = "post";
+inline const char* STEP_STATUS = "status";
+inline const char* STEP_STOP = "stop";
+inline const char* STEP_DELETE = "delete";
 inline const char* KEY_UPDATED_AT = "updated_at";
 inline const char* KEY_ITEMS = "items";
 inline const char* KEY_TOTAL = "total";
@@ -58,7 +76,14 @@ inline const char* MEDIA_FILENAME = "media.zip";
 inline const char* KEY_MODEL_ZIP = "model_zip";
 inline const char* KEY_VIDEOS = "videos";
 inline const char* KEY_IMAGES = "images";
+inline const char* KEY_EVENT_CODER = "event_coder";
+inline const char* KEY_FILESINK_OUTPUT = "filesink_output";
+inline const char* KEY_CAPTURER_OUTPUT = "capturer_output";
+inline const char* FILESINK_DIR = "/root/media/pipeline";
+inline const char* VIS_GENERATOR_MARK = "Vis";
+inline const int OUTPUT_SUFFIX_LIMIT = 1000;
 inline const char* PARAMS_YML = "params.yml";
+inline const char* YAML_STRING_TAG = "tag:yaml.org,2002:str";
 inline const char* MULTIPART_BOUNDARY = "ai_stream2_pipeline_generate";
 inline const char* MULTIPART_CONTENT_TYPE = "multipart/form-data; boundary=ai_stream2_pipeline_generate";
 
@@ -68,6 +93,7 @@ inline const char* STATUS_STOPPED = "stopped";
 inline const char* STATUS_STARTING = "starting";
 inline const char* STATUS_RUNNING = "running";
 inline const char* ERR_BUSY = "pipeline_err_busy";
+inline const char* ERR_LOGS_BUSY = "stop the pipeline before clearing logs";
 inline const char* ERR_IDLE = "pipeline is not running";
 
 inline const char* DOCKER_BASE_URL = "http://ai_stream2_docker_socket_proxy:2375";
@@ -78,6 +104,21 @@ inline const char* DOCKER_JSON_PATH = "/json";
 inline const char* DOCKER_NETWORK = "ai_stream2_default";
 inline const char* DOCKER_RUNTIME = "nvidia";
 inline const char* LOGS_DIR = "/root/logs";
+inline const char* DEEPSTREAM_LOG_DIR = "/root/logs/deepstream";
+inline const char* LOG_API_DIR = "api";
+inline const char* LOG_PAD_DIR = "pad";
+inline const int PAD_WIDTH = 3;
+inline const char* LOG_API_PAGE = "deepstream";
+inline const char* LOG_API_SUFFIX = ".jsonl";
+inline const char* LOG_GSTREAMER_DIR = "gstreamer";
+inline const char* LOG_GSTREAMER_PREFIX = "gstreamer_";
+inline const char* LOG_GSTREAMER_SUFFIX = ".log";
+inline const char* KEY_CONTENT = "content";
+inline const char* KEY_LATENCY = "latency";
+inline const std::size_t DATE_LENGTH = 10;
+inline const int LATENCY_DIGITS = 2;
+inline const char* MEDIA_DIR = "/root/media";
+inline const char* EVENT_DIR = "/root/event";
 inline const char* LOCALTIME_BIND = "/etc/localtime:/etc/localtime:ro";
 inline const char* MOUNTINFO_PATH = "/proc/self/mountinfo";
 inline const char* DOCKER_GPU_DRIVER = "nvidia";
@@ -91,6 +132,7 @@ inline const char* DEEPSTREAM_HEALTH_PATH = "/ai_stream2/deepstream/health";
 inline const char* DEEPSTREAM_START_PATH = "/start";
 inline const char* DEEPSTREAM_STOP_PATH = "/stop";
 inline const char* DEEPSTREAM_STATUS_PATH = "/status";
+inline const char* DEEPSTREAM_LOGS_PATH = "/ai_stream2/deepstream/logs";
 inline const int HEALTH_ATTEMPTS = 15;
 inline const int STATUS_ATTEMPTS = 15;
 inline const double HEALTH_INTERVAL_SECONDS = 1.0;
@@ -139,6 +181,8 @@ inline const char* MSG_BATCH_STOP_OK = "pipeline_batch_stop_ok";
 inline const char* MSG_BATCH_REMOVE_OK = "pipeline_batch_remove_ok";
 inline const char* MSG_PROBE_OK = "pipeline_probe_ok";
 inline const char* MSG_PROBE_ERROR = "pipeline_probe_error";
+inline const char* MSG_LOGS_OK = "pipeline_logs_ok";
+inline const char* MSG_LOGS_ERROR = "pipeline_logs_error";
 
 inline const char* SQL_REF_COLUMNS =
     "array_to_json(stream_ids)::text AS stream_ids, "
@@ -157,6 +201,8 @@ inline const char* SQL_REF_COLUMNS =
 inline const char* QUERY_SEARCH = "search";
 inline const char* QUERY_PAGE = "page";
 inline const char* QUERY_PAGE_SIZE = "page_size";
+inline const char* QUERY_DATE = "date";
+inline const char* QUERY_PAD = "pad";
 inline const int DEFAULT_PAGE = 1;
 inline const int DEFAULT_PAGE_SIZE = 20;
 

@@ -9,7 +9,7 @@
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocesspose
-//           → boxsnapshot → nvtracker → nvdsanalytics → detcollector → dslogger → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → posefadedrawerwithtracker{N} → nvosdbin{N}
+//           → boxsnapshot → nvtracker → nvdsanalytics → detcollector → dslogger → posefadedrawerwithtracker → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → nvosdbin{N}
 //             │     → queue_enc{N} → nvv4l2h264enc{N} → h264parse{N} → rtspclientsink{N}
 class VisSahiPoseRtspGenerator : public VisSahiRtspGenerator {
 public:

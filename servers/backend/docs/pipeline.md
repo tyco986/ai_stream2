@@ -23,6 +23,10 @@ JSON 成功外壳：`{success, message, data}`。
 | `POST` | `/backend/pipelines/{pipeline_id}/start` | path：`pipeline_id` | 管道对象 | 拉起 DeepStream 容器并启动 |
 | `POST` | `/backend/pipelines/{pipeline_id}/probe` | path：`pipeline_id` | 管道对象 | 读容器状态写回 |
 | `POST` | `/backend/pipelines/{pipeline_id}/stop` | path：`pipeline_id` | 管道对象 | 调 DeepStream `POST /stop` 结束管道进程，状态改为 `stopped` |
+| `GET` | `/backend/pipelines/{pipeline_id}/logs/api` | query：`date`，可空 | `{date: {content}}` | 读该管道 `api/` 下的请求日志 |
+| `GET` | `/backend/pipelines/{pipeline_id}/logs/pad` | query：`pad`、`date` | `{content}` | 读该管道某一路某一天的帧日志 |
+| `GET` | `/backend/pipelines/{pipeline_id}/logs/gstreamer` | query：`date` | `{content}` | 读该管道某一天的 GStreamer 日志 |
+| `DELETE` | `/backend/pipelines/{pipeline_id}/logs` | path：`pipeline_id` | `{}` | 调 DeepStream `DELETE /ai_stream2/deepstream/logs` 清空该容器日志 |
 | `POST` | `/backend/pipelines/batch/stop` | `ids` | 批量结果 | 批量停止 |
 | `POST` | `/backend/pipelines/batch/remove` | `ids` | 批量结果 | 批量删除 |
 
@@ -44,7 +48,7 @@ JSON 成功外壳：`{success, message, data}`。
 
 ### POST `/backend/pipelines`
 
-把 `input` 交给 `POST /ai_stream2/generator/generate`，得到 `config_path` 后入库。`status` 为 `stopped`，`updated_at` 为当前时间。
+只入库，不调用 generate。`config_path` 为 `null`，`status` 为 `stopped`，`updated_at` 为当前时间。
 
 入参：`name`、`type`、`input`、`stream_ids`、`media_ids`、`gie_ids`、`analyzer_ids`。缺省的 `stream_ids`、`media_ids` 写成空数组。
 
@@ -58,7 +62,7 @@ JSON 成功外壳：`{success, message, data}`。
 
 ### PATCH `/backend/pipelines/{pipeline_id}`
 
-`status=starting` 时拒绝。否则重新生成配置，更新 `name`、`type`、`input`、`config_path`、`stream_ids`、`media_ids`、`gie_ids`、`analyzer_ids`，清空 `start_time`、`end_time`、`duration`。缺省的 `stream_ids`、`media_ids` 写成空数组。
+`status=starting` 或容器正在跑时拒绝。否则更新 `name`、`type`、`input`、`stream_ids`、`media_ids`、`gie_ids`、`analyzer_ids`，保留已有 `config_path`，清空 `start_time`、`end_time`、`duration`。缺省的 `stream_ids`、`media_ids` 写成空数组。
 
 入参：`name`、`type`、`input`、`stream_ids`、`media_ids`、`gie_ids`、`analyzer_ids`。
 
@@ -74,7 +78,7 @@ JSON 成功外壳：`{success, message, data}`。
 
 ### POST `/backend/pipelines/{pipeline_id}/start`
 
-`starting` 或容器已在跑时 `409`。否则经 Docker 代理创建或重启容器 `ai_stream2_{name}`（镜像 `ai_stream2_deepstream`，端口 9000）。健康检查通过后，从 `config_path` 的 `params.yml` 取出全部 `model_zip`，以及 `videos`、`images` 里的本地文件。配置 zip（`name=config`）、模型 zip（`name=model`）和媒体 zip（`name=media`，条目为去掉前导 `/` 的原路径；没有本地媒体则不传）放进同一个 multipart 调用 `/start`，再轮询 `/status`，把 `status`、`start_time`、`end_time`、`duration` 写回。
+`starting` 或容器已在跑时 `409`。否则按本次启动时间写入产物目录：有 filesink 时写 `filesink_output` 为 `/root/media/pipeline/{name}-{时间戳}-{序号}`，有 event 时写 `capturer_output` 为 `/root/event/{name}/{时间戳}-{序号}`。更新 `input` 后调用 generate，把 zip 路径写入 `config_path`。随后经 Docker 代理创建或重启容器 `ai_stream2_{name}`（镜像 `ai_stream2_deepstream`，端口 9000）。健康检查通过后，从 `config_path` 的 `params.yml` 取出全部 `model_zip`，以及 `videos`、`images` 里的本地文件。配置 zip（`name=config`）、模型 zip（`name=model`）和媒体 zip（`name=media`，条目为去掉前导 `/` 的原路径；没有本地媒体则不传）放进同一个 multipart 调用 `/start`，再轮询 `/status`，把 `status`、`start_time`、`end_time`、`duration` 写回。日志 steps 增加 `generate`。
 
 入参：path `pipeline_id`。
 
@@ -95,6 +99,34 @@ JSON 成功外壳：`{success, message, data}`。
 入参：path `pipeline_id`。
 
 出参 `data`：管道对象。`message`：`Stopped pipeline`。其它失败 `500`，`Failed to stop pipeline`。
+
+### GET `/backend/pipelines/{pipeline_id}/logs/api`
+
+`date` 可省略。填写时须为 `YYYY-MM-DD`。文件在 `/root/logs/deepstream/<name>/api/deepstream_YYYY-MM-DD.jsonl`。
+
+入参（query）：`date`。
+
+出参 `data`：日期到 `{content}`。`content` 为该日日志行解析后的对象数组，空行和无法解析的行不包含在内。`latency` 是两位小数字符串。不填 `date` 返回该目录下全部日期；填写时只返回这一天，文件不存在则为 `{}`。`message`：`pipeline_logs_ok`。`date` 非法时 `400`，管道不存在时 `500`，`message` 均为 `pipeline_logs_error`。
+
+### GET `/backend/pipelines/{pipeline_id}/logs/pad`
+
+`pad`、`date` 都必填。`pad` 为十进制路号，`0` 到 `999`，对应目录 `000` 这种三位。`date` 为 `YYYY-MM-DD`。文件在 `/root/logs/deepstream/<name>/pad/<pad>/<page>_YYYY-MM-DD.jsonl`。一个管道只有一种 `page`。
+
+出参 `data`：`{content}`。`content` 为该日日志行解析后的对象数组，空行和无法解析的行不包含在内。`latency` 是两位小数字符串。目录或文件不存在时为 `[]`。`message`：`pipeline_logs_ok`。`pad` 或 `date` 非法时 `400`，管道不存在时 `500`，`message` 均为 `pipeline_logs_error`。
+
+### GET `/backend/pipelines/{pipeline_id}/logs/gstreamer`
+
+`date` 必填，须为 `YYYY-MM-DD`。文件在 `/root/logs/deepstream/<name>/gstreamer/gstreamer_YYYY-MM-DD.log`。
+
+出参 `data`：`{content}`，`content` 为文件文本。文件不存在时为空字符串。`message`：`pipeline_logs_ok`。`date` 非法时 `400`，管道不存在时 `500`，`message` 均为 `pipeline_logs_error`。
+
+### DELETE `/backend/pipelines/{pipeline_id}/logs`
+
+请求 `http://ai_stream2_{name}:8094/ai_stream2/deepstream/logs`。子进程还在时 DeepStream 返回 `409`。已退出时放开接口日志句柄，删除 `/root/logs/deepstream`，再把该目录建回来。
+
+入参：path `pipeline_id`。
+
+出参 `data`：`{}`。`message`：`pipeline_logs_ok`。子进程还在时 `409`，`stop the pipeline before clearing logs`。管道不存在或 DeepStream 未成功时 `500`，`pipeline_logs_error`。
 
 ### POST `/backend/pipelines/batch/stop`
 

@@ -85,6 +85,7 @@ status:
   pureNoNotify: 暂无通知
   pureNoTodo: 暂无待办
 media:
+  pureAll: 全部
   pureRecording: 录制
   purePipeline: 管道
   pureUpload: 上传
@@ -145,6 +146,8 @@ pipeline:
   pureStart: 启动
   pureStop: 停止
   pureProbe: 探测
+  pureLogs: 日志
+  pureClearLogs: 清空日志
   pureEdit: 编辑
   pureOps: 操作
   pureModel: 模型

@@ -4,7 +4,7 @@
 
 JSON 成功外壳：`{success, message, data}`。
 
-事件对象键：`id`、`occurred_at`、`stream_id`、`pipeline_id`、`event_code`、`event_label`、`status`（`new` | `handled`）、`raw_path`、`visualization_path`、`annotations`。路径和 `annotations` 为空时为 `null`。
+事件对象键：`id`、`occurred_at`、`stream_id`、`media_id`、`pipeline_id`、`event_code`、`event_label`、`status`（`new` | `handled`）、`raw_path`、`visualization_path`、`annotations`。路径、`stream_id`、`media_id` 和 `annotations` 为空时为 `null`。RTSP 写 `stream_id`，image、video 写 `media_id`，两者只填一个。
 
 ---
 
@@ -18,7 +18,7 @@ JSON 成功外壳：`{success, message, data}`。
 
 ### GET `/backend/events`
 
-`page` 默认 `1`，`page_size` 默认 `20`。`search` 匹配 id、stream_id、pipeline_id、event_code、event_label、status。按 `occurred_at` 降序，再按 `id` 降序。
+`page` 默认 `1`，`page_size` 默认 `20`。`search` 匹配 id、stream_id、media_id、pipeline_id、event_code、event_label、status。按 `occurred_at` 降序，再按 `id` 降序。
 
 入参（query）：`search`、`page`、`page_size`。
 
@@ -46,7 +46,8 @@ WebSocket。握手走 `AuthFilter`，读权限与列表相同。请求头没有 
 |----|------|--------|------|
 | `id` | UUID | 无（插入用 `gen_random_uuid()`） | PRIMARY KEY |
 | `occurred_at` | TIMESTAMPTZ | 无 | NOT NULL |
-| `stream_id` | UUID | 无 | NOT NULL |
+| `stream_id` | UUID | `NULL` | 可空；与 `media_id` 恰好一个非空 |
+| `media_id` | UUID | `NULL` | 可空；与 `stream_id` 恰好一个非空 |
 | `pipeline_id` | UUID | 无 | NOT NULL |
 | `event_code` | VARCHAR(64) | 无 | NOT NULL |
 | `event_label` | VARCHAR(150) | 无 | NOT NULL |
@@ -55,4 +56,4 @@ WebSocket。握手走 `AuthFilter`，读权限与列表相同。请求头没有 
 | `visualization_path` | TEXT | `NULL` | 可空 |
 | `annotations` | JSONB | `NULL` | 可空 |
 
-索引：`event_occurred_at_id_idx`（`occurred_at`，`id`）、`event_stream_id_idx`（`stream_id`）、`event_pipeline_id_event_code_idx`（`pipeline_id`，`event_code`）、`event_status_idx`（`status`）。
+约束：`event_source_check`，`(stream_id IS NULL) <> (media_id IS NULL)`。索引：`event_occurred_at_id_idx`（`occurred_at`，`id`）、`event_stream_id_idx`（`stream_id`）、`event_media_id_idx`（`media_id`）、`event_pipeline_id_event_code_idx`（`pipeline_id`，`event_code`）、`event_status_idx`（`status`）。

@@ -18,6 +18,7 @@ typedef struct zip_error zip_error_t;
 class PipelineService {
 public:
     static PipelineStatus status();
+    static bool alive();
     static std::filesystem::path prepare(const httplib::FormData& config,
                                          const std::vector<httplib::FormData>& models,
                                          const httplib::FormData& media);

@@ -8,7 +8,7 @@
 VisSahiVideoGenerator::VisSahiVideoGenerator(
     std::string pipelineName,
     nlohmann::json videos,
-    std::filesystem::path output,
+    std::filesystem::path filesinkOutput,
     std::optional<nlohmann::json> analyzer,
     nlohmann::json pgie,
     nlohmann::json sahi,
@@ -24,17 +24,17 @@ VisSahiVideoGenerator::VisSahiVideoGenerator(
           std::move(tracker),
           std::move(logger),
           std::move(drawer)),
-      output(std::filesystem::absolute(std::move(output))) {
+      filesinkOutput(std::filesystem::absolute(std::move(filesinkOutput))) {
 }
 
 void VisSahiVideoGenerator::initVideos() {
     SahiVideoGenerator::initVideos();
-    std::filesystem::create_directories(output);
+    std::filesystem::create_directories(filesinkOutput);
 }
 
 void VisSahiVideoGenerator::initParams() {
     SahiVideoGenerator::initParams();
-    std::get<YAML::Node>(files.at(PARAMS_CONFIG_NAME))["output"] = output.string();
+    std::get<YAML::Node>(files.at(PARAMS_CONFIG_NAME))["filesink_output"] = filesinkOutput.string();
 }
 
 void VisSahiVideoGenerator::add() {
@@ -76,16 +76,17 @@ void VisSahiVideoGenerator::add() {
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
     appendNode("detcollector", "detcollector", addCollector());
     appendNode("dslogger", "dslogger", addDslogger(logger.value("interval", 1), pipeline::PAGE_DET));
+    if (drawer.has_value()) {
+        const std::string drawerName = visDrawerElement();
+        appendNode(drawerName, drawerName, visDrawerProperties(*drawer));
+    }
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     for (int streamIndex = 0; streamIndex < muxBatchSize; ++streamIndex) {
         const std::string suffix = std::to_string(streamIndex);
         const std::filesystem::path source(videos.at(streamIndex).get<std::string>());
-        const std::filesystem::path sink = output / source.filename();
+        const std::filesystem::path sink = filesinkOutput / source.filename();
         appendNode("queue", "queue_demux" + suffix, addQueue());
         appendNode("nvvideoconvert", "nvvideoconvert" + suffix, addNvvideoconvert(gpuId));
-        if (drawer.has_value()) {
-            appendNode(visDrawerElement(), visDrawerElement() + suffix, visDrawerProperties(*drawer));
-        }
         appendNode("nvosdbin", "nvosdbin" + suffix, addNvosdbin(gpuId, true, true));
 
         appendNode(
@@ -120,16 +121,16 @@ void VisSahiVideoGenerator::link() {
     edges[inferenceTail] = "nvdsanalytics";
     edges["nvdsanalytics"] = "detcollector";
     edges["detcollector"] = "dslogger";
-    edges["dslogger"] = "nvstreamdemux";
+    const std::string drawerName = visDrawerElement();
+    const std::string demuxSource = drawer.has_value() ? drawerName : std::string("nvstreamdemux");
+    if (drawer.has_value()) {
+        edges[drawerName] = "nvstreamdemux";
+    }
+    edges["dslogger"] = demuxSource;
     for (int index = 0; index < muxBatchSize; ++index) {
         const std::string suffix = std::to_string(index);
-        const std::string drawerName = visDrawerElement() + suffix;
-        const std::string osdPrev = drawer.has_value() ? drawerName : "nvosdbin" + suffix;
         edges["queue_demux" + suffix] = "nvvideoconvert" + suffix;
-        edges["nvvideoconvert" + suffix] = osdPrev;
-        if (drawer.has_value()) {
-            edges[drawerName] = "nvosdbin" + suffix;
-        }
+        edges["nvvideoconvert" + suffix] = "nvosdbin" + suffix;
         edges["nvosdbin" + suffix] = "nvv4l2h264enc" + suffix;
         edges["nvv4l2h264enc" + suffix] = "h264parse" + suffix;
         edges["h264parse" + suffix] = "mp4mux" + suffix;

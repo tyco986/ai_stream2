@@ -9,14 +9,14 @@
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocess
-//         → boxsnapshot → nvtracker → nvdsanalytics → detcollector → dslogger → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → detfadedrawerwithtracker{N} → nvosdbin{N}
+//         → boxsnapshot → nvtracker → nvdsanalytics → detcollector → dslogger → detfadedrawerwithtracker → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → nvosdbin{N}
 //         │     → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
 class DetSahiVisVideoGenerator : public VisSahiVideoGenerator {
 public:
     DetSahiVisVideoGenerator(
         std::string pipelineName,
         nlohmann::json videos,
-        std::filesystem::path output,
+        std::filesystem::path filesinkOutput,
         std::optional<nlohmann::json> analyzer,
         nlohmann::json pgie,
         nlohmann::json sahi,

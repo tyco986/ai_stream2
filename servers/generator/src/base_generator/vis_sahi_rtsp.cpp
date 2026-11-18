@@ -44,15 +44,16 @@ void VisSahiRtspGenerator::add() {
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
     appendNode("detcollector", "detcollector", addCollector());
     appendNode("dslogger", "dslogger", addDslogger(logger.value("interval", 1), pipeline::PAGE_DET));
+    if (drawer.has_value()) {
+        const std::string drawerName = visDrawerElement();
+        appendNode(drawerName, drawerName, visDrawerProperties(*drawer));
+    }
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     index = 0;
     for (auto item = streams.begin(); item != streams.end(); ++item) {
         const std::string suffix = std::to_string(index);
         appendNode("queue", "queue_demux" + suffix, addQueue());
         appendNode("nvvideoconvert", "nvvideoconvert" + suffix, addNvvideoconvert(gpuId));
-        if (drawer.has_value()) {
-            appendNode(visDrawerElement(), visDrawerElement() + suffix, visDrawerProperties(*drawer));
-        }
         appendNode("nvosdbin", "nvosdbin" + suffix, addNvosdbin(gpuId, true, true));
         appendNode("queue", "queue_enc" + suffix, addQueue());
 
@@ -91,15 +92,16 @@ void VisSahiRtspGenerator::link() {
     edges[inferenceTail] = "nvdsanalytics";
     edges["nvdsanalytics"] = "detcollector";
     edges["detcollector"] = "dslogger";
-    edges["dslogger"] = "nvstreamdemux";
+    const std::string drawerName = visDrawerElement();
+    const std::string demuxSource = drawer.has_value() ? drawerName : std::string("nvstreamdemux");
+    if (drawer.has_value()) {
+        edges[drawerName] = "nvstreamdemux";
+    }
+    edges["dslogger"] = demuxSource;
     for (int index = 0; index < muxBatchSize; ++index) {
         const std::string suffix = std::to_string(index);
         edges["queue_demux" + suffix] = "nvvideoconvert" + suffix;
-        const std::string osdPrev = drawer.has_value() ? visDrawerElement() + suffix : "nvosdbin" + suffix;
-        edges["nvvideoconvert" + suffix] = osdPrev;
-        if (drawer.has_value()) {
-            edges[visDrawerElement() + suffix] = "nvosdbin" + suffix;
-        }
+        edges["nvvideoconvert" + suffix] = "nvosdbin" + suffix;
         edges["nvosdbin" + suffix] = "queue_enc" + suffix;
         edges["queue_enc" + suffix] = "nvv4l2h264enc" + suffix;
         edges["nvv4l2h264enc" + suffix] = "h264parse" + suffix;

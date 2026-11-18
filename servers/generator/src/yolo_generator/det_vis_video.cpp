@@ -7,7 +7,7 @@
 DetVisVideoGenerator::DetVisVideoGenerator(
     std::string pipelineName,
     nlohmann::json videos,
-    std::filesystem::path output,
+    std::filesystem::path filesinkOutput,
     std::optional<nlohmann::json> analyzer,
     nlohmann::json pgie,
     std::optional<nlohmann::json> tracker,
@@ -16,7 +16,7 @@ DetVisVideoGenerator::DetVisVideoGenerator(
     : VisVideoGenerator(
           std::move(pipelineName),
           std::move(videos),
-          std::move(output),
+          std::move(filesinkOutput),
           std::move(analyzer),
           std::move(pgie),
           std::move(tracker),

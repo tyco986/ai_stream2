@@ -3,6 +3,7 @@
 #include "constants/proxy_const.hpp"
 #include "db/database.hpp"
 #include "logger/base_logger.hpp"
+#include "logger/step_span.hpp"
 #include "response/response.hpp"
 
 #include <drogon/HttpClient.h>
@@ -274,6 +275,7 @@ drogon::Task<drogon::HttpResponsePtr> ModelController::build(drogon::HttpRequest
   const auto started = std::chrono::steady_clock::now();
   drogon::HttpResponsePtr response = http::Response::error(drogon::k500InternalServerError, model::MSG_BUILD_ERROR);
   std::string errorText;
+  Json::Value steps(Json::objectValue);
   bool building = false;
   try {
     const BuildStart recipes = service.buildStart(model_id);
@@ -284,10 +286,17 @@ drogon::Task<drogon::HttpResponsePtr> ModelController::build(drogon::HttpRequest
     onnxRequest->setMethod(drogon::Post);
     onnxRequest->setPath(model::PATH_EXPORT_ONNX);
     onnxRequest->setContentTypeString(model::MULTIPART_CONTENT_TYPE);
-    onnxRequest->setBody(zip2Multipart(source.filename().string(), zip2Bytes(sourcePath)) +
-                           yaml2Multipart(recipes.exportOnnx));
+    {
+      StepSpan span(steps, model::STEP_PACK);
+      onnxRequest->setBody(zip2Multipart(source.filename().string(), zip2Bytes(sourcePath)) +
+                             yaml2Multipart(recipes.exportOnnx));
+    }
     auto onnxClient = drogon::HttpClient::newHttpClient(export_onnx::DES_BASE_URL);
-    const auto onnxResponse = co_await onnxClient->sendRequestCoro(onnxRequest, export_onnx::REQUEST_TIMEOUT_SECONDS);
+    drogon::HttpResponsePtr onnxResponse;
+    {
+      StepSpan span(steps, model::STEP_ONNX);
+      onnxResponse = co_await onnxClient->sendRequestCoro(onnxRequest, export_onnx::REQUEST_TIMEOUT_SECONDS);
+    }
     const bool onnxOk = onnxResponse->statusCode() >= drogon::k200OK && onnxResponse->statusCode() < drogon::k300MultipleChoices;
     if (!onnxOk) {
       throw std::runtime_error("export onnx failed");
@@ -299,7 +308,11 @@ drogon::Task<drogon::HttpResponsePtr> ModelController::build(drogon::HttpRequest
     trtRequest->setContentTypeString(model::MULTIPART_CONTENT_TYPE);
     trtRequest->setBody(zip2Multipart(onnx.fileName, onnx.fileContent) + yaml2Multipart(recipes.exportTrt));
     auto trtClient = drogon::HttpClient::newHttpClient(export_trt::DES_BASE_URL);
-    const auto trtResponse = co_await trtClient->sendRequestCoro(trtRequest, export_trt::REQUEST_TIMEOUT_SECONDS);
+    drogon::HttpResponsePtr trtResponse;
+    {
+      StepSpan span(steps, model::STEP_TRT);
+      trtResponse = co_await trtClient->sendRequestCoro(trtRequest, export_trt::REQUEST_TIMEOUT_SECONDS);
+    }
     const bool trtOk = trtResponse->statusCode() >= drogon::k200OK && trtResponse->statusCode() < drogon::k300MultipleChoices;
     if (!trtOk) {
       throw std::runtime_error("export trt failed");
@@ -318,7 +331,7 @@ drogon::Task<drogon::HttpResponsePtr> ModelController::build(drogon::HttpRequest
                                      conflict ? model::ERR_BUILDING : model::MSG_BUILD_ERROR);
     errorText = reason;
   }
-  logger.record(request, response, started, errorText);
+  logger.record(request, response, started, errorText, steps);
   co_return response;
 }
 

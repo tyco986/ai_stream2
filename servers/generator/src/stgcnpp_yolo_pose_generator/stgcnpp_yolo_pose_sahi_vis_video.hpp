@@ -13,14 +13,14 @@
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocesspose
 //         → boxsnapshot → nvtracker → nvdspreprocess → sgie1 → stgcnppactionlabel
-//         → nvdsanalytics → stgcnppcollector → dslogger → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → stgcnppfadedrawerwithtracker{N} → nvosdbin{N}
+//         → nvdsanalytics → stgcnppcollector → dslogger → stgcnppfadedrawerwithtracker → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → nvosdbin{N}
 //         │     → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
 class StgcnppYoloPoseSahiVisVideoGenerator : public VisSahiPoseVideoGenerator {
 public:
     StgcnppYoloPoseSahiVisVideoGenerator(
         std::string pipelineName,
         nlohmann::json videos,
-        std::filesystem::path output,
+        std::filesystem::path filesinkOutput,
         std::optional<nlohmann::json> analyzer,
         nlohmann::json pgie,
         nlohmann::json stgcnpp,

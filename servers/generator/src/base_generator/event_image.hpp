@@ -24,9 +24,9 @@
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → pgie → nvdsanalytics → presenceeventcoder → presencecollector → dslogger → tee_msg
-//       ─┬→ nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → tee_raw{N}
+//       ─┬→ detfadedrawer → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → tee_raw{N}
 //       │     ─┬→ queue_raw{N} → nvvideoconvert_raw{N} → capsfilter_raw{N} → rawcapturer{N} → fakesink_raw{N}
-//       │     └→ queue_osd{N} → nvvideoconvert_osd{N} → detfadedrawer{N} → nvosdbin{N} → tee_vis{N}
+//       │     └→ queue_osd{N} → nvvideoconvert_osd{N} → nvosdbin{N} → tee_vis{N}
 //       │           ─┬→ queue_vis{N} → nvvideoconvert_vis{N} → capsfilter_vis{N} → viscapturer{N} → fakesink_vis{N}
 //       │           └→ queue_enc{N} → nvvideoconvert_enc{N} → capsfilter_jpeg{N}
 //       │                 → nvjpegenc{N} → filesink{N}
@@ -45,7 +45,8 @@ public:
     EventImageGenerator(
         std::string pipelineName,
         nlohmann::json images,
-        std::filesystem::path output,
+        std::filesystem::path filesinkOutput,
+        std::filesystem::path capturerOutput,
         std::optional<nlohmann::json> analyzer,
         nlohmann::json pgie,
         nlohmann::json eventCoder,
@@ -72,7 +73,7 @@ public:
     void link() override;
 
     nlohmann::json images;
-    std::filesystem::path output;
+    std::filesystem::path filesinkOutput;
     std::optional<nlohmann::json> analyzer;
     nlohmann::json pgie;
     nlohmann::json logger;

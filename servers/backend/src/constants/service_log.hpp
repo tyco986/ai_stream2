@@ -42,6 +42,7 @@ inline const char* NOTICE_DIR = "notice";
 inline const char* MEDIA_DIR = "media";
 inline const char* PROXY_DIR = "proxy";
 inline const char* LOG_DIR = "log";
+inline const char* KAFKA_DIR = "kafka";
 inline const char* PAGES[] = {
     STREAM_DIR,
     STREAM_GROUP_DIR,
@@ -59,6 +60,7 @@ inline const char* PAGES[] = {
     MEDIA_DIR,
     PROXY_DIR,
     LOG_DIR,
+    KAFKA_DIR,
 };
 inline const char* FILE_SUFFIX = ".jsonl";
 inline const std::size_t MAX_DAYS = 90;
@@ -83,6 +85,7 @@ inline const char* KEY_CODE = "code";
 inline const char* KEY_INPUT = "input";
 inline const char* KEY_OUTPUT = "output";
 inline const char* KEY_LATENCY = "latency";
+inline const char* KEY_STEPS = "steps";
 inline const int LATENCY_DIGITS = 2;
 inline const char* KEY_IP = "ip";
 inline const char* KEY_IN_BYTES = "in_bytes";
@@ -96,6 +99,7 @@ inline const char* LINE_KEYS[] = {
     KEY_INPUT,
     KEY_OUTPUT,
     KEY_LATENCY,
+    KEY_STEPS,
     KEY_IP,
     KEY_IN_BYTES,
     KEY_OUT_BYTES,

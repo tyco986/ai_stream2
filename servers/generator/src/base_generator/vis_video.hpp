@@ -15,14 +15,14 @@
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → detcollector → dslogger → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → detfadedrawerwithtracker{N} → nvosdbin{N}
+//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → detcollector → dslogger → detfadedrawerwithtracker → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → nvosdbin{N}
 //         │     → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
 class VisVideoGenerator : public BaseVideoGenerator {
 public:
     VisVideoGenerator(
         std::string pipelineName,
         nlohmann::json videos,
-        std::filesystem::path output,
+        std::filesystem::path filesinkOutput,
         std::optional<nlohmann::json> analyzer,
         nlohmann::json pgie,
         std::optional<nlohmann::json> tracker = std::nullopt,
@@ -34,5 +34,5 @@ public:
     void add() override;
     void link() override;
 
-    std::filesystem::path output;
+    std::filesystem::path filesinkOutput;
 };

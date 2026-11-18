@@ -7,7 +7,7 @@
 
 class VisCapturer : public Capturer {
 public:
-    VisCapturer(const char* captureCodes, const char* labelTask);
+    VisCapturer(const char* captureCodes, const char* labelTask, const char* output);
     ~VisCapturer() override;
 
 protected:

@@ -30,7 +30,7 @@ const char* SELECT_MEDIA =
     "id::text AS id, type, name, width, height, duration, fps, codec, size, md5, folder, "
     "to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"') AS created_at, "
     "to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"') AS updated_at, "
-    "user_id::text AS user_id, stream_id::text AS stream_id, pipeline_id::text AS pipeline_id ";
+    "user_id::text AS user_id ";
 
 class MediaInfoBuffer {
  public:
@@ -70,7 +70,7 @@ Json::Value MediaService::listUploadFile(int page,
                                      const std::string& userId,
                                      const std::string& type,
                                      const std::string& search) {
-  const Json::Value data = listFile(media::UPLOAD_DIR, "user_id", userId, type, page, pageSize, search, "");
+  const Json::Value data = listFile(media::UPLOAD_DIR, userId, "", type, page, pageSize, search, "");
   return data;
 }
 
@@ -78,8 +78,8 @@ Json::Value MediaService::listPipelineFile(int page,
                                        long pageSize,
                                        const std::string& type,
                                        const std::string& search,
-                                       const std::string& pipelineId) {
-  const Json::Value data = listFile(media::PIPELINE_DIR, "pipeline_id", pipelineId, type, page, pageSize, search, "");
+                                       const std::string& folder) {
+  const Json::Value data = listFile(media::PIPELINE_DIR, "", folder, type, page, pageSize, search, "");
   return data;
 }
 
@@ -87,34 +87,19 @@ Json::Value MediaService::listRecordingFile(int page,
                                         long pageSize,
                                         const std::string& type,
                                         const std::string& search,
-                                        const std::string& streamId,
+                                        const std::string& folder,
                                         const std::string& date) {
-  const Json::Value data = listFile(media::RECORDING_DIR, "stream_id", streamId, type, page, pageSize, search, date);
+  const Json::Value data = listFile(media::RECORDING_DIR, "", folder, type, page, pageSize, search, date);
   return data;
 }
 
 Json::Value MediaService::listUploadFolder() {
-  const Json::Value names = listFolder(media::UPLOAD_DIR, "SELECT username AS name, id::text AS id FROM \"user\"");
-  return names;
-}
-
-Json::Value MediaService::listPipelineFolder() {
-  const Json::Value names = listFolder(media::PIPELINE_DIR, "SELECT name, id::text AS id FROM pipeline");
-  return names;
-}
-
-Json::Value MediaService::listRecordingFolder() {
-  const Json::Value names = listFolder(media::RECORDING_DIR, "SELECT name, id::text AS id FROM stream");
-  return names;
-}
-
-Json::Value MediaService::listFolder(const std::string& folder, const std::string& sql) {
-  const auto rows = Sql::sync({}, dbClient, sql);
+  const auto rows = Sql::sync({}, dbClient, "SELECT username AS name, id::text AS id FROM \"user\"");
   std::map<std::string, std::string> ids;
   for (const auto& row : rows) {
     ids[row["name"].as<std::string>()] = row["id"].as<std::string>();
   }
-  const std::filesystem::path scan = std::filesystem::path(root) / folder;
+  const std::filesystem::path scan = std::filesystem::path(root) / media::UPLOAD_DIR;
   Json::Value names(Json::objectValue);
   const bool rooted = std::filesystem::is_directory(scan);
   const std::filesystem::directory_iterator end;
@@ -123,48 +108,60 @@ Json::Value MediaService::listFolder(const std::string& folder, const std::strin
       : end;
   for (; entry != end; ++entry) {
     const std::string name = entry->path().filename().string();
-    if (entry->is_directory() && ids.count(name) != 0) {
-      names[name] = ids[name];
+    const auto found = ids.find(name);
+    if (entry->is_directory() && found != ids.end()) {
+      names[name] = found->second;
     }
   }
   return names;
 }
 
-void MediaService::reloadFile(const std::string& folder, const std::string& ownerColumn, const std::string& ownerId) {
+Json::Value MediaService::listPipelineFolder() {
+  const Json::Value names = listStoredFolder(media::PIPELINE_DIR);
+  return names;
+}
+
+Json::Value MediaService::listRecordingFolder() {
+  const Json::Value names = listStoredFolder(media::RECORDING_DIR);
+  return names;
+}
+
+Json::Value MediaService::listStoredFolder(const std::string& folder) {
+  reloadFile(folder, "");
+  const std::string prefix = (std::filesystem::path(root) / folder).lexically_normal().string();
+  const auto rows = Sql::sync({}, dbClient,
+      "SELECT DISTINCT folder FROM media WHERE folder = $1 OR folder LIKE $1 || '/%' ORDER BY folder",
+      prefix);
+  Json::Value names(Json::objectValue);
+  for (const auto& row : rows) {
+    const std::string path = row["folder"].as<std::string>();
+    names[std::filesystem::path(path).filename().string()] = path;
+  }
+  return names;
+}
+
+void MediaService::reloadFile(const std::string& folder, const std::string& userId) {
   const std::filesystem::path prefix = (std::filesystem::path(root) / folder).lexically_normal();
   const std::string prefixText = prefix.string();
   const bool upload = folder == media::UPLOAD_DIR;
-  const bool pipeline = folder == media::PIPELINE_DIR;
   const bool recording = folder == media::RECORDING_DIR;
-  const std::string ownerName = ownerId.empty()
-      ? ""
-      : (upload ? userId2Name(ownerId) : (pipeline ? pipelineId2Name(ownerId) : streamId2Name(ownerId)));
+  const std::string ownerName = !upload || userId.empty() ? "" : userId2Name(userId);
   const std::filesystem::path scan = ownerName.empty() ? prefix : prefix / ownerName;
   const auto users = Sql::sync({}, dbClient, "SELECT username, id::text AS id FROM \"user\"");
-  const auto pipelines = Sql::sync({}, dbClient, "SELECT name, id::text AS id FROM pipeline");
-  const auto streams = Sql::sync({}, dbClient, "SELECT name, id::text AS id FROM stream");
   std::map<std::string, std::string> userIds;
-  std::map<std::string, std::string> pipelineIds;
-  std::map<std::string, std::string> streamIds;
   std::string adminId;
   for (const auto& row : users) {
     userIds[row["username"].as<std::string>()] = row["id"].as<std::string>();
     adminId = row["username"].as<std::string>() == media::ADMIN_USERNAME ? row["id"].as<std::string>() : adminId;
   }
-  if ((pipeline || recording) && adminId.empty()) {
+  if (!upload && adminId.empty()) {
     throw std::runtime_error(media::ERR_ADMIN);
-  }
-  for (const auto& row : pipelines) {
-    pipelineIds[row["name"].as<std::string>()] = row["id"].as<std::string>();
-  }
-  for (const auto& row : streams) {
-    streamIds[row["name"].as<std::string>()] = row["id"].as<std::string>();
   }
   const auto stored = Sql::sync({}, dbClient,
       std::string("SELECT ") + SELECT_MEDIA + ", EXTRACT(EPOCH FROM updated_at)::bigint AS " + media::UPDATED_SEC +
-          " FROM media WHERE (folder = $1 OR folder LIKE $1 || '/%') AND (" + ownerColumn + "::text = $2 OR $2 = '')",
+          " FROM media WHERE (folder = $1 OR folder LIKE $1 || '/%') AND (user_id::text = $2 OR $2 = '')",
       prefixText,
-      ownerId);
+      userId);
   std::map<std::string, Json::Value> rowsByKey;
   for (const auto& row : stored) {
     Json::Value data = mediaRow(row);
@@ -240,12 +237,8 @@ void MediaService::reloadFile(const std::string& folder, const std::string& owne
     const std::filesystem::path relative = parent.lexically_relative(prefix);
     const std::string ownerDir = relative.empty() || relative == "." ? "" : relative.begin()->string();
     const auto userFound = userIds.find(ownerDir);
-    const auto pipelineFound = pipelineIds.find(ownerDir);
-    const auto streamFound = streamIds.find(ownerDir);
-    const std::string userId = upload ? (ownerId.empty() ? (userFound == userIds.end() ? "" : userFound->second) : ownerId) : adminId;
-    const std::string pipelineId = pipeline ? (ownerId.empty() ? (pipelineFound == pipelineIds.end() ? "" : pipelineFound->second) : ownerId) : "";
-    const std::string streamId = recording ? (ownerId.empty() ? (streamFound == streamIds.end() ? "" : streamFound->second) : ownerId) : "";
-    const bool owned = !userId.empty() && (!pipeline || !pipelineId.empty()) && (!recording || !streamId.empty());
+    const std::string ownerId = upload ? (userId.empty() ? (userFound == userIds.end() ? "" : userFound->second) : userId) : adminId;
+    const bool owned = !ownerId.empty();
     std::tm utc{};
     const std::time_t mtime = stated == 0 ? static_cast<std::time_t>(status.stx_mtime.tv_sec) : 0;
     const std::time_t born = stated == 0 && (status.stx_mask & STATX_BTIME) != 0
@@ -279,9 +272,7 @@ void MediaService::reloadFile(const std::string& folder, const std::string& owne
              parent.string(),
              createdBuffer,
              updatedBuffer,
-             userId,
-             streamId.empty() ? Json::Value() : Json::Value(streamId),
-             pipelineId.empty() ? Json::Value() : Json::Value(pipelineId));
+             ownerId);
     }
     if (sameMd5) {
       update((*current)[media::KEY_TYPE],
@@ -297,8 +288,6 @@ void MediaService::reloadFile(const std::string& folder, const std::string& owne
              (*current)[media::KEY_CREATED_AT],
              updatedBuffer,
              (*current)[media::KEY_USER_ID],
-             (*current)[media::KEY_STREAM_ID],
-             (*current)[media::KEY_PIPELINE_ID],
              (*current)[media::KEY_ID].asString());
     }
     if (changed) {
@@ -315,8 +304,6 @@ void MediaService::reloadFile(const std::string& folder, const std::string& owne
              (*current)[media::KEY_CREATED_AT],
              updatedBuffer,
              (*current)[media::KEY_USER_ID],
-             (*current)[media::KEY_STREAM_ID],
-             (*current)[media::KEY_PIPELINE_ID],
              (*current)[media::KEY_ID].asString());
     }
   }
@@ -329,25 +316,26 @@ void MediaService::reloadFile(const std::string& folder, const std::string& owne
 }
 
 Json::Value MediaService::listFile(const std::string& folder,
-                                 const std::string& ownerColumn,
-                                 const std::string& ownerId,
+                                 const std::string& userId,
+                                 const std::string& folderPath,
                                  const std::string& type,
                                  int page,
                                  long pageSize,
                                  const std::string& search,
                                  const std::string& date) {
-  reloadFile(folder, ownerColumn, ownerId);
+  reloadFile(folder, userId);
   const long offset = static_cast<long>(page - 1) * pageSize;
   const std::string prefix = (std::filesystem::path(root) / folder).lexically_normal().string();
-  const std::string match = Searcher::clause(media::SEARCH_COLUMNS, 4);
-  const std::string from = "FROM media WHERE (folder = $1 OR folder LIKE $1 || '/%') AND (" + ownerColumn +
-      "::text = $2 OR $2 = '') AND (type = $3 OR $3 = '') AND " + match +
-      " AND ($5 = '' OR to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') = $5) ";
-  const auto counted = Sql::sync({}, dbClient, "SELECT count(*) AS total " + from, prefix, ownerId, type, search, date);
+  const std::string match = Searcher::clause(media::SEARCH_COLUMNS, 5);
+  const std::string from = "FROM media WHERE (($2 = '' AND (folder = $1 OR folder LIKE $1 || '/%')) OR ($2 <> '' AND folder = $2)) "
+      "AND (user_id::text = $3 OR $3 = '') AND (type = $4 OR $4 = '') AND " + match +
+      " AND ($6 = '' OR to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') = $6) ";
+  const auto counted = Sql::sync({}, dbClient, "SELECT count(*) AS total " + from, prefix, folderPath, userId, type, search, date);
   const auto rows = Sql::sync({}, dbClient,
-      std::string("SELECT ") + SELECT_MEDIA + from + "ORDER BY created_at DESC LIMIT $6 OFFSET $7",
+      std::string("SELECT ") + SELECT_MEDIA + from + "ORDER BY created_at DESC LIMIT $7 OFFSET $8",
       prefix,
-      ownerId,
+      folderPath,
+      userId,
       type,
       search,
       date,
@@ -363,12 +351,6 @@ Json::Value MediaService::listFile(const std::string& folder,
   data[media::KEY_PAGE] = page;
   data[media::KEY_PAGE_SIZE] = static_cast<Json::Int64>(pageSize);
   return data;
-}
-
-std::optional<std::string> MediaService::uuidOrEmpty(const Json::Value& value) {
-  const std::optional<std::string> id =
-      value.isNull() || value.asString().empty() ? std::nullopt : std::optional<std::string>(value.asString());
-  return id;
 }
 
 Json::Value MediaService::get(const std::string& mediaId) {
@@ -423,9 +405,7 @@ Json::Value MediaService::create(const Json::Value& type,
                                  const Json::Value& folder,
                                  const Json::Value& createdAt,
                                  const Json::Value& updatedAt,
-                                 const Json::Value& userId,
-                                 const Json::Value& streamId,
-                                 const Json::Value& pipelineId) {
+                                 const Json::Value& userId) {
   Json::Value data = media::MEDIA_ROW();
   data[media::KEY_TYPE] = type.isNull() ? data[media::KEY_TYPE] : type;
   data[media::KEY_NAME] = name.isNull() ? data[media::KEY_NAME] : name;
@@ -441,8 +421,6 @@ Json::Value MediaService::create(const Json::Value& type,
   data[media::KEY_CREATED_AT] = createdAt.isNull() ? data[media::KEY_CREATED_AT] : createdAt;
   data[media::KEY_UPDATED_AT] = updatedAt.isNull() ? data[media::KEY_UPDATED_AT] : updatedAt;
   data[media::KEY_USER_ID] = userId.isNull() ? data[media::KEY_USER_ID] : userId;
-  data[media::KEY_STREAM_ID] = streamId.isNull() ? data[media::KEY_STREAM_ID] : streamId;
-  data[media::KEY_PIPELINE_ID] = pipelineId.isNull() ? data[media::KEY_PIPELINE_ID] : pipelineId;
   const std::optional<int> widthValue =
       data[media::KEY_WIDTH].isNull() ? std::nullopt : std::optional<int>(data[media::KEY_WIDTH].asInt());
   const std::optional<int> heightValue =
@@ -460,9 +438,9 @@ Json::Value MediaService::create(const Json::Value& type,
       : std::optional<long>(data[media::KEY_SIZE].asInt64());
   const auto rows = Sql::sync({}, dbClient,
       std::string("INSERT INTO media (id, type, name, width, height, duration, fps, codec, size, md5, folder, "
-                  "created_at, updated_at, user_id, stream_id, pipeline_id) "
+                  "created_at, updated_at, user_id) "
                   "VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, "
-                  "$11::timestamptz, $12::timestamptz, $13::uuid, $14::uuid, $15::uuid) RETURNING ") +
+                  "$11::timestamptz, $12::timestamptz, $13::uuid) RETURNING ") +
           SELECT_MEDIA,
       data[media::KEY_TYPE].asString(),
       data[media::KEY_NAME].asString(),
@@ -476,9 +454,7 @@ Json::Value MediaService::create(const Json::Value& type,
       data[media::KEY_FOLDER].asString(),
       data[media::KEY_CREATED_AT].asString(),
       data[media::KEY_UPDATED_AT].asString(),
-      data[media::KEY_USER_ID].asString(),
-      uuidOrEmpty(data[media::KEY_STREAM_ID]),
-      uuidOrEmpty(data[media::KEY_PIPELINE_ID]));
+      data[media::KEY_USER_ID].asString());
   data = formatResult(mediaRow(rows[0]));
   return data;
 }
@@ -497,6 +473,25 @@ Json::Value MediaService::removeFile(const std::string& mediaId) {
     std::filesystem::remove(file);
   }
   return data;
+}
+
+Json::Value MediaService::removeFolder(const std::string& folder) {
+  const std::filesystem::path path = std::filesystem::path(folder).lexically_normal();
+  const std::filesystem::path base = std::filesystem::path(root).lexically_normal();
+  const std::string relative = path.lexically_relative(base).string();
+  const bool inside = !relative.empty() && relative != "." && relative.rfind("..", 0) != 0;
+  if (!inside) {
+    throw std::runtime_error(media::ERR_NOT_FOUND);
+  }
+  const auto rows = Sql::sync({}, dbClient,
+      std::string("DELETE FROM media WHERE folder = $1 OR folder LIKE $1 || '/%' RETURNING ") + SELECT_MEDIA,
+      path.string());
+  std::filesystem::remove_all(path);
+  Json::Value items(Json::arrayValue);
+  for (const auto& row : rows) {
+    items.append(formatResult(mediaRow(row)));
+  }
+  return items;
 }
 
 Json::Value MediaService::remove(const std::string& mediaId) {
@@ -523,8 +518,6 @@ Json::Value MediaService::update(const Json::Value& type,
                                  const Json::Value& createdAt,
                                  const Json::Value& updatedAt,
                                  const Json::Value& userId,
-                                 const Json::Value& streamId,
-                                 const Json::Value& pipelineId,
                                  const std::string& mediaId) {
   Json::Value data = media::MEDIA_ROW();
   data[media::KEY_TYPE] = type.isNull() ? data[media::KEY_TYPE] : type;
@@ -541,8 +534,6 @@ Json::Value MediaService::update(const Json::Value& type,
   data[media::KEY_CREATED_AT] = createdAt.isNull() ? data[media::KEY_CREATED_AT] : createdAt;
   data[media::KEY_UPDATED_AT] = updatedAt.isNull() ? data[media::KEY_UPDATED_AT] : updatedAt;
   data[media::KEY_USER_ID] = userId.isNull() ? data[media::KEY_USER_ID] : userId;
-  data[media::KEY_STREAM_ID] = streamId.isNull() ? data[media::KEY_STREAM_ID] : streamId;
-  data[media::KEY_PIPELINE_ID] = pipelineId.isNull() ? data[media::KEY_PIPELINE_ID] : pipelineId;
   const std::optional<int> widthValue =
       data[media::KEY_WIDTH].isNull() ? std::nullopt : std::optional<int>(data[media::KEY_WIDTH].asInt());
   const std::optional<int> heightValue =
@@ -561,8 +552,7 @@ Json::Value MediaService::update(const Json::Value& type,
   const auto rows = Sql::sync({}, dbClient,
       std::string("UPDATE media SET type = $1, name = $2, width = $3, height = $4, duration = $5, fps = $6, "
                   "codec = $7, size = $8, md5 = $9, folder = $10, created_at = $11::timestamptz, "
-                  "updated_at = $12::timestamptz, user_id = $13::uuid, stream_id = $14::uuid, "
-                  "pipeline_id = $15::uuid WHERE id = $16::uuid RETURNING ") +
+                  "updated_at = $12::timestamptz, user_id = $13::uuid WHERE id = $14::uuid RETURNING ") +
           SELECT_MEDIA,
       data[media::KEY_TYPE].asString(),
       data[media::KEY_NAME].asString(),
@@ -577,8 +567,6 @@ Json::Value MediaService::update(const Json::Value& type,
       data[media::KEY_CREATED_AT].asString(),
       data[media::KEY_UPDATED_AT].asString(),
       data[media::KEY_USER_ID].asString(),
-      uuidOrEmpty(data[media::KEY_STREAM_ID]),
-      uuidOrEmpty(data[media::KEY_PIPELINE_ID]),
       mediaId);
   if (rows.empty()) {
     throw std::runtime_error(media::ERR_NOT_FOUND);
@@ -630,8 +618,6 @@ Json::Value MediaService::mediaRow(const drogon::orm::Row& row) {
   data[media::KEY_CREATED_AT] = row["created_at"].as<std::string>();
   data[media::KEY_UPDATED_AT] = row["updated_at"].as<std::string>();
   data[media::KEY_USER_ID] = row["user_id"].as<std::string>();
-  data[media::KEY_STREAM_ID] = row["stream_id"].isNull() ? Json::Value() : row["stream_id"].as<std::string>();
-  data[media::KEY_PIPELINE_ID] = row["pipeline_id"].isNull() ? Json::Value() : row["pipeline_id"].as<std::string>();
   return data;
 }
 
@@ -665,18 +651,6 @@ std::string MediaService::fileMd5(const std::string& bytes) {
   }
   const std::string hex = digestHex(digest, length);
   return hex;
-}
-
-std::string MediaService::streamId2Name(const std::string& streamId) {
-  const auto rows = Sql::sync({}, dbClient, "SELECT name FROM stream WHERE id = $1::uuid", streamId);
-  const std::string name = rows[0]["name"].as<std::string>();
-  return name;
-}
-
-std::string MediaService::pipelineId2Name(const std::string& pipelineId) {
-  const auto rows = Sql::sync({}, dbClient, "SELECT name FROM pipeline WHERE id = $1::uuid", pipelineId);
-  const std::string name = rows[0]["name"].as<std::string>();
-  return name;
 }
 
 std::string MediaService::userId2Name(const std::string& userId) {
@@ -807,8 +781,6 @@ Json::Value MediaService::upload(const std::string& userId, const std::string& f
                current[media::KEY_CREATED_AT],
                updatedBuffer,
                userId,
-               Json::Value(),
-               Json::Value(),
                current[media::KEY_ID].asString())
       : create(type,
                name,
@@ -822,9 +794,7 @@ Json::Value MediaService::upload(const std::string& userId, const std::string& f
                folder.string(),
                createdBuffer,
                updatedBuffer,
-               userId,
-               Json::Value(),
-               Json::Value());
+               userId);
   return created;
 }
 

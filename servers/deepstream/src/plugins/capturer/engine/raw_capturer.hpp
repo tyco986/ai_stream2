@@ -5,7 +5,7 @@
 
 class RawCapturer : public Capturer {
 public:
-    explicit RawCapturer(const char* captureCodes);
+    RawCapturer(const char* captureCodes, const char* output);
     ~RawCapturer() override;
 
 protected:

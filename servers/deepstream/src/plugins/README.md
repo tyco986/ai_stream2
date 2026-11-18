@@ -63,7 +63,7 @@ stgcnppcollector: `object` 每项为 `{"det":[left,top,right,bottom,conf,class_i
 
 类型: 插件
 插件名称: dslogger
-说明: 读 dscollector 写入的那一行 JSON，按路追加到 `/root/logs/deepstream/<pipeline>/<pad>/<page>.jsonl`。`<pad>` 为三位，如 `000`。单文件 10MB，保留 5 个。没有采集行时不写。
+说明: 读 dscollector 写入的那一行 JSON，按路追加到 `/root/logs/deepstream/<pipeline>/pad/<pad>/<page>_YYYY-MM-DD.jsonl`。`<pad>` 为三位，如 `000`。每天 `00:00` 换新文件，保留 90 天。没有采集行时不写。
 
 入参:
 

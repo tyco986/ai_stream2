@@ -12,14 +12,14 @@
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdspreprocess_rtmpose → sgie0
-//         → nvrtmposepostprocess → nvdsanalytics → detcollector → dslogger → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → posefadedrawerwithtracker{N} → nvosdbin{N}
+//         → nvrtmposepostprocess → nvdsanalytics → detcollector → dslogger → posefadedrawerwithtracker → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → nvosdbin{N}
 //         │     → nvv4l2h264enc{N} → h264parse{N} → mp4mux{N} → filesink{N}
 class TopdownPoseVisVideoGenerator : public VisVideoGenerator {
 public:
     TopdownPoseVisVideoGenerator(
         std::string pipelineName,
         nlohmann::json videos,
-        std::filesystem::path output,
+        std::filesystem::path filesinkOutput,
         std::optional<nlohmann::json> analyzer,
         nlohmann::json pgie,
         nlohmann::json sgie,

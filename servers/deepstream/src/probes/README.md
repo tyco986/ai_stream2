@@ -14,6 +14,7 @@
 | `exceeded` | 尚未接入 | 非 0 表示该路重连次数已用完 |
 | `count` | `attachSourceProbes` | 实际挂上的路数 |
 | `reconnectIntervalSec` | `attachSourceProbes` | 判定「没帧」的秒数 |
+| `endedNs` | `run` 里管道返回后 | 管道结束的纳秒时间，0 表示还没结束 |
 
 ## 挂载
 
@@ -31,7 +32,7 @@
 | 还没有帧，或距上一帧超过间隔 | `reconnecting` |
 | 间隔内有帧 | `running` |
 
-任一已挂载的路不是 `running`，管道为 `degraded`。子进程已退出则为 `stopped`，`streams` 为 null。
+任一已挂载的路不是 `running`，管道为 `degraded`。`endedNs` 非 0 或子进程已退出时为 `stopped`，`streams` 为 null。`end_time` 用 `endedNs`，不用本次查询的时间。
 
 全部 `rtsp://` 源重连次数用完也不会让 `pipeline.start().wait()` 返回，子进程继续跑，`status` 仍是 `degraded`（各路为 `dead`），不会变成 `stopped`。`nvurisrcbin` 只为每一路发 `gst_nvmessage_reconnect_attempt_exceeded`，不会发出 Service Maker 用来退出等待的那条错误。
 

@@ -248,15 +248,17 @@ YAML::Node PipelineGenerator::addPresenceeventcoder(const std::string& eventSlot
     return properties;
 }
 
-YAML::Node PipelineGenerator::addRawcapturer(const std::string& captureCodes) {
+YAML::Node PipelineGenerator::addRawcapturer(const std::string& captureCodes, const std::string& output) {
     YAML::Node properties;
     properties["capture-codes"] = captureCodes;
+    properties["output"] = output;
     return properties;
 }
 
-YAML::Node PipelineGenerator::addViscapturer(const std::string& captureCodes, const std::string& labelTask) {
+YAML::Node PipelineGenerator::addViscapturer(const std::string& captureCodes, const std::string& output, const std::string& labelTask) {
     YAML::Node properties;
     properties["capture-codes"] = captureCodes;
+    properties["output"] = output;
     properties["label-task"] = labelTask;
     return properties;
 }

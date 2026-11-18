@@ -1,0 +1,17 @@
+{
+  "version": "5.0.1",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "Smoke",
+      "points": [[0, 0.75], [1188.75, 538.5]],
+      "group_id": null,
+      "shape_type": "rectangle",
+      "flags": {}
+    }
+  ],
+  "imagePath": "../images/raw_000_00000000.png",
+  "imageData": null,
+  "imageHeight": 1080,
+  "imageWidth": 1920
+}

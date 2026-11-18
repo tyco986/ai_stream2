@@ -11,7 +11,7 @@
 #include <iomanip>
 #include <sstream>
 
-#include <spdlog/sinks/rotating_file_sink.h>
+#include <spdlog/sinks/daily_file_sink.h>
 
 std::string RequestLogger::pipelineName;
 std::shared_ptr<spdlog::logger> RequestLogger::logger;
@@ -84,10 +84,11 @@ std::shared_ptr<spdlog::logger> RequestLogger::instance() {
     const std::string name = anonymous ? std::string(request_log::PAGE) : pipelineName;
     const bool switched = !logger || logger->name() != name;
     if (switched) {
-        const std::filesystem::path directory = anonymous ? std::filesystem::path(request_log::ANONYMOUS_DIR) : std::filesystem::path(request_log::ROOT) / pipelineName;
+        const std::filesystem::path directory = anonymous ? std::filesystem::path(request_log::ANONYMOUS_DIR) : std::filesystem::path(request_log::ROOT) / pipelineName / request_log::API_DIR;
         std::filesystem::create_directories(directory);
         const std::filesystem::path path = directory / (std::string(request_log::PAGE) + request_log::SUFFIX);
-        auto sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(path.string(), request_log::MAX_BYTES, request_log::MAX_FILES);
+        auto sink = std::make_shared<spdlog::sinks::daily_file_sink_mt>(
+            path.string(), request_log::ROTATION_HOUR, request_log::ROTATION_MINUTE, false, request_log::MAX_DAYS);
         logger = std::make_shared<spdlog::logger>(name, sink);
         logger->set_pattern("%v");
         logger->flush_on(spdlog::level::info);

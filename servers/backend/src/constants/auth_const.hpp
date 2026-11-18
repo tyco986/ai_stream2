@@ -92,6 +92,9 @@ inline const std::map<std::pair<drogon::HttpMethod, std::string>, CrudGate> CRUD
     {{drogon::Get, pipeline::PATH_LIST}, {user::KEY_PIPELINE_CRUD, CRUD_READ}},
     {{drogon::Get, pipeline::PATH_MAP}, {user::KEY_PIPELINE_CRUD, CRUD_READ}},
     {{drogon::Get, pipeline::PATH_ITEM}, {user::KEY_PIPELINE_CRUD, CRUD_READ}},
+    {{drogon::Get, pipeline::PATH_LOGS_API}, {user::KEY_PIPELINE_CRUD, CRUD_READ}},
+    {{drogon::Get, pipeline::PATH_LOGS_PAD}, {user::KEY_PIPELINE_CRUD, CRUD_READ}},
+    {{drogon::Get, pipeline::PATH_LOGS_GSTREAMER}, {user::KEY_PIPELINE_CRUD, CRUD_READ}},
     {{drogon::Post, pipeline::PATH_LIST}, {user::KEY_PIPELINE_CRUD, CRUD_CREATE}},
     {{drogon::Patch, pipeline::PATH_ITEM}, {user::KEY_PIPELINE_CRUD, CRUD_UPDATE}},
     {{drogon::Delete, pipeline::PATH_ITEM}, {user::KEY_PIPELINE_CRUD, CRUD_DELETE}},
@@ -163,6 +166,9 @@ inline const std::map<std::pair<drogon::HttpMethod, std::string>, CrudGate> CRUD
     {{drogon::Post, media::PATH_BATCH_UPLOAD}, {user::KEY_RECORDING_CRUD, CRUD_CREATE}},
     {{drogon::Post, media::PATH_BATCH_REMOVE}, {user::KEY_RECORDING_CRUD, CRUD_DELETE}},
     {{drogon::Post, media::PATH_BATCH_DOWNLOAD}, {user::KEY_RECORDING_CRUD, CRUD_READ}},
+    {{drogon::Get, media::PATH_PUBLISH_LIST}, {user::KEY_RECORDING_CRUD, CRUD_READ}},
+    {{drogon::Post, media::PATH_PUBLISH}, {user::KEY_RECORDING_CRUD, CRUD_CREATE}},
+    {{drogon::Delete, media::PATH_PUBLISH}, {user::KEY_RECORDING_CRUD, CRUD_DELETE}},
 };
 
 }

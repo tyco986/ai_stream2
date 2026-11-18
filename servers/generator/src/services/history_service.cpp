@@ -43,12 +43,13 @@ nlohmann::json History::yaml2json(const YAML::Node& node) {
         }
     }
     if (node.IsScalar() && !node.IsNull()) {
+        const bool plain = node.Tag() != history::YAML_STRING_TAG;
         bool boolean = false;
         std::int64_t integer = 0;
         double number = 0;
-        const bool isBool = YAML::convert<bool>::decode(node, boolean);
-        const bool isInt = YAML::convert<std::int64_t>::decode(node, integer);
-        const bool isDouble = YAML::convert<double>::decode(node, number);
+        const bool isBool = plain && YAML::convert<bool>::decode(node, boolean);
+        const bool isInt = plain && YAML::convert<std::int64_t>::decode(node, integer);
+        const bool isDouble = plain && YAML::convert<double>::decode(node, number);
         value = node.Scalar();
         value = isBool ? nlohmann::json(boolean) : value;
         value = !isBool && isInt ? nlohmann::json(integer) : value;

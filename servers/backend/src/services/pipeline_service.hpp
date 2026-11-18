@@ -4,6 +4,7 @@
 #include <json/json.h>
 #include <yaml-cpp/yaml.h>
 
+#include <iosfwd>
 #include <string>
 #include <vector>
 
@@ -13,6 +14,11 @@ class PipelineService {
   Json::Value list(const std::string& search, int page, long pageSize);
   Json::Value map();
   Json::Value get(const std::string& pipelineId);
+  bool queryDate(const std::string& date);
+  bool queryPad(const std::string& pad);
+  Json::Value getApiLogs(const std::string& name, const std::string& date);
+  Json::Value getPadLogs(const std::string& name, const std::string& pad, const std::string& date);
+  Json::Value getGstreamerLogs(const std::string& name, const std::string& date);
   std::string createStart(const Json::Value& input);
   Json::Value createEnd(const Json::Value& status,
                         const Json::Value& configPath,
@@ -23,6 +29,9 @@ class PipelineService {
                         const Json::Value& mediaIds,
                         const Json::Value& gieIds,
                         const Json::Value& input);
+  Json::Value getInput(const std::string& pipelineId);
+  Json::Value setInput(const std::string& pipelineId, const Json::Value& input);
+  Json::Value setConfigPath(const std::string& pipelineId, const std::string& configPath);
   Json::Value update(const std::string& pipelineId,
                         const Json::Value& status,
                         const Json::Value& configPath,
@@ -45,6 +54,7 @@ class PipelineService {
   std::string packMedia(const YAML::Node& params);
 
  private:
+  Json::Value readJsonl(std::istream& input);
   void collectModelZips(const YAML::Node& node, std::vector<std::string>& paths);
   void collectMedia(const YAML::Node& params, std::vector<std::string>& paths);
   YAML::Node json2yaml(const Json::Value& value);

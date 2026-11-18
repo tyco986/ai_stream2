@@ -9,7 +9,7 @@
 #include <glib.h>
 #include <glib/gstdio.h>
 
-VisCapturer::VisCapturer(const char* captureCodes, const char* labelTask) : Capturer(captureCodes) {
+VisCapturer::VisCapturer(const char* captureCodes, const char* labelTask, const char* output) : Capturer(captureCodes, output) {
     const std::string next = (labelTask != nullptr && labelTask[0] != '\0') ? labelTask : capturer::DEFAULT_LABEL_TASK;
     this->labelTask = capturer::DEFAULT_LABEL_TASK;
     if (next == capturer::DEFAULT_LABEL_TASK || next == capturer::LABEL_TASK_SEG) {

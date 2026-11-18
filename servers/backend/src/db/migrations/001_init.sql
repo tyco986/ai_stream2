@@ -254,8 +254,6 @@ CREATE TABLE media (
   created_at TIMESTAMPTZ NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL,
   user_id UUID NOT NULL REFERENCES "user" (id),
-  stream_id UUID REFERENCES stream (id) ON DELETE SET NULL,
-  pipeline_id UUID REFERENCES pipeline (id) ON DELETE SET NULL,
   CONSTRAINT media_type_check CHECK (
     type IN ('image', 'video')
     AND (type = 'video' OR (duration IS NULL AND fps IS NULL AND codec IS NULL))
@@ -263,8 +261,6 @@ CREATE TABLE media (
 );
 
 CREATE INDEX media_user_id_idx ON media (user_id);
-CREATE INDEX media_stream_id_idx ON media (stream_id);
-CREATE INDEX media_pipeline_id_idx ON media (pipeline_id);
 
 CREATE TABLE pipeline_analyzer (
   id UUID PRIMARY KEY,
@@ -281,18 +277,21 @@ CREATE INDEX pipeline_analyzer_media_id_idx ON pipeline_analyzer (media_id);
 CREATE TABLE event (
   id UUID PRIMARY KEY,
   occurred_at TIMESTAMPTZ NOT NULL,
-  stream_id UUID NOT NULL,
+  stream_id UUID,
+  media_id UUID,
   pipeline_id UUID NOT NULL,
   event_code VARCHAR(64) NOT NULL,
   event_label VARCHAR(150) NOT NULL,
   status TEXT NOT NULL,
   raw_path TEXT,
   visualization_path TEXT,
-  annotations JSONB
+  annotations JSONB,
+  CONSTRAINT event_source_check CHECK ((stream_id IS NULL) <> (media_id IS NULL))
 );
 
 CREATE INDEX event_occurred_at_id_idx ON event (occurred_at, id);
 CREATE INDEX event_stream_id_idx ON event (stream_id);
+CREATE INDEX event_media_id_idx ON event (media_id);
 CREATE INDEX event_pipeline_id_event_code_idx ON event (pipeline_id, event_code);
 CREATE INDEX event_status_idx ON event (status);
 

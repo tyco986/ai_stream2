@@ -4,8 +4,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-# shellcheck source=../../../scripts/load_project_env.sh
-source "${ROOT}/scripts/load_project_env.sh"
+PROJECT_NAME=ai_stream2
 
 NAME="${BESZEL_HUB_NAME:-${PROJECT_NAME}_beszel}"
 NET="${BESZEL_NETWORK:-${PROJECT_NAME}_default}"

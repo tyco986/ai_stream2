@@ -21,6 +21,9 @@ inline const char* PATH_MAP = "/backend/models/map";
 inline const char* PATH_TYPES = "/backend/models/types";
 inline const char* PATH_EXPORT_ONNX = "/ai_stream2/export_onnx/export";
 inline const char* PATH_EXPORT_TRT = "/ai_stream2/export_trt/export";
+inline const char* STEP_PACK = "pack";
+inline const char* STEP_ONNX = "onnx";
+inline const char* STEP_TRT = "trt";
 
 // keys
 inline const char* KEY_ITEMS = "items";

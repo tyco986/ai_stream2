@@ -4,8 +4,13 @@
 
 #include <utility>
 
-BaseEventGenerator::BaseEventGenerator(std::string pipelineName, nlohmann::json eventCoder, std::optional<nlohmann::json> capturer)
+BaseEventGenerator::BaseEventGenerator(
+    std::string pipelineName,
+    std::filesystem::path capturerOutput,
+    nlohmann::json eventCoder,
+    std::optional<nlohmann::json> capturer)
     : pipelineName(std::move(pipelineName)),
+      capturerOutput(std::filesystem::absolute(std::move(capturerOutput))),
       eventCoder(std::move(eventCoder)),
       capturer({{"capture_codes", pipeline::CAPTURE_CODES_DEFAULT}}) {
     if (capturer.has_value()) {

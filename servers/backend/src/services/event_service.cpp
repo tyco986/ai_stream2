@@ -13,7 +13,7 @@
 namespace {
 
 const char* SELECT_ROW =
-    "id::text AS id, occurred_at, stream_id::text AS stream_id, "
+    "id::text AS id, occurred_at, stream_id::text AS stream_id, media_id::text AS media_id, "
     "pipeline_id::text AS pipeline_id, event_code, event_label, status, "
     "raw_path, visualization_path, annotations::text AS annotations ";
 
@@ -35,23 +35,30 @@ Json::Value EventService::createFromKafka(const Json::Value& message, const std:
   const std::string prefix = kafka::TOPIC_PREFIX;
   const std::string name = topic.rfind(prefix, 0) == 0 ? topic.substr(prefix.size()) : topic;
   const auto rows = Sql::sync({}, dbClient,
-      "SELECT id::text AS id, array_to_json(stream_ids)::text AS stream_ids FROM pipeline WHERE name = $1",
+      "SELECT id::text AS id, array_to_json(stream_ids)::text AS stream_ids, "
+      "array_to_json(media_ids)::text AS media_ids FROM pipeline WHERE name = $1",
       name);
   if (rows.empty()) {
     throw std::runtime_error(event::ERR_PIPELINE);
   }
   Json::Value streamIds;
+  Json::Value mediaIds;
   Json::Reader().parse(rows[0]["stream_ids"].as<std::string>(), streamIds);
+  Json::Reader().parse(rows[0]["media_ids"].as<std::string>(), mediaIds);
+  const bool streamSource = streamIds.isArray() && !streamIds.empty();
+  const Json::Value& sources = streamSource ? streamIds : mediaIds;
   const int pad = message[kafka::KEY_PAD].asInt();
-  if (!streamIds.isArray() || pad < 0 || static_cast<Json::ArrayIndex>(pad) >= streamIds.size()) {
+  if (!sources.isArray() || pad < 0 || static_cast<Json::ArrayIndex>(pad) >= sources.size()) {
     throw std::runtime_error(event::ERR_PAD);
   }
+  const Json::Value sourceId = sources[static_cast<Json::ArrayIndex>(pad)];
   Json::Value annotations(Json::objectValue);
   annotations[kafka::KEY_NUM] = message[kafka::KEY_NUM];
   annotations[kafka::KEY_OBJECT] = message[kafka::KEY_OBJECT];
   const Json::Value& eventNode = message[kafka::KEY_EVENT];
   Json::Value created = create(message[kafka::KEY_TS],
-                               streamIds[static_cast<Json::ArrayIndex>(pad)],
+                               streamSource ? sourceId : Json::Value(),
+                               streamSource ? Json::Value() : sourceId,
                                Json::Value(rows[0]["id"].as<std::string>()),
                                eventNode[event::KEY_EVENT_CODE],
                                eventNode[event::KEY_EVENT_LABEL],
@@ -64,6 +71,7 @@ Json::Value EventService::createFromKafka(const Json::Value& message, const std:
 
 Json::Value EventService::create(const Json::Value& occurredAt,
                                  const Json::Value& streamId,
+                                 const Json::Value& mediaId,
                                  const Json::Value& pipelineId,
                                  const Json::Value& eventCode,
                                  const Json::Value& eventLabel,
@@ -74,6 +82,7 @@ Json::Value EventService::create(const Json::Value& occurredAt,
   Json::Value data = event::ROW();
   data[event::KEY_OCCURRED_AT] = occurredAt.isNull() ? data[event::KEY_OCCURRED_AT] : occurredAt;
   data[event::KEY_STREAM_ID] = streamId.isNull() ? data[event::KEY_STREAM_ID] : streamId;
+  data[event::KEY_MEDIA_ID] = mediaId.isNull() ? data[event::KEY_MEDIA_ID] : mediaId;
   data[event::KEY_PIPELINE_ID] = pipelineId.isNull() ? data[event::KEY_PIPELINE_ID] : pipelineId;
   data[event::KEY_EVENT_CODE] = eventCode.isNull() ? data[event::KEY_EVENT_CODE] : eventCode;
   data[event::KEY_EVENT_LABEL] = eventLabel.isNull() ? data[event::KEY_EVENT_LABEL] : eventLabel;
@@ -89,14 +98,15 @@ Json::Value EventService::create(const Json::Value& occurredAt,
   const std::string annotationsText =
       data[event::KEY_ANNOTATIONS].isNull() ? "" : Json::writeString(builder, data[event::KEY_ANNOTATIONS]);
   const auto rows = Sql::sync({}, dbClient, 
-      std::string("INSERT INTO event (id, occurred_at, stream_id, pipeline_id, "
+      std::string("INSERT INTO event (id, occurred_at, stream_id, media_id, pipeline_id, "
                   "event_code, event_label, status, raw_path, visualization_path, annotations) "
-                  "VALUES (gen_random_uuid(), $1::timestamptz, $2::uuid, $3::uuid, $4, $5, "
-                  "COALESCE(NULLIF($6, ''), 'new'), NULLIF($7, ''), NULLIF($8, ''), "
-                  "CASE WHEN $9 = '' THEN NULL ELSE $9::jsonb END) RETURNING ") +
+                  "VALUES (gen_random_uuid(), $1::timestamptz, NULLIF($2, '')::uuid, NULLIF($3, '')::uuid, "
+                  "$4::uuid, $5, $6, COALESCE(NULLIF($7, ''), 'new'), NULLIF($8, ''), NULLIF($9, ''), "
+                  "CASE WHEN $10 = '' THEN NULL ELSE $10::jsonb END) RETURNING ") +
           SELECT_ROW,
       data[event::KEY_OCCURRED_AT].isNull() ? "" : data[event::KEY_OCCURRED_AT].asString(),
       data[event::KEY_STREAM_ID].isNull() ? "" : data[event::KEY_STREAM_ID].asString(),
+      data[event::KEY_MEDIA_ID].isNull() ? "" : data[event::KEY_MEDIA_ID].asString(),
       data[event::KEY_PIPELINE_ID].isNull() ? "" : data[event::KEY_PIPELINE_ID].asString(),
       data[event::KEY_EVENT_CODE].isNull() ? "" : data[event::KEY_EVENT_CODE].asString(),
       data[event::KEY_EVENT_LABEL].isNull() ? "" : data[event::KEY_EVENT_LABEL].asString(),
@@ -127,7 +137,7 @@ Json::Value EventService::setStatus(const std::string& eventId, const std::strin
 Json::Value EventService::list(const std::string& search, int page, long pageSize) {
   const long offset = static_cast<long>(page - 1) * pageSize;
   const std::string match = Searcher::clause(
-      {"id", "stream_id", "pipeline_id", "event_code", "event_label", "status"}, 1);
+      {"id", "stream_id", "media_id", "pipeline_id", "event_code", "event_label", "status"}, 1);
   const std::string from = "FROM event WHERE " + match + " ";
   const auto counted = Sql::sync({}, dbClient, "SELECT count(*) AS total " + from, search);
   const auto rows = Sql::sync({}, dbClient, 
@@ -155,7 +165,8 @@ Json::Value EventService::row2json(const drogon::orm::Row& row) {
   Json::Value data = event::ROW();
   data[event::KEY_ID] = row["id"].as<std::string>();
   data[event::KEY_OCCURRED_AT] = row["occurred_at"].as<std::string>();
-  data[event::KEY_STREAM_ID] = row["stream_id"].as<std::string>();
+  data[event::KEY_STREAM_ID] = row["stream_id"].isNull() ? Json::Value() : row["stream_id"].as<std::string>();
+  data[event::KEY_MEDIA_ID] = row["media_id"].isNull() ? Json::Value() : row["media_id"].as<std::string>();
   data[event::KEY_PIPELINE_ID] = row["pipeline_id"].as<std::string>();
   data[event::KEY_EVENT_CODE] = row["event_code"].as<std::string>();
   data[event::KEY_EVENT_LABEL] = row["event_label"].as<std::string>();

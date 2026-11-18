@@ -79,14 +79,14 @@ static void probeImage(const std::filesystem::path& path, int& width, int& heigh
 BaseImageGenerator::BaseImageGenerator(
     std::string pipelineName,
     nlohmann::json images,
-    std::filesystem::path output,
+    std::filesystem::path filesinkOutput,
     std::optional<nlohmann::json> analyzer,
     nlohmann::json pgie,
     std::optional<nlohmann::json> logger,
     std::optional<nlohmann::json> drawer)
     : pipelineName(std::move(pipelineName)),
       images(std::move(images)),
-      output(std::filesystem::absolute(std::move(output))),
+      filesinkOutput(std::filesystem::absolute(std::move(filesinkOutput))),
       analyzer(std::move(analyzer)),
       pgie(std::move(pgie)),
       logger({{"interval", 1}}),
@@ -123,7 +123,7 @@ void BaseImageGenerator::initImages() {
         index += 1;
     }
     runtimeBatchSize = static_cast<int>(images.size());
-    std::filesystem::create_directories(output);
+    std::filesystem::create_directories(filesinkOutput);
 }
 
 void BaseImageGenerator::initParams() {
@@ -134,7 +134,7 @@ void BaseImageGenerator::initParams() {
     YAML::Node params(YAML::NodeType::Map);
     params["pipeline_name"] = pipelineName;
     params["images"] = jsonToYaml(images);
-    params["output"] = output.string();
+    params["filesink_output"] = filesinkOutput.string();
     params["type"] = *pipelineType;
     params["generator"] = generator;
     params["pgie"] = jsonToYaml(pgie);
@@ -295,15 +295,16 @@ void BaseImageGenerator::add() {
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
     appendNode("detcollector", "detcollector", addCollector());
     appendNode("dslogger", "dslogger", addDslogger(logger.value("interval", 1), pipeline::PAGE_DET));
+    if (drawer.has_value()) {
+        const std::string drawerName = nvdetDrawerElement();
+        appendNode(drawerName, drawerName, nvdetDrawerProperties(*drawer));
+    }
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     for (int streamIndex = 0; streamIndex < runtimeBatchSize; ++streamIndex) {
         const std::string suffix = std::to_string(streamIndex);
         const std::filesystem::path source(images.at(streamIndex).get<std::string>());
-        const std::filesystem::path sink = output / (source.stem().string() + ".jpg");
+        const std::filesystem::path sink = filesinkOutput / (source.stem().string() + ".jpg");
         appendNode("queue", "queue_demux" + suffix, addQueue());
-        if (drawer.has_value()) {
-            appendNode(nvdetDrawerElement(), "detfadedrawer" + suffix, nvdetDrawerProperties(*drawer));
-        }
         appendNode("nvosdbin", "nvosdbin" + suffix, addNvosdbin(gpuId, true, true));
         appendNode("nvvideoconvert", "nvvideoconvert" + suffix, addNvvideoconvert(gpuId));
         appendNode("capsfilter", "capsfilter" + suffix, addCapsfilter());
@@ -322,14 +323,15 @@ void BaseImageGenerator::link() {
     edges["pgie"] = "nvdsanalytics";
     edges["nvdsanalytics"] = "detcollector";
     edges["detcollector"] = "dslogger";
-    edges["dslogger"] = "nvstreamdemux";
+    const std::string drawerName = nvdetDrawerElement();
+    const std::string demuxSource = drawer.has_value() ? drawerName : std::string("nvstreamdemux");
+    if (drawer.has_value()) {
+        edges[drawerName] = "nvstreamdemux";
+    }
+    edges["dslogger"] = demuxSource;
     for (int index = 0; index < runtimeBatchSize; ++index) {
         const std::string suffix = std::to_string(index);
-        const std::string osdPrev = drawer.has_value() ? "detfadedrawer" + suffix : "nvosdbin" + suffix;
-        edges["queue_demux" + suffix] = osdPrev;
-        if (drawer.has_value()) {
-            edges["detfadedrawer" + suffix] = "nvosdbin" + suffix;
-        }
+        edges["queue_demux" + suffix] = "nvosdbin" + suffix;
         edges["nvosdbin" + suffix] = "nvvideoconvert" + suffix;
         edges["nvvideoconvert" + suffix] = "capsfilter" + suffix;
         edges["capsfilter" + suffix] = "nvjpegenc" + suffix;

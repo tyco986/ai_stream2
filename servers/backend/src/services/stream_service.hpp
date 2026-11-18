@@ -38,6 +38,7 @@ class StreamService {
   void setMount(const std::string& streamId, bool mount);
   void setRecord(const std::string& streamId, bool recording);
   Json::Value remove(const std::string& streamId);
+  std::vector<std::string> idsByUrl(const std::string& url);
   Json::Value importCSV(const std::string& csv);
   std::string exportCSV();
   Json::Value probe(const std::string& streamId,

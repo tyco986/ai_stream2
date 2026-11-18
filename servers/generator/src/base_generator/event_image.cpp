@@ -78,16 +78,17 @@ std::string EventImageGenerator::fileUri(const std::filesystem::path& path) {
 EventImageGenerator::EventImageGenerator(
     std::string pipelineName,
     nlohmann::json images,
-    std::filesystem::path output,
+    std::filesystem::path filesinkOutput,
+    std::filesystem::path capturerOutput,
     std::optional<nlohmann::json> analyzer,
     nlohmann::json pgie,
     nlohmann::json eventCoder,
     std::optional<nlohmann::json> logger,
     std::optional<nlohmann::json> drawer,
     std::optional<nlohmann::json> capturer)
-    : BaseEventGenerator(pipelineName, std::move(eventCoder), std::move(capturer)),
+    : BaseEventGenerator(pipelineName, std::move(capturerOutput), std::move(eventCoder), std::move(capturer)),
       images(std::move(images)),
-      output(std::filesystem::absolute(std::move(output))),
+      filesinkOutput(std::filesystem::absolute(std::move(filesinkOutput))),
       analyzer(std::move(analyzer)),
       pgie(std::move(pgie)),
       logger({{"interval", 1}}),
@@ -125,7 +126,8 @@ void EventImageGenerator::initImages() {
         index += 1;
     }
     runtimeBatchSize = static_cast<int>(images.size());
-    std::filesystem::create_directories(output);
+    std::filesystem::create_directories(filesinkOutput);
+    std::filesystem::create_directories(capturerOutput);
 }
 
 void EventImageGenerator::initParams() {
@@ -136,7 +138,8 @@ void EventImageGenerator::initParams() {
     YAML::Node params(YAML::NodeType::Map);
     params["pipeline_name"] = pipelineName;
     params["images"] = jsonToYaml(images);
-    params["output"] = output.string();
+    params["filesink_output"] = filesinkOutput.string();
+    params["capturer_output"] = capturerOutput.string();
     params["type"] = *pipelineType;
     params["generator"] = generator;
     params["pgie"] = jsonToYaml(pgie);
@@ -288,30 +291,31 @@ void EventImageGenerator::add() {
         "nvmsgbroker",
         "nvmsgbroker",
         addNvmsgbroker(subelement::KAFKA_PROTO_LIB, subelement::KAFKA_CONN_STR, kafkaTopic, KAFKA_CONFIG_NAME, false, false));
+    if (drawer.has_value()) {
+        const std::string drawerName = nvdetDrawerElement();
+        appendNode(drawerName, drawerName, nvdetDrawerProperties(*drawer));
+    }
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     for (int streamIndex = 0; streamIndex < runtimeBatchSize; ++streamIndex) {
         const std::string suffix = std::to_string(streamIndex);
         const std::filesystem::path source(images.at(streamIndex).get<std::string>());
-        const std::filesystem::path sink = output / (source.stem().string() + ".jpg");
+        const std::filesystem::path sink = filesinkOutput / (source.stem().string() + ".jpg");
         appendNode("queue", "queue_demux" + suffix, addQueue());
         appendNode("nvvideoconvert", "nvvideoconvert" + suffix, addNvvideoconvert(gpuId));
         appendNode("tee", "tee_raw" + suffix, addTee());
         appendNode("queue", "queue_raw" + suffix, addQueue());
         appendNode("nvvideoconvert", "nvvideoconvert_raw" + suffix, addNvvideoconvert(gpuId));
         appendNode("capsfilter", "capsfilter_raw" + suffix, addCapsfilter("video/x-raw(memory:NVMM), format=RGB"));
-        appendNode("rawcapturer", "rawcapturer" + suffix, addRawcapturer(capturerCodes()));
+        appendNode("rawcapturer", "rawcapturer" + suffix, addRawcapturer(capturerCodes(), capturerOutput.string()));
         appendNode("fakesink", "fakesink_raw" + suffix, addFakesink(false, false));
         appendNode("queue", "queue_osd" + suffix, addQueue());
         appendNode("nvvideoconvert", "nvvideoconvert_osd" + suffix, addNvvideoconvert(gpuId, true));
-        if (drawer.has_value()) {
-            appendNode(nvdetDrawerElement(), nvdetDrawerElement() + suffix, nvdetDrawerProperties(*drawer));
-        }
         appendNode("nvosdbin", "nvosdbin" + suffix, addNvosdbin(gpuId, true, true));
         appendNode("tee", "tee_vis" + suffix, addTee());
         appendNode("queue", "queue_vis" + suffix, addQueue());
         appendNode("nvvideoconvert", "nvvideoconvert_vis" + suffix, addNvvideoconvert(gpuId));
         appendNode("capsfilter", "capsfilter_vis" + suffix, addCapsfilter("video/x-raw(memory:NVMM), format=RGB"));
-        appendNode("viscapturer", "viscapturer" + suffix, addViscapturer(capturerCodes()));
+        appendNode("viscapturer", "viscapturer" + suffix, addViscapturer(capturerCodes(), capturerOutput.string()));
         appendNode("fakesink", "fakesink_vis" + suffix, addFakesink(false, false));
         appendNode("queue", "queue_enc" + suffix, addQueue());
 
@@ -331,7 +335,12 @@ void EventImageGenerator::link() {
     edges["pgie"] = "nvdsanalytics";
     edges["nvdsanalytics"] = afterAnalytics();
     linkEventCoder(edges);
-    edges["tee_msg"].push_back("nvstreamdemux");
+    const std::string drawerName = nvdetDrawerElement();
+    const std::string demuxSource = drawer.has_value() ? drawerName : std::string("nvstreamdemux");
+    if (drawer.has_value()) {
+        edges[drawerName] = "nvstreamdemux";
+    }
+    edges["tee_msg"].push_back(demuxSource);
     edges["tee_msg"].push_back("queue_msg");
     edges["queue_msg"] = "nvmsgconv";
     edges["nvmsgconv"] = "nvmsgbroker";
@@ -346,11 +355,7 @@ void EventImageGenerator::link() {
         edges["capsfilter_raw" + suffix] = "rawcapturer" + suffix;
         edges["rawcapturer" + suffix] = "fakesink_raw" + suffix;
         edges["queue_osd" + suffix] = "nvvideoconvert_osd" + suffix;
-        const std::string osdPrev = drawer.has_value() ? nvdetDrawerElement() + suffix : "nvosdbin" + suffix;
-        edges["nvvideoconvert_osd" + suffix] = osdPrev;
-        if (drawer.has_value()) {
-            edges[nvdetDrawerElement() + suffix] = "nvosdbin" + suffix;
-        }
+        edges["nvvideoconvert_osd" + suffix] = "nvosdbin" + suffix;
         edges["nvosdbin" + suffix] = "tee_vis" + suffix;
         edges["tee_vis" + suffix].push_back("queue_vis" + suffix);
         edges["tee_vis" + suffix].push_back("queue_enc" + suffix);

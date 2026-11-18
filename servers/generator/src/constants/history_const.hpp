@@ -11,5 +11,6 @@ inline constexpr const char* BOUNDARY = "generator-history";
 inline constexpr const char* NOT_FOUND = "history file not found: ";
 inline constexpr const char* ZIP_SUFFIX = ".zip";
 inline constexpr const char* PARAMS_YML = "params.yml";
+inline constexpr const char* YAML_STRING_TAG = "tag:yaml.org,2002:str";
 
 }

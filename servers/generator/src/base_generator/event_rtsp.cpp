@@ -43,6 +43,7 @@ static YAML::Node jsonToYaml(const nlohmann::json& value) {
 EventRtspGenerator::EventRtspGenerator(
     std::string pipelineName,
     nlohmann::json streams,
+    std::filesystem::path capturerOutput,
     std::optional<nlohmann::json> analyzer,
     nlohmann::json pgie,
     nlohmann::json eventCoder,
@@ -50,7 +51,7 @@ EventRtspGenerator::EventRtspGenerator(
     std::optional<nlohmann::json> logger,
     std::optional<nlohmann::json> drawer,
     std::optional<nlohmann::json> capturer)
-    : BaseEventGenerator(pipelineName, std::move(eventCoder), std::move(capturer)),
+    : BaseEventGenerator(pipelineName, std::move(capturerOutput), std::move(eventCoder), std::move(capturer)),
       streams(std::move(streams)),
       analyzer(std::move(analyzer)),
       tracker(std::move(tracker)),
@@ -116,6 +117,7 @@ void EventRtspGenerator::initParams() {
     params["logger"] = jsonToYaml(logger);
     params["drawer"] = drawer.has_value() ? jsonToYaml(*drawer) : YAML::Node(YAML::NodeType::Null);
     params["event_coder"] = jsonToYaml(eventCoder);
+    params["capturer_output"] = capturerOutput.string();
     params["capturer"] = jsonToYaml(capturer);
     files.insert_or_assign(PARAMS_CONFIG_NAME, ConfigFile(params));
 }
@@ -296,7 +298,7 @@ void EventRtspGenerator::appendAfterOsd(int index, int gpuId) {
     appendNode("queue", "queue_vis" + suffix, addQueue());
     appendNode("nvvideoconvert", "nvvideoconvert_vis" + suffix, addNvvideoconvert(gpuId));
     appendNode("capsfilter", "capsfilter_vis" + suffix, addCapsfilter("video/x-raw(memory:NVMM), format=RGB"));
-    appendNode("viscapturer", "viscapturer" + suffix, addViscapturer(capturerCodes()));
+    appendNode("viscapturer", "viscapturer" + suffix, addViscapturer(capturerCodes(), capturerOutput.string()));
     appendNode("fakesink", "fakesink_vis" + suffix, addFakesink(false, false));
 }
 
@@ -335,6 +337,10 @@ void EventRtspGenerator::add() {
         "nvmsgbroker",
         "nvmsgbroker",
         addNvmsgbroker(subelement::KAFKA_PROTO_LIB, subelement::KAFKA_CONN_STR, kafkaTopic, KAFKA_CONFIG_NAME, false, false));
+    if (drawer.has_value()) {
+        const std::string drawerName = nvdetDrawerElement();
+        appendNode(drawerName, drawerName, nvdetDrawerProperties(*drawer));
+    }
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     for (int streamIndex = 0; streamIndex < static_cast<int>(streams.size()); ++streamIndex) {
         const std::string suffix = std::to_string(streamIndex);
@@ -344,13 +350,10 @@ void EventRtspGenerator::add() {
         appendNode("queue", "queue_raw" + suffix, addQueue());
         appendNode("nvvideoconvert", "nvvideoconvert_raw" + suffix, addNvvideoconvert(gpuId));
         appendNode("capsfilter", "capsfilter_raw" + suffix, addCapsfilter("video/x-raw(memory:NVMM), format=RGB"));
-        appendNode("rawcapturer", "rawcapturer" + suffix, addRawcapturer(capturerCodes()));
+        appendNode("rawcapturer", "rawcapturer" + suffix, addRawcapturer(capturerCodes(), capturerOutput.string()));
         appendNode("fakesink", "fakesink_raw" + suffix, addFakesink(false, false));
         appendNode("queue", "queue_osd" + suffix, addQueue());
         appendNode("nvvideoconvert", "nvvideoconvert_osd" + suffix, addNvvideoconvert(gpuId, true));
-        if (drawer.has_value()) {
-            appendNode(nvdetDrawerElement(), nvdetDrawerElement() + suffix, nvdetDrawerProperties(*drawer));
-        }
         appendNode("nvosdbin", "nvosdbin" + suffix, addNvosdbin(gpuId, true, true));
         appendAfterOsd(streamIndex, gpuId);
     }
@@ -375,7 +378,12 @@ void EventRtspGenerator::link() {
     edges[tail] = "nvdsanalytics";
     edges["nvdsanalytics"] = afterAnalytics();
     linkEventCoder(edges);
-    edges["tee_msg"].push_back("nvstreamdemux");
+    const std::string drawerName = nvdetDrawerElement();
+    const std::string demuxSource = drawer.has_value() ? drawerName : std::string("nvstreamdemux");
+    if (drawer.has_value()) {
+        edges[drawerName] = "nvstreamdemux";
+    }
+    edges["tee_msg"].push_back(demuxSource);
     edges["tee_msg"].push_back("queue_msg");
     edges["queue_msg"] = "nvmsgconv";
     edges["nvmsgconv"] = "nvmsgbroker";
@@ -390,11 +398,7 @@ void EventRtspGenerator::link() {
         edges["capsfilter_raw" + suffix] = "rawcapturer" + suffix;
         edges["rawcapturer" + suffix] = "fakesink_raw" + suffix;
         edges["queue_osd" + suffix] = "nvvideoconvert_osd" + suffix;
-        const std::string osdPrev = drawer.has_value() ? nvdetDrawerElement() + suffix : "nvosdbin" + suffix;
-        edges["nvvideoconvert_osd" + suffix] = osdPrev;
-        if (drawer.has_value()) {
-            edges[nvdetDrawerElement() + suffix] = "nvosdbin" + suffix;
-        }
+        edges["nvvideoconvert_osd" + suffix] = "nvosdbin" + suffix;
         linkAfterOsd(edges, index);
     }
     pipeline["deepstream"]["edges"] = edges;

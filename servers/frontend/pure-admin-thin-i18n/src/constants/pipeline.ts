@@ -1,11 +1,11 @@
 import { assertColumnPercents } from "@/utils/columnWidth";
 
 export const PIPELINE_CREATE_DIALOG_WIDTH = "50%";
+export const PIPELINE_LOG_DIALOG_WIDTH = "70%";
+export const PIPELINE_LOG_PAD_OPTIONS = ["000", "001"];
 export const PIPELINE_LIST_PAGE_SIZE = 20;
 export const PIPELINE_OPTION_PAGE_SIZE = 200;
 export const PIPELINE_SOURCE_PAGE_SIZE = 20;
-export const PIPELINE_OUTPUT_DIR = "/root/outputs/deepstream";
-
 export const PIPELINE_SOURCE_COLUMN_PERCENTS = {
   selection: 8,
   name: 52,
@@ -127,11 +127,11 @@ export const PIPELINE_LIST_COLUMN_PERCENTS = {
   name: 12,
   type: 8,
   status: 8,
-  gie: 14,
+  gie: 11,
   startTime: 16,
   endTime: 16,
   duration: 10,
-  ops: 12
+  ops: 15
 };
 assertColumnPercents(PIPELINE_SOURCE_COLUMN_PERCENTS);
 assertColumnPercents(PIPELINE_TIMED_SOURCE_COLUMN_PERCENTS);

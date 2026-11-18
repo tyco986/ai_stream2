@@ -22,6 +22,7 @@ event_coder:
   length: 5
   threshold: 0.5
   mode: fold
+capturer_output: /root/event/yolo10x_smoke_fire_sahi_rtsp
 capturer:
   capture_codes: "12"
 streams:

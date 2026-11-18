@@ -9,14 +9,14 @@
 // Topology::
 //
 //     nvurisrcbin{N} → nvstreammux → nvsahipreprocess → pgie → queue_sahi → nvsahipostprocesspose
-//         → nvdsanalytics → detcollector → dslogger → nvstreamdemux → queue_demux{N} → posefadedrawer{N} → nvosdbin{N} → nvvideoconvert{N}
+//         → nvdsanalytics → detcollector → dslogger → posefadedrawer → nvstreamdemux → queue_demux{N} → nvosdbin{N} → nvvideoconvert{N}
 //         │     → capsfilter{N} → nvjpegenc{N} → filesink{N}
 class SahiPoseImageGenerator : public SahiImageGenerator {
 public:
     SahiPoseImageGenerator(
         std::string pipelineName,
         nlohmann::json images,
-        std::filesystem::path output,
+        std::filesystem::path filesinkOutput,
         std::optional<nlohmann::json> analyzer,
         nlohmann::json pgie,
         nlohmann::json sahi,

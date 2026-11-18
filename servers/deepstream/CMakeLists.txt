@@ -20,6 +20,7 @@ add_executable(deepstream
     src/routes/pipeline_route.cpp
     src/routes/logs_route.cpp
     src/logger/request_logger.cpp
+    src/logger/gstreamer_logger.cpp
     src/response/response.cpp
     src/services/pipeline_service.cpp
     src/services/logs_service.cpp
@@ -32,6 +33,7 @@ target_include_directories(deepstream PRIVATE
     ${YAML_CPP_INCLUDE_DIRS}
 )
 target_compile_definitions(deepstream PRIVATE CPPHTTPLIB_NO_OPENSSL)
+target_precompile_headers(deepstream PRIVATE src/libs/httplib.h)
 target_compile_options(deepstream PRIVATE -Wall -Werror ${YAML_CPP_CFLAGS_OTHER})
 target_link_directories(deepstream PRIVATE
     /opt/nvidia/deepstream/deepstream/lib

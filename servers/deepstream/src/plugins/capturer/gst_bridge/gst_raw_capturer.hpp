@@ -14,6 +14,7 @@ struct _GstRawCapturer {
     GstBaseTransform base;
     gpointer engine;
     gchar* captureCodes;
+    gchar* output;
 };
 
 struct _GstRawCapturerClass {

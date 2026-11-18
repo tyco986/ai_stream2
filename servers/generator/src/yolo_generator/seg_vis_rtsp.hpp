@@ -8,7 +8,7 @@
 //
 // Topology::
 //
-//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → detcollector → dslogger → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → segfadedrawerwithtracker{N} → nvosdbin{N}
+//     nvurisrcbin{N} → nvstreammux → pgie → boxsnapshot → nvtracker → nvdsanalytics → detcollector → dslogger → segfadedrawerwithtracker → nvstreamdemux → queue_demux{N} → nvvideoconvert{N} → nvosdbin{N}
 //           │                → queue_enc{N} → nvv4l2h264enc{N} → h264parse{N} → rtspclientsink{N}
 class SegVisRtspGenerator : public VisRtspGenerator {
 public:

@@ -16,6 +16,7 @@ inline constexpr const char* KEY_DURATION = "duration";
 inline constexpr const char* KEY_STREAMS = "streams";
 inline constexpr const char* KEY_SOURCE_ID = "source_id";
 inline constexpr const char* STATUS_RUNNING = "running";
+inline constexpr const char* STATUS_STARTING = "starting";
 inline constexpr const char* STATUS_STOPPED = "stopped";
 inline constexpr const char* STATUS_DEGRADED = "degraded";
 inline constexpr const char* STATUS_RECONNECTING = "reconnecting";
@@ -31,6 +32,7 @@ inline constexpr const char* MODELS_DIR = "/root/runtime/models";
 inline constexpr int STATUS_CONFLICT = 409;
 inline constexpr const char* ERR_RUNNING = "stop the pipeline before start";
 inline constexpr const char* ERR_IDLE = "pipeline is not running";
+inline constexpr const char* ERR_LOGS_BUSY = "stop the pipeline before clearing logs";
 inline constexpr std::size_t READ_BUFFER = 64 * 1024;
 inline constexpr std::size_t PAYLOAD_MAX = 2ULL * 1024 * 1024 * 1024;
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, provide, reactive, ref, watch } from "vue";
-import Brush from "~icons/ri/brush-line";
+import Eraser from "~icons/ri/eraser-line";
 import Save from "~icons/ri/save-line";
 import SaveAs from "~icons/ri/save-3-line";
 import { createPreset, getActivePreset, getPreset, getPresetMap, updatePreset } from "@/api/preview";
@@ -194,6 +194,9 @@ onMounted(() => {
     </aside>
     <div class="preview-main">
       <div class="preview-toolbar">
+        <el-select v-model="layout" class="preview-layout">
+          <el-option v-for="item in LAYOUTS" :key="item" :label="item" :value="item" />
+        </el-select>
         <el-select
           :model-value="presetId"
           class="preview-preset"
@@ -208,11 +211,8 @@ onMounted(() => {
         <el-button link :title="transformI18n($t('preview.pureSaveAs'))" @click="onSaveAs">
           <IconifyIconOffline :icon="SaveAs" />
         </el-button>
-        <el-select v-model="layout" class="preview-layout">
-          <el-option v-for="item in LAYOUTS" :key="item" :label="item" :value="item" />
-        </el-select>
         <el-button link :title="transformI18n($t('preview.pureClear'))" @click="onClear">
-          <IconifyIconOffline :icon="Brush" />
+          <IconifyIconOffline :icon="Eraser" />
         </el-button>
       </div>
       <div class="preview-stage-wrap">

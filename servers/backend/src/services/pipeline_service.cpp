@@ -7,8 +7,12 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include <cctype>
 #include <cstdio>
 #include <filesystem>
+#include <fstream>
+#include <iomanip>
+#include <sstream>
 #include <stdexcept>
 #include <vector>
 
@@ -48,6 +52,119 @@ Json::Value PipelineService::map() {
   return data;
 }
 
+bool PipelineService::queryDate(const std::string& date) {
+  bool ok = date.size() == pipeline::DATE_LENGTH;
+  for (std::size_t index = 0; ok && index < date.size(); ++index) {
+    const bool separator = index == 4 || index == 7;
+    const unsigned char character = static_cast<unsigned char>(date[index]);
+    ok = separator ? date[index] == '-' : std::isdigit(character) != 0;
+  }
+  return ok;
+}
+
+Json::Value PipelineService::readJsonl(std::istream& input) {
+  Json::Value lines(Json::arrayValue);
+  for (std::string line; std::getline(input, line); ) {
+    Json::Value item;
+    const bool parsed = !line.empty() && Json::Reader().parse(line, item);
+    const bool latencyField = parsed && item.isObject() && item[pipeline::KEY_LATENCY].isNumeric();
+    if (latencyField) {
+      std::ostringstream latency;
+      latency << std::fixed << std::setprecision(pipeline::LATENCY_DIGITS) << item[pipeline::KEY_LATENCY].asDouble();
+      item[pipeline::KEY_LATENCY] = latency.str();
+    }
+    if (parsed && item.isObject()) {
+      lines.append(item);
+    }
+  }
+  return lines;
+}
+
+bool PipelineService::queryPad(const std::string& pad) {
+  bool ok = !pad.empty() && pad.size() <= static_cast<std::size_t>(pipeline::PAD_WIDTH);
+  for (std::size_t index = 0; ok && index < pad.size(); ++index) {
+    ok = std::isdigit(static_cast<unsigned char>(pad[index])) != 0;
+  }
+  const int value = ok ? std::stoi(pad) : 0;
+  ok = ok && value < 1000;
+  return ok;
+}
+
+Json::Value PipelineService::getPadLogs(const std::string& name, const std::string& pad, const std::string& date) {
+  std::ostringstream folder;
+  folder << std::setw(pipeline::PAD_WIDTH) << std::setfill('0') << std::stoi(pad);
+  const std::filesystem::path directory =
+      std::filesystem::path(pipeline::DEEPSTREAM_LOG_DIR) / name / pipeline::LOG_PAD_DIR / folder.str();
+  const std::string suffix = std::string("_") + date + pipeline::LOG_API_SUFFIX;
+  Json::Value lines(Json::arrayValue);
+  const bool scan = std::filesystem::is_directory(directory);
+  if (scan) {
+    for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(directory)) {
+      const std::string filename = entry.path().filename().string();
+      const bool shaped = entry.is_regular_file() && filename.size() > suffix.size() &&
+                          filename.compare(filename.size() - suffix.size(), suffix.size(), suffix) == 0;
+      if (shaped) {
+        std::ifstream file(entry.path());
+        const Json::Value rows = readJsonl(file);
+        for (const Json::Value& row : rows) {
+          lines.append(row);
+        }
+      }
+    }
+  }
+  Json::Value body(Json::objectValue);
+  body[pipeline::KEY_CONTENT] = lines;
+  return body;
+}
+
+Json::Value PipelineService::getApiLogs(const std::string& name, const std::string& date) {
+  const std::filesystem::path directory =
+      std::filesystem::path(pipeline::DEEPSTREAM_LOG_DIR) / name / pipeline::LOG_API_DIR;
+  Json::Value dates(Json::objectValue);
+  if (!date.empty()) {
+    const std::filesystem::path direct =
+        directory / (std::string(pipeline::LOG_API_PAGE) + "_" + date + pipeline::LOG_API_SUFFIX);
+    std::ifstream input(direct);
+    if (input) {
+      Json::Value body(Json::objectValue);
+      body[pipeline::KEY_CONTENT] = readJsonl(input);
+      dates[date] = body;
+    }
+  }
+  const bool scan = date.empty() && std::filesystem::is_directory(directory);
+  if (scan) {
+    const std::string prefix = std::string(pipeline::LOG_API_PAGE) + "_";
+    const std::string suffix = pipeline::LOG_API_SUFFIX;
+    for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(directory)) {
+      const std::string filename = entry.path().filename().string();
+      const bool shaped = entry.is_regular_file() &&
+                          filename.size() == prefix.size() + pipeline::DATE_LENGTH + suffix.size() &&
+                          filename.compare(0, prefix.size(), prefix) == 0 &&
+                          filename.compare(filename.size() - suffix.size(), suffix.size(), suffix) == 0;
+      const std::string stamp = shaped ? filename.substr(prefix.size(), pipeline::DATE_LENGTH) : "";
+      if (shaped && queryDate(stamp)) {
+        std::ifstream file(entry.path());
+        Json::Value body(Json::objectValue);
+        body[pipeline::KEY_CONTENT] = readJsonl(file);
+        dates[stamp] = body;
+      }
+    }
+  }
+  return dates;
+}
+
+Json::Value PipelineService::getGstreamerLogs(const std::string& name, const std::string& date) {
+  const std::filesystem::path path =
+      std::filesystem::path(pipeline::DEEPSTREAM_LOG_DIR) / name / pipeline::LOG_GSTREAMER_DIR /
+      (std::string(pipeline::LOG_GSTREAMER_PREFIX) + date + pipeline::LOG_GSTREAMER_SUFFIX);
+  std::ifstream input(path);
+  std::ostringstream text;
+  text << input.rdbuf();
+  Json::Value body(Json::objectValue);
+  body[pipeline::KEY_CONTENT] = input ? text.str() : "";
+  return body;
+}
+
 Json::Value PipelineService::get(const std::string& pipelineId) {
   const auto rows = Sql::sync({}, dbClient, 
       std::string("SELECT id::text AS id, name, type, status, input::text AS input, config_path, ") +
@@ -84,6 +201,7 @@ YAML::Node PipelineService::json2yaml(const Json::Value& value) {
     node = value.asDouble();
   } else if (value.isString()) {
     node = value.asString();
+    node.SetTag(pipeline::YAML_STRING_TAG);
   } else if (value.isNull()) {
     node = YAML::Null;
   }
@@ -124,7 +242,7 @@ Json::Value PipelineService::createEnd(const Json::Value& status,
   builder["indentation"] = "";
   const auto rows = Sql::sync({}, dbClient, 
       "INSERT INTO pipeline (id, name, type, status, input, config_path, stream_ids, media_ids, gie_ids, analyzer_ids, updated_at) "
-      "VALUES (gen_random_uuid(), $1, $2, $3, $4::jsonb, $5, "
+      "VALUES (gen_random_uuid(), $1, $2, $3, $4::jsonb, NULLIF($5, ''), "
       "ARRAY(SELECT jsonb_array_elements_text($6::jsonb)::uuid), "
       "ARRAY(SELECT jsonb_array_elements_text($7::jsonb)::uuid), "
       "ARRAY(SELECT jsonb_array_elements_text($8::jsonb)::uuid), "
@@ -148,6 +266,57 @@ Json::Value PipelineService::createEnd(const Json::Value& status,
   return result;
 }
 
+Json::Value PipelineService::getInput(const std::string& pipelineId) {
+  const auto rows = Sql::sync({}, dbClient,
+      "SELECT input::text AS input FROM pipeline WHERE id = $1::uuid",
+      pipelineId);
+  if (rows.empty()) {
+    throw std::runtime_error("pipeline not found");
+  }
+  Json::Value input;
+  const bool parsed = !rows[0]["input"].isNull() && Json::Reader().parse(rows[0]["input"].as<std::string>(), input);
+  Json::Value result = parsed ? input : Json::Value();
+  return result;
+}
+
+Json::Value PipelineService::setInput(const std::string& pipelineId, const Json::Value& input) {
+  Json::StreamWriterBuilder builder;
+  builder["indentation"] = "";
+  const auto rows = Sql::sync({}, dbClient,
+      "UPDATE pipeline SET input = $2::jsonb WHERE id = $1::uuid " +
+      std::string("RETURNING id::text AS id, name, type, status, input::text AS input, config_path, ") +
+      pipeline::SQL_REF_COLUMNS +
+      "start_time, end_time, duration, updated_at",
+      pipelineId,
+      Json::writeString(builder, input));
+  if (rows.empty()) {
+    throw std::runtime_error("pipeline not updated");
+  }
+  Json::Value result = row2json(rows[0]);
+  return result;
+}
+
+Json::Value PipelineService::setConfigPath(const std::string& pipelineId, const std::string& configPath) {
+  const Json::Value current = get(pipelineId);
+  const bool hasPath = current[pipeline::KEY_CONFIG_PATH].isString();
+  const std::string oldPath = hasPath ? current[pipeline::KEY_CONFIG_PATH].asString() : "";
+  const auto rows = Sql::sync({}, dbClient,
+      "UPDATE pipeline SET config_path = NULLIF($2, '') WHERE id = $1::uuid " +
+      std::string("RETURNING id::text AS id, name, type, status, input::text AS input, config_path, ") +
+      pipeline::SQL_REF_COLUMNS +
+      "start_time, end_time, duration, updated_at",
+      pipelineId,
+      configPath);
+  if (rows.empty()) {
+    throw std::runtime_error("pipeline not updated");
+  }
+  if (hasPath && oldPath != configPath) {
+    std::filesystem::remove(oldPath);
+  }
+  Json::Value result = row2json(rows[0]);
+  return result;
+}
+
 Json::Value PipelineService::update(const std::string& pipelineId,
                                         const Json::Value& status,
                                         const Json::Value& configPath,
@@ -166,7 +335,7 @@ Json::Value PipelineService::update(const std::string& pipelineId,
   Json::StreamWriterBuilder builder;
   builder["indentation"] = "";
   const auto rows = Sql::sync({}, dbClient, 
-      "UPDATE pipeline SET name = $2, type = $3, status = $4, input = $5::jsonb, config_path = $6, "
+      "UPDATE pipeline SET name = $2, type = $3, status = $4, input = $5::jsonb, config_path = NULLIF($6, ''), "
       "stream_ids = ARRAY(SELECT jsonb_array_elements_text($7::jsonb)::uuid), "
       "media_ids = ARRAY(SELECT jsonb_array_elements_text($8::jsonb)::uuid), "
       "gie_ids = ARRAY(SELECT jsonb_array_elements_text($9::jsonb)::uuid), "

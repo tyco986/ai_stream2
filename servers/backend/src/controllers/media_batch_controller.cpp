@@ -34,8 +34,7 @@ void MediaBatchController::batchCreate(const drogon::HttpRequestPtr& request,
           item.get(media::KEY_CODEC, Json::Value()), item.get(media::KEY_SIZE, Json::Value()),
           item.get(media::KEY_MD5, Json::Value()), item.get(media::KEY_FOLDER, Json::Value()),
           item.get(media::KEY_CREATED_AT, Json::Value()), item.get(media::KEY_UPDATED_AT, Json::Value()),
-          item.get(media::KEY_USER_ID, Json::Value()), item.get(media::KEY_STREAM_ID, Json::Value()),
-          item.get(media::KEY_PIPELINE_ID, Json::Value())));
+          item.get(media::KEY_USER_ID, Json::Value())));
     } catch (const std::exception&) {
       data[media::KEY_FAILED_ROWS].append(item);
     }
@@ -108,6 +107,36 @@ void MediaBatchController::batchRemove(const drogon::HttpRequestPtr& request,
   data[media::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[media::KEY_FAILED_ROWS].size());
   data[media::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[media::KEY_SKIPPED_ROWS].size());
   const auto response = http::Response::ok(data, media::MSG_BATCH_REMOVE_OK);
+  logger.record(request, response, started);
+  callback(response);
+}
+
+void MediaBatchController::batchRemoveFolder(const drogon::HttpRequestPtr& request,
+                                             std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
+  const auto started = std::chrono::steady_clock::now();
+  const auto body = request->getJsonObject();
+  Json::Value folders(Json::arrayValue);
+  const bool hasFolders = body && body->isMember(media::KEY_FOLDERS) && (*body)[media::KEY_FOLDERS].isArray();
+  if (hasFolders) {
+    folders = (*body)[media::KEY_FOLDERS];
+  }
+  Json::Value data = media::BATCH_DATA();
+  for (const auto& folder : folders) {
+    try {
+      const Json::Value rows = service.removeFolder(folder.asString());
+      for (const auto& row : rows) {
+        data[media::KEY_UPDATED_ROWS].append(row);
+      }
+    } catch (const std::exception&) {
+      Json::Value failed;
+      failed[media::KEY_FOLDER] = folder.asString();
+      data[media::KEY_FAILED_ROWS].append(failed);
+    }
+  }
+  data[media::KEY_UPDATED_COUNT] = static_cast<Json::UInt64>(data[media::KEY_UPDATED_ROWS].size());
+  data[media::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[media::KEY_FAILED_ROWS].size());
+  data[media::KEY_SKIPPED_COUNT] = static_cast<Json::UInt64>(data[media::KEY_SKIPPED_ROWS].size());
+  const auto response = http::Response::ok(data, media::MSG_BATCH_REMOVE_FOLDER_OK);
   logger.record(request, response, started);
   callback(response);
 }

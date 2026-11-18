@@ -7,6 +7,7 @@
 DetRtspPresenceGenerator::DetRtspPresenceGenerator(
     std::string pipelineName,
     nlohmann::json streams,
+    std::filesystem::path capturerOutput,
     std::optional<nlohmann::json> analyzer,
     nlohmann::json pgie,
     nlohmann::json eventCoder,
@@ -17,6 +18,7 @@ DetRtspPresenceGenerator::DetRtspPresenceGenerator(
     : EventRtspGenerator(
           std::move(pipelineName),
           std::move(streams),
+          std::move(capturerOutput),
           std::move(analyzer),
           std::move(pgie),
           std::move(eventCoder),

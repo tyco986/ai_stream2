@@ -22,7 +22,7 @@ drawer:
 videos:
   - /root/attachments/videos/video1.mp4
   - /root/attachments/videos/video2.mp4
-output: /root/outputs/deepstream/yolo11n_det_sahi_vis_video_no_interval
+filesink_output: /root/media/pipeline/yolo11n_det_sahi_vis_video_no_interval
 sahi:
   preprocess:
     slice_width: 640

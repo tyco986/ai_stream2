@@ -3,7 +3,9 @@
 #include "constants/pipeline_const.hpp"
 #include "constants/proxy_const.hpp"
 #include "db/database.hpp"
+#include "kafka/kafka.hpp"
 #include "logger/base_logger.hpp"
+#include "logger/step_span.hpp"
 #include "response/response.hpp"
 
 #include <drogon/HttpClient.h>
@@ -13,6 +15,7 @@
 #include <exception>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <iterator>
 #include <sstream>
 #include <stdexcept>
@@ -50,6 +53,73 @@ void PipelineController::map(
     callback(response);
   } catch (const std::exception& error) {
     const auto response = http::Response::error(drogon::k500InternalServerError, pipeline::MSG_MAP_ERROR);
+    logger.record(request, response, started, error.what());
+    callback(response);
+  }
+}
+
+void PipelineController::logsApi(
+    const drogon::HttpRequestPtr& request,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback,
+    const std::string& pipeline_id) {
+  const auto started = std::chrono::steady_clock::now();
+  try {
+    const std::string date = request->getParameter(pipeline::QUERY_DATE);
+    const bool dateOk = date.empty() || service.queryDate(date);
+    drogon::HttpResponsePtr response = http::Response::error(drogon::k400BadRequest, pipeline::MSG_LOGS_ERROR);
+    if (dateOk) {
+      const Json::Value current = service.get(pipeline_id);
+      response = http::Response::ok(service.getApiLogs(current[pipeline::KEY_NAME].asString(), date), pipeline::MSG_LOGS_OK);
+    }
+    logger.record(request, response, started);
+    callback(response);
+  } catch (const std::exception& error) {
+    const auto response = http::Response::error(drogon::k500InternalServerError, pipeline::MSG_LOGS_ERROR);
+    logger.record(request, response, started, error.what());
+    callback(response);
+  }
+}
+
+void PipelineController::logsPad(
+    const drogon::HttpRequestPtr& request,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback,
+    const std::string& pipeline_id) {
+  const auto started = std::chrono::steady_clock::now();
+  try {
+    const std::string pad = request->getParameter(pipeline::QUERY_PAD);
+    const std::string date = request->getParameter(pipeline::QUERY_DATE);
+    const bool queryOk = service.queryPad(pad) && service.queryDate(date);
+    drogon::HttpResponsePtr response = http::Response::error(drogon::k400BadRequest, pipeline::MSG_LOGS_ERROR);
+    if (queryOk) {
+      const Json::Value current = service.get(pipeline_id);
+      response = http::Response::ok(service.getPadLogs(current[pipeline::KEY_NAME].asString(), pad, date), pipeline::MSG_LOGS_OK);
+    }
+    logger.record(request, response, started);
+    callback(response);
+  } catch (const std::exception& error) {
+    const auto response = http::Response::error(drogon::k500InternalServerError, pipeline::MSG_LOGS_ERROR);
+    logger.record(request, response, started, error.what());
+    callback(response);
+  }
+}
+
+void PipelineController::logsGstreamer(
+    const drogon::HttpRequestPtr& request,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback,
+    const std::string& pipeline_id) {
+  const auto started = std::chrono::steady_clock::now();
+  try {
+    const std::string date = request->getParameter(pipeline::QUERY_DATE);
+    const bool dateOk = service.queryDate(date);
+    drogon::HttpResponsePtr response = http::Response::error(drogon::k400BadRequest, pipeline::MSG_LOGS_ERROR);
+    if (dateOk) {
+      const Json::Value current = service.get(pipeline_id);
+      response = http::Response::ok(service.getGstreamerLogs(current[pipeline::KEY_NAME].asString(), date), pipeline::MSG_LOGS_OK);
+    }
+    logger.record(request, response, started);
+    callback(response);
+  } catch (const std::exception& error) {
+    const auto response = http::Response::error(drogon::k500InternalServerError, pipeline::MSG_LOGS_ERROR);
     logger.record(request, response, started, error.what());
     callback(response);
   }
@@ -137,11 +207,64 @@ drogon::Task<Json::Value> PipelineController::postGenerate(const std::string& na
   co_return data;
 }
 
-std::string PipelineController::logsBind() {
+bool PipelineController::reserveOutputDirectory(const std::filesystem::path& path) {
+  std::filesystem::create_directories(path.parent_path());
+  const bool created = std::filesystem::create_directory(path);
+  return created;
+}
+
+std::string PipelineController::outputStamp() const {
+  const std::time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+  std::tm local{};
+  localtime_r(&now, &local);
+  std::ostringstream text;
+  text << std::put_time(&local, "%Y%m%d-%H%M%S");
+  const std::string stamp = text.str();
+  return stamp;
+}
+
+Json::Value PipelineController::addTimeStampToInput(Json::Value input, const std::string& name) {
+  const std::string generator = input.isMember(pipeline::KEY_GENERATOR) && input[pipeline::KEY_GENERATOR].isString()
+      ? input[pipeline::KEY_GENERATOR].asString()
+      : "";
+  const bool filesink = input.isMember(pipeline::KEY_IMAGES)
+      || (input.isMember(pipeline::KEY_VIDEOS) && generator.find(pipeline::VIS_GENERATOR_MARK) != std::string::npos);
+  const bool capturer = input.isMember(pipeline::KEY_EVENT_CODER) && !input[pipeline::KEY_EVENT_CODER].isNull();
+  const std::string stamp = outputStamp();
+  int suffix = 0;
+  bool reserved = !filesink && !capturer;
+  std::string filesinkPath;
+  std::string capturerPath;
+  for (; suffix < pipeline::OUTPUT_SUFFIX_LIMIT && !reserved; ++suffix) {
+    const std::string leaf = name + "-" + stamp + "-" + std::to_string(suffix);
+    filesinkPath = (std::filesystem::path(pipeline::FILESINK_DIR) / leaf).string();
+    capturerPath = (std::filesystem::path(pipeline::EVENT_DIR) / name / (stamp + "-" + std::to_string(suffix))).string();
+    const bool filesinkReady = !filesink || reserveOutputDirectory(filesinkPath);
+    const bool capturerReady = !capturer || reserveOutputDirectory(capturerPath);
+    if (filesink && filesinkReady && !capturerReady) {
+      std::filesystem::remove(filesinkPath);
+    }
+    if (capturer && capturerReady && !filesinkReady) {
+      std::filesystem::remove(capturerPath);
+    }
+    reserved = filesinkReady && capturerReady;
+  }
+  if (!reserved) {
+    throw std::runtime_error("output directory not reserved");
+  }
+  if (filesink) {
+    input[pipeline::KEY_FILESINK_OUTPUT] = filesinkPath;
+  }
+  if (capturer) {
+    input[pipeline::KEY_CAPTURER_OUTPUT] = capturerPath;
+  }
+  return input;
+}
+
+std::string PipelineController::hostBind(const std::string& dir) {
   std::ifstream mounts(pipeline::MOUNTINFO_PATH);
   std::string host;
   std::string line;
-  const std::string logsDir = pipeline::LOGS_DIR;
   while (std::getline(mounts, line)) {
     std::istringstream row(line);
     std::string mountId;
@@ -150,28 +273,34 @@ std::string PipelineController::logsBind() {
     std::string root;
     std::string point;
     row >> mountId >> parent >> device >> root >> point;
-    const bool matched = point == logsDir || point.rfind(logsDir + "/", 0) == 0;
-    const std::size_t extra = matched ? point.size() - logsDir.size() : 0;
+    const bool matched = point == dir || point.rfind(dir + "/", 0) == 0;
+    const std::size_t extra = matched ? point.size() - dir.size() : 0;
     const bool usable = matched && root.size() >= extra;
     host = usable ? root.substr(0, root.size() - extra) : host;
   }
   if (host.empty()) {
-    throw std::runtime_error("logs mount missing");
+    throw std::runtime_error(dir + " mount missing");
   }
-  return host + ":" + logsDir;
+  return host + ":" + dir;
 }
 
 drogon::Task<bool> PipelineController::runDeepstreamContainer(const std::string& containerName,
-                                                                       const std::string& pipelineName) {
+                                                                       const std::string& pipelineName,
+                                                                       Json::Value& steps) {
   auto docker = drogon::HttpClient::newHttpClient(pipeline::DOCKER_BASE_URL);
   const std::string baseUrl = "http://" + containerName + ":" + std::to_string(pipeline::DEEPSTREAM_PORT);
-  auto inspectRequest = drogon::HttpRequest::newHttpRequest();
-  inspectRequest->setMethod(drogon::Get);
-  inspectRequest->setPath("/containers/" + containerName + pipeline::DOCKER_JSON_PATH);
-  const auto inspected = co_await docker->sendRequestCoro(inspectRequest, pipeline::DOCKER_TIMEOUT_SECONDS);
+  drogon::HttpResponsePtr inspected;
+  {
+    StepSpan span(steps, pipeline::STEP_INSPECT);
+    auto inspectRequest = drogon::HttpRequest::newHttpRequest();
+    inspectRequest->setMethod(drogon::Get);
+    inspectRequest->setPath("/containers/" + containerName + pipeline::DOCKER_JSON_PATH);
+    inspected = co_await docker->sendRequestCoro(inspectRequest, pipeline::DOCKER_TIMEOUT_SECONDS);
+  }
   const bool exists = inspected->statusCode() == drogon::k200OK;
   bool running = false;
   if (exists) {
+    StepSpan span(steps, pipeline::STEP_RUNNING);
     try {
       auto statusRequest = drogon::HttpRequest::newHttpRequest();
       statusRequest->setMethod(drogon::Get);
@@ -203,12 +332,15 @@ drogon::Task<bool> PipelineController::runDeepstreamContainer(const std::string&
     body["Cmd"][1] = pipelineName;
     body["HostConfig"]["NetworkMode"] = pipeline::DOCKER_NETWORK;
     body["HostConfig"]["Runtime"] = pipeline::DOCKER_RUNTIME;
-    body["HostConfig"]["Binds"][0] = logsBind();
-    body["HostConfig"]["Binds"][1] = pipeline::LOCALTIME_BIND;
+    body["HostConfig"]["Binds"][0] = hostBind(pipeline::LOGS_DIR);
+    body["HostConfig"]["Binds"][1] = hostBind(pipeline::MEDIA_DIR);
+    body["HostConfig"]["Binds"][2] = hostBind(pipeline::EVENT_DIR);
+    body["HostConfig"]["Binds"][3] = pipeline::LOCALTIME_BIND;
     body["HostConfig"]["DeviceRequests"][0] = gpu;
     auto createRequest = drogon::HttpRequest::newHttpJsonRequest(body);
     createRequest->setMethod(drogon::Post);
     createRequest->setPath(std::string(pipeline::DOCKER_CREATE_PATH) + "?name=" + containerName);
+    StepSpan span(steps, pipeline::STEP_CREATE);
     const auto created = co_await docker->sendRequestCoro(createRequest, pipeline::DOCKER_TIMEOUT_SECONDS);
     ready = created->statusCode() == drogon::k201Created;
   }
@@ -217,47 +349,55 @@ drogon::Task<bool> PipelineController::runDeepstreamContainer(const std::string&
     auto restartRequest = drogon::HttpRequest::newHttpRequest();
     restartRequest->setMethod(drogon::Post);
     restartRequest->setPath("/containers/" + containerName + pipeline::DOCKER_RESTART_PATH);
+    StepSpan span(steps, pipeline::STEP_RESTART);
     const auto restartedResponse = co_await docker->sendRequestCoro(restartRequest, pipeline::DOCKER_TIMEOUT_SECONDS);
     restarted = restartedResponse->statusCode() == drogon::k204NoContent;
   }
   bool healthy = false;
-  for (int attempt = 0; restarted && attempt < pipeline::HEALTH_ATTEMPTS && !healthy; ++attempt) {
-    co_await drogon::sleepCoro(drogon::app().getLoop(), pipeline::HEALTH_INTERVAL_SECONDS);
-    try {
-      auto healthRequest = drogon::HttpRequest::newHttpRequest();
-      healthRequest->setMethod(drogon::Get);
-      healthRequest->setPath(pipeline::DEEPSTREAM_HEALTH_PATH);
-      auto deepstream = drogon::HttpClient::newHttpClient(baseUrl);
-      const auto health = co_await deepstream->sendRequestCoro(healthRequest, pipeline::HEALTH_TIMEOUT_SECONDS);
-      healthy = health->statusCode() >= drogon::k200OK && health->statusCode() < drogon::k300MultipleChoices;
-    } catch (const std::exception&) {
-      healthy = false;
+  if (restarted) {
+    StepSpan span(steps, pipeline::STEP_HEALTH);
+    for (int attempt = 0; attempt < pipeline::HEALTH_ATTEMPTS && !healthy; ++attempt) {
+      co_await drogon::sleepCoro(drogon::app().getLoop(), pipeline::HEALTH_INTERVAL_SECONDS);
+      try {
+        auto healthRequest = drogon::HttpRequest::newHttpRequest();
+        healthRequest->setMethod(drogon::Get);
+        healthRequest->setPath(pipeline::DEEPSTREAM_HEALTH_PATH);
+        auto deepstream = drogon::HttpClient::newHttpClient(baseUrl);
+        const auto health = co_await deepstream->sendRequestCoro(healthRequest, pipeline::HEALTH_TIMEOUT_SECONDS);
+        healthy = health->statusCode() >= drogon::k200OK && health->statusCode() < drogon::k300MultipleChoices;
+      } catch (const std::exception&) {
+        healthy = false;
+      }
     }
   }
   co_return healthy;
 }
 
 drogon::Task<Json::Value> PipelineController::postDeepstreamStart(const std::string& containerName,
-                                                                      const std::string& configPath) {
-  const bool exists = std::filesystem::is_regular_file(configPath);
+                                                                      const std::string& configPath,
+                                                                      Json::Value& steps) {
   std::vector<ZipPart> files;
-  if (exists) {
-    std::ifstream configFile(configPath, std::ios::binary);
-    std::string configZip = std::string(std::istreambuf_iterator<char>(configFile), std::istreambuf_iterator<char>());
-    files.push_back(ZipPart{pipeline::FIELD_CONFIG, std::filesystem::path(configPath).filename().string(), configZip});
-    const YAML::Node params = service.readParams(configPath);
-    for (const std::string& path : service.getModelPaths(params)) {
-      const bool modelExists = std::filesystem::is_regular_file(path);
-      if (!modelExists) {
-        throw std::runtime_error("model zip missing");
+  {
+    StepSpan span(steps, pipeline::STEP_PACK);
+    const bool exists = std::filesystem::is_regular_file(configPath);
+    if (exists) {
+      std::ifstream configFile(configPath, std::ios::binary);
+      std::string configZip = std::string(std::istreambuf_iterator<char>(configFile), std::istreambuf_iterator<char>());
+      files.push_back(ZipPart{pipeline::FIELD_CONFIG, std::filesystem::path(configPath).filename().string(), configZip});
+      const YAML::Node params = service.readParams(configPath);
+      for (const std::string& path : service.getModelPaths(params)) {
+        const bool modelExists = std::filesystem::is_regular_file(path);
+        if (!modelExists) {
+          throw std::runtime_error("model zip missing");
+        }
+        std::ifstream modelFile(path, std::ios::binary);
+        std::string modelZip = std::string(std::istreambuf_iterator<char>(modelFile), std::istreambuf_iterator<char>());
+        files.push_back(ZipPart{pipeline::FIELD_MODEL, std::filesystem::path(path).filename().string(), modelZip});
       }
-      std::ifstream modelFile(path, std::ios::binary);
-      std::string modelZip = std::string(std::istreambuf_iterator<char>(modelFile), std::istreambuf_iterator<char>());
-      files.push_back(ZipPart{pipeline::FIELD_MODEL, std::filesystem::path(path).filename().string(), modelZip});
-    }
-    const std::string mediaZip = service.packMedia(params);
-    if (!mediaZip.empty()) {
-      files.push_back(ZipPart{pipeline::FIELD_MEDIA, pipeline::MEDIA_FILENAME, mediaZip});
+      const std::string mediaZip = service.packMedia(params);
+      if (!mediaZip.empty()) {
+        files.push_back(ZipPart{pipeline::FIELD_MEDIA, pipeline::MEDIA_FILENAME, mediaZip});
+      }
     }
   }
   const std::string baseUrl = "http://" + containerName + ":" + std::to_string(pipeline::DEEPSTREAM_PORT);
@@ -269,6 +409,7 @@ drogon::Task<Json::Value> PipelineController::postDeepstreamStart(const std::str
     startRequest->setContentTypeString(pipeline::MULTIPART_CONTENT_TYPE);
     startRequest->setBody(zips2Multipart(files));
     auto deepstream = drogon::HttpClient::newHttpClient(baseUrl);
+    StepSpan span(steps, pipeline::STEP_POST);
     const auto started = co_await deepstream->sendRequestCoro(startRequest, pipeline::START_TIMEOUT_SECONDS);
     posted = started->statusCode() >= drogon::k200OK && started->statusCode() < drogon::k300MultipleChoices;
   }
@@ -276,34 +417,34 @@ drogon::Task<Json::Value> PipelineController::postDeepstreamStart(const std::str
   Json::Value startTime;
   Json::Value endTime;
   Json::Value duration;
-  for (int attempt = 0;
-       posted && status != pipeline::STATUS_RUNNING && status != pipeline::STATUS_STOPPED && attempt < pipeline::STATUS_ATTEMPTS;
-       ++attempt) {
-    co_await drogon::sleepCoro(drogon::app().getLoop(), pipeline::HEALTH_INTERVAL_SECONDS);
-    try {
-      auto statusRequest = drogon::HttpRequest::newHttpRequest();
-      statusRequest->setMethod(drogon::Get);
-      statusRequest->setPath(pipeline::DEEPSTREAM_STATUS_PATH);
-      auto deepstream = drogon::HttpClient::newHttpClient(baseUrl);
-      const auto polled = co_await deepstream->sendRequestCoro(statusRequest, pipeline::STATUS_TIMEOUT_SECONDS);
-      Json::Value body;
-      const bool read = polled->statusCode() >= drogon::k200OK && polled->statusCode() < drogon::k300MultipleChoices &&
-                        Json::Reader().parse(std::string(polled->getBody()), body);
-      const Json::Value payload = read && body.isObject() && body.isMember("data") && body["data"].isObject() ? body["data"] : body;
-      const bool known = read && payload.isObject() && payload.isMember(pipeline::KEY_STATUS) && payload[pipeline::KEY_STATUS].isString();
-      status = known ? payload[pipeline::KEY_STATUS].asString() : status;
-      startTime = known && payload.isMember(pipeline::KEY_START_TIME) ? payload[pipeline::KEY_START_TIME] : startTime;
-      endTime = known && payload.isMember(pipeline::KEY_END_TIME) ? payload[pipeline::KEY_END_TIME] : endTime;
-      duration = known && payload.isMember(pipeline::KEY_DURATION) ? payload[pipeline::KEY_DURATION] : duration;
-    } catch (const std::exception&) {
+  if (posted) {
+    StepSpan span(steps, pipeline::STEP_STATUS);
+    for (int attempt = 0;
+         status != pipeline::STATUS_RUNNING && status != pipeline::STATUS_STOPPED && attempt < pipeline::STATUS_ATTEMPTS;
+         ++attempt) {
+      co_await drogon::sleepCoro(drogon::app().getLoop(), pipeline::HEALTH_INTERVAL_SECONDS);
+      try {
+        auto statusRequest = drogon::HttpRequest::newHttpRequest();
+        statusRequest->setMethod(drogon::Get);
+        statusRequest->setPath(pipeline::DEEPSTREAM_STATUS_PATH);
+        auto deepstream = drogon::HttpClient::newHttpClient(baseUrl);
+        const auto polled = co_await deepstream->sendRequestCoro(statusRequest, pipeline::STATUS_TIMEOUT_SECONDS);
+        Json::Value body;
+        const bool read = polled->statusCode() >= drogon::k200OK && polled->statusCode() < drogon::k300MultipleChoices &&
+                          Json::Reader().parse(std::string(polled->getBody()), body);
+        const Json::Value payload = read && body.isObject() && body.isMember("data") && body["data"].isObject() ? body["data"] : body;
+        const bool known = read && payload.isObject() && payload.isMember(pipeline::KEY_STATUS) && payload[pipeline::KEY_STATUS].isString();
+        status = known ? payload[pipeline::KEY_STATUS].asString() : status;
+        startTime = known && payload.isMember(pipeline::KEY_START_TIME) ? payload[pipeline::KEY_START_TIME] : startTime;
+        endTime = known && payload.isMember(pipeline::KEY_END_TIME) ? payload[pipeline::KEY_END_TIME] : endTime;
+        duration = known && payload.isMember(pipeline::KEY_DURATION) ? payload[pipeline::KEY_DURATION] : duration;
+      } catch (const std::exception&) {
+      }
     }
   }
-  const bool terminal = status == pipeline::STATUS_RUNNING || status == pipeline::STATUS_STOPPED;
   Json::Value data;
-  if (!posted) {
-    data[pipeline::KEY_STATUS] = pipeline::STATUS_STOPPED;
-  } else if (terminal) {
-    data[pipeline::KEY_STATUS] = status;
+  data[pipeline::KEY_STATUS] = status;
+  if (startTime.isString()) {
     data[pipeline::KEY_START_TIME] = startTime;
     data[pipeline::KEY_END_TIME] = endTime;
     data[pipeline::KEY_DURATION] = duration;
@@ -321,9 +462,8 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::create(drogon::HttpReq
     if (!parsed) {
       throw std::runtime_error("invalid pipeline");
     }
-    const Json::Value data = co_await postGenerate(body[pipeline::KEY_NAME].asString(), service.createStart(body[pipeline::KEY_INPUT]));
     response = http::Response::ok(service.createEnd(Json::Value(),
-                                                    data[pipeline::KEY_CONFIG_PATH],
+                                                    Json::Value(""),
                                                     body[pipeline::KEY_NAME],
                                                     body[pipeline::KEY_TYPE],
                                                     body[pipeline::KEY_ANALYZER_IDS],
@@ -374,10 +514,10 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::update(drogon::HttpReq
     if (!parsed) {
       throw std::runtime_error("invalid pipeline");
     }
-    const Json::Value data = co_await postGenerate(body[pipeline::KEY_NAME].asString(), service.createStart(body[pipeline::KEY_INPUT]));
+    const Json::Value configPath = current[pipeline::KEY_CONFIG_PATH].isString() ? current[pipeline::KEY_CONFIG_PATH] : Json::Value("");
     response = http::Response::ok(service.update(pipeline_id,
                                                     Json::Value(pipeline::STATUS_STOPPED),
-                                                    data[pipeline::KEY_CONFIG_PATH],
+                                                    configPath,
                                                     body[pipeline::KEY_NAME],
                                                     body[pipeline::KEY_TYPE],
                                                     body[pipeline::KEY_ANALYZER_IDS],
@@ -401,19 +541,35 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::start(drogon::HttpRequ
   const auto started = std::chrono::steady_clock::now();
   drogon::HttpResponsePtr response = http::Response::error(drogon::k500InternalServerError, pipeline::MSG_START_ERROR);
   std::string errorText;
+  Json::Value steps(Json::objectValue);
   try {
     const Json::Value current = service.get(pipeline_id);
     const std::string containerName = std::string(pipeline::CONTAINER_PREFIX) + current[pipeline::KEY_NAME].asString();
-    const std::string configPath = current[pipeline::KEY_CONFIG_PATH].asString();
     const std::string previous = current[pipeline::KEY_STATUS].asString();
     const bool starting = previous == pipeline::STATUS_STARTING;
     if (starting) {
       throw std::runtime_error(pipeline::ERR_BUSY);
     }
     service.setStatus(pipeline_id, pipeline::STATUS_STARTING);
+    std::string configPath;
+    try {
+      const Json::Value input = addTimeStampToInput(current[pipeline::KEY_INPUT], current[pipeline::KEY_NAME].asString());
+      service.setInput(pipeline_id, input);
+      Json::Value generated;
+      {
+        StepSpan span(steps, pipeline::STEP_GENERATE);
+        generated = co_await postGenerate(current[pipeline::KEY_NAME].asString(), service.createStart(input));
+      }
+      configPath = generated[pipeline::KEY_CONFIG_PATH].asString();
+      service.setConfigPath(pipeline_id, configPath);
+    } catch (const std::exception&) {
+      service.setStatus(pipeline_id, previous);
+      throw;
+    }
+    Kafka::shared().watch(current[pipeline::KEY_NAME].asString());
     bool up = false;
     try {
-      up = co_await runDeepstreamContainer(containerName, current[pipeline::KEY_NAME].asString());
+      up = co_await runDeepstreamContainer(containerName, current[pipeline::KEY_NAME].asString(), steps);
     } catch (const std::exception& error) {
       const bool busy = std::string(error.what()) == pipeline::ERR_BUSY;
       if (busy) {
@@ -422,30 +578,64 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::start(drogon::HttpRequ
       }
       up = false;
     }
-    Json::Value data = service.setStatus(pipeline_id, pipeline::STATUS_STOPPED);
+    Json::Value data = service.get(pipeline_id);
     if (up) {
       try {
-        const Json::Value polled = co_await postDeepstreamStart(containerName, configPath);
-        const bool terminal = polled.isObject() && polled.isMember(pipeline::KEY_STATUS) &&
-                              (polled[pipeline::KEY_STATUS].asString() == pipeline::STATUS_RUNNING ||
-                               polled[pipeline::KEY_STATUS].asString() == pipeline::STATUS_STOPPED);
-        const bool measured = terminal && polled.isMember(pipeline::KEY_START_TIME);
-        data = measured ? service.probe(pipeline_id,
-                                        polled[pipeline::KEY_STATUS].asString(),
-                                        polled[pipeline::KEY_START_TIME],
-                                        polled[pipeline::KEY_END_TIME],
-                                        polled[pipeline::KEY_DURATION])
-                        : (terminal ? service.setStatus(pipeline_id, polled[pipeline::KEY_STATUS].asString())
-                                    : service.get(pipeline_id));
+        const Json::Value polled = co_await postDeepstreamStart(containerName, configPath, steps);
+        const bool known = polled.isObject() && polled.isMember(pipeline::KEY_STATUS) && polled[pipeline::KEY_STATUS].isString();
+        const std::string polledStatus = known ? polled[pipeline::KEY_STATUS].asString() : std::string(pipeline::STATUS_STARTING);
+        const bool pending = polledStatus == pipeline::STATUS_STARTING;
+        const bool measured = !pending && polled.isMember(pipeline::KEY_START_TIME);
+        data = pending ? data
+                       : (measured ? service.probe(pipeline_id,
+                                                  polledStatus,
+                                                  polled[pipeline::KEY_START_TIME],
+                                                  polled[pipeline::KEY_END_TIME],
+                                                  polled[pipeline::KEY_DURATION])
+                                  : service.setStatus(pipeline_id, polledStatus));
       } catch (const std::exception&) {
         data = service.setStatus(pipeline_id, pipeline::STATUS_STOPPED);
       }
     }
+    data = up ? data : service.setStatus(pipeline_id, pipeline::STATUS_STOPPED);
     response = http::Response::ok(data, pipeline::MSG_START_OK);
   } catch (const std::exception& error) {
     const bool conflict = std::string(error.what()) == pipeline::ERR_BUSY;
     response = http::Response::error(conflict ? drogon::k409Conflict : drogon::k500InternalServerError,
                                      conflict ? pipeline::ERR_BUSY : pipeline::MSG_START_ERROR);
+    errorText = error.what();
+  }
+  logger.record(request, response, started, errorText, steps);
+  co_return response;
+}
+
+drogon::Task<drogon::HttpResponsePtr> PipelineController::removeLogs(drogon::HttpRequestPtr request,
+                                                                     std::string pipeline_id) {
+  const auto started = std::chrono::steady_clock::now();
+  drogon::HttpResponsePtr response = http::Response::error(drogon::k500InternalServerError, pipeline::MSG_LOGS_ERROR);
+  std::string errorText;
+  try {
+    const Json::Value current = service.get(pipeline_id);
+    const std::string baseUrl = "http://" + std::string(pipeline::CONTAINER_PREFIX) + current[pipeline::KEY_NAME].asString() +
+                                ":" + std::to_string(pipeline::DEEPSTREAM_PORT);
+    auto logsRequest = drogon::HttpRequest::newHttpRequest();
+    logsRequest->setMethod(drogon::Delete);
+    logsRequest->setPath(pipeline::DEEPSTREAM_LOGS_PATH);
+    auto deepstream = drogon::HttpClient::newHttpClient(baseUrl);
+    const auto cleared = co_await deepstream->sendRequestCoro(logsRequest, pipeline::DOCKER_TIMEOUT_SECONDS);
+    const bool conflict = cleared->statusCode() == drogon::k409Conflict;
+    const bool ok = cleared->statusCode() >= drogon::k200OK && cleared->statusCode() < drogon::k300MultipleChoices;
+    if (conflict) {
+      throw std::runtime_error(pipeline::ERR_LOGS_BUSY);
+    }
+    if (!ok) {
+      throw std::runtime_error("clear logs failed");
+    }
+    response = http::Response::ok(Json::Value(Json::objectValue), pipeline::MSG_LOGS_OK);
+  } catch (const std::exception& error) {
+    const bool conflict = std::string(error.what()) == pipeline::ERR_LOGS_BUSY;
+    response = http::Response::error(conflict ? drogon::k409Conflict : drogon::k500InternalServerError,
+                                     conflict ? pipeline::ERR_LOGS_BUSY : pipeline::MSG_LOGS_ERROR);
     errorText = error.what();
   }
   logger.record(request, response, started, errorText);
@@ -551,31 +741,44 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::remove(drogon::HttpReq
   const auto started = std::chrono::steady_clock::now();
   drogon::HttpResponsePtr response = http::Response::error(drogon::k500InternalServerError, pipeline::MSG_REMOVE_ERROR);
   std::string errorText;
+  Json::Value steps(Json::objectValue);
   try {
     const Json::Value current = service.get(pipeline_id);
     const std::string containerName = std::string(pipeline::CONTAINER_PREFIX) + current[pipeline::KEY_NAME].asString();
     auto docker = drogon::HttpClient::newHttpClient(pipeline::DOCKER_BASE_URL);
-    auto inspectRequest = drogon::HttpRequest::newHttpRequest();
-    inspectRequest->setMethod(drogon::Get);
-    inspectRequest->setPath("/containers/" + containerName + pipeline::DOCKER_JSON_PATH);
-    const auto inspected = co_await docker->sendRequestCoro(inspectRequest, pipeline::DOCKER_TIMEOUT_SECONDS);
+    drogon::HttpResponsePtr inspected;
+    {
+      StepSpan span(steps, pipeline::STEP_INSPECT);
+      auto inspectRequest = drogon::HttpRequest::newHttpRequest();
+      inspectRequest->setMethod(drogon::Get);
+      inspectRequest->setPath("/containers/" + containerName + pipeline::DOCKER_JSON_PATH);
+      inspected = co_await docker->sendRequestCoro(inspectRequest, pipeline::DOCKER_TIMEOUT_SECONDS);
+    }
     const bool exists = inspected->statusCode() == drogon::k200OK;
     if (inspected->statusCode() != drogon::k200OK && inspected->statusCode() != drogon::k404NotFound) {
       throw std::runtime_error("remove failed");
     }
     if (exists) {
-      auto stopRequest = drogon::HttpRequest::newHttpRequest();
-      stopRequest->setMethod(drogon::Post);
-      stopRequest->setPath("/containers/" + containerName + pipeline::DOCKER_STOP_PATH);
-      const auto stopped = co_await docker->sendRequestCoro(stopRequest, pipeline::DOCKER_TIMEOUT_SECONDS);
+      drogon::HttpResponsePtr stopped;
+      {
+        StepSpan span(steps, pipeline::STEP_STOP);
+        auto stopRequest = drogon::HttpRequest::newHttpRequest();
+        stopRequest->setMethod(drogon::Post);
+        stopRequest->setPath("/containers/" + containerName + pipeline::DOCKER_STOP_PATH);
+        stopped = co_await docker->sendRequestCoro(stopRequest, pipeline::DOCKER_TIMEOUT_SECONDS);
+      }
       const bool stoppedOk = stopped->statusCode() == drogon::k204NoContent || stopped->statusCode() == drogon::k304NotModified;
       if (!stoppedOk) {
         throw std::runtime_error("remove failed");
       }
-      auto deleteRequest = drogon::HttpRequest::newHttpRequest();
-      deleteRequest->setMethod(drogon::Delete);
-      deleteRequest->setPath("/containers/" + containerName);
-      const auto deleted = co_await docker->sendRequestCoro(deleteRequest, pipeline::DOCKER_TIMEOUT_SECONDS);
+      drogon::HttpResponsePtr deleted;
+      {
+        StepSpan span(steps, pipeline::STEP_DELETE);
+        auto deleteRequest = drogon::HttpRequest::newHttpRequest();
+        deleteRequest->setMethod(drogon::Delete);
+        deleteRequest->setPath("/containers/" + containerName);
+        deleted = co_await docker->sendRequestCoro(deleteRequest, pipeline::DOCKER_TIMEOUT_SECONDS);
+      }
       if (deleted->statusCode() != drogon::k204NoContent) {
         throw std::runtime_error("remove failed");
       }
@@ -585,6 +788,6 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::remove(drogon::HttpReq
     response = http::Response::error(drogon::k500InternalServerError, pipeline::MSG_REMOVE_ERROR);
     errorText = error.what();
   }
-  logger.record(request, response, started, errorText);
+  logger.record(request, response, started, errorText, steps);
   co_return response;
 }

@@ -6,7 +6,7 @@ ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 PROJECT_NAME="ai_stream2"
 NAME="${PROJECT_NAME}_generator"
 
-mkdir -p "${ROOT}/models" "${ROOT}/history/generator" "${ROOT}/logs"
+mkdir -p "${ROOT}/models" "${ROOT}/media" "${ROOT}/event" "${ROOT}/history/generator" "${ROOT}/logs"
 
 docker network create "${PROJECT_NAME}_default" 2>/dev/null || true
 docker rm -f "${NAME}" 2>/dev/null || true
@@ -17,6 +17,8 @@ docker run -d \
   -p 8091:8091 \
   -v /etc/localtime:/etc/localtime:ro \
   -v "${ROOT}/models:/root/models" \
+  -v "${ROOT}/media:/root/media" \
+  -v "${ROOT}/event:/root/event" \
   -v "${ROOT}/history:/root/history" \
   -v "${ROOT}/logs:/root/logs" \
   -v "${ROOT}/attachments:/root/attachments" \

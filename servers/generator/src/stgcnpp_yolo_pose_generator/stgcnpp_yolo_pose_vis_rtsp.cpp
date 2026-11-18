@@ -74,15 +74,15 @@ void StgcnppYoloPoseVisRtspGenerator::add() {
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
     appendNode("stgcnppcollector", "stgcnppcollector", addCollector());
     appendNode("dslogger", "dslogger", addDslogger(logger.value("interval", 1), pipeline::PAGE_STGCNPP));
+    if (drawer.has_value()) {
+        appendNode(StgcnppYoloPose::DRAWER_ELEMENT, StgcnppYoloPose::DRAWER_ELEMENT, StgcnppYoloPose::drawerProperties(*drawer));
+    }
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     index = 0;
     for (auto item = streams.begin(); item != streams.end(); ++item) {
         const std::string suffix = std::to_string(index);
         appendNode("queue", "queue_demux" + suffix, addQueue());
         appendNode("nvvideoconvert", "nvvideoconvert" + suffix, addNvvideoconvert(gpuId));
-        if (drawer.has_value()) {
-            appendNode(StgcnppYoloPose::DRAWER_ELEMENT, std::string(StgcnppYoloPose::DRAWER_ELEMENT) + suffix, StgcnppYoloPose::drawerProperties(*drawer));
-        }
         appendNode("nvosdbin", "nvosdbin" + suffix, addNvosdbin(gpuId, true, true, false));
         appendNode("queue", "queue_enc" + suffix, addQueue());
 
@@ -121,16 +121,16 @@ void StgcnppYoloPoseVisRtspGenerator::link() {
     edges["stgcnppactionlabel"] = "nvdsanalytics";
     edges["nvdsanalytics"] = "stgcnppcollector";
     edges["stgcnppcollector"] = "dslogger";
-    edges["dslogger"] = "nvstreamdemux";
+    const std::string drawerName = StgcnppYoloPose::DRAWER_ELEMENT;
+    const std::string demuxSource = drawer.has_value() ? drawerName : std::string("nvstreamdemux");
+    if (drawer.has_value()) {
+        edges[drawerName] = "nvstreamdemux";
+    }
+    edges["dslogger"] = demuxSource;
     for (int index = 0; index < runtimeBatchSize; ++index) {
         const std::string suffix = std::to_string(index);
-        const std::string drawerName = std::string(StgcnppYoloPose::DRAWER_ELEMENT) + suffix;
         edges["queue_demux" + suffix] = "nvvideoconvert" + suffix;
-        const std::string osdPrev = drawer.has_value() ? drawerName : "nvosdbin" + suffix;
-        edges["nvvideoconvert" + suffix] = osdPrev;
-        if (drawer.has_value()) {
-            edges[drawerName] = "nvosdbin" + suffix;
-        }
+        edges["nvvideoconvert" + suffix] = "nvosdbin" + suffix;
         edges["nvosdbin" + suffix] = "queue_enc" + suffix;
         edges["queue_enc" + suffix] = "nvv4l2h264enc" + suffix;
         edges["nvv4l2h264enc" + suffix] = "h264parse" + suffix;

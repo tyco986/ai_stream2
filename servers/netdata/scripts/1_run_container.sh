@@ -4,9 +4,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-# shellcheck source=../../../scripts/load_project_env.sh
-source "${ROOT}/scripts/load_project_env.sh"
-
+PROJECT_NAME=ai_stream2
 NAME="${NETDATA_CONTAINER_NAME:-${PROJECT_NAME}_netdata}"
 NET="${NETDATA_NETWORK:-${PROJECT_NAME}_default}"
 IMG="${NETDATA_IMAGE:-netdata/netdata:stable}"
@@ -42,7 +40,7 @@ docker run -d \
   -v "${VOL_CONFIG}:/etc/netdata" \
   -v "${VOL_LIB}:/var/lib/netdata" \
   -v "${VOL_CACHE}:/var/cache/netdata" \
-  -v /:/host/root:ro,rslave \
+  -v /:/host/root:ro \
   -v /etc/passwd:/host/etc/passwd:ro \
   -v /etc/group:/host/etc/group:ro \
   -v /etc/localtime:/etc/localtime:ro \

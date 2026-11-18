@@ -14,9 +14,7 @@
 #include <vector>
 
 #include <csignal>
-#include <fcntl.h>
 #include <sys/mman.h>
-#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -33,6 +31,12 @@ PipelineRunner::PipelineRunner(std::string configDir)
 
 PipelineRunner::~PipelineRunner() {
     std::lock_guard<std::mutex> lock(mutex);
+    if (pid > 0) {
+        kill(pid, SIGKILL);
+        int processStatus = 0;
+        waitpid(pid, &processStatus, 0);
+        pid = -1;
+    }
     if (table != nullptr) {
         munmap(table, sizeof(SourceLivenessTable));
         table = nullptr;
@@ -43,6 +47,22 @@ void PipelineRunner::recordEnded(std::chrono::system_clock::time_point time) {
     if (!ended.has_value()) {
         ended = time;
     }
+}
+
+void PipelineRunner::markEnded() const {
+    const auto now = std::chrono::system_clock::now().time_since_epoch();
+    const std::int64_t ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now).count();
+    if (table != nullptr) {
+        table->endedNs.store(ns, std::memory_order_relaxed);
+    }
+}
+
+std::chrono::system_clock::time_point PipelineRunner::pipelineEnded(std::chrono::system_clock::time_point fallback) const {
+    const std::int64_t endedNs = table != nullptr ? table->endedNs.load(std::memory_order_relaxed) : 0;
+    const auto stamped = std::chrono::system_clock::time_point(
+        std::chrono::duration_cast<std::chrono::system_clock::duration>(std::chrono::nanoseconds(endedNs)));
+    const auto when = endedNs > 0 ? stamped : fallback;
+    return when;
 }
 
 std::string PipelineRunner::loadPipelineName() const {
@@ -179,21 +199,6 @@ const char* PipelineRunner::slotStatus(const SourceLivenessSlot& slot, std::int6
     return status;
 }
 
-void PipelineRunner::redirectLog() const {
-    const std::filesystem::path directory = std::filesystem::path(pipeline_runner::LOG_DIR) / pipelineName;
-    std::filesystem::create_directories(directory);
-    const std::filesystem::path file = directory / pipeline_runner::LOG_FILE;
-    const int fd = ::open(file.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
-    const bool opened = fd >= 0;
-    if (opened) {
-        ::dup2(fd, STDOUT_FILENO);
-        ::dup2(fd, STDERR_FILENO);
-        ::close(fd);
-        std::setvbuf(stdout, nullptr, _IOLBF, 0);
-        std::setvbuf(stderr, nullptr, _IOLBF, 0);
-    }
-}
-
 void PipelineRunner::runPipeline() {
     const YAML::Node pipelineYaml = loadPipelineYaml();
     const std::filesystem::path pipelinePath =
@@ -212,6 +217,7 @@ void PipelineRunner::run() {
     }
     if (table != nullptr) {
         new (table) SourceLivenessTable();
+        table->count.store(pipeline_runner::COUNT_UNSET, std::memory_order_relaxed);
     }
     const pid_t child = fork();
     int code = 0;
@@ -219,13 +225,15 @@ void PipelineRunner::run() {
         // The child inherits the HTTP server. An exception must exit here, otherwise
         // it is reported as a second /start/local response and the child stays alive.
         pipelineName = loadPipelineName();
-        redirectLog();
+        gstreamerLogger.start(pipelineName);
         try {
             runPipeline();
         } catch (const std::exception& error) {
             std::fprintf(stderr, "%s\n", error.what());
             code = 1;
         }
+        markEnded();
+        gstreamerLogger.stop();
         std::fflush(stdout);
         std::fflush(stderr);
         _exit(code);
@@ -243,24 +251,33 @@ PipelineStatus PipelineRunner::status() {
     const pid_t result = pid > 0 ? waitpid(pid, &processStatus, WNOHANG) : -1;
     const bool alive = result == 0;
     const auto now = std::chrono::system_clock::now();
-    if (pid > 0 && !alive) {
-        recordEnded(now);
+    const std::int64_t endedNs = table != nullptr ? table->endedNs.load(std::memory_order_relaxed) : 0;
+    const bool reaped = pid > 0 && !alive;
+    const bool active = alive && endedNs == 0;
+    if (reaped || endedNs > 0) {
+        recordEnded(pipelineEnded(now));
     }
-    pid = alive ? pid : -1;
+    pid = reaped ? static_cast<pid_t>(-1) : pid;
     const auto end = ended.value_or(now);
     const auto nowNs = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
     const int intervalSec = table != nullptr ? table->reconnectIntervalSec.load(std::memory_order_relaxed) : pipeline_runner::STALE_SEC;
     const int count = table != nullptr ? table->count.load(std::memory_order_relaxed) : 0;
+    bool seen = false;
     bool degraded = false;
     std::vector<StreamStatus> streams;
-    for (int index = 0; alive && table != nullptr && index < count && index < pipeline_runner::SLOT_COUNT; ++index) {
+    for (int index = 0; active && table != nullptr && index < count && index < pipeline_runner::SLOT_COUNT; ++index) {
+        const std::int64_t last = table->slots[index].lastFrameNs.load(std::memory_order_relaxed);
         const char* slot = slotStatus(table->slots[index], nowNs, intervalSec);
+        seen = seen || last > 0;
         degraded = degraded || slot != pipeline::STATUS_RUNNING;
         streams.push_back(StreamStatus{index, slot});
     }
+    const bool starting = active && table != nullptr && (count < 0 || (count > 0 && !seen));
     PipelineStatus report;
-    report.status = !alive ? pipeline::STATUS_STOPPED : (degraded ? pipeline::STATUS_DEGRADED : pipeline::STATUS_RUNNING);
-    report.streams = alive && table != nullptr ? std::optional<std::vector<StreamStatus>>(std::move(streams)) : std::nullopt;
+    report.status = active ? (starting ? pipeline::STATUS_STARTING
+                                       : (degraded ? pipeline::STATUS_DEGRADED : pipeline::STATUS_RUNNING))
+                           : pipeline::STATUS_STOPPED;
+    report.streams = active && table != nullptr ? std::optional<std::vector<StreamStatus>>(std::move(streams)) : std::nullopt;
     report.startTime = started;
     report.endTime = ended;
     report.duration = started.has_value()
@@ -269,12 +286,19 @@ PipelineStatus PipelineRunner::status() {
     return report;
 }
 
+bool PipelineRunner::alive() {
+    status();
+    std::lock_guard<std::mutex> lock(mutex);
+    return pid > 0;
+}
+
 void PipelineRunner::stop() {
+    const auto when = pipelineEnded(std::chrono::system_clock::now());
     if (pid > 0) {
         kill(pid, SIGKILL);
         int processStatus = 0;
         waitpid(pid, &processStatus, 0);
-        recordEnded(std::chrono::system_clock::now());
+        recordEnded(when);
         pid = -1;
     }
 }

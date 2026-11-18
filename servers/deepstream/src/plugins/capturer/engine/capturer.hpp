@@ -35,14 +35,13 @@ struct CaptureJob {
 
 class Capturer {
 public:
-    explicit Capturer(const char* captureCodes);
+    Capturer(const char* captureCodes, const char* output);
     virtual ~Capturer();
 
     Capturer(const Capturer&) = delete;
     Capturer& operator=(const Capturer&) = delete;
 
     bool capture(NvBufSurface* surface, NvDsFrameMeta* frame);
-    void setPipelineName(const std::string& name);
 
 protected:
     std::string outputRoot() const;
@@ -51,7 +50,7 @@ protected:
     void stop();
 
     std::string captureCodes;
-    std::string pipelineName;
+    std::string output;
 
 private:
     bool codesHit(const EventMeta& event) const;
