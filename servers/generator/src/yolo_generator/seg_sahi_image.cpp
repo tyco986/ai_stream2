@@ -36,7 +36,7 @@ void SegSahiImageGenerator::add() {
     int index = 0;
     const int gpuId = pgieGenerator->config["property"]["gpu-id"].as<int>();
     for (const nlohmann::json& item : images) {
-        appendNode("nvurisrcbin", "nvurisrcbin" + std::to_string(index), addNvurisrcbin(fileUri(item.get<std::string>()), true, 1));
+        appendNode("nvurisrcbin", "nvurisrcbin" + std::to_string(index), addNvurisrcbin(fileUri(item.at("path").get<std::string>()), true, 1));
         index += 1;
     }
     appendNode(
@@ -71,7 +71,7 @@ void SegSahiImageGenerator::add() {
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     for (int streamIndex = 0; streamIndex < muxBatchSize; ++streamIndex) {
         const std::string suffix = std::to_string(streamIndex);
-        const std::filesystem::path source(images.at(streamIndex).get<std::string>());
+        const std::filesystem::path source(images.at(streamIndex).at("path").get<std::string>());
         const std::filesystem::path sink = filesinkOutput / (source.stem().string() + ".jpg");
         appendNode("queue", "queue_demux" + suffix, addQueue());
         appendNode("nvosdbin", "nvosdbin" + suffix, addNvosdbin(gpuId, true, true, true));

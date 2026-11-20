@@ -28,20 +28,47 @@ void EventController::list(const drogon::HttpRequestPtr& request,
   }
 }
 
-void EventController::setStatus(const drogon::HttpRequestPtr& request,
-                                std::function<void(const drogon::HttpResponsePtr&)>&& callback,
-                                const std::string& event_id) {
+void EventController::read(const drogon::HttpRequestPtr& request,
+                           std::function<void(const drogon::HttpResponsePtr&)>&& callback,
+                           const std::string& event_id) {
+  setRead(request, std::move(callback), event_id, true, event::MSG_READ_OK, event::MSG_READ_ERROR);
+}
+
+void EventController::unread(const drogon::HttpRequestPtr& request,
+                             std::function<void(const drogon::HttpResponsePtr&)>&& callback,
+                             const std::string& event_id) {
+  setRead(request, std::move(callback), event_id, false, event::MSG_UNREAD_OK, event::MSG_UNREAD_ERROR);
+}
+
+void EventController::remove(const drogon::HttpRequestPtr& request,
+                             std::function<void(const drogon::HttpResponsePtr&)>&& callback,
+                             const std::string& event_id) {
   const auto started = std::chrono::steady_clock::now();
-  const auto body = request->getJsonObject();
-  const Json::Value payload = body ? *body : Json::Value(Json::objectValue);
   try {
-    const auto response = http::Response::ok(service.setStatus(event_id, payload[event::KEY_STATUS].asString()),
-                               event::MSG_STATUS_OK);
+    const auto response = http::Response::ok(service.remove(event_id), event::MSG_REMOVE_OK);
     logger.record(request, response, started);
     callback(response);
   } catch (const std::exception& error) {
-    const auto response = http::Response::error(drogon::k500InternalServerError, event::MSG_STATUS_ERROR);
+    const auto response = http::Response::error(drogon::k500InternalServerError, event::MSG_REMOVE_ERROR);
     logger.record(request, response, started, error.what());
+    callback(response);
+  }
+}
+
+void EventController::setRead(const drogon::HttpRequestPtr& request,
+                              std::function<void(const drogon::HttpResponsePtr&)>&& callback,
+                              const std::string& eventId,
+                              bool read,
+                              const char* ok,
+                              const char* error) {
+  const auto started = std::chrono::steady_clock::now();
+  try {
+    const auto response = http::Response::ok(service.setRead(eventId, read), ok);
+    logger.record(request, response, started);
+    callback(response);
+  } catch (const std::exception& failure) {
+    const auto response = http::Response::error(drogon::k500InternalServerError, error);
+    logger.record(request, response, started, failure.what());
     callback(response);
   }
 }

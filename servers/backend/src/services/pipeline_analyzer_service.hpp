@@ -18,8 +18,6 @@ class PipelineAnalyzerService {
   Json::Value remove(const std::string& analyzerId);
 
  private:
-  Json::Value getPipelineRefCurrentAnalyzer(const std::string& analyzerId);
-  void updatePipelineInput(const Json::Value& analyzer, const Json::Value& pipelines);
   Json::Value row2json(const drogon::orm::Row& row);
 
   drogon::orm::DbClientPtr dbClient;

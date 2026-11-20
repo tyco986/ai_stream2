@@ -2,7 +2,7 @@
 
 #include "base_generator/base_event.hpp"
 #include "constants/subelement_const.hpp"
-#include "subelement_generator/kafka.hpp"
+#include "subelement_generator/redis.hpp"
 #include "subelement_generator/nvdsanalytics.hpp"
 #include "subelement_generator/nvmsgconv.hpp"
 #include "subelement_generator/nvtracker.hpp"
@@ -20,7 +20,8 @@
 
 // Generate YOLO event video pipeline YAML.
 //
-// Reads a batch of video files. Width and height must match. After demux each stream has its
+// Reads a batch of video files. Each item supplies path, width, height, and fps.
+// Width and height must match. After demux each stream has its
 // own raw and vis capture branch. The headless tail ends at the vis capturer.
 //
 // Topology::
@@ -38,7 +39,7 @@ public:
     static constexpr const char* TRACKER_CONFIG_NAME = "nvtracker.yml";
     static constexpr const char* ANALYTICS_CONFIG_NAME = "nvdsanalytics.yml";
     static constexpr const char* MSGCONV_CONFIG_NAME = "nvmsgconv.yml";
-    static constexpr const char* KAFKA_CONFIG_NAME = "kafka.txt";
+    static constexpr const char* REDIS_CONFIG_NAME = "redis.txt";
     static constexpr const char* PARAMS_CONFIG_NAME = "params.yml";
 
     using ConfigFile = std::variant<YAML::Node, std::string>;
@@ -63,9 +64,9 @@ public:
     void initPgie();
     void initNvdsanalytics();
     void initNvtracker();
-    std::vector<std::string> kafkaStreams() const;
+    std::vector<std::string> redisStreams() const;
     void initNvmsgconv();
-    void initKafka();
+    void initRedis();
     virtual void applySavePaths(YAML::Node pipelineDocument, const std::filesystem::path& configSaveDir);
     std::map<std::string, std::string> documents(const std::filesystem::path& configSaveDir);
     virtual void write(const std::filesystem::path& configSaveDir);
@@ -86,7 +87,7 @@ public:
     int fps = 0;
     std::vector<int> videoFps;
     int runtimeBatchSize = 0;
-    std::string kafkaTopic;
+    std::string redisTopic;
     std::string msg2pLib = subelement::MSG2P_LIB_PRESENCE;
     bool enableNvdsanalytics = false;
     bool enableNvtracker = false;
@@ -97,7 +98,7 @@ public:
     std::optional<PgieGenerator> pgieGenerator;
     std::optional<NvtrackerGenerator> nvtrackerGenerator;
     std::optional<NvmsgconvGenerator> nvmsgconvGenerator;
-    std::optional<KafkaGenerator> kafkaGenerator;
+    std::optional<RedisGenerator> redisGenerator;
     std::map<std::string, ConfigFile> files;
 
 protected:

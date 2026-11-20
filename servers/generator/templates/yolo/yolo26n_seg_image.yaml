@@ -19,6 +19,10 @@ drawer:
   show_label: true
   show_mask: true
 images:
-  - /root/attachments/images/video1.png
-  - /root/attachments/images/video2.png
+  - path: /root/attachments/images/video1.png
+    width: 1920
+    height: 1080
+  - path: /root/attachments/images/video2.png
+    width: 1920
+    height: 1080
 filesink_output: /root/media/pipeline/yolo26n_seg_image

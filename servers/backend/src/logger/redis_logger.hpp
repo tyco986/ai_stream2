@@ -4,7 +4,7 @@
 
 #include <string>
 
-class KafkaLogger {
+class RedisLogger {
  public:
   static void write(const std::string& topic, const Json::Value& payload);
 

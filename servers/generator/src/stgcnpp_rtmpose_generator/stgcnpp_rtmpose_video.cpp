@@ -61,7 +61,7 @@ void StgcnppRtmposeVideoGenerator::add() {
     int index = 0;
     const int gpuId = pgieGenerator->config["property"]["gpu-id"].as<int>();
     for (const nlohmann::json& item : videos) {
-        appendNode("nvurisrcbin", "nvurisrcbin" + std::to_string(index), addNvurisrcbin(fileUri(item.get<std::string>()), true));
+        appendNode("nvurisrcbin", "nvurisrcbin" + std::to_string(index), addNvurisrcbin(fileUri(item.at("path").get<std::string>()), true));
         index += 1;
     }
     YAML::Node mux = addNvstreammux(runtimeBatchSize, width, height, true, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId, false);

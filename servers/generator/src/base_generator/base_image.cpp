@@ -9,11 +9,10 @@
 #include <cctype>
 #include <filesystem>
 #include <fstream>
+#include <set>
 #include <stdexcept>
 #include <utility>
 #include <variant>
-
-#include <opencv2/imgcodecs.hpp>
 
 static YAML::Node jsonToYaml(const nlohmann::json& value) {
     YAML::Node node;
@@ -64,18 +63,6 @@ std::string BaseImageGenerator::fileUri(const std::filesystem::path& path) {
     return uri;
 }
 
-static void probeImage(const std::filesystem::path& path, int& width, int& height) {
-    const cv::Mat image = cv::imread(path.string(), cv::IMREAD_UNCHANGED);
-    if (image.empty()) {
-        throw std::runtime_error("input image not found: " + path.string());
-    }
-    width = image.cols;
-    height = image.rows;
-    if (width <= 0 || height <= 0) {
-        throw std::runtime_error("invalid image size: " + path.string());
-    }
-}
-
 BaseImageGenerator::BaseImageGenerator(
     std::string pipelineName,
     nlohmann::json images,
@@ -100,7 +87,7 @@ void BaseImageGenerator::init() {
     initImages();
     initPgie();
     initNvdsanalytics();
-    initKafka();
+    initRedis();
     initParams();
     initPipeline();
 }
@@ -109,19 +96,25 @@ void BaseImageGenerator::initImages() {
     if (!images.is_array() || images.empty()) {
         throw std::invalid_argument("images cannot be empty");
     }
-    int index = 0;
+    std::set<int> widths;
+    std::set<int> heights;
     for (const nlohmann::json& item : images) {
-        int imageWidth = 0;
-        int imageHeight = 0;
-        probeImage(item.get<std::string>(), imageWidth, imageHeight);
-        if (index == 0) {
-            width = imageWidth;
-            height = imageHeight;
-        } else if (imageWidth != width || imageHeight != height) {
-            throw std::invalid_argument("images have inconsistent resolution");
+        const int imageWidth = item.at("width").get<int>();
+        const int imageHeight = item.at("height").get<int>();
+        if (imageWidth <= 0 || imageHeight <= 0) {
+            throw std::invalid_argument("invalid image size: " + item.at("path").get<std::string>());
         }
-        index += 1;
+        widths.insert(imageWidth);
+        heights.insert(imageHeight);
     }
+    if (widths.size() != 1) {
+        throw std::invalid_argument("images have inconsistent width");
+    }
+    if (heights.size() != 1) {
+        throw std::invalid_argument("images have inconsistent height");
+    }
+    width = *widths.begin();
+    height = *heights.begin();
     runtimeBatchSize = static_cast<int>(images.size());
     std::filesystem::create_directories(filesinkOutput);
 }
@@ -195,10 +188,10 @@ void BaseImageGenerator::initNvdsanalytics() {
     files.insert_or_assign(ANALYTICS_CONFIG_NAME, ConfigFile(analytics));
 }
 
-void BaseImageGenerator::initKafka() {
-    kafkaGenerator.emplace();
-    kafkaTopic = std::string(subelement::KAFKA_TOPIC_PREFIX) + pipelineName;
-    files.insert_or_assign(KAFKA_CONFIG_NAME, ConfigFile(kafkaGenerator->config));
+void BaseImageGenerator::initRedis() {
+    redisGenerator.emplace();
+    redisTopic = std::string(subelement::REDIS_TOPIC_PREFIX) + pipelineName;
+    files.insert_or_assign(REDIS_CONFIG_NAME, ConfigFile(redisGenerator->config));
 }
 
 void BaseImageGenerator::applySavePaths(YAML::Node pipelineDocument, const std::filesystem::path& configSaveDir) {
@@ -287,7 +280,7 @@ void BaseImageGenerator::add() {
     int index = 0;
     const int gpuId = pgieGenerator->config["property"]["gpu-id"].as<int>();
     for (const nlohmann::json& item : images) {
-        appendNode("nvurisrcbin", "nvurisrcbin" + std::to_string(index), addNvurisrcbin(fileUri(item.get<std::string>()), true, 1));
+        appendNode("nvurisrcbin", "nvurisrcbin" + std::to_string(index), addNvurisrcbin(fileUri(item.at("path").get<std::string>()), true, 1));
         index += 1;
     }
     appendNode("nvstreammux", "nvstreammux", addNvstreammux(runtimeBatchSize, width, height, false, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId, false));
@@ -302,7 +295,7 @@ void BaseImageGenerator::add() {
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     for (int streamIndex = 0; streamIndex < runtimeBatchSize; ++streamIndex) {
         const std::string suffix = std::to_string(streamIndex);
-        const std::filesystem::path source(images.at(streamIndex).get<std::string>());
+        const std::filesystem::path source(images.at(streamIndex).at("path").get<std::string>());
         const std::filesystem::path sink = filesinkOutput / (source.stem().string() + ".jpg");
         appendNode("queue", "queue_demux" + suffix, addQueue());
         appendNode("nvosdbin", "nvosdbin" + suffix, addNvosdbin(gpuId, true, true));

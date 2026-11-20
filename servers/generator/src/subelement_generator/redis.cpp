@@ -1,14 +1,14 @@
-#include "subelement_generator/kafka.hpp"
+#include "subelement_generator/redis.hpp"
 
 #include "constants/subelement_const.hpp"
 
 #include <fstream>
 
-KafkaGenerator::KafkaGenerator()
-    : config(subelement::KAFKA_CONFIG) {
+RedisGenerator::RedisGenerator()
+    : config(subelement::REDIS_CONFIG) {
 }
 
-void KafkaGenerator::write(const std::filesystem::path& savePath) {
+void RedisGenerator::write(const std::filesystem::path& savePath) {
     const std::filesystem::path path = std::filesystem::absolute(savePath);
     std::filesystem::create_directories(path.parent_path());
     std::ofstream handle;

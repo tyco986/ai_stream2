@@ -8,7 +8,7 @@ JSON 成功外壳：`{success, message, data}`。
 
 行字段：`ts`、`method`、`url`、`code`、`input`、`output`、`latency`、`ip`、`in_bytes`、`out_bytes`、`error`、`header`。`input`、`output` 正文是 JSON 时嵌成值，否则为字符串。`header` 为请求头对象，只含 `authorization`、`accept-language`。`ts` 为本地时间，毫秒三位。`latency` 为毫秒，保留两位小数。中文按 UTF-8 写出。
 
-`page`：`stream`、`stream_group`、`model`、`pipeline`、`pipeline_gie`、`pipeline_analyzer`、`device`、`server`、`preview`、`user_group`、`user`、`event`、`notice`、`media`。
+`page`：`stream`、`stream_group`、`model`、`pipeline`、`pipeline_gie`、`pipeline_analyzer`、`device`、`preview`、`user_group`、`user`、`event`、`notice`、`media`。
 
 ---
 

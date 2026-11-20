@@ -76,6 +76,17 @@ inline const char* MEDIA_FILENAME = "media.zip";
 inline const char* KEY_MODEL_ZIP = "model_zip";
 inline const char* KEY_VIDEOS = "videos";
 inline const char* KEY_IMAGES = "images";
+inline const char* KEY_STREAMS = "streams";
+inline const char* KEY_URL = "url";
+inline const char* KEY_WIDTH = "width";
+inline const char* KEY_HEIGHT = "height";
+inline const char* KEY_FPS = "fps";
+inline const char* KEY_PATH = "path";
+inline const char* KEY_PGIE = "pgie";
+inline const char* KEY_SGIE = "sgie";
+inline const char* KEY_RTMPOSE = "rtmpose";
+inline const char* KEY_STGCNPP = "stgcnpp";
+inline const char* ANALYZER_STREAM_SUFFIX = "-stream";
 inline const char* KEY_EVENT_CODER = "event_coder";
 inline const char* KEY_FILESINK_OUTPUT = "filesink_output";
 inline const char* KEY_CAPTURER_OUTPUT = "capturer_output";
@@ -184,19 +195,44 @@ inline const char* MSG_PROBE_ERROR = "pipeline_probe_error";
 inline const char* MSG_LOGS_OK = "pipeline_logs_ok";
 inline const char* MSG_LOGS_ERROR = "pipeline_logs_error";
 
+inline const char* SQL_GIE_USED =
+    "input->>'pgie' = $1 OR input->>'sgie' = $1 OR input->>'rtmpose' = $1 OR input->>'stgcnpp' = $1";
+inline const char* SQL_ANALYZER_USED =
+    "EXISTS (SELECT 1 FROM jsonb_path_query(input, '$.streams[*].analyzer') AS slot(body) WHERE slot.body #>> '{}' = $1) "
+    "OR EXISTS (SELECT 1 FROM jsonb_path_query(input, '$.videos[*].analyzer') AS slot(body) WHERE slot.body #>> '{}' = $1) "
+    "OR EXISTS (SELECT 1 FROM jsonb_path_query(input, '$.images[*].analyzer') AS slot(body) WHERE slot.body #>> '{}' = $1)";
 inline const char* SQL_REF_COLUMNS =
-    "array_to_json(stream_ids)::text AS stream_ids, "
-    "COALESCE((SELECT json_agg(stream.name ORDER BY item.ord) FROM unnest(pipeline.stream_ids) WITH ORDINALITY AS item(id, ord) "
-    "LEFT JOIN stream ON stream.id = item.id), '[]'::json)::text AS stream_names, "
-    "array_to_json(media_ids)::text AS media_ids, "
-    "COALESCE((SELECT json_agg(media.name ORDER BY item.ord) FROM unnest(pipeline.media_ids) WITH ORDINALITY AS item(id, ord) "
-    "LEFT JOIN media ON media.id = item.id), '[]'::json)::text AS media_names, "
-    "array_to_json(gie_ids)::text AS gie_ids, "
-    "COALESCE((SELECT json_agg(pipeline_gie.name ORDER BY item.ord) FROM unnest(pipeline.gie_ids) WITH ORDINALITY AS item(id, ord) "
-    "LEFT JOIN pipeline_gie ON pipeline_gie.id = item.id), '[]'::json)::text AS gie_names, "
-    "array_to_json(analyzer_ids)::text AS analyzer_ids, "
-    "COALESCE((SELECT json_agg(pipeline_analyzer.name ORDER BY item.ord) FROM unnest(pipeline.analyzer_ids) WITH ORDINALITY AS item(id, ord) "
-    "LEFT JOIN pipeline_analyzer ON pipeline_analyzer.id = item.id), '[]'::json)::text AS analyzer_names, ";
+    "COALESCE((SELECT json_agg(item.id ORDER BY item.ord) FROM ("
+    "SELECT elem->>'id' AS id, ord FROM jsonb_array_elements(COALESCE(input->'streams', '[]'::jsonb)) WITH ORDINALITY AS src(elem, ord)) item "
+    "WHERE item.id IS NOT NULL), '[]'::json)::text AS stream_ids, "
+    "COALESCE((SELECT json_agg(stream.name ORDER BY item.ord) FROM ("
+    "SELECT elem->>'id' AS id, ord FROM jsonb_array_elements(COALESCE(input->'streams', '[]'::jsonb)) WITH ORDINALITY AS src(elem, ord)) item "
+    "LEFT JOIN stream ON stream.id::text = item.id WHERE item.id IS NOT NULL), '[]'::json)::text AS stream_names, "
+    "COALESCE((SELECT json_agg(item.id ORDER BY item.ord) FROM ("
+    "SELECT elem->>'id' AS id, ord FROM jsonb_array_elements(COALESCE(input->'videos', '[]'::jsonb)) WITH ORDINALITY AS src(elem, ord) "
+    "UNION ALL SELECT elem->>'id', ord FROM jsonb_array_elements(COALESCE(input->'images', '[]'::jsonb)) WITH ORDINALITY AS src(elem, ord)) item "
+    "WHERE item.id IS NOT NULL), '[]'::json)::text AS media_ids, "
+    "COALESCE((SELECT json_agg(media.name ORDER BY item.ord) FROM ("
+    "SELECT elem->>'id' AS id, ord FROM jsonb_array_elements(COALESCE(input->'videos', '[]'::jsonb)) WITH ORDINALITY AS src(elem, ord) "
+    "UNION ALL SELECT elem->>'id', ord FROM jsonb_array_elements(COALESCE(input->'images', '[]'::jsonb)) WITH ORDINALITY AS src(elem, ord)) item "
+    "LEFT JOIN media ON media.id::text = item.id WHERE item.id IS NOT NULL), '[]'::json)::text AS media_names, "
+    "COALESCE((SELECT json_agg(item.id ORDER BY item.ord) FROM ("
+    "SELECT 1 AS ord, input->>'pgie' AS id UNION ALL SELECT 2, input->>'sgie' "
+    "UNION ALL SELECT 3, input->>'rtmpose' UNION ALL SELECT 4, input->>'stgcnpp') item WHERE item.id IS NOT NULL), '[]'::json)::text AS gie_ids, "
+    "COALESCE((SELECT json_agg(pipeline_gie.name ORDER BY item.ord) FROM ("
+    "SELECT 1 AS ord, input->>'pgie' AS id UNION ALL SELECT 2, input->>'sgie' "
+    "UNION ALL SELECT 3, input->>'rtmpose' UNION ALL SELECT 4, input->>'stgcnpp') item "
+    "LEFT JOIN pipeline_gie ON pipeline_gie.id::text = item.id WHERE item.id IS NOT NULL), '[]'::json)::text AS gie_names, "
+    "COALESCE((SELECT json_agg(item.id) FROM ("
+    "SELECT slot.body #>> '{}' AS id FROM jsonb_path_query(input, '$.streams[*].analyzer') AS slot(body) "
+    "UNION ALL SELECT slot.body #>> '{}' FROM jsonb_path_query(input, '$.videos[*].analyzer') AS slot(body) "
+    "UNION ALL SELECT slot.body #>> '{}' FROM jsonb_path_query(input, '$.images[*].analyzer') AS slot(body)) item "
+    "WHERE item.id IS NOT NULL), '[]'::json)::text AS analyzer_ids, "
+    "COALESCE((SELECT json_agg(pipeline_analyzer.name) FROM ("
+    "SELECT slot.body #>> '{}' AS id FROM jsonb_path_query(input, '$.streams[*].analyzer') AS slot(body) "
+    "UNION ALL SELECT slot.body #>> '{}' FROM jsonb_path_query(input, '$.videos[*].analyzer') AS slot(body) "
+    "UNION ALL SELECT slot.body #>> '{}' FROM jsonb_path_query(input, '$.images[*].analyzer') AS slot(body)) item "
+    "LEFT JOIN pipeline_analyzer ON pipeline_analyzer.id::text = item.id WHERE item.id IS NOT NULL), '[]'::json)::text AS analyzer_names, ";
 
 inline const char* QUERY_SEARCH = "search";
 inline const char* QUERY_PAGE = "page";

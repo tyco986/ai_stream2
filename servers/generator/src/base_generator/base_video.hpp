@@ -1,6 +1,6 @@
 #pragma once
 
-#include "subelement_generator/kafka.hpp"
+#include "subelement_generator/redis.hpp"
 #include "subelement_generator/nvdsanalytics.hpp"
 #include "subelement_generator/nvtracker.hpp"
 #include "subelement_generator/pgie.hpp"
@@ -20,7 +20,8 @@
 
 // Generate YOLO video pipeline YAML (headless, ends at fakesink).
 //
-// Reads a batch of video files. Width and height must match. live-source is on, so a
+// Reads a batch of video files. Each item supplies path, width, height, and fps.
+// Width and height must match. live-source is on, so a
 // finished file does not hold the batch. The pipeline ends when the longest file ends.
 // sync-inputs is off, so frames are not aligned by PTS.
 //
@@ -35,7 +36,7 @@ public:
     static constexpr const char* PGIE_CONFIG_NAME = "pgie.yml";
     static constexpr const char* TRACKER_CONFIG_NAME = "nvtracker.yml";
     static constexpr const char* ANALYTICS_CONFIG_NAME = "nvdsanalytics.yml";
-    static constexpr const char* KAFKA_CONFIG_NAME = "kafka.txt";
+    static constexpr const char* REDIS_CONFIG_NAME = "redis.txt";
     static constexpr const char* PARAMS_CONFIG_NAME = "params.yml";
 
     using ConfigFile = std::variant<YAML::Node, std::string>;
@@ -57,7 +58,7 @@ public:
     void initPgie();
     void initNvdsanalytics();
     void initNvtracker();
-    void initKafka();
+    void initRedis();
     virtual void applySavePaths(YAML::Node pipelineDocument, const std::filesystem::path& configSaveDir);
     std::map<std::string, std::string> documents(const std::filesystem::path& configSaveDir);
     virtual void write(const std::filesystem::path& configSaveDir);
@@ -87,7 +88,7 @@ protected:
     int fps = 0;
     std::vector<int> videoFps;
     int runtimeBatchSize = 0;
-    std::string kafkaTopic;
+    std::string redisTopic;
     bool enableNvdsanalytics = false;
     bool enableNvtracker = false;
     int trackerWidth = 0;
@@ -96,6 +97,6 @@ protected:
     std::optional<PgieParser> pgieConfigParser;
     std::optional<PgieGenerator> pgieGenerator;
     std::optional<NvtrackerGenerator> nvtrackerGenerator;
-    std::optional<KafkaGenerator> kafkaGenerator;
+    std::optional<RedisGenerator> redisGenerator;
     std::map<std::string, ConfigFile> files;
 };

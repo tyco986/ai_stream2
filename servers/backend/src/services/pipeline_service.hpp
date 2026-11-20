@@ -4,6 +4,7 @@
 #include <json/json.h>
 #include <yaml-cpp/yaml.h>
 
+#include <filesystem>
 #include <iosfwd>
 #include <string>
 #include <vector>
@@ -20,27 +21,19 @@ class PipelineService {
   Json::Value getPadLogs(const std::string& name, const std::string& pad, const std::string& date);
   Json::Value getGstreamerLogs(const std::string& name, const std::string& date);
   std::string createStart(const Json::Value& input);
+  Json::Value assembleInput(Json::Value input);
+  Json::Value addOutput(Json::Value input, const std::string& name);
   Json::Value createEnd(const Json::Value& status,
                         const Json::Value& configPath,
                         const Json::Value& name,
                         const Json::Value& type,
-                        const Json::Value& analyzerIds,
-                        const Json::Value& streamIds,
-                        const Json::Value& mediaIds,
-                        const Json::Value& gieIds,
                         const Json::Value& input);
-  Json::Value getInput(const std::string& pipelineId);
-  Json::Value setInput(const std::string& pipelineId, const Json::Value& input);
   Json::Value setConfigPath(const std::string& pipelineId, const std::string& configPath);
   Json::Value update(const std::string& pipelineId,
                         const Json::Value& status,
                         const Json::Value& configPath,
                         const Json::Value& name,
                         const Json::Value& type,
-                        const Json::Value& analyzerIds,
-                        const Json::Value& streamIds,
-                        const Json::Value& mediaIds,
-                        const Json::Value& gieIds,
                         const Json::Value& input);
   Json::Value remove(const std::string& pipelineId);
   Json::Value setStatus(const std::string& pipelineId, const std::string& status);
@@ -60,6 +53,11 @@ class PipelineService {
   YAML::Node json2yaml(const Json::Value& value);
   Json::Value json2array(const std::string& text);
   Json::Value row2json(const drogon::orm::Row& row);
+  void expandGie(Json::Value& input);
+  void expandStream(Json::Value& input, Json::Value& analyzer);
+  void expandMedia(Json::Value& input, Json::Value& analyzer);
+  void expandAnalyzer(Json::Value& source, int index, Json::Value& analyzer);
+  bool reserveOutputDirectory(const std::filesystem::path& path);
 
   drogon::orm::DbClientPtr dbClient;
 };

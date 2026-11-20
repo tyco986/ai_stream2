@@ -3,12 +3,15 @@
 #include "error_tracer/sql.hpp"
 
 #include "constants/pipeline_const.hpp"
+#include "constants/pipeline_gie_const.hpp"
 #include "searcher/searcher.hpp"
 
 #include <yaml-cpp/yaml.h>
 
 #include <cctype>
+#include <chrono>
 #include <cstdio>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -223,10 +226,6 @@ Json::Value PipelineService::createEnd(const Json::Value& status,
                                         const Json::Value& configPath,
                                         const Json::Value& name,
                                         const Json::Value& type,
-                                        const Json::Value& analyzerIds,
-                                        const Json::Value& streamIds,
-                                        const Json::Value& mediaIds,
-                                        const Json::Value& gieIds,
                                         const Json::Value& input) {
   Json::Value data = pipeline::ROW();
   data[pipeline::KEY_NAME] = name.isNull() ? data[pipeline::KEY_NAME] : name;
@@ -234,19 +233,11 @@ Json::Value PipelineService::createEnd(const Json::Value& status,
   data[pipeline::KEY_STATUS] = status.isNull() ? data[pipeline::KEY_STATUS] : status;
   data[pipeline::KEY_INPUT] = input.isNull() ? data[pipeline::KEY_INPUT] : input;
   data[pipeline::KEY_CONFIG_PATH] = configPath.isNull() ? data[pipeline::KEY_CONFIG_PATH] : configPath;
-  data[pipeline::KEY_STREAM_IDS] = streamIds.isNull() ? Json::Value(Json::arrayValue) : streamIds;
-  data[pipeline::KEY_MEDIA_IDS] = mediaIds.isNull() ? Json::Value(Json::arrayValue) : mediaIds;
-  data[pipeline::KEY_GIE_IDS] = gieIds.isNull() ? data[pipeline::KEY_GIE_IDS] : gieIds;
-  data[pipeline::KEY_ANALYZER_IDS] = analyzerIds.isNull() ? data[pipeline::KEY_ANALYZER_IDS] : analyzerIds;
   Json::StreamWriterBuilder builder;
   builder["indentation"] = "";
   const auto rows = Sql::sync({}, dbClient, 
-      "INSERT INTO pipeline (id, name, type, status, input, config_path, stream_ids, media_ids, gie_ids, analyzer_ids, updated_at) "
-      "VALUES (gen_random_uuid(), $1, $2, $3, $4::jsonb, NULLIF($5, ''), "
-      "ARRAY(SELECT jsonb_array_elements_text($6::jsonb)::uuid), "
-      "ARRAY(SELECT jsonb_array_elements_text($7::jsonb)::uuid), "
-      "ARRAY(SELECT jsonb_array_elements_text($8::jsonb)::uuid), "
-      "ARRAY(SELECT jsonb_array_elements_text($9::jsonb)::uuid), now()) " +
+      "INSERT INTO pipeline (id, name, type, status, input, config_path, updated_at) "
+      "VALUES (gen_random_uuid(), $1, $2, $3, $4::jsonb, NULLIF($5, ''), now()) " +
       std::string("RETURNING id::text AS id, name, type, status, input::text AS input, config_path, ") +
       pipeline::SQL_REF_COLUMNS +
       "start_time, end_time, duration, updated_at",
@@ -254,11 +245,7 @@ Json::Value PipelineService::createEnd(const Json::Value& status,
       data[pipeline::KEY_TYPE].asString(),
       data[pipeline::KEY_STATUS].asString(),
       Json::writeString(builder, data[pipeline::KEY_INPUT]),
-      data[pipeline::KEY_CONFIG_PATH].asString(),
-      Json::writeString(builder, data[pipeline::KEY_STREAM_IDS]),
-      Json::writeString(builder, data[pipeline::KEY_MEDIA_IDS]),
-      Json::writeString(builder, data[pipeline::KEY_GIE_IDS]),
-      Json::writeString(builder, data[pipeline::KEY_ANALYZER_IDS]));
+      data[pipeline::KEY_CONFIG_PATH].asString());
   if (rows.empty()) {
     throw std::runtime_error("pipeline not created");
   }
@@ -266,34 +253,179 @@ Json::Value PipelineService::createEnd(const Json::Value& status,
   return result;
 }
 
-Json::Value PipelineService::getInput(const std::string& pipelineId) {
-  const auto rows = Sql::sync({}, dbClient,
-      "SELECT input::text AS input FROM pipeline WHERE id = $1::uuid",
-      pipelineId);
-  if (rows.empty()) {
-    throw std::runtime_error("pipeline not found");
+void PipelineService::expandGie(Json::Value& input) {
+  const char* slots[] = {pipeline::KEY_PGIE, pipeline::KEY_SGIE, pipeline::KEY_RTMPOSE, pipeline::KEY_STGCNPP};
+  for (const char* slot : slots) {
+    const bool present = input.isMember(slot) && input[slot].isString();
+    if (present) {
+      const bool primary = std::string(slot) == pipeline::KEY_PGIE;
+      const auto rows = Sql::sync({}, dbClient,
+          "SELECT m.engine_path, g.interval, g.class_attrs::text AS class_attrs "
+          "FROM pipeline_gie g JOIN model m ON m.id = g.model_id WHERE g.id = $1::uuid",
+          input[slot].asString());
+      if (rows.empty()) {
+        throw std::runtime_error("gie not found");
+      }
+      Json::Value body;
+      body[pipeline::KEY_MODEL_ZIP] = rows[0]["engine_path"].isNull() ? "" : rows[0]["engine_path"].as<std::string>();
+      body[pipeline_gie::KEY_INTERVAL] = rows[0]["interval"].as<int>();
+      Json::Value attrs;
+      if (primary && Json::Reader().parse(rows[0]["class_attrs"].as<std::string>(), attrs)) {
+        body[pipeline_gie::KEY_CLASS_ATTRS] = attrs;
+      }
+      input[slot] = body;
+    }
   }
-  Json::Value input;
-  const bool parsed = !rows[0]["input"].isNull() && Json::Reader().parse(rows[0]["input"].as<std::string>(), input);
-  Json::Value result = parsed ? input : Json::Value();
-  return result;
 }
 
-Json::Value PipelineService::setInput(const std::string& pipelineId, const Json::Value& input) {
-  Json::StreamWriterBuilder builder;
-  builder["indentation"] = "";
-  const auto rows = Sql::sync({}, dbClient,
-      "UPDATE pipeline SET input = $2::jsonb WHERE id = $1::uuid " +
-      std::string("RETURNING id::text AS id, name, type, status, input::text AS input, config_path, ") +
-      pipeline::SQL_REF_COLUMNS +
-      "start_time, end_time, duration, updated_at",
-      pipelineId,
-      Json::writeString(builder, input));
-  if (rows.empty()) {
-    throw std::runtime_error("pipeline not updated");
+void PipelineService::expandAnalyzer(Json::Value& source, int index, Json::Value& analyzer) {
+  const bool marked = source.isObject() && source.isMember(pipeline::KEY_ANALYZER) && source[pipeline::KEY_ANALYZER].isString();
+  if (marked) {
+    const auto rows = Sql::sync({}, dbClient,
+        "SELECT annotations::text AS annotations FROM pipeline_analyzer WHERE id = $1::uuid",
+        source[pipeline::KEY_ANALYZER].asString());
+    if (rows.empty()) {
+      throw std::runtime_error("analyzer not found");
+    }
+    Json::Value annotations;
+    Json::Reader().parse(rows[0]["annotations"].as<std::string>(), annotations);
+    const std::string suffix = pipeline::ANALYZER_STREAM_SUFFIX;
+    const auto keys = annotations.isObject() ? annotations.getMemberNames() : std::vector<std::string>();
+    for (const auto& key : keys) {
+      const bool stream = key.size() >= suffix.size() &&
+          key.compare(key.size() - suffix.size(), suffix.size(), suffix) == 0;
+      analyzer[stream ? key + "-" + std::to_string(index) : key] = annotations[key];
+    }
   }
-  Json::Value result = row2json(rows[0]);
-  return result;
+  if (source.isObject()) {
+    source.removeMember(pipeline::KEY_ANALYZER);
+  }
+}
+
+void PipelineService::expandStream(Json::Value& input, Json::Value& analyzer) {
+  const bool listed = input.isMember(pipeline::KEY_STREAMS) && input[pipeline::KEY_STREAMS].isArray();
+  if (listed) {
+    Json::Value streams(Json::objectValue);
+    int index = 0;
+    for (auto& item : input[pipeline::KEY_STREAMS]) {
+      expandAnalyzer(item, index, analyzer);
+      const std::string id = item.isObject() && item.isMember(pipeline::KEY_ID) ? item[pipeline::KEY_ID].asString() : "";
+      const auto rows = Sql::sync({}, dbClient,
+          "SELECT name, url, width, height, fps FROM stream WHERE id = $1::uuid",
+          id);
+      if (rows.empty()) {
+        throw std::runtime_error("stream not found");
+      }
+      Json::Value source;
+      source[pipeline::KEY_URL] = rows[0]["url"].as<std::string>();
+      source[pipeline::KEY_WIDTH] = rows[0]["width"].isNull() ? Json::Value() : rows[0]["width"].as<int>();
+      source[pipeline::KEY_HEIGHT] = rows[0]["height"].isNull() ? Json::Value() : rows[0]["height"].as<int>();
+      source[pipeline::KEY_FPS] = rows[0]["fps"].isNull() ? Json::Value() : rows[0]["fps"].as<double>();
+      streams[rows[0]["name"].as<std::string>()] = source;
+      index = index + 1;
+    }
+    input[pipeline::KEY_STREAMS] = streams;
+  }
+}
+
+void PipelineService::expandMedia(Json::Value& input, Json::Value& analyzer) {
+  const char* lists[] = {pipeline::KEY_VIDEOS, pipeline::KEY_IMAGES};
+  for (const char* key : lists) {
+    if (input.isMember(key) && input[key].isArray()) {
+      Json::Value paths(Json::arrayValue);
+      int index = 0;
+      for (auto& item : input[key]) {
+        expandAnalyzer(item, index, analyzer);
+        const bool referenced = item.isObject() && item.isMember(pipeline::KEY_ID);
+        if (referenced) {
+          const auto rows = Sql::sync({}, dbClient,
+              "SELECT name, folder, width, height, fps FROM media WHERE id = $1::uuid",
+              item[pipeline::KEY_ID].asString());
+          if (rows.empty()) {
+            throw std::runtime_error("media not found");
+          }
+          std::string folder = rows[0]["folder"].as<std::string>();
+          if (!folder.empty() && folder.back() == '/') {
+            folder.pop_back();
+          }
+          Json::Value source(Json::objectValue);
+          source[pipeline::KEY_PATH] = folder + "/" + rows[0]["name"].as<std::string>();
+          source[pipeline::KEY_WIDTH] = rows[0]["width"].isNull() ? Json::Value() : rows[0]["width"].as<int>();
+          source[pipeline::KEY_HEIGHT] = rows[0]["height"].isNull() ? Json::Value() : rows[0]["height"].as<int>();
+          const bool video = std::string(key) == pipeline::KEY_VIDEOS;
+          if (video) {
+            source[pipeline::KEY_FPS] = rows[0]["fps"].isNull() ? Json::Value() : rows[0]["fps"].as<double>();
+          }
+          paths.append(source);
+        }
+        if (!referenced) {
+          paths.append(item);
+        }
+        index = index + 1;
+      }
+      input[key] = paths;
+    }
+  }
+}
+
+Json::Value PipelineService::assembleInput(Json::Value input) {
+  Json::Value analyzer(Json::objectValue);
+  if (input.isObject()) {
+    expandGie(input);
+    expandStream(input, analyzer);
+    expandMedia(input, analyzer);
+    input[pipeline::KEY_ANALYZER] = analyzer.empty() ? Json::Value() : analyzer;
+  }
+  return input;
+}
+
+bool PipelineService::reserveOutputDirectory(const std::filesystem::path& path) {
+  std::filesystem::create_directories(path.parent_path());
+  const bool created = std::filesystem::create_directory(path);
+  return created;
+}
+
+Json::Value PipelineService::addOutput(Json::Value input, const std::string& name) {
+  const std::string generator = input.isMember(pipeline::KEY_GENERATOR) && input[pipeline::KEY_GENERATOR].isString()
+      ? input[pipeline::KEY_GENERATOR].asString()
+      : "";
+  const bool filesink = input.isMember(pipeline::KEY_IMAGES)
+      || (input.isMember(pipeline::KEY_VIDEOS) && generator.find(pipeline::VIS_GENERATOR_MARK) != std::string::npos);
+  const bool capturer = input.isMember(pipeline::KEY_EVENT_CODER) && !input[pipeline::KEY_EVENT_CODER].isNull();
+  const std::time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+  std::tm local{};
+  localtime_r(&now, &local);
+  std::ostringstream text;
+  text << std::put_time(&local, "%Y%m%d-%H%M%S");
+  const std::string stamp = text.str();
+  int suffix = 0;
+  bool reserved = !filesink && !capturer;
+  std::string filesinkPath;
+  std::string capturerPath;
+  for (; suffix < pipeline::OUTPUT_SUFFIX_LIMIT && !reserved; ++suffix) {
+    const std::string leaf = name + "-" + stamp + "-" + std::to_string(suffix);
+    filesinkPath = (std::filesystem::path(pipeline::FILESINK_DIR) / leaf).string();
+    capturerPath = (std::filesystem::path(pipeline::EVENT_DIR) / name / (stamp + "-" + std::to_string(suffix))).string();
+    const bool filesinkReady = !filesink || reserveOutputDirectory(filesinkPath);
+    const bool capturerReady = !capturer || reserveOutputDirectory(capturerPath);
+    if (filesink && filesinkReady && !capturerReady) {
+      std::filesystem::remove(filesinkPath);
+    }
+    if (capturer && capturerReady && !filesinkReady) {
+      std::filesystem::remove(capturerPath);
+    }
+    reserved = filesinkReady && capturerReady;
+  }
+  if (!reserved) {
+    throw std::runtime_error("output directory not reserved");
+  }
+  if (filesink) {
+    input[pipeline::KEY_FILESINK_OUTPUT] = filesinkPath;
+  }
+  if (capturer) {
+    input[pipeline::KEY_CAPTURER_OUTPUT] = capturerPath;
+  }
+  return input;
 }
 
 Json::Value PipelineService::setConfigPath(const std::string& pipelineId, const std::string& configPath) {
@@ -322,26 +454,16 @@ Json::Value PipelineService::update(const std::string& pipelineId,
                                         const Json::Value& configPath,
                                         const Json::Value& name,
                                         const Json::Value& type,
-                                        const Json::Value& analyzerIds,
-                                        const Json::Value& streamIds,
-                                        const Json::Value& mediaIds,
-                                        const Json::Value& gieIds,
                                         const Json::Value& input) {
   const Json::Value current = get(pipelineId);
   const bool hasPath = current[pipeline::KEY_CONFIG_PATH].isString();
   const std::string oldPath = hasPath ? current[pipeline::KEY_CONFIG_PATH].asString() : "";
-  const Json::Value streams = streamIds.isNull() ? Json::Value(Json::arrayValue) : streamIds;
-  const Json::Value medias = mediaIds.isNull() ? Json::Value(Json::arrayValue) : mediaIds;
   Json::StreamWriterBuilder builder;
   builder["indentation"] = "";
   const auto rows = Sql::sync({}, dbClient, 
       "UPDATE pipeline SET name = $2, type = $3, status = $4, input = $5::jsonb, config_path = NULLIF($6, ''), "
-      "stream_ids = ARRAY(SELECT jsonb_array_elements_text($7::jsonb)::uuid), "
-      "media_ids = ARRAY(SELECT jsonb_array_elements_text($8::jsonb)::uuid), "
-      "gie_ids = ARRAY(SELECT jsonb_array_elements_text($9::jsonb)::uuid), "
-      "analyzer_ids = ARRAY(SELECT jsonb_array_elements_text($10::jsonb)::uuid), "
       "start_time = NULL, end_time = NULL, duration = NULL, updated_at = now() "
-      "WHERE id = $1::uuid AND status <> $11 " +
+      "WHERE id = $1::uuid AND status <> $7 " +
       std::string("RETURNING id::text AS id, name, type, status, input::text AS input, config_path, ") +
       pipeline::SQL_REF_COLUMNS +
       "start_time, end_time, duration, updated_at",
@@ -351,10 +473,6 @@ Json::Value PipelineService::update(const std::string& pipelineId,
       status.asString(),
       Json::writeString(builder, input),
       configPath.asString(),
-      Json::writeString(builder, streams),
-      Json::writeString(builder, medias),
-      Json::writeString(builder, gieIds),
-      Json::writeString(builder, analyzerIds),
       std::string(pipeline::STATUS_STARTING));
   if (rows.empty()) {
     throw std::runtime_error(pipeline::ERR_BUSY);
@@ -487,8 +605,12 @@ void PipelineService::collectMedia(const YAML::Node& params, std::vector<std::st
     if (sequence) {
       for (const auto& item : node) {
         const bool scalar = item.IsScalar();
+        const bool mapped = item.IsMap() && item[pipeline::KEY_PATH];
         if (scalar) {
           paths.push_back(item.as<std::string>());
+        }
+        if (mapped) {
+          paths.push_back(item[pipeline::KEY_PATH].as<std::string>());
         }
       }
     }

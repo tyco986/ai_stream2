@@ -1,7 +1,9 @@
 #include "subelement_generator/utils/sahi.hpp"
 
 #include <algorithm>
+#include <cstdlib>
 
+#include <jpeglib.h>
 #include <opencv2/imgproc.hpp>
 
 #include "constants/sahi_const.hpp"
@@ -75,7 +77,7 @@ cv::Scalar Sahi::color(const std::string& label, int rowCount) const {
     return ink;
 }
 
-cv::Mat Sahi::preview(const SahiInfo& info) const {
+cv::Mat Sahi::draw(const SahiInfo& info) const {
     cv::Mat image(info.height, info.width, CV_8UC3, cv::Scalar(0, 0, 0));
     for (const auto& item : info.box) {
         const cv::Scalar ink = color(item.first, info.row);
@@ -100,4 +102,35 @@ cv::Mat Sahi::preview(const SahiInfo& info) const {
             cv::LINE_AA);
     }
     return image;
+}
+
+std::string Sahi::previewJpegBytes(const SahiInfo& info) const {
+    const cv::Mat bgr = draw(info);
+    cv::Mat rgb;
+    cv::cvtColor(bgr, rgb, cv::COLOR_BGR2RGB);
+    jpeg_compress_struct cinfo;
+    jpeg_error_mgr jerr;
+    cinfo.err = jpeg_std_error(&jerr);
+    jpeg_create_compress(&cinfo);
+    unsigned char* buffer = nullptr;
+    unsigned long size = 0;
+    jpeg_mem_dest(&cinfo, &buffer, &size);
+    cinfo.image_width = static_cast<JDIMENSION>(rgb.cols);
+    cinfo.image_height = static_cast<JDIMENSION>(rgb.rows);
+    cinfo.input_components = 3;
+    cinfo.in_color_space = JCS_RGB;
+    jpeg_set_defaults(&cinfo);
+    jpeg_set_quality(&cinfo, sahi::JPEG_QUALITY, TRUE);
+    jpeg_start_compress(&cinfo, TRUE);
+    while (cinfo.next_scanline < cinfo.image_height) {
+        JSAMPROW row = rgb.ptr<unsigned char>(static_cast<int>(cinfo.next_scanline));
+        jpeg_write_scanlines(&cinfo, &row, 1);
+    }
+    jpeg_finish_compress(&cinfo);
+    const std::string bytes = buffer == nullptr
+        ? std::string()
+        : std::string(reinterpret_cast<char*>(buffer), static_cast<std::size_t>(size));
+    jpeg_destroy_compress(&cinfo);
+    std::free(buffer);
+    return bytes;
 }

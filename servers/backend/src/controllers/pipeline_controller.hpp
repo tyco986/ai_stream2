@@ -7,7 +7,6 @@
 #include <drogon/HttpController.h>
 #include <drogon/utils/coroutine.h>
 
-#include <filesystem>
 #include <functional>
 #include <string>
 #include <vector>
@@ -67,9 +66,6 @@ class PipelineController : public drogon::HttpController<PipelineController> {
   std::string yaml2Multipart(const std::string& name, const std::string& yaml);
   std::string zips2Multipart(const std::vector<ZipPart>& files);
   drogon::Task<Json::Value> postGenerate(const std::string& name, const std::string& yaml);
-  bool reserveOutputDirectory(const std::filesystem::path& path);
-  std::string outputStamp() const;
-  Json::Value addTimeStampToInput(Json::Value input, const std::string& name);
   std::string hostBind(const std::string& dir);
   drogon::Task<bool> runDeepstreamContainer(const std::string& containerName,
                                            const std::string& pipelineName,

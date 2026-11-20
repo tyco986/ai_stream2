@@ -1,6 +1,6 @@
 #pragma once
 
-#include "subelement_generator/kafka.hpp"
+#include "subelement_generator/redis.hpp"
 #include "subelement_generator/nvdsanalytics.hpp"
 #include "subelement_generator/pgie.hpp"
 #include "constants/subelement_const.hpp"
@@ -19,7 +19,8 @@
 
 // Generate YOLO image pipeline YAML.
 //
-// Reads a batch of images. Width and height must match. Each image is one frame
+// Reads a batch of images. Each item supplies path, width, and height.
+// Width and height must match. Each image is one frame
 // (num-buffers=1) and is written to its own jpeg after per-stream OSD.
 //
 // Set ``analyzer=None`` to disable nvdsanalytics rules.
@@ -33,7 +34,7 @@ public:
     static constexpr const char* PIPELINE_CONFIG_NAME = "pipeline.yml";
     static constexpr const char* PGIE_CONFIG_NAME = "pgie.yml";
     static constexpr const char* ANALYTICS_CONFIG_NAME = "nvdsanalytics.yml";
-    static constexpr const char* KAFKA_CONFIG_NAME = "kafka.txt";
+    static constexpr const char* REDIS_CONFIG_NAME = "redis.txt";
     static constexpr const char* PARAMS_CONFIG_NAME = "params.yml";
 
     using ConfigFile = std::variant<YAML::Node, std::string>;
@@ -54,7 +55,7 @@ public:
     virtual void initPipeline();
     void initPgie();
     void initNvdsanalytics();
-    void initKafka();
+    void initRedis();
     virtual void applySavePaths(YAML::Node pipelineDocument, const std::filesystem::path& configSaveDir);
     std::map<std::string, std::string> documents(const std::filesystem::path& configSaveDir);
     void write(const std::filesystem::path& configSaveDir);
@@ -82,10 +83,10 @@ protected:
     int width = 0;
     int height = 0;
     int runtimeBatchSize = 0;
-    std::string kafkaTopic;
+    std::string redisTopic;
     bool enableNvdsanalytics = false;
     std::optional<PgieParser> pgieConfigParser;
     std::optional<PgieGenerator> pgieGenerator;
-    std::optional<KafkaGenerator> kafkaGenerator;
+    std::optional<RedisGenerator> redisGenerator;
     std::map<std::string, ConfigFile> files;
 };

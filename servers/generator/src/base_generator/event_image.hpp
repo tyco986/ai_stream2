@@ -2,7 +2,7 @@
 
 #include "base_generator/base_event.hpp"
 #include "constants/subelement_const.hpp"
-#include "subelement_generator/kafka.hpp"
+#include "subelement_generator/redis.hpp"
 #include "subelement_generator/nvmsgconv.hpp"
 #include "subelement_generator/pgie.hpp"
 #include "subelement_generator/utils/pgie_parser.hpp"
@@ -18,7 +18,8 @@
 
 // Generate YOLO event image pipeline.
 //
-// Images must share width and height. Each image is one frame (num-buffers=1).
+// Each item supplies path, width, and height. Images must share width and height.
+// Each image is one frame (num-buffers=1).
 // After demux each stream has its own raw, vis, and JPEG branch.
 //
 // Topology::
@@ -37,7 +38,7 @@ public:
     static constexpr const char* PGIE_CONFIG_NAME = "pgie.yml";
     static constexpr const char* ANALYTICS_CONFIG_NAME = "nvdsanalytics.yml";
     static constexpr const char* MSGCONV_CONFIG_NAME = "nvmsgconv.yml";
-    static constexpr const char* KAFKA_CONFIG_NAME = "kafka.txt";
+    static constexpr const char* REDIS_CONFIG_NAME = "redis.txt";
     static constexpr const char* PARAMS_CONFIG_NAME = "params.yml";
 
     using ConfigFile = std::variant<YAML::Node, std::string>;
@@ -61,9 +62,9 @@ public:
     void initPipeline();
     void initPgie();
     void initNvdsanalytics();
-    std::vector<std::string> kafkaStreams() const;
+    std::vector<std::string> redisStreams() const;
     void initNvmsgconv();
-    void initKafka();
+    void initRedis();
     void applySavePaths(YAML::Node pipelineDocument, const std::filesystem::path& configSaveDir);
     std::map<std::string, std::string> documents(const std::filesystem::path& configSaveDir);
     void write(const std::filesystem::path& configSaveDir);
@@ -82,13 +83,13 @@ public:
     int width = 0;
     int height = 0;
     int runtimeBatchSize = 0;
-    std::string kafkaTopic;
+    std::string redisTopic;
     std::string msg2pLib = subelement::MSG2P_LIB_PRESENCE;
     bool enableNvdsanalytics = false;
     std::optional<PgieParser> pgieConfigParser;
     std::optional<PgieGenerator> pgieGenerator;
     std::optional<NvmsgconvGenerator> nvmsgconvGenerator;
-    std::optional<KafkaGenerator> kafkaGenerator;
+    std::optional<RedisGenerator> redisGenerator;
     std::map<std::string, ConfigFile> files;
 
 protected:

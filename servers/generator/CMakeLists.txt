@@ -12,8 +12,7 @@ find_package(Threads REQUIRED)
 find_path(OPENCV_INCLUDE_DIR NAMES opencv2/core.hpp PATH_SUFFIXES opencv4 REQUIRED)
 find_library(OPENCV_CORE NAMES opencv_core REQUIRED)
 find_library(OPENCV_IMGPROC NAMES opencv_imgproc REQUIRED)
-find_library(OPENCV_IMGCODECS NAMES opencv_imgcodecs REQUIRED)
-find_library(OPENCV_VIDEOIO NAMES opencv_videoio REQUIRED)
+find_package(JPEG REQUIRED)
 
 add_executable(generator
     main.cpp
@@ -33,7 +32,7 @@ add_executable(generator
     src/subelement_generator/utils/pgie_parser.cpp
     src/subelement_generator/sgie.cpp
     src/subelement_generator/utils/sgie_parser.cpp
-    src/subelement_generator/kafka.cpp
+    src/subelement_generator/redis.cpp
     src/subelement_generator/nvdsanalytics.cpp
     src/subelement_generator/nvmsgconv.cpp
     src/subelement_generator/nvsahipreprocess.cpp
@@ -142,5 +141,5 @@ add_executable(generator
     src/stgcnpp_yolo_pose_generator/stgcnpp_yolo_pose_sahi_vis_rtsp.cpp
 )
 
-target_include_directories(generator PRIVATE src ${OPENCV_INCLUDE_DIR})
-target_link_libraries(generator PRIVATE nlohmann_json::nlohmann_json yaml-cpp libzip::zip spdlog::spdlog Threads::Threads ${OPENCV_CORE} ${OPENCV_IMGPROC} ${OPENCV_IMGCODECS} ${OPENCV_VIDEOIO})
+target_include_directories(generator PRIVATE src ${OPENCV_INCLUDE_DIR} ${JPEG_INCLUDE_DIR})
+target_link_libraries(generator PRIVATE nlohmann_json::nlohmann_json yaml-cpp libzip::zip spdlog::spdlog Threads::Threads ${OPENCV_CORE} ${OPENCV_IMGPROC} JPEG::JPEG)

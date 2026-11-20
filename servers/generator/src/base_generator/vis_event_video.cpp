@@ -43,7 +43,7 @@ void VisEventVideoGenerator::initParams() {
 
 void VisEventVideoGenerator::appendAfterOsd(int index, int gpuId) {
     const std::string suffix = std::to_string(index);
-    const std::filesystem::path source(videos.at(index).get<std::string>());
+    const std::filesystem::path source(videos.at(index).at("path").get<std::string>());
     const std::filesystem::path sink = filesinkOutput / source.filename();
     appendNode("tee", "tee_vis" + suffix, addTee());
     appendNode("queue", "queue_vis" + suffix, addQueue());

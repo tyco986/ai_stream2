@@ -76,7 +76,7 @@ void UserGroupController::create(
                                               json[user::KEY_PREVIEW_CRUD],
                                               json[user::KEY_PIPELINE_CRUD],
                                               json[user::KEY_RECORDING_CRUD],
-                                              json[user::KEY_SERVER_CRUD],
+                                              json[user::KEY_DEVICE_CRUD],
                                               json[user::KEY_USER_CRUD],
                                               json[user::KEY_EVENT_CRUD]),
                                user::MSG_CREATE_OK);
@@ -105,7 +105,7 @@ void UserGroupController::update(
                                               json[user::KEY_PREVIEW_CRUD],
                                               json[user::KEY_PIPELINE_CRUD],
                                               json[user::KEY_RECORDING_CRUD],
-                                              json[user::KEY_SERVER_CRUD],
+                                              json[user::KEY_DEVICE_CRUD],
                                               json[user::KEY_USER_CRUD],
                                               json[user::KEY_EVENT_CRUD]),
                                user::MSG_UPDATE_OK);

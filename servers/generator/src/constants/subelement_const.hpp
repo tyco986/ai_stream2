@@ -2,15 +2,15 @@
 
 namespace subelement {
 
-inline constexpr const char* KAFKA_PROTO_LIB = "/opt/nvidia/deepstream/deepstream/lib/libnvds_kafka_proto.so";
+inline constexpr const char* REDIS_PROTO_LIB = "/opt/nvidia/deepstream/deepstream/lib/libnvds_redis_proto.so";
 inline constexpr const char* MSG2P_LIB_DET = "/opt/ai_stream2/servers/deepstream/libs/libnvds_msgconv_det.so";
 inline constexpr const char* MSG2P_LIB_PRESENCE = "/opt/ai_stream2/servers/deepstream/libs/libnvds_msgconv_presence.so";
 inline constexpr const char* MSG2P_LIB_STGCNPP = "/opt/ai_stream2/servers/deepstream/libs/libnvds_msgconv_stgcnpp.so";
-inline constexpr const char* KAFKA_CONN_STR = "ai_stream2_kafka;9092";
-inline constexpr const char* KAFKA_TOPIC_PREFIX = "ai_stream2_";
-inline constexpr const char* KAFKA_CONFIG =
+inline constexpr const char* REDIS_CONN_STR = "ai_stream2_redis;6379";
+inline constexpr const char* REDIS_TOPIC_PREFIX = "ai_stream2_";
+inline constexpr const char* REDIS_CONFIG =
     "[message-broker]\n"
-    "#producer-proto-cfg = \"queue.buffering.max.messages=200000;message.send.max.retries=3\"\n";
+    "streamsize=1000\n";
 
 inline constexpr const char* TRACKER_LL_LIB = "/opt/nvidia/deepstream/deepstream/lib/libnvds_nvmultiobjecttracker.so";
 

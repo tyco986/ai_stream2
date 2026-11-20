@@ -65,7 +65,7 @@ void StgcnppRtmposeSahiVisVideoGenerator::add() {
     int index = 0;
     const int gpuId = pgieGenerator->config["property"]["gpu-id"].as<int>();
     for (const nlohmann::json& item : videos) {
-        appendNode("nvurisrcbin", "nvurisrcbin" + std::to_string(index), addNvurisrcbin(fileUri(item.get<std::string>()), true));
+        appendNode("nvurisrcbin", "nvurisrcbin" + std::to_string(index), addNvurisrcbin(fileUri(item.at("path").get<std::string>()), true));
         index += 1;
     }
     YAML::Node mux = addNvstreammux(muxBatchSize, width, height, true, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId, false);
@@ -113,7 +113,7 @@ void StgcnppRtmposeSahiVisVideoGenerator::add() {
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     for (int streamIndex = 0; streamIndex < muxBatchSize; ++streamIndex) {
         const std::string suffix = std::to_string(streamIndex);
-        const std::filesystem::path source(videos.at(streamIndex).get<std::string>());
+        const std::filesystem::path source(videos.at(streamIndex).at("path").get<std::string>());
         const std::filesystem::path sink = filesinkOutput / source.filename();
         appendNode("queue", "queue_demux" + suffix, addQueue());
         appendNode("nvvideoconvert", "nvvideoconvert" + suffix, addNvvideoconvert(gpuId));

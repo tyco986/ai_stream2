@@ -16,7 +16,7 @@ RUN rm -f /etc/apt/sources.list.d/debian.sources \
       pkg-config \
       libjsoncpp-dev \
       libpq-dev \
-      librdkafka-dev \
+      libhiredis-dev \
       libspdlog-dev \
       libssl-dev \
       uuid-dev \

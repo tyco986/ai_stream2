@@ -8,12 +8,10 @@
 #include "subelement_generator/utils/nvtracker_parser.hpp"
 
 #include <cctype>
-#include <cmath>
 #include <fstream>
+#include <set>
 #include <stdexcept>
 #include <utility>
-
-#include <opencv2/videoio.hpp>
 
 static YAML::Node jsonToYaml(const nlohmann::json& value) {
     YAML::Node node;
@@ -41,19 +39,6 @@ static YAML::Node jsonToYaml(const nlohmann::json& value) {
         node = value.get<double>();
     }
     return node;
-}
-
-static void probeVideo(const std::filesystem::path& path, int& width, int& height, int& fps) {
-    cv::VideoCapture capture(path.string());
-    if (!capture.isOpened()) {
-        throw std::runtime_error("input video not found: " + path.string());
-    }
-    width = static_cast<int>(capture.get(cv::CAP_PROP_FRAME_WIDTH));
-    height = static_cast<int>(capture.get(cv::CAP_PROP_FRAME_HEIGHT));
-    fps = static_cast<int>(std::lround(capture.get(cv::CAP_PROP_FPS)));
-    if (width <= 0 || height <= 0 || fps <= 0) {
-        throw std::runtime_error("invalid video metadata: " + path.string());
-    }
 }
 
 std::string EventVideoGenerator::fileUri(const std::filesystem::path& path) {
@@ -106,7 +91,7 @@ void EventVideoGenerator::init() {
     initNvdsanalytics();
     initNvtracker();
     initNvmsgconv();
-    initKafka();
+    initRedis();
     initParams();
     initPipeline();
 }
@@ -115,23 +100,29 @@ void EventVideoGenerator::initVideos() {
     if (!videos.is_array() || videos.empty()) {
         throw std::invalid_argument("videos cannot be empty");
     }
+    std::set<int> widths;
+    std::set<int> heights;
     videoFps.clear();
-    int index = 0;
     for (const nlohmann::json& item : videos) {
-        int videoWidth = 0;
-        int videoHeight = 0;
-        int probedFps = 0;
-        probeVideo(item.get<std::string>(), videoWidth, videoHeight, probedFps);
-        if (index == 0) {
-            width = videoWidth;
-            height = videoHeight;
-            fps = probedFps;
-        } else if (videoWidth != width || videoHeight != height) {
-            throw std::invalid_argument("videos have inconsistent resolution");
+        const int videoWidth = item.at("width").get<int>();
+        const int videoHeight = item.at("height").get<int>();
+        const int itemFps = item.at("fps").get<int>();
+        if (videoWidth <= 0 || videoHeight <= 0 || itemFps <= 0) {
+            throw std::invalid_argument("invalid video metadata: " + item.at("path").get<std::string>());
         }
-        videoFps.push_back(probedFps);
-        index += 1;
+        widths.insert(videoWidth);
+        heights.insert(videoHeight);
+        videoFps.push_back(itemFps);
     }
+    if (widths.size() != 1) {
+        throw std::invalid_argument("videos have inconsistent width");
+    }
+    if (heights.size() != 1) {
+        throw std::invalid_argument("videos have inconsistent height");
+    }
+    width = *widths.begin();
+    height = *heights.begin();
+    fps = videoFps.front();
     runtimeBatchSize = static_cast<int>(videos.size());
 }
 
@@ -223,23 +214,23 @@ void EventVideoGenerator::initNvtracker() {
     }
 }
 
-std::vector<std::string> EventVideoGenerator::kafkaStreams() const {
+std::vector<std::string> EventVideoGenerator::redisStreams() const {
     std::vector<std::string> names;
     for (const nlohmann::json& item : videos) {
-        names.push_back(item.get<std::string>());
+        names.push_back(item.at("path").get<std::string>());
     }
     return names;
 }
 
 void EventVideoGenerator::initNvmsgconv() {
-    nvmsgconvGenerator.emplace(kafkaStreams());
+    nvmsgconvGenerator.emplace(redisStreams());
     files.insert_or_assign(MSGCONV_CONFIG_NAME, ConfigFile(nvmsgconvGenerator->config));
 }
 
-void EventVideoGenerator::initKafka() {
-    kafkaGenerator.emplace();
-    kafkaTopic = std::string(subelement::KAFKA_TOPIC_PREFIX) + pipelineName;
-    files.insert_or_assign(KAFKA_CONFIG_NAME, ConfigFile(kafkaGenerator->config));
+void EventVideoGenerator::initRedis() {
+    redisGenerator.emplace();
+    redisTopic = std::string(subelement::REDIS_TOPIC_PREFIX) + pipelineName;
+    files.insert_or_assign(REDIS_CONFIG_NAME, ConfigFile(redisGenerator->config));
 }
 
 void EventVideoGenerator::applySavePaths(YAML::Node pipelineDocument, const std::filesystem::path& configSaveDir) {
@@ -259,7 +250,7 @@ void EventVideoGenerator::applySavePaths(YAML::Node pipelineDocument, const std:
             properties["config"] = (configSaveDir / MSGCONV_CONFIG_NAME).string();
         }
         if (name == "nvmsgbroker") {
-            properties["config"] = (configSaveDir / KAFKA_CONFIG_NAME).string();
+            properties["config"] = (configSaveDir / REDIS_CONFIG_NAME).string();
         }
         node["properties"] = properties;
     }
@@ -344,7 +335,7 @@ void EventVideoGenerator::add() {
     int index = 0;
     const int gpuId = pgieGenerator->config["property"]["gpu-id"].as<int>();
     for (const nlohmann::json& item : videos) {
-        appendNode("nvurisrcbin", "nvurisrcbin" + std::to_string(index), addNvurisrcbin(fileUri(item.get<std::string>()), true));
+        appendNode("nvurisrcbin", "nvurisrcbin" + std::to_string(index), addNvurisrcbin(fileUri(item.at("path").get<std::string>()), true));
         index += 1;
     }
     appendInfer(gpuId);
@@ -365,7 +356,7 @@ void EventVideoGenerator::add() {
     appendNode(
         "nvmsgbroker",
         "nvmsgbroker",
-        addNvmsgbroker(subelement::KAFKA_PROTO_LIB, subelement::KAFKA_CONN_STR, kafkaTopic, KAFKA_CONFIG_NAME, false, false));
+        addNvmsgbroker(subelement::REDIS_PROTO_LIB, subelement::REDIS_CONN_STR, redisTopic, REDIS_CONFIG_NAME, false, false));
     if (drawer.has_value()) {
         const std::string drawerName = nvdetDrawerElement();
         appendNode(drawerName, drawerName, nvdetDrawerProperties(*drawer));

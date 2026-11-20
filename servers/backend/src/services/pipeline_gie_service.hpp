@@ -24,8 +24,6 @@ class PipelineGieService {
   Json::Value remove(const std::string& gieId);
 
  private:
-  Json::Value getPipelineRefCurrentGie(const std::string& gieId);
-  void updatePipelineInput(const Json::Value& gie, const Json::Value& pipelines);
   Json::Value row2json(const drogon::orm::Row& row, const std::string& enginePath);
 
   drogon::orm::DbClientPtr dbClient;

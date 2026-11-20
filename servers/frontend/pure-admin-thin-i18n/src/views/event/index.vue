@@ -1,9 +1,23 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from "vue";
-import { getEvents, type EventAnnotations, type EventItem } from "@/api/event";
-import { EVENT_LIST_COLUMN_PERCENTS, EVENT_LIST_PAGE_SIZE } from "@/constants/event";
+import DeleteBin from "~icons/ri/delete-bin-line";
+import ListCheck from "~icons/ri/list-check";
+import Mail from "~icons/ri/mail-line";
+import MailOpen from "~icons/ri/mail-open-line";
+import {
+  getEvents,
+  readEvent,
+  readEvents,
+  removeEvent,
+  removeEvents,
+  unreadEvent,
+  unreadEvents,
+  type EventItem
+} from "@/api/event";
+import { EVENT_ANNOTATION_DIALOG_WIDTH, EVENT_LIST_COLUMN_PERCENTS, EVENT_LIST_PAGE_SIZE } from "@/constants/event";
 import { PATH_EVENT_WS } from "@/constants/path";
 import { $t, transformI18n } from "@/plugins/i18n";
+import { message } from "@/utils/message";
 import { formatLocalTime } from "@/utils/time";
 import { useColumnWidths } from "@/views/pipeline/columnWidth";
 
@@ -13,31 +27,97 @@ defineOptions({
 
 const { target: listRef, widths: listWidths, observe } = useColumnWidths(EVENT_LIST_COLUMN_PERCENTS);
 const items = ref<EventItem[]>([]);
+const selected = ref<EventItem[]>([]);
+const page = ref(1);
+const total = ref(0);
+const annotationsOpen = ref(false);
+const annotationText = ref("");
 let socket: WebSocket | null = null;
 
-const shown = (value: string | number | undefined | null) => {
-  const text = value === undefined || value === null || value === "" ? "" : String(value);
-  return text;
+const load = () => {
+  getEvents({ page: page.value, page_size: EVENT_LIST_PAGE_SIZE }).then(res => {
+    items.value = res.data.items;
+    total.value = res.data.total;
+    page.value = res.data.page;
+  });
 };
 
-const annotationText = (annotations: EventAnnotations) => {
-  const text = [shown(annotations?.num), shown(annotations?.object)].join(" ").trim();
-  return text;
+const onPage = (next: number) => {
+  page.value = next;
+  load();
 };
 
-const onMessage = (message: MessageEvent) => {
-  const row = JSON.parse(String(message.data)) as EventItem;
-  items.value = items.value.some(item => item.id === row.id) ? items.value : [row, ...items.value];
+const onAnnotations = (row: EventItem) => {
+  annotationText.value = JSON.stringify(row.annotations ?? {}, null, 2);
+  annotationsOpen.value = true;
+};
+
+const sourceName = (row: EventItem) => {
+  const name = row.stream_name || row.media_name || "";
+  return name;
+};
+
+const replaceRow = (row: EventItem) => {
+  items.value = items.value.map(item => (item.id === row.id ? row : item));
+};
+
+const selectedIds = () => selected.value.map(row => row.id);
+
+const onRead = (row: EventItem) => {
+  const request = row.read_at ? unreadEvent(row.id) : readEvent(row.id);
+  request.then(res => {
+    replaceRow(res.data);
+    message(res.message, { type: "success" });
+  });
+};
+
+const onRemove = (row: EventItem) => {
+  removeEvent(row.id).then(res => {
+    message(res.message, { type: "success" });
+    page.value = items.value.length > 1 || page.value === 1 ? page.value : page.value - 1;
+    load();
+  });
+};
+
+const onReadBatch = () => {
+  readEvents(selectedIds()).then(res => {
+    const updated = new Map(res.data.updated_rows.map(row => [row.id, row]));
+    items.value = items.value.map(item => updated.get(item.id) ?? item);
+    message(res.message, { type: "success" });
+  });
+};
+
+const onUnreadBatch = () => {
+  unreadEvents(selectedIds()).then(res => {
+    const updated = new Map(res.data.updated_rows.map(row => [row.id, row]));
+    items.value = items.value.map(item => updated.get(item.id) ?? item);
+    message(res.message, { type: "success" });
+  });
+};
+
+const onRemoveBatch = () => {
+  removeEvents(selectedIds()).then(res => {
+    message(res.message, { type: "success" });
+    const left = items.value.length - res.data.updated_count;
+    page.value = left > 0 || page.value === 1 ? page.value : page.value - 1;
+    load();
+  });
+};
+
+const onMessage = (messageEvent: MessageEvent) => {
+  const row = JSON.parse(String(messageEvent.data)) as EventItem;
+  const exists = items.value.some(item => item.id === row.id);
+  total.value = exists ? total.value : total.value + 1;
+  items.value =
+    page.value === 1 && !exists ? [row, ...items.value].slice(0, EVENT_LIST_PAGE_SIZE) : items.value;
 };
 
 onMounted(() => {
   observe();
-  getEvents({ page: 1, page_size: EVENT_LIST_PAGE_SIZE }).then(res => {
-    items.value = res.data.items;
-    const protocol = location.protocol === "https:" ? "wss" : "ws";
-    socket = new WebSocket(`${protocol}://${location.host}${PATH_EVENT_WS}`);
-    socket.onmessage = onMessage;
-  });
+  load();
+  const protocol = location.protocol === "https:" ? "wss" : "ws";
+  socket = new WebSocket(`${protocol}://${location.host}${PATH_EVENT_WS}`);
+  socket.onmessage = onMessage;
 });
 
 onUnmounted(() => {
@@ -47,21 +127,75 @@ onUnmounted(() => {
 
 <template>
   <div class="event-page">
-    <el-table ref="listRef" class="event-list" :data="items" table-layout="fixed" border show-overflow-tooltip>
+    <div class="event-toolbar">
+      <el-button type="primary" :disabled="!selected.length" @click="onRemoveBatch">
+        {{ transformI18n($t("event.pureRemove")) }}
+      </el-button>
+      <el-button type="primary" :disabled="!selected.length" @click="onReadBatch">
+        {{ transformI18n($t("event.pureRead")) }}
+      </el-button>
+      <el-button type="primary" :disabled="!selected.length" @click="onUnreadBatch">
+        {{ transformI18n($t("event.pureUnread")) }}
+      </el-button>
+    </div>
+    <el-table
+      ref="listRef"
+      class="event-list"
+      :data="items"
+      table-layout="fixed"
+      border
+      show-overflow-tooltip
+      @selection-change="selected = $event"
+    >
+      <el-table-column type="selection" :width="listWidths.selection" />
       <el-table-column :label="transformI18n($t('event.pureOccurredAt'))" :width="listWidths.occurredAt">
         <template #default="{ row }">{{ formatLocalTime(row.occurred_at) }}</template>
       </el-table-column>
       <el-table-column prop="event_code" :label="transformI18n($t('event.pureEventCode'))" :width="listWidths.eventCode" />
       <el-table-column prop="event_label" :label="transformI18n($t('event.pureEventLabel'))" :width="listWidths.eventLabel" />
-      <el-table-column :label="transformI18n($t('event.pureAnnotations'))" :width="listWidths.annotations">
-        <template #default="{ row }">{{ annotationText(row.annotations) }}</template>
+      <el-table-column prop="pipeline_name" :label="transformI18n($t('event.purePipeline'))" :width="listWidths.pipeline" />
+      <el-table-column :label="transformI18n($t('event.pureSource'))" :width="listWidths.source">
+        <template #default="{ row }">{{ sourceName(row) }}</template>
+      </el-table-column>
+      <el-table-column :label="transformI18n($t('event.pureAnnotations'))" :width="listWidths.annotations" :show-overflow-tooltip="false">
+        <template #default="{ row }">
+          <el-button link type="primary" :title="transformI18n($t('event.pureAnnotations'))" @click="onAnnotations(row)">
+            <IconifyIconOffline :icon="ListCheck" />
+          </el-button>
+        </template>
+      </el-table-column>
+      <el-table-column :label="transformI18n($t('event.pureOps'))" :width="listWidths.ops" :show-overflow-tooltip="false">
+        <template #default="{ row }">
+          <el-button
+            link
+            type="primary"
+            :title="transformI18n($t(row.read_at ? 'event.pureUnread' : 'event.pureRead'))"
+            @click="onRead(row)"
+          >
+            <IconifyIconOffline :icon="row.read_at ? MailOpen : Mail" />
+          </el-button>
+          <el-button link type="primary" :title="transformI18n($t('event.pureRemove'))" @click="onRemove(row)">
+            <IconifyIconOffline :icon="DeleteBin" />
+          </el-button>
+        </template>
       </el-table-column>
     </el-table>
+    <el-pagination
+      class="event-pager"
+      layout="prev, pager, next"
+      :current-page="page"
+      :page-size="EVENT_LIST_PAGE_SIZE"
+      :total="total"
+      @current-change="onPage"
+    />
+    <el-dialog v-model="annotationsOpen" :title="transformI18n($t('event.pureAnnotations'))" :width="EVENT_ANNOTATION_DIALOG_WIDTH">
+      <pre class="event-annotations">{{ annotationText }}</pre>
+    </el-dialog>
   </div>
 </template>
 
 <style scoped>
-.event-page {
+.event-page.main-content {
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -69,6 +203,15 @@ onUnmounted(() => {
   min-height: 0;
   margin: 0;
   overflow: hidden;
+  background: var(--el-bg-color);
+}
+
+.event-toolbar {
+  display: flex;
+  flex: none;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
   background: var(--el-bg-color);
 }
 
@@ -81,5 +224,18 @@ onUnmounted(() => {
 .event-list :deep(.cell) {
   word-break: normal;
   white-space: nowrap;
+}
+
+.event-pager {
+  flex: none;
+  justify-content: flex-end;
+  padding: 8px;
+}
+
+.event-annotations {
+  max-height: 420px;
+  margin: 0;
+  overflow: auto;
+  white-space: pre-wrap;
 }
 </style>

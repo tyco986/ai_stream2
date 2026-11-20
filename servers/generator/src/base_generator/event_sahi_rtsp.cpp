@@ -4,8 +4,6 @@
 
 #include <utility>
 
-#include <opencv2/imgcodecs.hpp>
-
 EventSahiRtspGenerator::EventSahiRtspGenerator(
     std::string pipelineName,
     nlohmann::json streams,
@@ -91,9 +89,7 @@ void EventSahiRtspGenerator::initSahi() {
         };
     }
     files.insert_or_assign(SAHI_INFO_NAME, ConfigFile(info.dump(2)));
-    std::vector<unsigned char> encoded;
-    cv::imencode(".jpg", Sahi().preview(sahiInfo), encoded);
-    files.insert_or_assign(SAHI_PREVIEW_NAME, ConfigFile(std::string(encoded.begin(), encoded.end())));
+    files.insert_or_assign(SAHI_PREVIEW_NAME, ConfigFile(Sahi().previewJpegBytes(sahiInfo)));
 }
 
 void EventSahiRtspGenerator::applySavePaths(YAML::Node pipelineDocument, const std::filesystem::path& configSaveDir) {

@@ -25,7 +25,6 @@ import {
 import { $t, transformI18n } from "@/plugins/i18n";
 import { columnPixels } from "@/utils/columnWidth";
 import { message } from "@/utils/message";
-import { attrMap, attrRows } from "@/views/pipeline/gie/attrs";
 
 const props = defineProps<{ pipelineId: string }>();
 const emit = defineEmits<{ close: []; created: [] }>();
@@ -41,6 +40,7 @@ type SourceRow = {
   fps: number | null;
   path: string;
   url: string;
+  analyzer: string | null;
 };
 
 const SECTION_KEYS = ["logger", "drawer", "sahi", "event_coder", "capturer"] as const;
@@ -111,7 +111,6 @@ const collectPages = async <T>(
 };
 
 const creating = ref(false);
-const savedAnalyzers = ref<string[]>([]);
 const createType = ref("");
 const createName = ref("");
 const pipelineTypes = ref<Record<string, PipelineSpec>>({});
@@ -179,7 +178,8 @@ const mediaRow = (item: MediaItem): SourceRow => ({
   height: item.height,
   fps: item.fps,
   path: `${item.folder.replace(/\/$/, "")}/${item.name}`,
-  url: ""
+  url: "",
+  analyzer: null
 });
 
 const streamRow = (item: StreamItem): SourceRow => ({
@@ -189,7 +189,8 @@ const streamRow = (item: StreamItem): SourceRow => ({
   height: item.height,
   fps: item.fps,
   path: "",
-  url: item.url
+  url: item.url,
+  analyzer: null
 });
 
 const sameFrame = (left: SourceRow, right: SourceRow) => {
@@ -295,7 +296,6 @@ const onPipelineCreate = () => {
 
 const fillPipeline = (item: PipelineDetail) => {
   const input = item.input;
-  savedAnalyzers.value = item.analyzer_ids;
   createName.value = item.name;
   createType.value = item.type;
   applyType();
@@ -306,11 +306,7 @@ const fillPipeline = (item: PipelineDetail) => {
       value && typeof value === "object" && (sections.value[key] = value as PipelineSection);
     });
   giePicks.value = Object.fromEntries(
-    Object.keys(spec?.gie ?? {}).map(slot => {
-      const body = input[slot] as { model_zip?: string } | undefined;
-      const gie = gieChoices.value.find(choice => choice.engine_path === body?.model_zip);
-      return [slot, gie?.id ?? ""];
-    })
+    Object.keys(spec?.gie ?? {}).map(slot => [slot, typeof input[slot] === "string" ? (input[slot] as string) : ""])
   );
   const tracker = input.tracker as { class_id?: number } | null;
   classId.value = tracker && typeof tracker.class_id === "number" ? tracker.class_id : null;
@@ -322,8 +318,14 @@ const fillPipeline = (item: PipelineDetail) => {
         : Promise.resolve([]);
   load.then(rows => {
     const mapped = spec?.source === "rtsp" ? (rows as StreamItem[]).map(streamRow) : (rows as MediaItem[]).map(mediaRow);
-    const idSet = new Set(spec?.source === "rtsp" ? item.stream_ids : item.media_ids);
-    sourceSelected.value = mapped.filter(row => idSet.has(row.id));
+    const sourceKey = spec?.source === "image" ? "images" : spec?.source === "video" ? "videos" : "streams";
+    const saved = (input[sourceKey] ?? []) as { id?: string; analyzer?: string | null }[];
+    const byId = new Map(mapped.map(row => [row.id, row]));
+    sourceSelected.value = saved.flatMap(item => {
+      const row = item.id ? byId.get(item.id) : undefined;
+      const selected = row ? [{ ...row, analyzer: item.analyzer ?? null }] : [];
+      return selected;
+    });
     markSources(sourceRows.value);
   });
 };
@@ -337,7 +339,11 @@ const onSourceSelect = (rows: SourceRow[]) => {
   const anchor = sourceSyncing ? undefined : rows[0];
   const kept = anchor ? rows.filter(row => sameFrame(anchor, row)) : [];
   const dropped = anchor ? rows.filter(row => !kept.some(item => item.id === row.id)) : [];
-  anchor && (sourceSelected.value = kept);
+  anchor &&
+    (sourceSelected.value = kept.map(row => ({
+      ...row,
+      analyzer: sourceSelected.value.find(item => item.id === row.id)?.analyzer ?? null
+    })));
   sourceSyncing = true;
   dropped.forEach(row => sourceRef.value?.toggleRowSelection(row, false));
   sourceSyncing = false;
@@ -347,30 +353,15 @@ const pipelineDraft = () => {
   const spec = currentSpec.value;
   const name = createName.value.trim();
   const slots = Object.keys(spec?.gie ?? {});
-  const picked = Object.fromEntries(
-    slots.map(slot => {
-      const gie = gieChoices.value.find(item => item.id === giePicks.value[slot]);
-      const body =
-        slot === "pgie"
-          ? { model_zip: gie?.engine_path, interval: gie?.interval, class_attrs: attrMap(attrRows(gie?.class_attrs ?? null)) }
-          : { model_zip: gie?.engine_path, interval: gie?.interval };
-      return [slot, body];
-    })
-  );
+  const picked = Object.fromEntries(slots.map(slot => [slot, giePicks.value[slot]]));
   const sourceKeys = { image: "images", video: "videos", rtsp: "streams" };
   const sourceKey = spec ? sourceKeys[spec.source] : "streams";
-  const sourceValue =
-    spec?.source === "rtsp"
-      ? Object.fromEntries(
-          sourceSelected.value.map(row => [row.name, { url: row.url, width: row.width, height: row.height, fps: row.fps }])
-        )
-      : sourceSelected.value.map(row => row.path);
+  const sourceValue = sourceSelected.value.map(row => ({ id: row.id, analyzer: row.analyzer }));
   const input = {
     generator: spec?.generator,
     pipeline_name: name,
     ...picked,
     tracker: spec?.tracker ? { class_id: classId.value } : null,
-    analyzer: null,
     ...sections.value,
     drawer: sections.value.drawer ?? null,
     [sourceKey]: sourceValue
@@ -379,11 +370,7 @@ const pipelineDraft = () => {
     ? {
         name,
         type: createType.value,
-        input,
-        stream_ids: spec.source === "rtsp" ? sourceSelected.value.map(row => row.id) : [],
-        media_ids: spec.source === "rtsp" ? [] : sourceSelected.value.map(row => row.id),
-        gie_ids: slots.map(slot => giePicks.value[slot]),
-        analyzer_ids: savedAnalyzers.value
+        input
       }
     : null;
   return draft;

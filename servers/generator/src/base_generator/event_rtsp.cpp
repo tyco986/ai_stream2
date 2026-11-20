@@ -69,7 +69,7 @@ void EventRtspGenerator::init() {
     initNvdsanalytics();
     initNvtracker();
     initNvmsgconv();
-    initKafka();
+    initRedis();
     initParams();
     initPipeline();
 }
@@ -189,7 +189,7 @@ void EventRtspGenerator::initNvtracker() {
     }
 }
 
-std::vector<std::string> EventRtspGenerator::kafkaStreams() const {
+std::vector<std::string> EventRtspGenerator::redisStreams() const {
     std::vector<std::string> names;
     for (auto item = streams.begin(); item != streams.end(); ++item) {
         names.push_back(item.key());
@@ -198,14 +198,14 @@ std::vector<std::string> EventRtspGenerator::kafkaStreams() const {
 }
 
 void EventRtspGenerator::initNvmsgconv() {
-    nvmsgconvGenerator.emplace(kafkaStreams());
+    nvmsgconvGenerator.emplace(redisStreams());
     files.insert_or_assign(MSGCONV_CONFIG_NAME, ConfigFile(nvmsgconvGenerator->config));
 }
 
-void EventRtspGenerator::initKafka() {
-    kafkaGenerator.emplace();
-    kafkaTopic = std::string(subelement::KAFKA_TOPIC_PREFIX) + pipelineName;
-    files.insert_or_assign(KAFKA_CONFIG_NAME, ConfigFile(kafkaGenerator->config));
+void EventRtspGenerator::initRedis() {
+    redisGenerator.emplace();
+    redisTopic = std::string(subelement::REDIS_TOPIC_PREFIX) + pipelineName;
+    files.insert_or_assign(REDIS_CONFIG_NAME, ConfigFile(redisGenerator->config));
 }
 
 void EventRtspGenerator::applySavePaths(YAML::Node pipelineDocument, const std::filesystem::path& configSaveDir) {
@@ -225,7 +225,7 @@ void EventRtspGenerator::applySavePaths(YAML::Node pipelineDocument, const std::
             properties["config"] = (configSaveDir / MSGCONV_CONFIG_NAME).string();
         }
         if (name == "nvmsgbroker") {
-            properties["config"] = (configSaveDir / KAFKA_CONFIG_NAME).string();
+            properties["config"] = (configSaveDir / REDIS_CONFIG_NAME).string();
         }
         node["properties"] = properties;
     }
@@ -271,7 +271,7 @@ YAML::Node EventRtspGenerator::nvdetDrawerProperties(const nlohmann::json& drawe
 }
 
 std::string EventRtspGenerator::visualizedSinkUri(const std::string& sourceUri) const {
-    const std::string uri = sourceUri + "/" + kafkaTopic;
+    const std::string uri = sourceUri + "/" + redisTopic;
     return uri;
 }
 
@@ -336,7 +336,7 @@ void EventRtspGenerator::add() {
     appendNode(
         "nvmsgbroker",
         "nvmsgbroker",
-        addNvmsgbroker(subelement::KAFKA_PROTO_LIB, subelement::KAFKA_CONN_STR, kafkaTopic, KAFKA_CONFIG_NAME, false, false));
+        addNvmsgbroker(subelement::REDIS_PROTO_LIB, subelement::REDIS_CONN_STR, redisTopic, REDIS_CONFIG_NAME, false, false));
     if (drawer.has_value()) {
         const std::string drawerName = nvdetDrawerElement();
         appendNode(drawerName, drawerName, nvdetDrawerProperties(*drawer));

@@ -1,6 +1,6 @@
-#include "logger/kafka_logger.hpp"
+#include "logger/redis_logger.hpp"
 
-#include "constants/kafka_const.hpp"
+#include "constants/redis_const.hpp"
 #include "constants/response_const.hpp"
 #include "constants/service_log.hpp"
 #include "logger/base_logger.hpp"
@@ -12,7 +12,7 @@
 #include <iomanip>
 #include <sstream>
 
-std::string KafkaLogger::timestamp() {
+std::string RedisLogger::timestamp() {
   const auto now = std::chrono::system_clock::now();
   const auto time = std::chrono::system_clock::to_time_t(now);
   const auto milliseconds =
@@ -25,12 +25,12 @@ std::string KafkaLogger::timestamp() {
   return text.str();
 }
 
-void KafkaLogger::write(const std::string& topic, const Json::Value& payload) {
+void RedisLogger::write(const std::string& topic, const Json::Value& payload) {
   if (BaseLogger::enabledValue()) {
     Json::Value entry(Json::objectValue);
-    entry[kafka::KEY_TS] = timestamp();
-    entry[kafka::KEY_TOPIC] = topic;
-    entry[kafka::KEY_PAYLOAD] = payload;
+    entry[redis::KEY_TS] = timestamp();
+    entry[redis::KEY_TOPIC] = topic;
+    entry[redis::KEY_PAYLOAD] = payload;
     Json::StreamWriterBuilder writer;
     writer[http::JSON_INDENTATION] = "";
     writer[http::JSON_PRECISION_TYPE] = http::JSON_PRECISION_DECIMAL;
@@ -39,6 +39,6 @@ void KafkaLogger::write(const std::string& topic, const Json::Value& payload) {
     if (!line.empty() && line.back() == '\n') {
       line.pop_back();
     }
-    BaseLogger::write(service_log::KAFKA_DIR, line);
+    BaseLogger::write(service_log::REDIS_DIR, line);
   }
 }

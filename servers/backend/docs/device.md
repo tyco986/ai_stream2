@@ -1,6 +1,6 @@
 # Device
 
-路径：`GET /backend/device`。经 `AuthFilter`，权限为 `server_crud` 的读位。
+路径：`GET /backend/device`。经 `AuthFilter`，权限为 `device_crud` 的读位。
 
 JSON 成功外壳：`{success, message, data}`。`data` 的键是 GPU 序号字符串，值为该卡当前状态。无卡时 `data` 为 `{}`。
 

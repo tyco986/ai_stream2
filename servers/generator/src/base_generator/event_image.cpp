@@ -9,10 +9,9 @@
 
 #include <cctype>
 #include <fstream>
+#include <set>
 #include <stdexcept>
 #include <utility>
-
-#include <opencv2/imgcodecs.hpp>
 
 static YAML::Node jsonToYaml(const nlohmann::json& value) {
     YAML::Node node;
@@ -40,18 +39,6 @@ static YAML::Node jsonToYaml(const nlohmann::json& value) {
         node = value.get<double>();
     }
     return node;
-}
-
-static void probeImage(const std::filesystem::path& path, int& width, int& height) {
-    const cv::Mat image = cv::imread(path.string(), cv::IMREAD_UNCHANGED);
-    if (image.empty()) {
-        throw std::runtime_error("input image not found: " + path.string());
-    }
-    width = image.cols;
-    height = image.rows;
-    if (width <= 0 || height <= 0) {
-        throw std::runtime_error("invalid image size: " + path.string());
-    }
 }
 
 std::string EventImageGenerator::fileUri(const std::filesystem::path& path) {
@@ -103,7 +90,7 @@ void EventImageGenerator::init() {
     initPgie();
     initNvdsanalytics();
     initNvmsgconv();
-    initKafka();
+    initRedis();
     initParams();
     initPipeline();
 }
@@ -112,19 +99,25 @@ void EventImageGenerator::initImages() {
     if (!images.is_array() || images.empty()) {
         throw std::invalid_argument("images cannot be empty");
     }
-    int index = 0;
+    std::set<int> widths;
+    std::set<int> heights;
     for (const nlohmann::json& item : images) {
-        int imageWidth = 0;
-        int imageHeight = 0;
-        probeImage(item.get<std::string>(), imageWidth, imageHeight);
-        if (index == 0) {
-            width = imageWidth;
-            height = imageHeight;
-        } else if (imageWidth != width || imageHeight != height) {
-            throw std::invalid_argument("images have inconsistent resolution");
+        const int imageWidth = item.at("width").get<int>();
+        const int imageHeight = item.at("height").get<int>();
+        if (imageWidth <= 0 || imageHeight <= 0) {
+            throw std::invalid_argument("invalid image size: " + item.at("path").get<std::string>());
         }
-        index += 1;
+        widths.insert(imageWidth);
+        heights.insert(imageHeight);
     }
+    if (widths.size() != 1) {
+        throw std::invalid_argument("images have inconsistent width");
+    }
+    if (heights.size() != 1) {
+        throw std::invalid_argument("images have inconsistent height");
+    }
+    width = *widths.begin();
+    height = *heights.begin();
     runtimeBatchSize = static_cast<int>(images.size());
     std::filesystem::create_directories(filesinkOutput);
     std::filesystem::create_directories(capturerOutput);
@@ -202,23 +195,23 @@ void EventImageGenerator::initNvdsanalytics() {
     files.insert_or_assign(ANALYTICS_CONFIG_NAME, ConfigFile(analytics));
 }
 
-std::vector<std::string> EventImageGenerator::kafkaStreams() const {
+std::vector<std::string> EventImageGenerator::redisStreams() const {
     std::vector<std::string> names;
     for (const nlohmann::json& item : images) {
-        names.push_back(item.get<std::string>());
+        names.push_back(item.at("path").get<std::string>());
     }
     return names;
 }
 
 void EventImageGenerator::initNvmsgconv() {
-    nvmsgconvGenerator.emplace(kafkaStreams());
+    nvmsgconvGenerator.emplace(redisStreams());
     files.insert_or_assign(MSGCONV_CONFIG_NAME, ConfigFile(nvmsgconvGenerator->config));
 }
 
-void EventImageGenerator::initKafka() {
-    kafkaGenerator.emplace();
-    kafkaTopic = std::string(subelement::KAFKA_TOPIC_PREFIX) + pipelineName;
-    files.insert_or_assign(KAFKA_CONFIG_NAME, ConfigFile(kafkaGenerator->config));
+void EventImageGenerator::initRedis() {
+    redisGenerator.emplace();
+    redisTopic = std::string(subelement::REDIS_TOPIC_PREFIX) + pipelineName;
+    files.insert_or_assign(REDIS_CONFIG_NAME, ConfigFile(redisGenerator->config));
 }
 
 void EventImageGenerator::applySavePaths(YAML::Node pipelineDocument, const std::filesystem::path& configSaveDir) {
@@ -235,7 +228,7 @@ void EventImageGenerator::applySavePaths(YAML::Node pipelineDocument, const std:
             properties["config"] = (configSaveDir / MSGCONV_CONFIG_NAME).string();
         }
         if (name == "nvmsgbroker") {
-            properties["config"] = (configSaveDir / KAFKA_CONFIG_NAME).string();
+            properties["config"] = (configSaveDir / REDIS_CONFIG_NAME).string();
         }
         node["properties"] = properties;
     }
@@ -274,7 +267,7 @@ void EventImageGenerator::add() {
     int index = 0;
     const int gpuId = pgieGenerator->config["property"]["gpu-id"].as<int>();
     for (const nlohmann::json& item : images) {
-        appendNode("nvurisrcbin", "nvurisrcbin" + std::to_string(index), addNvurisrcbin(fileUri(item.get<std::string>()), true, 1));
+        appendNode("nvurisrcbin", "nvurisrcbin" + std::to_string(index), addNvurisrcbin(fileUri(item.at("path").get<std::string>()), true, 1));
         index += 1;
     }
     appendNode(
@@ -290,7 +283,7 @@ void EventImageGenerator::add() {
     appendNode(
         "nvmsgbroker",
         "nvmsgbroker",
-        addNvmsgbroker(subelement::KAFKA_PROTO_LIB, subelement::KAFKA_CONN_STR, kafkaTopic, KAFKA_CONFIG_NAME, false, false));
+        addNvmsgbroker(subelement::REDIS_PROTO_LIB, subelement::REDIS_CONN_STR, redisTopic, REDIS_CONFIG_NAME, false, false));
     if (drawer.has_value()) {
         const std::string drawerName = nvdetDrawerElement();
         appendNode(drawerName, drawerName, nvdetDrawerProperties(*drawer));
@@ -298,7 +291,7 @@ void EventImageGenerator::add() {
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     for (int streamIndex = 0; streamIndex < runtimeBatchSize; ++streamIndex) {
         const std::string suffix = std::to_string(streamIndex);
-        const std::filesystem::path source(images.at(streamIndex).get<std::string>());
+        const std::filesystem::path source(images.at(streamIndex).at("path").get<std::string>());
         const std::filesystem::path sink = filesinkOutput / (source.stem().string() + ".jpg");
         appendNode("queue", "queue_demux" + suffix, addQueue());
         appendNode("nvvideoconvert", "nvvideoconvert" + suffix, addNvvideoconvert(gpuId));

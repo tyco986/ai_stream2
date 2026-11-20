@@ -20,5 +20,8 @@ drawer:
   fade_time: 1
   show_label: true
 videos:
-  - /root/attachments/videos/video1.mp4
+  - path: /root/attachments/videos/video1.mp4
+    width: 1920
+    height: 1080
+    fps: 25
 filesink_output: /root/media/pipeline/yolo26n_det_vis_video_single

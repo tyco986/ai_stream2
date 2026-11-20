@@ -8,7 +8,7 @@ CREATE TABLE user_group (
   preview_crud CHAR(4) NOT NULL,
   pipeline_crud CHAR(4) NOT NULL,
   recording_crud CHAR(4) NOT NULL,
-  server_crud CHAR(4) NOT NULL,
+  device_crud CHAR(4) NOT NULL,
   user_crud CHAR(4) NOT NULL,
   event_crud CHAR(4) NOT NULL
 );
@@ -23,7 +23,7 @@ CREATE TABLE "user" (
   last_login TIMESTAMPTZ
 );
 
-INSERT INTO user_group (id, name, stream_crud, model_crud, preview_crud, pipeline_crud, recording_crud, server_crud, user_crud, event_crud)
+INSERT INTO user_group (id, name, stream_crud, model_crud, preview_crud, pipeline_crud, recording_crud, device_crud, user_crud, event_crud)
 VALUES (
   '00000000-0000-4000-8000-000000000003',
   'admin',
@@ -212,20 +212,11 @@ CREATE TABLE pipeline (
   status TEXT NOT NULL,
   input JSONB,
   config_path TEXT,
-  stream_ids UUID[] NOT NULL,
-  media_ids UUID[] NOT NULL,
-  gie_ids UUID[] NOT NULL,
-  analyzer_ids UUID[] NOT NULL,
   start_time TIMESTAMPTZ,
   end_time TIMESTAMPTZ,
   duration BIGINT,
   updated_at TIMESTAMPTZ
 );
-
-CREATE INDEX pipeline_stream_ids_idx ON pipeline USING GIN (stream_ids);
-CREATE INDEX pipeline_media_ids_idx ON pipeline USING GIN (media_ids);
-CREATE INDEX pipeline_gie_ids_idx ON pipeline USING GIN (gie_ids);
-CREATE INDEX pipeline_analyzer_ids_idx ON pipeline USING GIN (analyzer_ids);
 
 CREATE TABLE pipeline_gie (
   id UUID PRIMARY KEY,
@@ -282,7 +273,7 @@ CREATE TABLE event (
   pipeline_id UUID NOT NULL,
   event_code VARCHAR(64) NOT NULL,
   event_label VARCHAR(150) NOT NULL,
-  status TEXT NOT NULL,
+  read_at TIMESTAMPTZ,
   raw_path TEXT,
   visualization_path TEXT,
   annotations JSONB,
@@ -293,7 +284,7 @@ CREATE INDEX event_occurred_at_id_idx ON event (occurred_at, id);
 CREATE INDEX event_stream_id_idx ON event (stream_id);
 CREATE INDEX event_media_id_idx ON event (media_id);
 CREATE INDEX event_pipeline_id_event_code_idx ON event (pipeline_id, event_code);
-CREATE INDEX event_status_idx ON event (status);
+CREATE INDEX event_read_at_idx ON event (read_at);
 
 -- notice
 
@@ -309,45 +300,3 @@ CREATE TABLE notice (
 );
 
 CREATE INDEX notice_user_id_created_at_idx ON notice (user_id, created_at);
-
--- server page
-
-CREATE TABLE server (
-  id UUID PRIMARY KEY,
-  probed_at TIMESTAMPTZ,
-  deepstream JSONB,
-  generator BOOLEAN NOT NULL,
-  export_onnx BOOLEAN NOT NULL,
-  export_trt BOOLEAN NOT NULL,
-  mediamtx BOOLEAN NOT NULL,
-  kafka BOOLEAN NOT NULL,
-  postgresql BOOLEAN NOT NULL,
-  frontend BOOLEAN NOT NULL,
-  backend BOOLEAN NOT NULL
-);
-
-CREATE FUNCTION server_reject_delete() RETURNS trigger
-LANGUAGE plpgsql AS $$
-BEGIN
-  RAISE EXCEPTION 'server row cannot be deleted';
-END;
-$$;
-
-CREATE TRIGGER server_reject_delete
-BEFORE DELETE ON server
-FOR EACH ROW
-EXECUTE FUNCTION server_reject_delete();
-
-INSERT INTO server (id, deepstream, generator, export_onnx, export_trt, mediamtx, kafka, postgresql, frontend, backend)
-VALUES (
-  '00000000-0000-4000-8000-000000000005',
-  '[]'::jsonb,
-  FALSE,
-  FALSE,
-  FALSE,
-  FALSE,
-  FALSE,
-  FALSE,
-  FALSE,
-  FALSE
-);

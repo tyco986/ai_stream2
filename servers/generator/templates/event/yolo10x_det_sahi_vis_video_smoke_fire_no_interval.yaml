@@ -27,8 +27,14 @@ event_coder:
 capturer:
   capture_codes: "12"
 videos:
-  - /root/attachments/videos/video1.mp4
-  - /root/attachments/videos/video2.mp4
+  - path: /root/attachments/videos/video1.mp4
+    width: 1920
+    height: 1080
+    fps: 25
+  - path: /root/attachments/videos/video2.mp4
+    width: 1920
+    height: 1080
+    fps: 25
 filesink_output: /root/media/pipeline/yolo10x_smoke_fire_sahi_vis_video_no_interval
 capturer_output: /root/events/yolo10x_smoke_fire_sahi_vis_video_no_interval
 sahi:

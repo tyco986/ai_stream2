@@ -13,6 +13,8 @@ HOST_PORT="${BESZEL_HOST_PORT:-8093}"
 VOL_DATA="${PROJECT_NAME}_beszel_data"
 VOL_SOCKET="${PROJECT_NAME}_beszel_socket"
 APP_URL="${BESZEL_APP_URL:-http://127.0.0.1:${HOST_PORT}}"
+USER_EMAIL=admin@example.com
+USER_PASSWORD=88888888
 
 docker network create "${NET}" 2>/dev/null || true
 docker volume create "${VOL_DATA}" >/dev/null
@@ -25,6 +27,8 @@ docker run -d \
   --network "${NET}" \
   --restart unless-stopped \
   -e "APP_URL=${APP_URL}" \
+  -e "USER_EMAIL=${USER_EMAIL}" \
+  -e "USER_PASSWORD=${USER_PASSWORD}" \
   -p "${HOST_PORT}:8090" \
   -v /etc/localtime:/etc/localtime:ro \
   -v "${VOL_DATA}:/beszel_data" \
@@ -35,7 +39,8 @@ cat <<EOF
 ${NAME} (${NET})
   UI: ${APP_URL}
   image: ${IMG}
-  Next: open UI → create admin → Add System → copy TOKEN/KEY
+  login: ${USER_EMAIL} / ${USER_PASSWORD}
+  Next: open UI → Add System → copy TOKEN/KEY
         then: bash servers/beszel/scripts/2_run_agent.sh
         In Add System, Host/IP use: /beszel_socket/beszel.sock
 EOF

@@ -8,14 +8,12 @@
 #include "subelement_generator/utils/nvtracker_parser.hpp"
 
 #include <cctype>
-#include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <set>
 #include <stdexcept>
 #include <utility>
 #include <variant>
-
-#include <opencv2/videoio.hpp>
 
 static YAML::Node jsonToYaml(const nlohmann::json& value) {
     YAML::Node node;
@@ -66,19 +64,6 @@ std::string BaseVideoGenerator::fileUri(const std::filesystem::path& path) {
     return uri;
 }
 
-static void probeVideo(const std::filesystem::path& path, int& width, int& height, int& fps) {
-    cv::VideoCapture capture(path.string());
-    if (!capture.isOpened()) {
-        throw std::runtime_error("input video not found: " + path.string());
-    }
-    width = static_cast<int>(capture.get(cv::CAP_PROP_FRAME_WIDTH));
-    height = static_cast<int>(capture.get(cv::CAP_PROP_FRAME_HEIGHT));
-    fps = static_cast<int>(std::lround(capture.get(cv::CAP_PROP_FPS)));
-    if (width <= 0 || height <= 0 || fps <= 0) {
-        throw std::runtime_error("invalid video metadata: " + path.string());
-    }
-}
-
 BaseVideoGenerator::BaseVideoGenerator(
     std::string pipelineName,
     nlohmann::json videos,
@@ -104,7 +89,7 @@ void BaseVideoGenerator::init() {
     initPgie();
     initNvdsanalytics();
     initNvtracker();
-    initKafka();
+    initRedis();
     initParams();
     initPipeline();
 }
@@ -113,23 +98,29 @@ void BaseVideoGenerator::initVideos() {
     if (!videos.is_array() || videos.empty()) {
         throw std::invalid_argument("videos cannot be empty");
     }
+    std::set<int> widths;
+    std::set<int> heights;
     videoFps.clear();
-    int index = 0;
     for (const nlohmann::json& item : videos) {
-        int videoWidth = 0;
-        int videoHeight = 0;
-        int probedFps = 0;
-        probeVideo(item.get<std::string>(), videoWidth, videoHeight, probedFps);
-        if (index == 0) {
-            width = videoWidth;
-            height = videoHeight;
-            fps = probedFps;
-        } else if (videoWidth != width || videoHeight != height) {
-            throw std::invalid_argument("videos have inconsistent resolution");
+        const int videoWidth = item.at("width").get<int>();
+        const int videoHeight = item.at("height").get<int>();
+        const int itemFps = item.at("fps").get<int>();
+        if (videoWidth <= 0 || videoHeight <= 0 || itemFps <= 0) {
+            throw std::invalid_argument("invalid video metadata: " + item.at("path").get<std::string>());
         }
-        videoFps.push_back(probedFps);
-        index += 1;
+        widths.insert(videoWidth);
+        heights.insert(videoHeight);
+        videoFps.push_back(itemFps);
     }
+    if (widths.size() != 1) {
+        throw std::invalid_argument("videos have inconsistent width");
+    }
+    if (heights.size() != 1) {
+        throw std::invalid_argument("videos have inconsistent height");
+    }
+    width = *widths.begin();
+    height = *heights.begin();
+    fps = videoFps.front();
     runtimeBatchSize = static_cast<int>(videos.size());
 }
 
@@ -218,10 +209,10 @@ void BaseVideoGenerator::initNvtracker() {
     }
 }
 
-void BaseVideoGenerator::initKafka() {
-    kafkaGenerator.emplace();
-    kafkaTopic = std::string(subelement::KAFKA_TOPIC_PREFIX) + pipelineName;
-    files.insert_or_assign(KAFKA_CONFIG_NAME, ConfigFile(kafkaGenerator->config));
+void BaseVideoGenerator::initRedis() {
+    redisGenerator.emplace();
+    redisTopic = std::string(subelement::REDIS_TOPIC_PREFIX) + pipelineName;
+    files.insert_or_assign(REDIS_CONFIG_NAME, ConfigFile(redisGenerator->config));
 }
 
 void BaseVideoGenerator::applySavePaths(YAML::Node pipelineDocument, const std::filesystem::path& configSaveDir) {
@@ -329,7 +320,7 @@ void BaseVideoGenerator::add() {
     int index = 0;
     const int gpuId = pgieGenerator->config["property"]["gpu-id"].as<int>();
     for (const nlohmann::json& item : videos) {
-        appendNode("nvurisrcbin", "nvurisrcbin" + std::to_string(index), addNvurisrcbin(fileUri(item.get<std::string>()), true));
+        appendNode("nvurisrcbin", "nvurisrcbin" + std::to_string(index), addNvurisrcbin(fileUri(item.at("path").get<std::string>()), true));
         index += 1;
     }
     YAML::Node mux = addNvstreammux(runtimeBatchSize, width, height, true, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId, false);

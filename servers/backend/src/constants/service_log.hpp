@@ -33,7 +33,6 @@ inline const char* PIPELINE_DIR = "pipeline";
 inline const char* PIPELINE_GIE_DIR = "pipeline_gie";
 inline const char* PIPELINE_ANALYZER_DIR = "pipeline_analyzer";
 inline const char* DEVICE_DIR = "device";
-inline const char* SERVER_DIR = "server";
 inline const char* PREVIEW_DIR = "preview";
 inline const char* USER_GROUP_DIR = "user_group";
 inline const char* USER_DIR = "user";
@@ -42,7 +41,7 @@ inline const char* NOTICE_DIR = "notice";
 inline const char* MEDIA_DIR = "media";
 inline const char* PROXY_DIR = "proxy";
 inline const char* LOG_DIR = "log";
-inline const char* KAFKA_DIR = "kafka";
+inline const char* REDIS_DIR = "redis";
 inline const char* PAGES[] = {
     STREAM_DIR,
     STREAM_GROUP_DIR,
@@ -51,7 +50,6 @@ inline const char* PAGES[] = {
     PIPELINE_GIE_DIR,
     PIPELINE_ANALYZER_DIR,
     DEVICE_DIR,
-    SERVER_DIR,
     PREVIEW_DIR,
     USER_GROUP_DIR,
     USER_DIR,
@@ -60,7 +58,7 @@ inline const char* PAGES[] = {
     MEDIA_DIR,
     PROXY_DIR,
     LOG_DIR,
-    KAFKA_DIR,
+    REDIS_DIR,
 };
 inline const char* FILE_SUFFIX = ".jsonl";
 inline const std::size_t MAX_DAYS = 90;

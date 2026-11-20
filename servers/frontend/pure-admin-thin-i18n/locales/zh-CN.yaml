@@ -261,7 +261,13 @@ event:
   pureOccurredAt: 发生时间
   pureEventCode: 事件码
   pureEventLabel: 事件名称
+  purePipeline: 管道
+  pureSource: 来源
   pureAnnotations: 标注
+  pureOps: 操作
+  pureRemove: 删除
+  pureRead: 已读
+  pureUnread: 未读
 logger:
   pureTitle: 日志
 login:

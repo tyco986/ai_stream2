@@ -36,10 +36,6 @@ export type PipelineDraft = {
   name: string;
   type: string;
   input: PipelineInput;
-  stream_ids: string[];
-  media_ids: string[];
-  gie_ids: string[];
-  analyzer_ids: string[];
 };
 
 export type PipelineItem = {

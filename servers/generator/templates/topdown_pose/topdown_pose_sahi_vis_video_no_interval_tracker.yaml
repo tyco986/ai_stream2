@@ -27,8 +27,14 @@ drawer:
   show_pose: true
   pose_threshold: 0.5
 videos:
-  - /root/attachments/videos/video1.mp4
-  - /root/attachments/videos/video2.mp4
+  - path: /root/attachments/videos/video1.mp4
+    width: 1920
+    height: 1080
+    fps: 25
+  - path: /root/attachments/videos/video2.mp4
+    width: 1920
+    height: 1080
+    fps: 25
 filesink_output: /root/media/pipeline/topdown_pose_sahi_vis_video_no_interval_tracker
 sahi:
   preprocess:

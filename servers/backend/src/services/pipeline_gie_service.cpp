@@ -1,14 +1,12 @@
 #include "services/pipeline_gie_service.hpp"
 
 #include "error_tracer/sql.hpp"
-#include "services/pipeline_service.hpp"
 
 #include "constants/pipeline_const.hpp"
 #include "constants/pipeline_gie_const.hpp"
 #include "searcher/searcher.hpp"
 
 #include <stdexcept>
-#include <vector>
 
 PipelineGieService::PipelineGieService(drogon::orm::DbClientPtr dbClient) : dbClient(std::move(dbClient)) {}
 
@@ -136,59 +134,12 @@ Json::Value PipelineGieService::update(const std::string& gieId,
     throw std::runtime_error(pipeline_gie::ERR_NOT_FOUND);
   }
   data = row2json(rows[0], models[0]["engine_path"].as<std::string>());
-  updatePipelineInput(data, getPipelineRefCurrentGie(gieId));
   return data;
 }
 
-Json::Value PipelineGieService::getPipelineRefCurrentGie(const std::string& gieId) {
-  const auto rows = Sql::sync({}, dbClient,
-      "SELECT id::text AS id, array_to_json(gie_ids)::text AS gie_ids "
-      "FROM pipeline WHERE $1::uuid = ANY(gie_ids)",
-      gieId);
-  Json::Value pipelines(Json::arrayValue);
-  for (const auto& row : rows) {
-    Json::Value gieIds;
-    Json::Reader().parse(row["gie_ids"].as<std::string>(), gieIds);
-    Json::Value item;
-    item[pipeline::KEY_ID] = row["id"].as<std::string>();
-    item[pipeline::KEY_GIE_IDS] = gieIds;
-    pipelines.append(item);
-  }
-  return pipelines;
-}
-
-void PipelineGieService::updatePipelineInput(const Json::Value& gie, const Json::Value& pipelines) {
-  PipelineService pipelinesService(dbClient);
-  for (const auto& item : pipelines) {
-    Json::Value input = pipelinesService.getInput(item[pipeline::KEY_ID].asString());
-    std::vector<std::string> slots;
-    const auto names = input.isObject() ? input.getMemberNames() : std::vector<std::string>();
-    for (const auto& name : names) {
-      if (input[name].isObject() && input[name].isMember(pipeline::KEY_MODEL_ZIP)) {
-        slots.push_back(name);
-      }
-    }
-    int index = 0;
-    for (const auto& id : item[pipeline::KEY_GIE_IDS]) {
-      if (id.asString() == gie[pipeline_gie::KEY_ID].asString() && index < static_cast<int>(slots.size())) {
-        Json::Value& slot = input[slots[index]];
-        slot[pipeline::KEY_MODEL_ZIP] = gie[pipeline_gie::KEY_ENGINE_PATH];
-        slot[pipeline_gie::KEY_INTERVAL] = gie[pipeline_gie::KEY_INTERVAL];
-        if (slot.isMember(pipeline_gie::KEY_CLASS_ATTRS)) {
-          slot[pipeline_gie::KEY_CLASS_ATTRS] = gie[pipeline_gie::KEY_CLASS_ATTRS];
-        }
-      }
-      index = index + 1;
-    }
-    if (input.isObject()) {
-      pipelinesService.setInput(item[pipeline::KEY_ID].asString(), input);
-    }
-  }
-}
-
 Json::Value PipelineGieService::remove(const std::string& gieId) {
-  const auto used = Sql::sync({}, dbClient, 
-      "SELECT id FROM pipeline WHERE $1::uuid = ANY(gie_ids) LIMIT 1", gieId);
+  const auto used = Sql::sync({}, dbClient,
+      std::string("SELECT id FROM pipeline WHERE ") + pipeline::SQL_GIE_USED + " LIMIT 1", gieId);
   if (!used.empty()) {
     throw std::runtime_error(pipeline_gie::ERR_OCCUPIED);
   }

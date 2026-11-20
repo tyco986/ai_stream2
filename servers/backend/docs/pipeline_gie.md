@@ -4,7 +4,7 @@
 
 JSON 成功外壳：`{success, message, data}`。
 
-GIE 对象键：`id`、`name`、`model_id`、`model_name`、`class_attrs`、`interval`、`engine_path`、`updated_at`。`engine_path` 来自关联模型，不在本表。被 `pipeline.gie_ids` 引用时不可删。
+GIE 对象键：`id`、`name`、`model_id`、`model_name`、`class_attrs`、`interval`、`engine_path`、`updated_at`。`engine_path` 来自关联模型，不在本表。被 `pipeline.input` 的 `pgie`、`sgie`、`rtmpose`、`stgcnpp` 引用时不可删。
 
 ---
 

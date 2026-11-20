@@ -67,7 +67,7 @@ void BaseRtspGenerator::init() {
     initPgie();
     initNvdsanalytics();
     initNvtracker();
-    initKafka();
+    initRedis();
     initParams();
     initPipeline();
 }
@@ -184,10 +184,10 @@ void BaseRtspGenerator::initNvtracker() {
     }
 }
 
-void BaseRtspGenerator::initKafka() {
-    kafkaGenerator.emplace();
-    kafkaTopic = std::string(subelement::KAFKA_TOPIC_PREFIX) + pipelineName;
-    files.insert_or_assign(KAFKA_CONFIG_NAME, ConfigFile(kafkaGenerator->config));
+void BaseRtspGenerator::initRedis() {
+    redisGenerator.emplace();
+    redisTopic = std::string(subelement::REDIS_TOPIC_PREFIX) + pipelineName;
+    files.insert_or_assign(REDIS_CONFIG_NAME, ConfigFile(redisGenerator->config));
 }
 
 void BaseRtspGenerator::applySavePaths(YAML::Node pipelineDocument, const std::filesystem::path& configSaveDir) {
@@ -357,6 +357,6 @@ void BaseRtspGenerator::link() {
 }
 
 std::string BaseRtspGenerator::visualizedSinkUri(const std::string& sourceUri) const {
-    const std::string uri = sourceUri + "/" + kafkaTopic;
+    const std::string uri = sourceUri + "/" + redisTopic;
     return uri;
 }

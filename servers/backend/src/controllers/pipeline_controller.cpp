@@ -3,7 +3,7 @@
 #include "constants/pipeline_const.hpp"
 #include "constants/proxy_const.hpp"
 #include "db/database.hpp"
-#include "kafka/kafka.hpp"
+#include "redis/redis.hpp"
 #include "logger/base_logger.hpp"
 #include "logger/step_span.hpp"
 #include "response/response.hpp"
@@ -15,7 +15,6 @@
 #include <exception>
 #include <filesystem>
 #include <fstream>
-#include <iomanip>
 #include <iterator>
 #include <sstream>
 #include <stdexcept>
@@ -205,60 +204,6 @@ drogon::Task<Json::Value> PipelineController::postGenerate(const std::string& na
   Json::Value data;
   data[pipeline::KEY_CONFIG_PATH] = path.string();
   co_return data;
-}
-
-bool PipelineController::reserveOutputDirectory(const std::filesystem::path& path) {
-  std::filesystem::create_directories(path.parent_path());
-  const bool created = std::filesystem::create_directory(path);
-  return created;
-}
-
-std::string PipelineController::outputStamp() const {
-  const std::time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-  std::tm local{};
-  localtime_r(&now, &local);
-  std::ostringstream text;
-  text << std::put_time(&local, "%Y%m%d-%H%M%S");
-  const std::string stamp = text.str();
-  return stamp;
-}
-
-Json::Value PipelineController::addTimeStampToInput(Json::Value input, const std::string& name) {
-  const std::string generator = input.isMember(pipeline::KEY_GENERATOR) && input[pipeline::KEY_GENERATOR].isString()
-      ? input[pipeline::KEY_GENERATOR].asString()
-      : "";
-  const bool filesink = input.isMember(pipeline::KEY_IMAGES)
-      || (input.isMember(pipeline::KEY_VIDEOS) && generator.find(pipeline::VIS_GENERATOR_MARK) != std::string::npos);
-  const bool capturer = input.isMember(pipeline::KEY_EVENT_CODER) && !input[pipeline::KEY_EVENT_CODER].isNull();
-  const std::string stamp = outputStamp();
-  int suffix = 0;
-  bool reserved = !filesink && !capturer;
-  std::string filesinkPath;
-  std::string capturerPath;
-  for (; suffix < pipeline::OUTPUT_SUFFIX_LIMIT && !reserved; ++suffix) {
-    const std::string leaf = name + "-" + stamp + "-" + std::to_string(suffix);
-    filesinkPath = (std::filesystem::path(pipeline::FILESINK_DIR) / leaf).string();
-    capturerPath = (std::filesystem::path(pipeline::EVENT_DIR) / name / (stamp + "-" + std::to_string(suffix))).string();
-    const bool filesinkReady = !filesink || reserveOutputDirectory(filesinkPath);
-    const bool capturerReady = !capturer || reserveOutputDirectory(capturerPath);
-    if (filesink && filesinkReady && !capturerReady) {
-      std::filesystem::remove(filesinkPath);
-    }
-    if (capturer && capturerReady && !filesinkReady) {
-      std::filesystem::remove(capturerPath);
-    }
-    reserved = filesinkReady && capturerReady;
-  }
-  if (!reserved) {
-    throw std::runtime_error("output directory not reserved");
-  }
-  if (filesink) {
-    input[pipeline::KEY_FILESINK_OUTPUT] = filesinkPath;
-  }
-  if (capturer) {
-    input[pipeline::KEY_CAPTURER_OUTPUT] = capturerPath;
-  }
-  return input;
 }
 
 std::string PipelineController::hostBind(const std::string& dir) {
@@ -466,10 +411,6 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::create(drogon::HttpReq
                                                     Json::Value(""),
                                                     body[pipeline::KEY_NAME],
                                                     body[pipeline::KEY_TYPE],
-                                                    body[pipeline::KEY_ANALYZER_IDS],
-                                                    body[pipeline::KEY_STREAM_IDS],
-                                                    body[pipeline::KEY_MEDIA_IDS],
-                                                    body[pipeline::KEY_GIE_IDS],
                                                     body[pipeline::KEY_INPUT]),
                                   pipeline::MSG_CREATE_OK);
   } catch (const std::exception& error) {
@@ -520,10 +461,6 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::update(drogon::HttpReq
                                                     configPath,
                                                     body[pipeline::KEY_NAME],
                                                     body[pipeline::KEY_TYPE],
-                                                    body[pipeline::KEY_ANALYZER_IDS],
-                                                    body[pipeline::KEY_STREAM_IDS],
-                                                    body[pipeline::KEY_MEDIA_IDS],
-                                                    body[pipeline::KEY_GIE_IDS],
                                                     body[pipeline::KEY_INPUT]),
                                   pipeline::MSG_UPDATE_OK);
   } catch (const std::exception& error) {
@@ -553,8 +490,7 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::start(drogon::HttpRequ
     service.setStatus(pipeline_id, pipeline::STATUS_STARTING);
     std::string configPath;
     try {
-      const Json::Value input = addTimeStampToInput(current[pipeline::KEY_INPUT], current[pipeline::KEY_NAME].asString());
-      service.setInput(pipeline_id, input);
+      const Json::Value input = service.addOutput(service.assembleInput(current[pipeline::KEY_INPUT]), current[pipeline::KEY_NAME].asString());
       Json::Value generated;
       {
         StepSpan span(steps, pipeline::STEP_GENERATE);
@@ -566,7 +502,7 @@ drogon::Task<drogon::HttpResponsePtr> PipelineController::start(drogon::HttpRequ
       service.setStatus(pipeline_id, previous);
       throw;
     }
-    Kafka::shared().watch(current[pipeline::KEY_NAME].asString());
+    Redis::shared().watch(current[pipeline::KEY_NAME].asString());
     bool up = false;
     try {
       up = co_await runDeepstreamContainer(containerName, current[pipeline::KEY_NAME].asString(), steps);

@@ -4,7 +4,7 @@
 
 JSON 成功外壳：`{success, message, data}`。
 
-管道对象键：`id`、`name`、`type`、`status`（`stopped` | `starting` | `running`）、`input`、`config_path`、`stream_ids`、`stream_names`、`media_ids`、`media_names`、`gie_ids`、`gie_names`、`analyzer_ids`、`analyzer_names`、`start_time`、`end_time`、`duration`、`updated_at`。未填的时间、时长、`input`、`config_path` 为 `null`。名称数组与 id 数组同序。RTSP 写 `stream_ids`，`media_ids` 为空数组；image、video 写 `media_ids`，`stream_ids` 为空数组。
+管道对象键：`id`、`name`、`type`、`status`（`stopped` | `starting` | `running`）、`input`、`config_path`、`stream_ids`、`stream_names`、`media_ids`、`media_names`、`gie_ids`、`gie_names`、`analyzer_ids`、`analyzer_names`、`start_time`、`end_time`、`duration`、`updated_at`。未填的时间、时长、`input`、`config_path` 为 `null`。名称数组与 id 数组同序。这些 id 都从 `input` 读出，不单独入库。`pgie`、`sgie`、`rtmpose`、`stgcnpp` 为 gie id。`streams`、`videos`、`images` 是数组，每项为 `{id, analyzer}`：`streams` 的 id 是 stream id，`videos` 和 `images` 的 id 是 media id，`analyzer` 为 analyzer id 或 `null`。前端按管道类型的 `source` 只写其中一个键。
 
 `status=starting` 时不可更新、不可再启动，返回 `409`，`pipeline is running`。
 
@@ -16,9 +16,9 @@ JSON 成功外壳：`{success, message, data}`。
 |------|------|--------|------------------|------|
 | `GET` | `/backend/pipelines` | query：`search`、`page`、`page_size` | `items`、`total`、`page`、`page_size` | 分页列表 |
 | `GET` | `/backend/pipelines/map` | 无 | `{管道名: id}` | 名称到 id |
-| `POST` | `/backend/pipelines` | `name`、`type`、`input`、`stream_ids`、`media_ids`、`gie_ids`、`analyzer_ids` | 管道对象 | 生成配置并入库，状态 `stopped` |
+| `POST` | `/backend/pipelines` | `name`、`type`、`input` | 管道对象 | 生成配置并入库，状态 `stopped` |
 | `GET` | `/backend/pipelines/{pipeline_id}` | path：`pipeline_id` | 管道对象 | 详情 |
-| `PATCH` | `/backend/pipelines/{pipeline_id}` | `name`、`type`、`input`、`stream_ids`、`media_ids`、`gie_ids`、`analyzer_ids` | 管道对象 | 重新生成配置并改来源 id |
+| `PATCH` | `/backend/pipelines/{pipeline_id}` | `name`、`type`、`input` | 管道对象 | 改名称、类型和 `input` |
 | `DELETE` | `/backend/pipelines/{pipeline_id}` | path：`pipeline_id` | 管道对象 | 停容器并删除 |
 | `POST` | `/backend/pipelines/{pipeline_id}/start` | path：`pipeline_id` | 管道对象 | 拉起 DeepStream 容器并启动 |
 | `POST` | `/backend/pipelines/{pipeline_id}/probe` | path：`pipeline_id` | 管道对象 | 读容器状态写回 |
@@ -50,7 +50,7 @@ JSON 成功外壳：`{success, message, data}`。
 
 只入库，不调用 generate。`config_path` 为 `null`，`status` 为 `stopped`，`updated_at` 为当前时间。
 
-入参：`name`、`type`、`input`、`stream_ids`、`media_ids`、`gie_ids`、`analyzer_ids`。缺省的 `stream_ids`、`media_ids` 写成空数组。
+入参：`name`、`type`、`input`。
 
 出参 `data`：管道对象。`message`：`Created pipeline`。失败 `500`，`Failed to create pipeline`。
 
@@ -62,9 +62,9 @@ JSON 成功外壳：`{success, message, data}`。
 
 ### PATCH `/backend/pipelines/{pipeline_id}`
 
-`status=starting` 或容器正在跑时拒绝。否则更新 `name`、`type`、`input`、`stream_ids`、`media_ids`、`gie_ids`、`analyzer_ids`，保留已有 `config_path`，清空 `start_time`、`end_time`、`duration`。缺省的 `stream_ids`、`media_ids` 写成空数组。
+`status=starting` 或容器正在跑时拒绝。否则更新 `name`、`type`、`input`，保留已有 `config_path`，清空 `start_time`、`end_time`、`duration`。
 
-入参：`name`、`type`、`input`、`stream_ids`、`media_ids`、`gie_ids`、`analyzer_ids`。
+入参：`name`、`type`、`input`。
 
 出参 `data`：管道对象。`message`：`Updated pipeline`。失败 `500`，`Failed to update pipeline`。
 
@@ -78,7 +78,7 @@ JSON 成功外壳：`{success, message, data}`。
 
 ### POST `/backend/pipelines/{pipeline_id}/start`
 
-`starting` 或容器已在跑时 `409`。否则按本次启动时间写入产物目录：有 filesink 时写 `filesink_output` 为 `/root/media/pipeline/{name}-{时间戳}-{序号}`，有 event 时写 `capturer_output` 为 `/root/events/{name}/{时间戳}-{序号}`。更新 `input` 后调用 generate，把 zip 路径写入 `config_path`。随后经 Docker 代理创建或重启容器 `ai_stream2_{name}`（镜像 `ai_stream2_deepstream`，端口 9000）。健康检查通过后，从 `config_path` 的 `params.yml` 取出全部 `model_zip`，以及 `videos`、`images` 里的本地文件。配置 zip（`name=config`）、模型 zip（`name=model`）和媒体 zip（`name=media`，条目为去掉前导 `/` 的原路径；没有本地媒体则不传）放进同一个 multipart 调用 `/start`，再轮询 `/status`，把 `status`、`start_time`、`end_time`、`duration` 写回。日志 steps 增加 `generate`。
+`starting` 或容器已在跑时 `409`。否则在内存中把 `input` 的 gie id 展开为 `model_zip`、`interval`、`class_attrs`，按 `streams`、`videos`、`images` 里的 id 查 `stream` 或 `media` 拼成 generator 要的来源：流是 `url`、`width`、`height`、`fps`，视频是 `path`、`width`、`height`、`fps`，图片是 `path`、`width`、`height`，把每路 `analyzer` id 收成 `analyzer`，再按本次启动时间写入产物目录：有 filesink 时写 `filesink_output` 为 `/root/media/pipeline/{name}-{时间戳}-{序号}`，有 event 时写 `capturer_output` 为 `/root/events/{name}/{时间戳}-{序号}`。这份 JSON 只发给 generate，不写回 `input`。把 zip 路径写入 `config_path`。随后经 Docker 代理创建或重启容器 `ai_stream2_{name}`（镜像 `ai_stream2_deepstream`，端口 9000）。健康检查通过后，从 `config_path` 的 `params.yml` 取出全部 `model_zip`，以及 `videos`、`images` 里的本地文件。配置 zip（`name=config`）、模型 zip（`name=model`）和媒体 zip（`name=media`，条目为去掉前导 `/` 的原路径；没有本地媒体则不传）放进同一个 multipart 调用 `/start`，再轮询 `/status`，把 `status`、`start_time`、`end_time`、`duration` 写回。日志 steps 增加 `generate`。
 
 入参：path `pipeline_id`。
 
@@ -154,13 +154,9 @@ JSON 成功外壳：`{success, message, data}`。
 | `status` | TEXT | 无 | NOT NULL |
 | `input` | JSONB | `NULL` | 可空 |
 | `config_path` | TEXT | `NULL` | 可空 |
-| `stream_ids` | UUID[] | 无 | NOT NULL |
-| `media_ids` | UUID[] | 无 | NOT NULL |
-| `gie_ids` | UUID[] | 无 | NOT NULL |
-| `analyzer_ids` | UUID[] | 无 | NOT NULL |
 | `start_time` | TIMESTAMPTZ | `NULL` | 可空 |
 | `end_time` | TIMESTAMPTZ | `NULL` | 可空 |
 | `duration` | BIGINT | `NULL` | 可空 |
 | `updated_at` | TIMESTAMPTZ | `NULL` | 可空 |
 
-GIN 索引：`pipeline_stream_ids_idx`、`pipeline_media_ids_idx`、`pipeline_gie_ids_idx`、`pipeline_analyzer_ids_idx`。
+无额外索引。

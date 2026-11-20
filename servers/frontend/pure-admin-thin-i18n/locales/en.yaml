@@ -261,7 +261,13 @@ event:
   pureOccurredAt: Occurred at
   pureEventCode: Code
   pureEventLabel: Label
+  purePipeline: Pipeline
+  pureSource: Source
   pureAnnotations: Annotations
+  pureOps: Ops
+  pureRemove: Remove
+  pureRead: Read
+  pureUnread: Unread
 logger:
   pureTitle: Logs
 login:

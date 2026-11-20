@@ -3,9 +3,9 @@
 #include <filesystem>
 #include <string>
 
-class KafkaGenerator {
+class RedisGenerator {
 public:
-    KafkaGenerator();
+    RedisGenerator();
 
     void write(const std::filesystem::path& savePath);
     std::string config;

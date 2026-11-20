@@ -9,7 +9,6 @@
 #include "constants/pipeline_const.hpp"
 #include "constants/pipeline_gie_const.hpp"
 #include "constants/preview_const.hpp"
-#include "constants/server_const.hpp"
 #include "constants/stream_const.hpp"
 #include "constants/stream_group_const.hpp"
 #include "constants/user_const.hpp"
@@ -120,10 +119,7 @@ inline const std::map<std::pair<drogon::HttpMethod, std::string>, CrudGate> CRUD
     {{drogon::Delete, pipeline_analyzer::PATH_ITEM}, {user::KEY_PIPELINE_CRUD, CRUD_DELETE}},
     {{drogon::Post, pipeline_analyzer::PATH_BATCH_REMOVE}, {user::KEY_PIPELINE_CRUD, CRUD_DELETE}},
     // device
-    {{drogon::Get, device::PATH_LIST}, {user::KEY_SERVER_CRUD, CRUD_READ}},
-    // server
-    {{drogon::Get, server::PATH_ITEM}, {user::KEY_SERVER_CRUD, CRUD_READ}},
-    {{drogon::Post, server::PATH_PROBE}, {user::KEY_SERVER_CRUD, CRUD_UPDATE}},
+    {{drogon::Get, device::PATH_LIST}, {user::KEY_DEVICE_CRUD, CRUD_READ}},
     // user
     {{drogon::Get, user::PATH_USER_LIST}, {user::KEY_USER_CRUD, CRUD_READ}},
     {{drogon::Get, user::PATH_USER_MAP}, {user::KEY_USER_CRUD, CRUD_READ}},
@@ -145,7 +141,12 @@ inline const std::map<std::pair<drogon::HttpMethod, std::string>, CrudGate> CRUD
     // event
     {{drogon::Get, event::PATH_LIST}, {user::KEY_EVENT_CRUD, CRUD_READ}},
     {{drogon::Get, event::PATH_WS}, {user::KEY_EVENT_CRUD, CRUD_READ}},
-    {{drogon::Post, event::PATH_STATUS}, {user::KEY_EVENT_CRUD, CRUD_UPDATE}},
+    {{drogon::Post, event::PATH_READ}, {user::KEY_EVENT_CRUD, CRUD_UPDATE}},
+    {{drogon::Post, event::PATH_UNREAD}, {user::KEY_EVENT_CRUD, CRUD_UPDATE}},
+    {{drogon::Delete, event::PATH_ITEM}, {user::KEY_EVENT_CRUD, CRUD_DELETE}},
+    {{drogon::Post, event::PATH_BATCH_READ}, {user::KEY_EVENT_CRUD, CRUD_UPDATE}},
+    {{drogon::Post, event::PATH_BATCH_UNREAD}, {user::KEY_EVENT_CRUD, CRUD_UPDATE}},
+    {{drogon::Post, event::PATH_BATCH_REMOVE}, {user::KEY_EVENT_CRUD, CRUD_DELETE}},
     // log
     {{drogon::Get, service_log::PATH_LIST}, {user::KEY_EVENT_CRUD, CRUD_READ}},
     {{drogon::Delete, service_log::PATH_LIST}, {user::KEY_EVENT_CRUD, CRUD_DELETE}},

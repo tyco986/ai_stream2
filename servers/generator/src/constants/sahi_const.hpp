@@ -9,5 +9,6 @@ inline constexpr int TEXT_CLEARANCE = 14;
 inline constexpr int TEXT_LIFT = 12;
 inline constexpr double FONT_SCALE = 0.4;
 inline constexpr int FONT_FACE = 0;
+inline constexpr int JPEG_QUALITY = 95;
 
 }

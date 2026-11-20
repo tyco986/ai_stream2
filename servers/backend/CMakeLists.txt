@@ -10,7 +10,7 @@ find_package(libzip REQUIRED)
 
 find_package(yaml-cpp REQUIRED)
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(RDKAFKA REQUIRED rdkafka++)
+pkg_check_modules(HIREDIS REQUIRED hiredis)
 pkg_check_modules(MEDIAINFO REQUIRED libmediainfo)
 find_package(OpenSSL REQUIRED)
 
@@ -37,10 +37,10 @@ add_executable(backend
   src/controllers/pipeline_analyzer_batch_controller.cpp
   src/controllers/model_batch_controller.cpp
   src/controllers/proxy_controller.cpp
-  src/controllers/server_controller.cpp
   src/controllers/device_controller.cpp
   src/controllers/preview_controller.cpp
   src/controllers/event_controller.cpp
+  src/controllers/event_batch_controller.cpp
   src/controllers/event_ws.cpp
   src/controllers/notice_controller.cpp
   src/controllers/media_controller.cpp
@@ -50,7 +50,7 @@ add_executable(backend
   src/searcher/searcher.cpp
   src/mediamtx/mediamtx.cpp
   src/ffmpeg/ffmpeg.cpp
-  src/kafka/kafka.cpp
+  src/redis/redis.cpp
   src/services/stream_group_service.cpp
   src/services/user_group_service.cpp
   src/services/user_service.cpp
@@ -59,7 +59,6 @@ add_executable(backend
   src/services/pipeline_service.cpp
   src/services/pipeline_gie_service.cpp
   src/services/pipeline_analyzer_service.cpp
-  src/services/server_service.cpp
   src/services/preview_service.cpp
   src/services/event_service.cpp
   src/services/event_hub.cpp
@@ -75,7 +74,6 @@ add_executable(backend
   src/logger/pipeline_logger.cpp
   src/logger/pipeline_gie_logger.cpp
   src/logger/pipeline_analyzer_logger.cpp
-  src/logger/server_logger.cpp
   src/logger/device_logger.cpp
   src/logger/preview_logger.cpp
   src/logger/event_logger.cpp
@@ -83,8 +81,8 @@ add_executable(backend
   src/logger/media_logger.cpp
   src/logger/proxy_logger.cpp
   src/logger/log_logger.cpp
-  src/logger/kafka_logger.cpp)
-target_include_directories(backend PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${RDKAFKA_INCLUDE_DIRS} ${MEDIAINFO_INCLUDE_DIRS}
+  src/logger/redis_logger.cpp)
+target_include_directories(backend PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${HIREDIS_INCLUDE_DIRS} ${MEDIAINFO_INCLUDE_DIRS}
   /usr/local/cuda-13.4/targets/x86_64-linux/include)
 target_link_directories(backend PRIVATE /usr/local/cuda-13.4/targets/x86_64-linux/lib/stubs)
-target_link_libraries(backend PRIVATE Drogon::Drogon spdlog::spdlog libzip::zip yaml-cpp OpenSSL::Crypto ${RDKAFKA_LIBRARIES} ${MEDIAINFO_LIBRARIES} nvidia-ml)
+target_link_libraries(backend PRIVATE Drogon::Drogon spdlog::spdlog libzip::zip yaml-cpp OpenSSL::Crypto ${HIREDIS_LIBRARIES} ${MEDIAINFO_LIBRARIES} nvidia-ml)

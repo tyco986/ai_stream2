@@ -32,7 +32,8 @@ public:
         double overlapHeightRatio,
         bool enableFullFrame) const;
 
-    cv::Mat preview(const SahiInfo& info) const;
+    cv::Mat draw(const SahiInfo& info) const;
+    std::string previewJpegBytes(const SahiInfo& info) const;
 
 private:
     cv::Scalar color(const std::string& label, int rowCount) const;
