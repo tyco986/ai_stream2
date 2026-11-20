@@ -63,13 +63,11 @@ panel:
 menus:
   pureHome: Home
   pureStream: Stream
-  pureTool: Tool
   pureMedia: Media
   purePreview: Preview
   pureModel: Model
   purePipeline: Pipeline
   pureEvent: Event
-  pureService: Service
   pureLogin: Login
   purePermission: Permission Manage
   purePermissionPage: Page Permission
@@ -258,6 +256,10 @@ preview:
   pureFullscreen: Fullscreen
   pureUnbind: Unbind
 event:
+  pureLevel: Level
+  pureLevelAll: All
+  pureLevelAlert: Alert
+  pureLevelTransit: Transit
   pureOccurredAt: Occurred at
   pureEventCode: Code
   pureEventLabel: Label

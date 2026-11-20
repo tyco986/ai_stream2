@@ -4,7 +4,7 @@
 
 JSON 成功外壳：`{success, message, data}`。
 
-事件对象键：`id`、`occurred_at`、`stream_id`、`stream_name`、`media_id`、`media_name`、`pipeline_id`、`pipeline_name`、`event_code`、`event_label`、`read_at`、`raw_path`、`visualization_path`、`annotations`。路径、`stream_id`、`stream_name`、`media_id`、`media_name`、`pipeline_name`、`read_at` 和 `annotations` 为空时为 `null`。`read_at` 为 `null` 表示未读。RTSP 写 `stream_id`，image、video 写 `media_id`，两者只填一个。三个 name 读时分别关联 `stream`、`media`、`pipeline`，源已删除则为 `null`。
+事件对象键：`id`、`occurred_at`、`stream_id`、`stream_name`、`media_id`、`media_name`、`pipeline_id`、`pipeline_name`、`event_code`、`level`、`event_label`、`read_at`、`raw_path`、`visualization_path`、`annotations`。`level` 原样保存 DeepStream 消息中的值。路径、`stream_id`、`stream_name`、`media_id`、`media_name`、`pipeline_name`、`read_at` 和 `annotations` 为空时为 `null`。`read_at` 为 `null` 表示未读。RTSP 写 `stream_id`，image、video 写 `media_id`，两者只填一个。三个 name 读时分别关联 `stream`、`media`、`pipeline`，源已删除则为 `null`。
 
 ---
 
@@ -23,9 +23,9 @@ JSON 成功外壳：`{success, message, data}`。
 
 ### GET `/backend/events`
 
-`page` 默认 `1`，`page_size` 默认 `20`。`search` 匹配 id、stream_id、media_id、pipeline_id、event_code、event_label。按 `occurred_at` 降序，再按 `id` 降序。
+`page` 默认 `1`，`page_size` 默认 `20`。`search` 匹配 id、stream_id、media_id、pipeline_id、event_code、event_label。`level` 为 `alert` 或 `transit` 时只返回该级别；空或 `all` 不过滤。按 `occurred_at` 降序，再按 `id` 降序。
 
-入参（query）：`search`、`page`、`page_size`。
+入参（query）：`search`、`level`、`page`、`page_size`。
 
 出参 `data`：`items`（事件对象数组）、`total`、`page`、`page_size`。`message`：`Loaded event list`。失败 `500`，`Failed to load event list`。
 
@@ -75,10 +75,11 @@ WebSocket。握手走 `AuthFilter`，读权限与列表相同。请求头没有 
 | `media_id` | UUID | `NULL` | 可空；与 `stream_id` 恰好一个非空 |
 | `pipeline_id` | UUID | 无 | NOT NULL |
 | `event_code` | VARCHAR(64) | 无 | NOT NULL |
+| `level` | VARCHAR(16) | 无 | NOT NULL；原样保存消息中的值 |
 | `event_label` | VARCHAR(150) | 无 | NOT NULL |
 | `read_at` | TIMESTAMPTZ | `NULL` | 可空；`NULL` 为未读 |
 | `raw_path` | TEXT | `NULL` | 可空 |
 | `visualization_path` | TEXT | `NULL` | 可空 |
 | `annotations` | JSONB | `NULL` | 可空 |
 
-约束：`event_source_check`，`(stream_id IS NULL) <> (media_id IS NULL)`。索引：`event_occurred_at_id_idx`（`occurred_at`，`id`）、`event_stream_id_idx`（`stream_id`）、`event_media_id_idx`（`media_id`）、`event_pipeline_id_event_code_idx`（`pipeline_id`，`event_code`）、`event_read_at_idx`（`read_at`）。
+约束：`event_source_check`，`(stream_id IS NULL) <> (media_id IS NULL)`。索引：`event_occurred_at_id_idx`（`occurred_at`，`id`）、`event_stream_id_idx`（`stream_id`）、`event_media_id_idx`（`media_id`）、`event_pipeline_id_event_code_idx`（`pipeline_id`，`event_code`）、`event_level_occurred_at_id_idx`（`level`，`occurred_at`，`id`）、`event_read_at_idx`（`read_at`）。

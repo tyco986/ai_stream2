@@ -63,13 +63,11 @@ panel:
 menus:
   pureHome: 首页
   pureStream: 视频流
-  pureTool: 工具
   pureMedia: 媒体
   purePreview: 预览
   pureModel: 模型
   purePipeline: 管道
   pureEvent: 事件
-  pureService: 服务
   pureLogin: 登录
   purePermission: 权限管理
   purePermissionPage: 页面权限
@@ -258,6 +256,10 @@ preview:
   pureFullscreen: 全屏
   pureUnbind: 取消绑定
 event:
+  pureLevel: 级别
+  pureLevelAll: 全部
+  pureLevelAlert: 告警
+  pureLevelTransit: 过渡
   pureOccurredAt: 发生时间
   pureEventCode: 事件码
   pureEventLabel: 事件名称

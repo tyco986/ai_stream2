@@ -15,13 +15,14 @@ class EventService {
                      const Json::Value& mediaId,
                      const Json::Value& pipelineId,
                      const Json::Value& eventCode,
+                     const Json::Value& level,
                      const Json::Value& eventLabel,
                      const Json::Value& rawPath,
                      const Json::Value& visualizationPath,
                      const Json::Value& annotations);
   Json::Value setRead(const std::string& eventId, bool read);
   Json::Value remove(const std::string& eventId);
-  Json::Value list(const std::string& search, int page, long pageSize);
+  Json::Value list(const std::string& search, const std::string& level, int page, long pageSize);
 
  private:
   Json::Value row2json(const drogon::orm::Row& row);

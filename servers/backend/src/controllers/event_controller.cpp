@@ -17,8 +17,9 @@ void EventController::list(const drogon::HttpRequestPtr& request,
     const auto pageSizeText = request->getParameter(event::QUERY_PAGE_SIZE);
     const int page = pageText.empty() ? event::DEFAULT_PAGE : std::stoi(pageText);
     const int pageSize = pageSizeText.empty() ? event::DEFAULT_PAGE_SIZE : std::stoi(pageSizeText);
-    const auto response = http::Response::ok(service.list(request->getParameter(event::QUERY_SEARCH), page, pageSize),
-                               event::MSG_LIST_OK);
+    const auto response = http::Response::ok(
+        service.list(request->getParameter(event::QUERY_SEARCH), request->getParameter(event::QUERY_LEVEL), page, pageSize),
+        event::MSG_LIST_OK);
     logger.record(request, response, started);
     callback(response);
   } catch (const std::exception& error) {

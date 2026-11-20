@@ -272,6 +272,7 @@ CREATE TABLE event (
   media_id UUID,
   pipeline_id UUID NOT NULL,
   event_code VARCHAR(64) NOT NULL,
+  level VARCHAR(16) NOT NULL,
   event_label VARCHAR(150) NOT NULL,
   read_at TIMESTAMPTZ,
   raw_path TEXT,
@@ -284,6 +285,7 @@ CREATE INDEX event_occurred_at_id_idx ON event (occurred_at, id);
 CREATE INDEX event_stream_id_idx ON event (stream_id);
 CREATE INDEX event_media_id_idx ON event (media_id);
 CREATE INDEX event_pipeline_id_event_code_idx ON event (pipeline_id, event_code);
+CREATE INDEX event_level_occurred_at_id_idx ON event (level, occurred_at, id);
 CREATE INDEX event_read_at_idx ON event (read_at);
 
 -- notice

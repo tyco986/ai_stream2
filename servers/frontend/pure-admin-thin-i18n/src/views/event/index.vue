@@ -14,7 +14,15 @@ import {
   unreadEvents,
   type EventItem
 } from "@/api/event";
-import { EVENT_ANNOTATION_DIALOG_WIDTH, EVENT_LIST_COLUMN_PERCENTS, EVENT_LIST_PAGE_SIZE } from "@/constants/event";
+import {
+  EVENT_ANNOTATION_DIALOG_WIDTH,
+  EVENT_LEVEL_ALERT,
+  EVENT_LEVEL_ALL,
+  EVENT_LEVEL_LABELS,
+  EVENT_LEVELS,
+  EVENT_LIST_COLUMN_PERCENTS,
+  EVENT_LIST_PAGE_SIZE
+} from "@/constants/event";
 import { PATH_EVENT_WS } from "@/constants/path";
 import { $t, transformI18n } from "@/plugins/i18n";
 import { message } from "@/utils/message";
@@ -28,6 +36,7 @@ defineOptions({
 const { target: listRef, widths: listWidths, observe } = useColumnWidths(EVENT_LIST_COLUMN_PERCENTS);
 const items = ref<EventItem[]>([]);
 const selected = ref<EventItem[]>([]);
+const level = ref<(typeof EVENT_LEVELS)[number]>(EVENT_LEVEL_ALERT);
 const page = ref(1);
 const total = ref(0);
 const annotationsOpen = ref(false);
@@ -35,11 +44,16 @@ const annotationText = ref("");
 let socket: WebSocket | null = null;
 
 const load = () => {
-  getEvents({ page: page.value, page_size: EVENT_LIST_PAGE_SIZE }).then(res => {
+  getEvents({ page: page.value, page_size: EVENT_LIST_PAGE_SIZE, level: level.value }).then(res => {
     items.value = res.data.items;
     total.value = res.data.total;
     page.value = res.data.page;
   });
+};
+
+const onLevel = () => {
+  page.value = 1;
+  load();
 };
 
 const onPage = (next: number) => {
@@ -106,10 +120,11 @@ const onRemoveBatch = () => {
 
 const onMessage = (messageEvent: MessageEvent) => {
   const row = JSON.parse(String(messageEvent.data)) as EventItem;
-  const exists = items.value.some(item => item.id === row.id);
-  total.value = exists ? total.value : total.value + 1;
+  const shown = level.value === EVENT_LEVEL_ALL || row.level === level.value;
+  const exists = shown && items.value.some(item => item.id === row.id);
+  total.value = shown && !exists ? total.value + 1 : total.value;
   items.value =
-    page.value === 1 && !exists ? [row, ...items.value].slice(0, EVENT_LIST_PAGE_SIZE) : items.value;
+    shown && page.value === 1 && !exists ? [row, ...items.value].slice(0, EVENT_LIST_PAGE_SIZE) : items.value;
 };
 
 onMounted(() => {
@@ -137,6 +152,10 @@ onUnmounted(() => {
       <el-button type="primary" :disabled="!selected.length" @click="onUnreadBatch">
         {{ transformI18n($t("event.pureUnread")) }}
       </el-button>
+      <span class="event-level-label">{{ transformI18n($t("event.pureLevel")) }}</span>
+      <el-select v-model="level" class="event-level" @change="onLevel">
+        <el-option v-for="item in EVENT_LEVELS" :key="item" :label="transformI18n($t(EVENT_LEVEL_LABELS[item]))" :value="item" />
+      </el-select>
     </div>
     <el-table
       ref="listRef"
@@ -213,6 +232,14 @@ onUnmounted(() => {
   align-items: center;
   padding: 8px;
   background: var(--el-bg-color);
+}
+
+.event-level-label {
+  margin-left: auto;
+}
+
+.event-level {
+  width: 120px;
 }
 
 .event-list {

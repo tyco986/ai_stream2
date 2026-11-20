@@ -16,7 +16,7 @@ namespace {
 const char* SELECT_ROW =
     "event.id::text AS id, event.occurred_at, event.stream_id::text AS stream_id, stream.name AS stream_name, "
     "event.media_id::text AS media_id, media.name AS media_name, event.pipeline_id::text AS pipeline_id, "
-    "pipeline.name AS pipeline_name, event.event_code, event.event_label, event.read_at, "
+    "pipeline.name AS pipeline_name, event.event_code, event.level, event.event_label, event.read_at, "
     "event.raw_path, event.visualization_path, event.annotations::text AS annotations ";
 
 const char* FROM_EVENT =
@@ -70,6 +70,7 @@ Json::Value EventService::createFromRedis(const Json::Value& message, const std:
                                streamSource ? Json::Value() : sourceId,
                                Json::Value(rows[0]["id"].as<std::string>()),
                                eventNode[event::KEY_EVENT_CODE],
+                               eventNode[event::KEY_LEVEL],
                                eventNode[event::KEY_EVENT_LABEL],
                                Json::Value(),
                                Json::Value(),
@@ -82,6 +83,7 @@ Json::Value EventService::create(const Json::Value& occurredAt,
                                  const Json::Value& mediaId,
                                  const Json::Value& pipelineId,
                                  const Json::Value& eventCode,
+                                 const Json::Value& level,
                                  const Json::Value& eventLabel,
                                  const Json::Value& rawPath,
                                  const Json::Value& visualizationPath,
@@ -92,6 +94,7 @@ Json::Value EventService::create(const Json::Value& occurredAt,
   data[event::KEY_MEDIA_ID] = mediaId.isNull() ? data[event::KEY_MEDIA_ID] : mediaId;
   data[event::KEY_PIPELINE_ID] = pipelineId.isNull() ? data[event::KEY_PIPELINE_ID] : pipelineId;
   data[event::KEY_EVENT_CODE] = eventCode.isNull() ? data[event::KEY_EVENT_CODE] : eventCode;
+  data[event::KEY_LEVEL] = level.isNull() ? data[event::KEY_LEVEL] : level;
   data[event::KEY_EVENT_LABEL] = eventLabel.isNull() ? data[event::KEY_EVENT_LABEL] : eventLabel;
   data[event::KEY_RAW_PATH] = rawPath.isNull() ? data[event::KEY_RAW_PATH] : rawPath;
   data[event::KEY_VISUALIZATION_PATH] =
@@ -106,11 +109,11 @@ Json::Value EventService::create(const Json::Value& occurredAt,
   const auto rows = Sql::sync({}, dbClient, 
       std::string("WITH event AS ("
                   "INSERT INTO event (id, occurred_at, stream_id, media_id, pipeline_id, "
-                  "event_code, event_label, raw_path, visualization_path, annotations) "
+                  "event_code, level, event_label, raw_path, visualization_path, annotations) "
                   "VALUES (gen_random_uuid(), $1::timestamptz, NULLIF($2, '')::uuid, NULLIF($3, '')::uuid, "
-                  "$4::uuid, $5, $6, NULLIF($7, ''), NULLIF($8, ''), "
-                  "CASE WHEN $9 = '' THEN NULL ELSE $9::jsonb END) "
-                  "RETURNING id, occurred_at, stream_id, media_id, pipeline_id, event_code, event_label, read_at, "
+                  "$4::uuid, $5, $6, $7, NULLIF($8, ''), NULLIF($9, ''), "
+                  "CASE WHEN $10 = '' THEN NULL ELSE $10::jsonb END) "
+                  "RETURNING id, occurred_at, stream_id, media_id, pipeline_id, event_code, level, event_label, read_at, "
                   "raw_path, visualization_path, annotations) "
                   "SELECT ") +
           SELECT_ROW + FROM_EVENT,
@@ -119,6 +122,7 @@ Json::Value EventService::create(const Json::Value& occurredAt,
       data[event::KEY_MEDIA_ID].isNull() ? "" : data[event::KEY_MEDIA_ID].asString(),
       data[event::KEY_PIPELINE_ID].isNull() ? "" : data[event::KEY_PIPELINE_ID].asString(),
       data[event::KEY_EVENT_CODE].isNull() ? "" : data[event::KEY_EVENT_CODE].asString(),
+      data[event::KEY_LEVEL].isNull() ? "" : data[event::KEY_LEVEL].asString(),
       data[event::KEY_EVENT_LABEL].isNull() ? "" : data[event::KEY_EVENT_LABEL].asString(),
       data[event::KEY_RAW_PATH].isNull() ? "" : data[event::KEY_RAW_PATH].asString(),
       data[event::KEY_VISUALIZATION_PATH].isNull() ? "" : data[event::KEY_VISUALIZATION_PATH].asString(),
@@ -131,7 +135,7 @@ Json::Value EventService::setRead(const std::string& eventId, bool read) {
   const auto rows = Sql::sync({}, dbClient, 
       std::string("WITH event AS ("
                   "UPDATE event SET read_at = CASE WHEN $2::boolean THEN now() ELSE NULL END WHERE id = $1::uuid "
-                  "RETURNING id, occurred_at, stream_id, media_id, pipeline_id, event_code, event_label, read_at, "
+                  "RETURNING id, occurred_at, stream_id, media_id, pipeline_id, event_code, level, event_label, read_at, "
                   "raw_path, visualization_path, annotations) "
                   "SELECT ") +
           SELECT_ROW + FROM_EVENT,
@@ -152,7 +156,7 @@ Json::Value EventService::remove(const std::string& eventId) {
   const auto rows = Sql::sync({}, dbClient, 
       std::string("WITH event AS ("
                   "DELETE FROM event WHERE id = $1::uuid "
-                  "RETURNING id, occurred_at, stream_id, media_id, pipeline_id, event_code, event_label, read_at, "
+                  "RETURNING id, occurred_at, stream_id, media_id, pipeline_id, event_code, level, event_label, read_at, "
                   "raw_path, visualization_path, annotations) "
                   "SELECT ") +
           SELECT_ROW + FROM_EVENT,
@@ -164,15 +168,17 @@ Json::Value EventService::remove(const std::string& eventId) {
   return data;
 }
 
-Json::Value EventService::list(const std::string& search, int page, long pageSize) {
+Json::Value EventService::list(const std::string& search, const std::string& level, int page, long pageSize) {
   const long offset = static_cast<long>(page - 1) * pageSize;
   const std::string match = Searcher::clause(
       {"event.id", "event.stream_id", "event.media_id", "event.pipeline_id", "event.event_code", "event.event_label"}, 1);
-  const std::string from = std::string(FROM_EVENT) + "WHERE " + match + " ";
-  const auto counted = Sql::sync({}, dbClient, "SELECT count(*) AS total " + from, search);
+  const std::string levelMatch = std::string("($2 = '' OR $2 = '") + event::LEVEL_ALL + "' OR event.level = $2)";
+  const std::string from = std::string(FROM_EVENT) + "WHERE " + match + " AND " + levelMatch + " ";
+  const auto counted = Sql::sync({}, dbClient, "SELECT count(*) AS total " + from, search, level);
   const auto rows = Sql::sync({}, dbClient, 
-      std::string("SELECT ") + SELECT_ROW + from + "ORDER BY event.occurred_at DESC, event.id DESC LIMIT $2 OFFSET $3",
+      std::string("SELECT ") + SELECT_ROW + from + "ORDER BY event.occurred_at DESC, event.id DESC LIMIT $3 OFFSET $4",
       search,
+      level,
       pageSize,
       offset);
   Json::Value items(Json::arrayValue);
@@ -202,6 +208,7 @@ Json::Value EventService::row2json(const drogon::orm::Row& row) {
   data[event::KEY_PIPELINE_ID] = row["pipeline_id"].as<std::string>();
   data[event::KEY_PIPELINE_NAME] = row["pipeline_name"].isNull() ? Json::Value() : row["pipeline_name"].as<std::string>();
   data[event::KEY_EVENT_CODE] = row["event_code"].as<std::string>();
+  data[event::KEY_LEVEL] = row["level"].as<std::string>();
   data[event::KEY_EVENT_LABEL] = row["event_label"].as<std::string>();
   data[event::KEY_READ_AT] = row["read_at"].isNull() ? Json::Value() : row["read_at"].as<std::string>();
   data[event::KEY_RAW_PATH] = row["raw_path"].isNull() ? Json::Value() : row["raw_path"].as<std::string>();

@@ -40,10 +40,14 @@ void PresenceCollectorEngine::appendExtra(std::ostringstream& json, NvDsFrameMet
         const unsigned count = slotCount(event);
         std::string label;
         bool firstName = true;
+        bool alert = false;
+        bool transit = false;
         json << "{\"event_code\":\"";
         for (unsigned index = 0; index < count; index++) {
             const EventSlot& slot = event->event.slots[index];
             json << slot.code;
+            alert = alert || slot.code == eventmeta::ALERT;
+            transit = transit || slot.code == eventmeta::TRANSIT;
             if (slot.code == eventmeta::ALERT && slot.name[0] != '\0') {
                 if (!firstName) {
                     label.push_back(',');
@@ -52,7 +56,9 @@ void PresenceCollectorEngine::appendExtra(std::ostringstream& json, NvDsFrameMet
                 label += slot.name;
             }
         }
-        json << "\",\"event_label\":\"" << escapeLabel(label.c_str())
+        const char* level = alert ? eventmeta::LEVEL_ALERT : (transit ? eventmeta::LEVEL_TRANSIT : eventmeta::LEVEL_ABSENT);
+        json << "\",\"level\":\"" << level
+             << "\",\"event_label\":\"" << escapeLabel(label.c_str())
              << "\",\"debouncer\":{\"max_length\":" << event->debouncer.length
              << ",\"ratio_threshold\":" << std::fixed << std::setprecision(collector::CONF_DIGITS) << event->debouncer.threshold
              << ",\"current_length\":[";

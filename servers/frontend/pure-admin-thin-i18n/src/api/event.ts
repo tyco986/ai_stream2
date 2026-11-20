@@ -25,6 +25,7 @@ export type EventItem = {
   pipeline_name: string | null;
   read_at: string | null;
   event_code: string;
+  level: string;
   event_label: string;
   annotations: EventAnnotations;
 };
