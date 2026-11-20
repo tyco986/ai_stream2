@@ -1,8 +1,0 @@
-type: TopdownPoseSahiImagePipeline
-modules:
-  - plugins/nvfadedrawer
-  - plugins/nvlogger
-  - plugins/nvdspreprocess/rtmpose_preprocess
-  - plugins/nvrtmposepostprocess
-extras:
-  - deepstream_sahi

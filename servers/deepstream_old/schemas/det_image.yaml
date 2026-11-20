@@ -1,6 +1,0 @@
-type: DetImagePipeline
-modules:
-  - plugins/nvfadedrawer
-  - plugins/nvlogger
-extras:
-  - deepstream_sahi

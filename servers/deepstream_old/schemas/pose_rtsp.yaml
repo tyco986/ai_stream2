@@ -1,8 +1,0 @@
-type: PoseRTSPPipeline
-modules:
-  - plugins/nvbboxsnapshot
-  - plugins/nvfadedrawer
-  - plugins/nvlogger
-  - gie_custom_lib/nvdsinfer_yolo_pose
-extras:
-  []

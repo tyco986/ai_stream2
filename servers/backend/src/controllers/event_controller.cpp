@@ -13,12 +13,12 @@ void EventController::list(const drogon::HttpRequestPtr& request,
                            std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
   const auto started = std::chrono::steady_clock::now();
   try {
-    const auto pageText = request->getParameter(event::QUERY_PAGE);
-    const auto pageSizeText = request->getParameter(event::QUERY_PAGE_SIZE);
+    const auto pageText = request->getParameter(event::KEY_PAGE);
+    const auto pageSizeText = request->getParameter(event::KEY_PAGE_SIZE);
     const int page = pageText.empty() ? event::DEFAULT_PAGE : std::stoi(pageText);
     const int pageSize = pageSizeText.empty() ? event::DEFAULT_PAGE_SIZE : std::stoi(pageSizeText);
     const auto response = http::Response::ok(
-        service.list(request->getParameter(event::QUERY_SEARCH), request->getParameter(event::QUERY_LEVEL), page, pageSize),
+        service.list(request->getParameter(event::QUERY_SEARCH), request->getParameter(event::KEY_LEVEL), page, pageSize),
         event::MSG_LIST_OK);
     logger.record(request, response, started);
     callback(response);

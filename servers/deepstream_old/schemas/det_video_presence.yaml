@@ -1,9 +1,0 @@
-type: PresenceVideoPipeline
-modules:
-  - plugins/nvbboxsnapshot
-  - plugins/nvfadedrawer
-  - plugins/nvlogger
-  - plugins/nveventcoder
-  - plugins/nvcapturer
-extras:
-  - deepstream_sahi
