@@ -57,6 +57,7 @@ media/
 *.onnx.data
 # Docker
 *.tar
+packages/
 
 
 models/
