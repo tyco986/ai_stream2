@@ -35,8 +35,8 @@ void BaseEventGenerator::appendEventCoder(int logInterval, const std::string& na
             eventCoder.value("length", pipeline::PRESENCE_LENGTH),
             eventCoder.value("threshold", pipeline::PRESENCE_THRESHOLD),
             eventCoder.value("mode", std::string(pipeline::PRESENCE_MODE_FOLD))));
-    appendNode("presencecollector", "presencecollector", addCollector());
-    appendNode("dslogger", "dslogger", addDslogger(logInterval, pipeline::PAGE_PRESENCE));
+    appendNode("presencecollector", "presencecollector", addCollector(logInterval));
+    appendNode("dslogger", "dslogger", addDslogger(pipeline::PAGE_PRESENCE));
 }
 
 std::string BaseEventGenerator::afterAnalytics(const std::string& teeName) const {

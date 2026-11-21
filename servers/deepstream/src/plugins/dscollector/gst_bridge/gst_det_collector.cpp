@@ -7,22 +7,13 @@
 #define gst_det_collector_parent_class parent_class
 G_DEFINE_TYPE(GstDetCollector, gst_det_collector, GST_TYPE_BASE_TRANSFORM);
 
-static CollectorEngine* engineOf(GstDetCollector* self) {
-    return static_cast<CollectorEngine*>(self->engine);
-}
-
 static void gst_det_collector_finalize(GObject* object);
-static GstFlowReturn gst_det_collector_transform_ip(GstBaseTransform* transform, GstBuffer* buffer);
 static void gst_det_collector_class_init(GstDetCollectorClass* klass);
 static void gst_det_collector_init(GstDetCollector* self);
 
-static GstFlowReturn gst_det_collector_transform_ip(GstBaseTransform* transform, GstBuffer* buffer) {
-    return collectorTransform(transform, buffer, engineOf(GST_DET_COLLECTOR(transform)));
-}
-
 static void gst_det_collector_finalize(GObject* object) {
     GstDetCollector* self = GST_DET_COLLECTOR(object);
-    delete engineOf(self);
+    delete static_cast<CollectorEngine*>(self->engine);
     self->engine = nullptr;
     G_OBJECT_CLASS(parent_class)->finalize(object);
 }
@@ -32,13 +23,13 @@ static void gst_det_collector_class_init(GstDetCollectorClass* klass) {
     GstElementClass* elementClass = GST_ELEMENT_CLASS(klass);
     GstBaseTransformClass* transformClass = GST_BASE_TRANSFORM_CLASS(klass);
     objectClass->finalize = gst_det_collector_finalize;
-    transformClass->transform_ip = gst_det_collector_transform_ip;
+    collectorConfigure(objectClass, transformClass);
     collectorAddPads(elementClass);
     gst_element_class_set_details_simple(
         elementClass, "DetCollector", "Filter/Metadata", collector::ELEMENT_DET_DETAIL, collector::PLUGIN_PACKAGE);
 }
 
 static void gst_det_collector_init(GstDetCollector* self) {
-    self->engine = new CollectorEngine();
+    self->engine = new CollectorEngine(collector::DEFAULT_INTERVAL);
     collectorPrepare(GST_BASE_TRANSFORM(self));
 }

@@ -90,8 +90,8 @@ void TopdownPoseSahiVisRtspGenerator::add() {
     appendNode("nvinfer", "sgie0", addNvinfer(TopdownPose::SGIE_CONFIG_NAME, pose->batchSize, pose->gpuId, true));
     appendNode("rtmposepostprocess", "nvrtmposepostprocess", addNvrtmposepostprocess(pose->uniqueId));
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
-    appendNode("detcollector", "detcollector", addCollector());
-    appendNode("dslogger", "dslogger", addDslogger(logger.value("interval", 1), pipeline::PAGE_DET));
+    appendNode("detcollector", "detcollector", addCollector(logger.value("interval", 1)));
+    appendNode("dslogger", "dslogger", addDslogger(pipeline::PAGE_DET));
     const std::string drawerElement = nvposeDrawerElement();
     if (drawer.has_value()) {
         appendNode(drawerElement, drawerElement, nvposeDrawerProperties(*drawer));

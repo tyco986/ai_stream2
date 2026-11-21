@@ -62,8 +62,8 @@ void SegSahiImageGenerator::add() {
     appendNode("queue", "queue_sahi", addQueue());
     appendNode(sahiPostprocess, sahiPostprocess, sahiPostprocessProperties(sahi.at("postprocess")));
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
-    appendNode("detcollector", "detcollector", addCollector());
-    appendNode("dslogger", "dslogger", addDslogger(logger.value("interval", 1), pipeline::PAGE_DET));
+    appendNode("detcollector", "detcollector", addCollector(logger.value("interval", 1)));
+    appendNode("dslogger", "dslogger", addDslogger(pipeline::PAGE_DET));
     const std::string drawerElement = nvsegDrawerElement();
     if (drawer.has_value()) {
         appendNode(drawerElement, drawerElement, nvsegDrawerProperties(*drawer));

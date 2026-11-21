@@ -57,12 +57,13 @@ inline const char* STATUS_OFFLINE = "offline";
 inline const char* STATUS_ONLINE = "online";
 
 inline const char* ALL_GROUP_ID = "00000000-0000-4000-8000-000000000001";
+inline const char* CUSTOM_GROUP_ID = "00000000-0000-4000-8000-000000000007";
 
 inline Json::Value ROW() {
   Json::Value node;
   node[KEY_ID] = Json::Value();
   node[KEY_NAME] = Json::Value();
-  node[KEY_GROUP_ID] = ALL_GROUP_ID;
+  node[KEY_GROUP_ID] = CUSTOM_GROUP_ID;
   node[KEY_URL] = Json::Value();
   node[KEY_WIDTH] = Json::Value();
   node[KEY_HEIGHT] = Json::Value();
@@ -139,6 +140,7 @@ inline const char* ERR_CSV = "stream_err_csv";
 inline const char* ERR_GROUP_MISSING = "stream_err_group_missing";
 inline const char* ERR_NAME_EXISTS = "stream_err_name_exists";
 inline const char* ERR_URL_EXISTS = "stream_err_url_exists";
+inline const char* ERR_REALM = "stream_err_realm";
 inline const char* MSG_PROBE_OK = "stream_probe_ok";
 inline const char* MSG_PROBE_ERROR = "stream_probe_error";
 

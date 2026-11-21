@@ -18,6 +18,8 @@ buttons:
   pureBackTop: 回到顶部
   pureOpenText: 开
   pureCloseText: 关
+  pureDashboard: 仪表盘
+  pureDatabase: 数据库
 search:
   pureTotal: 共
   pureHistory: 搜索历史

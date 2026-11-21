@@ -18,6 +18,8 @@ buttons:
   pureBackTop: BackTop
   pureOpenText: Open
   pureCloseText: Close
+  pureDashboard: Dashboard
+  pureDatabase: Database
 search:
   pureTotal: Total
   pureHistory: History

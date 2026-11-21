@@ -13,7 +13,6 @@ typedef struct _GstDsLoggerClass GstDsLoggerClass;
 struct _GstDsLogger {
     GstBaseTransform base;
     gpointer engine;
-    gint interval;
     gchar* page;
 };
 

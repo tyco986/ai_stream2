@@ -92,6 +92,7 @@ inline const char* KEY_FILESINK_OUTPUT = "filesink_output";
 inline const char* KEY_CAPTURER_OUTPUT = "capturer_output";
 inline const char* FILESINK_DIR = "/root/media/pipeline";
 inline const char* VIS_GENERATOR_MARK = "Vis";
+inline const char* VIS_RTSP_MARK = "VisRTSP";
 inline const int OUTPUT_SUFFIX_LIMIT = 1000;
 inline const char* PARAMS_YML = "params.yml";
 inline const char* YAML_STRING_TAG = "tag:yaml.org,2002:str";

@@ -2,14 +2,18 @@
 
 #include <cstring>
 
-#include "constants/event_meta_const.hpp"
-#include "constants/presenceeventcoder_const.hpp"
 #include "nvmsgconv.h"
 #include "plugins/dscollector/engine/collector_line.hpp"
-#include "plugins/presenceeventcoder/engine/presence_event_coder.hpp"
 
 #if defined(MSGCONV_PRESENCE)
-static bool presencePublishable(NvDsFrameMeta* frame) {
+#include "constants/event_meta_const.hpp"
+#include "constants/presenceeventcoder_const.hpp"
+#include "plugins/presenceeventcoder/engine/presence_event_coder.hpp"
+#endif
+
+bool MsgconvPayload::publishable(NvDsFrameMeta* frame) const {
+    const bool collected = frame != nullptr && collectorLine(frame) != nullptr;
+#if defined(MSGCONV_PRESENCE)
     const PresenceEventMeta* event = nullptr;
     if (frame != nullptr) {
         for (NvDsMetaList* item = frame->frame_user_meta_list; item != nullptr && event == nullptr; item = item->next) {
@@ -19,27 +23,17 @@ static bool presencePublishable(NvDsFrameMeta* frame) {
             }
         }
     }
-    unsigned count = 0;
-    if (event != nullptr) {
-        count = event->event.slotCount;
-        if (count > static_cast<unsigned>(eventmeta::SLOT_COUNT)) {
-            count = static_cast<unsigned>(eventmeta::SLOT_COUNT);
-        }
+    unsigned count = event != nullptr ? event->event.slotCount : 0;
+    count = count > static_cast<unsigned>(eventmeta::SLOT_COUNT) ? static_cast<unsigned>(eventmeta::SLOT_COUNT) : count;
+    bool active = false;
+    for (unsigned index = 0; index < count && !active; index++) {
+        active = event->event.slots[index].code != eventmeta::ABSENT;
     }
-    bool found = false;
-    for (unsigned index = 0; index < count && !found; index++) {
-        found = event->event.slots[index].code != eventmeta::ABSENT;
-    }
-    return found;
-}
-#endif
-
-bool MsgconvPayload::publishable(NvDsFrameMeta* frame) const {
-#if defined(MSGCONV_PRESENCE)
-    return presencePublishable(frame);
+    const bool publish = collected && active;
 #else
-    return frame != nullptr;
+    const bool publish = collected;
 #endif
+    return publish;
 }
 
 std::string MsgconvPayload::line(NvDsFrameMeta* frame) const {

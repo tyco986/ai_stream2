@@ -40,8 +40,8 @@ void SegImageGenerator::add() {
     appendNode("nvstreammux", "nvstreammux", addNvstreammux(runtimeBatchSize, width, height, false, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId, false));
     appendNode("nvinfer", "pgie", addNvinfer(PGIE_CONFIG_NAME, pgieGenerator->config["property"]["batch-size"].as<int>(), gpuId));
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
-    appendNode("detcollector", "detcollector", addCollector());
-    appendNode("dslogger", "dslogger", addDslogger(logger.value("interval", 1), pipeline::PAGE_DET));
+    appendNode("detcollector", "detcollector", addCollector(logger.value("interval", 1)));
+    appendNode("dslogger", "dslogger", addDslogger(pipeline::PAGE_DET));
     const std::string drawerElement = nvsegDrawerElement();
     if (drawer.has_value()) {
         appendNode(drawerElement, drawerElement, nvsegDrawerProperties(*drawer));

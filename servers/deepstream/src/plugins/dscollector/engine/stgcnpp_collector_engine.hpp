@@ -6,7 +6,7 @@
 
 class StgcnppCollectorEngine : public CollectorEngine {
 public:
-    StgcnppCollectorEngine() = default;
+    explicit StgcnppCollectorEngine(int interval);
 
 protected:
     void appendObjectItem(std::ostringstream& json, NvDsObjectMeta* object) const override;

@@ -13,6 +13,60 @@
 extern "C" gpointer collectorMetaCopy(gpointer data, gpointer userData);
 extern "C" void collectorMetaRelease(gpointer data, gpointer userData);
 
+CollectorEngine::CollectorEngine(int interval)
+    : sampleInterval(interval),
+      batchCounter(0) {
+    sampleInterval = sampleInterval < 1 ? 1 : sampleInterval;
+}
+
+void CollectorEngine::setInterval(int interval) {
+    sampleInterval = interval < 1 ? 1 : interval;
+    batchCounter = 0;
+}
+
+int CollectorEngine::getInterval() const {
+    return sampleInterval;
+}
+
+double CollectorEngine::latencyFor(NvDsFrameLatencyInfo* info, guint count, NvDsFrameMeta* frame) const {
+    double latencyMs = collector::LATENCY_NONE;
+    if (info != nullptr && frame != nullptr) {
+        for (guint index = 0; index < count; index++) {
+            if (info[index].source_id == frame->source_id && static_cast<gint>(info[index].frame_num) == frame->frame_num) {
+                latencyMs = info[index].latency;
+            }
+        }
+    }
+    return latencyMs;
+}
+
+void CollectorEngine::collect(NvDsBatchMeta* batch, NvDsFrameLatencyInfo* info, guint count) {
+    const bool sample = batchCounter % sampleInterval == 0;
+    batchCounter = sample ? 1 : batchCounter + 1;
+    for (NvDsMetaList* item = batch->frame_meta_list; item != nullptr; item = item->next) {
+        auto* frame = static_cast<NvDsFrameMeta*>(item->data);
+        if (frame != nullptr) {
+            NvDsMetaList* meta = frame->frame_user_meta_list;
+            while (meta != nullptr) {
+                NvDsMetaList* next = meta->next;
+                auto* userMeta = static_cast<NvDsUserMeta*>(meta->data);
+                if (userMeta != nullptr && userMeta->base_meta.meta_type == collector::USER_META) {
+                    nvds_remove_user_meta_from_frame(frame, userMeta);
+                }
+                meta = next;
+            }
+            NvDsUserMeta* userMeta = sample ? nvds_acquire_user_meta_from_pool(batch) : nullptr;
+            if (userMeta != nullptr) {
+                userMeta->user_meta_data = g_strdup(buildLine(frame, latencyFor(info, count, frame)).c_str());
+                userMeta->base_meta.meta_type = collector::USER_META;
+                userMeta->base_meta.copy_func = collectorMetaCopy;
+                userMeta->base_meta.release_func = collectorMetaRelease;
+                nvds_add_user_meta_to_frame(frame, userMeta);
+            }
+        }
+    }
+}
+
 void CollectorEngine::appendExtra(std::ostringstream&, NvDsFrameMeta*) const {
 }
 
@@ -97,27 +151,6 @@ std::string CollectorEngine::buildLine(NvDsFrameMeta* frame, double latencyMs) c
     }
     json << "]}";
     return json.str();
-}
-
-void CollectorEngine::attach(NvDsBatchMeta* batch, NvDsFrameMeta* frame, double latencyMs) {
-    const std::string line = buildLine(frame, latencyMs);
-    NvDsMetaList* item = frame->frame_user_meta_list;
-    while (item != nullptr) {
-        NvDsMetaList* next = item->next;
-        auto* userMeta = static_cast<NvDsUserMeta*>(item->data);
-        if (userMeta != nullptr && userMeta->base_meta.meta_type == collector::USER_META) {
-            nvds_remove_user_meta_from_frame(frame, userMeta);
-        }
-        item = next;
-    }
-    NvDsUserMeta* userMeta = nvds_acquire_user_meta_from_pool(batch);
-    if (userMeta != nullptr) {
-        userMeta->user_meta_data = g_strdup(line.c_str());
-        userMeta->base_meta.meta_type = collector::USER_META;
-        userMeta->base_meta.copy_func = collectorMetaCopy;
-        userMeta->base_meta.release_func = collectorMetaRelease;
-        nvds_add_user_meta_to_frame(frame, userMeta);
-    }
 }
 
 extern "C" gpointer collectorMetaCopy(gpointer data, gpointer userData) {

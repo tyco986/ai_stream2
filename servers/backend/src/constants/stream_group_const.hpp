@@ -29,6 +29,9 @@ inline const char* FIELD_FILE = "file";
 inline const char* EXPORT_FILENAME = "groups.csv";
 inline const char* CSV_HEADER = "group,parent";
 inline const char* ALL_GROUP_NAME = "All";
+inline const char* PUBLISH_GROUP_NAME = "Publish";
+inline const char* VISUALIZATION_GROUP_NAME = "Visualization";
+inline const char* CUSTOM_GROUP_NAME = "Custom";
 inline const char* MULTIPART_BOUNDARY = "ai_stream2_group_export";
 inline const char* MULTIPART_CONTENT_TYPE = "multipart/form-data; boundary=ai_stream2_group_export";
 inline const char* ERR_CSV = "stream_group_err_csv";
@@ -36,7 +39,11 @@ inline const char* ERR_PARENT_MISSING = "stream_group_err_parent_missing";
 inline const char* ERR_GROUP_EXISTS = "stream_group_err_group_exists";
 inline const char* ERR_ALL = "stream_group_err_all";
 inline const char* ERR_ALL_DELETE = "stream_group_err_all_delete";
+inline const char* ERR_REALM = "stream_group_err_realm";
 inline const char* ALL_GROUP_ID = "00000000-0000-4000-8000-000000000001";
+inline const char* PUBLISH_GROUP_ID = "00000000-0000-4000-8000-000000000002";
+inline const char* VISUALIZATION_GROUP_ID = "00000000-0000-4000-8000-000000000005";
+inline const char* CUSTOM_GROUP_ID = "00000000-0000-4000-8000-000000000007";
 
 // types
 inline const char* TYPE_GROUP = "group";

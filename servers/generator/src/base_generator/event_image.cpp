@@ -279,7 +279,7 @@ void EventImageGenerator::add() {
     appendEventCoder(logger.value("interval", 1));
     appendNode("tee", "tee_msg", addTee());
     appendNode("queue", "queue_msg", addQueue());
-    appendNode("nvmsgconv", "nvmsgconv", addNvmsgconv(MSGCONV_CONFIG_NAME, msg2pLib, pipeline::PAYLOAD_DEEPSTREAM_MINIMAL, true, pgie.at("interval").get<int>()));
+    appendNode("nvmsgconv", "nvmsgconv", addNvmsgconv(MSGCONV_CONFIG_NAME, msg2pLib, pipeline::PAYLOAD_DEEPSTREAM_MINIMAL, true));
     appendNode(
         "nvmsgbroker",
         "nvmsgbroker",

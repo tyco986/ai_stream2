@@ -5,7 +5,7 @@
 
 class PresenceCollectorEngine : public CollectorEngine {
 public:
-    PresenceCollectorEngine() = default;
+    explicit PresenceCollectorEngine(int interval);
 
 protected:
     void appendExtra(std::ostringstream& json, NvDsFrameMeta* frame) const override;

@@ -14,6 +14,7 @@ HOST_PORT="${BESZEL_HOST_PORT:-8093}"
 VOL_DATA="${PROJECT_NAME}_beszel_data"
 VOL_AGENT="${PROJECT_NAME}_beszel_agent_data"
 APP_URL="${BESZEL_APP_URL:-http://127.0.0.1:${HOST_PORT}}"
+HEARTBEAT_INTERVAL=60
 USER_EMAIL=admin@example.com
 USER_PASSWORD=88888888
 SYSTEM_NAME=localhost
@@ -57,6 +58,8 @@ docker run -d \
   -e "APP_URL=${APP_URL}" \
   -e "USER_EMAIL=${USER_EMAIL}" \
   -e "USER_PASSWORD=${USER_PASSWORD}" \
+  -e "AUTO_LOGIN=${USER_EMAIL}" \
+  -e "HEARTBEAT_INTERVAL=${HEARTBEAT_INTERVAL}" \
   -p "${HOST_PORT}:8090" \
   -v /etc/localtime:/etc/localtime:ro \
   -v "${VOL_DATA}:/beszel_data" \
@@ -125,6 +128,7 @@ ${NAME} (${NET})
   UI: ${APP_URL}
   image: ${IMG}
   login: ${USER_EMAIL} / ${USER_PASSWORD}
+  heartbeat: ${HEARTBEAT_INTERVAL}s
   system: ${SYSTEM_NAME}
 ${AGENT_NAME}
   image: ${AGENT_IMG}

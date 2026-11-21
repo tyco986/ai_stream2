@@ -16,7 +16,6 @@ inline constexpr int ROTATION_HOUR = 0;
 inline constexpr int ROTATION_MINUTE = 0;
 inline constexpr std::size_t MAX_DAYS = 90;
 inline constexpr int PAD_WIDTH = 3;
-inline constexpr int DEFAULT_INTERVAL = 1;
 
 inline constexpr const char* ELEMENT_NAME = "dslogger";
 inline constexpr const char* ELEMENT_DETAIL = "Write collector JSON lines to disk";

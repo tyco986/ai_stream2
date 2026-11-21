@@ -7,6 +7,9 @@
 #include "constants/event_meta_const.hpp"
 #include "constants/presenceeventcoder_const.hpp"
 
+PresenceCollectorEngine::PresenceCollectorEngine(int interval) : CollectorEngine(interval) {
+}
+
 const PresenceEventMeta* PresenceCollectorEngine::eventMeta(NvDsFrameMeta* frame) const {
     const PresenceEventMeta* event = nullptr;
     if (frame != nullptr) {

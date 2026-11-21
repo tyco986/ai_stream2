@@ -7,6 +7,9 @@
 #include "constants/stgcnpp_const.hpp"
 #include "constants/stgcnppactionlabel_const.hpp"
 
+StgcnppCollectorEngine::StgcnppCollectorEngine(int interval) : CollectorEngine(interval) {
+}
+
 const StgcnppActionMeta* StgcnppCollectorEngine::actionMeta(NvDsObjectMeta* object) const {
     const StgcnppActionMeta* action = nullptr;
     if (object != nullptr) {

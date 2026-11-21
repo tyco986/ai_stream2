@@ -3,7 +3,7 @@ import { computed } from "vue";
 import { useNav } from "@/layout/hooks/useNav";
 import LaySearch from "../lay-search/index.vue";
 import LayLogger from "../lay-logger/index.vue";
-import { DEBUG_USER } from "@/constants/logger";
+import { DATABASE_URL, DASHBOARD_URL, DEBUG_USER } from "@/constants/logger";
 import { useUserStoreHook } from "@/store/modules/user";
 import LayNotice from "../lay-notice/index.vue";
 import LayNavMix from "../lay-sidebar/NavMix.vue";
@@ -12,6 +12,8 @@ import LaySidebarFullScreen from "../lay-sidebar/components/SidebarFullScreen.vu
 import LaySidebarBreadCrumb from "../lay-sidebar/components/SidebarBreadCrumb.vue";
 import LaySidebarTopCollapse from "../lay-sidebar/components/SidebarTopCollapse.vue";
 
+import Dashboard from "~icons/ri/dashboard-3-line";
+import Database from "~icons/ri/database-2-line";
 import GlobalizationIcon from "@/assets/svg/globalization.svg?component";
 import LogoutCircleRLine from "~icons/ri/logout-circle-r-line";
 import Setting from "~icons/ri/settings-3-line";
@@ -35,6 +37,10 @@ const { t, locale, translationCh, translationEn } = useTranslationLang();
 const showLogger = computed(
   () => useUserStoreHook().username === DEBUG_USER
 );
+
+const openUrl = (url: string) => {
+  window.open(url, "_blank", "noopener");
+};
 </script>
 
 <template>
@@ -55,6 +61,22 @@ const showLogger = computed(
 
     <div v-if="layout === 'vertical'" class="vertical-header-right">
       <LayLogger v-if="showLogger" />
+      <div
+        v-if="showLogger"
+        class="w-[40px] h-[48px] flex-c cursor-pointer navbar-bg-hover"
+        :title="t('buttons.pureDashboard')"
+        @click="openUrl(DASHBOARD_URL)"
+      >
+        <IconifyIconOffline :icon="Dashboard" />
+      </div>
+      <div
+        v-if="showLogger"
+        class="w-[40px] h-[48px] flex-c cursor-pointer navbar-bg-hover"
+        :title="t('buttons.pureDatabase')"
+        @click="openUrl(DATABASE_URL)"
+      >
+        <IconifyIconOffline :icon="Database" />
+      </div>
       <!-- 菜单搜索 -->
       <LaySearch id="header-search" />
       <!-- 国际化 -->

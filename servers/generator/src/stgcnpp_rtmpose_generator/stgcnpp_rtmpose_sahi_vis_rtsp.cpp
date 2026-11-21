@@ -104,8 +104,8 @@ void StgcnppRtmposeSahiVisRtspGenerator::add() {
     appendNode("nvinfer", "sgie1", addNvinfer(StgcnppYoloPose::CONFIG_NAME, model->batchSize, model->gpuId, true));
     appendNode("stgcnppactionlabel", "stgcnppactionlabel", addStgcnppactionlabel(model->uniqueId));
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
-    appendNode("stgcnppcollector", "stgcnppcollector", addCollector());
-    appendNode("dslogger", "dslogger", addDslogger(logger.value("interval", 1), pipeline::PAGE_STGCNPP));
+    appendNode("stgcnppcollector", "stgcnppcollector", addCollector(logger.value("interval", 1)));
+    appendNode("dslogger", "dslogger", addDslogger(pipeline::PAGE_STGCNPP));
     const std::string drawerElement = std::string(StgcnppYoloPose::DRAWER_ELEMENT);
     if (drawer.has_value()) {
         appendNode(drawerElement, drawerElement, StgcnppYoloPose::drawerProperties(*drawer));

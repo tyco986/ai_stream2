@@ -165,13 +165,14 @@ int PipelineGenerator::userInterval(int interval) {
     return accepted;
 }
 
-YAML::Node PipelineGenerator::addCollector() {
-    return YAML::Node(YAML::NodeType::Map);
-}
-
-YAML::Node PipelineGenerator::addDslogger(int interval, const std::string& page) {
+YAML::Node PipelineGenerator::addCollector(int interval) {
     YAML::Node properties;
     properties["interval"] = userInterval(interval);
+    return properties;
+}
+
+YAML::Node PipelineGenerator::addDslogger(const std::string& page) {
+    YAML::Node properties;
     properties["page"] = page;
     return properties;
 }

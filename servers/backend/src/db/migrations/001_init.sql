@@ -112,22 +112,37 @@ CREATE INDEX stream_group_id_idx ON stream (group_id);
 
 INSERT INTO stream_group (id, name, parent_id)
 VALUES
-  ('00000000-0000-4000-8000-000000000001', 'All', NULL);
+  ('00000000-0000-4000-8000-000000000001', 'All', NULL),
+  ('00000000-0000-4000-8000-000000000002', 'Publish', '00000000-0000-4000-8000-000000000001'),
+  ('00000000-0000-4000-8000-000000000005', 'Visualization', '00000000-0000-4000-8000-000000000001'),
+  ('00000000-0000-4000-8000-000000000007', 'Custom', '00000000-0000-4000-8000-000000000001');
 
-CREATE FUNCTION stream_group_reject_delete() RETURNS trigger
+CREATE FUNCTION stream_group_reject_change() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
-  IF OLD.id = '00000000-0000-4000-8000-000000000001' THEN
-    RAISE EXCEPTION 'system group cannot be deleted';
+  IF OLD.id IN (
+    '00000000-0000-4000-8000-000000000001',
+    '00000000-0000-4000-8000-000000000002',
+    '00000000-0000-4000-8000-000000000005',
+    '00000000-0000-4000-8000-000000000007'
+  ) AND (
+    TG_OP = 'DELETE'
+    OR NEW.name IS DISTINCT FROM OLD.name
+    OR NEW.parent_id IS DISTINCT FROM OLD.parent_id
+  ) THEN
+    RAISE EXCEPTION 'system group cannot be changed';
   END IF;
-  RETURN OLD;
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+  RETURN NEW;
 END;
 $$;
 
-CREATE TRIGGER stream_group_reject_delete
-BEFORE DELETE ON stream_group
+CREATE TRIGGER stream_group_reject_change
+BEFORE DELETE OR UPDATE ON stream_group
 FOR EACH ROW
-EXECUTE FUNCTION stream_group_reject_delete();
+EXECUTE FUNCTION stream_group_reject_change();
 
 -- model page
 

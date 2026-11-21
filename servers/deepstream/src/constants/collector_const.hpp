@@ -11,6 +11,7 @@ inline constexpr double CONF_SCALE = 100.0;
 inline constexpr int CONF_DIGITS = 2;
 inline constexpr int MISSING_OBJECT_ID = -1;
 inline constexpr double LATENCY_NONE = -1.0;
+inline constexpr int DEFAULT_INTERVAL = 1;
 inline constexpr const char* JSON_NULL = "null";
 
 inline constexpr const char* ELEMENT_DET = "detcollector";

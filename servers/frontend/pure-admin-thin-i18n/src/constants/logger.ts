@@ -1,5 +1,9 @@
 export const DEBUG_USER = "admin";
 
+export const DASHBOARD_URL = "http://127.0.0.1:8093/";
+
+export const DATABASE_URL = "http://127.0.0.1:8082/";
+
 export const LOGGER_DIALOG_WIDTH = "46%";
 
 export const LOG_PAGES = [
