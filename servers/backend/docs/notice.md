@@ -4,9 +4,7 @@
 
 JSON 成功外壳：`{success, message, data}`。
 
-通知对象键：`id`、`created_at`、`read_at`、`user_id`、`level`、`source`、`text`、`ref_id`。`read_at`、`user_id`、`ref_id` 为空时为 `null`。`user_id` 为空表示全员可见。
-
-列表和未读数只含当前用户的通知，以及 `user_id` 为空的通知。标记已读和删除按 `id` 操作，不校验归属。
+通知对象键：`id`、`created_at`、`read_at`、`level`、`source`、`text`、`ref_id`。`read_at`、`ref_id` 为空时为 `null`。通知全员可见。`read_at` 为 `null` 表示未读。
 
 ---
 
@@ -14,32 +12,52 @@ JSON 成功外壳：`{success, message, data}`。
 
 | 方法 | 路径 | 入参键 | 出参键（`data`） | 功能 |
 |------|------|--------|------------------|------|
-| `GET` | `/backend/notices` | query：`page`、`page_size` | `items`、`total`、`page`、`page_size` | 分页列表 |
-| `GET` | `/backend/notices/unread` | 无 | `total` | 未读条数 |
-| `POST` | `/backend/notices/{notice_id}/read_at` | `read_at` | 通知对象 | 写入已读时间 |
+| `GET` | `/backend/notices` | query：`level`、`page`、`page_size` | `items`、`total`、`page`、`page_size` | 分页列表 |
+| `POST` | `/backend/notices` | `created_at`、`level`、`source`、`text`、`ref_id` | 通知对象 | 新建 |
+| `GET` | `/backend/notices/count` | 无 | `total`、`event`、`system` | 未读数量 |
+| `POST` | `/backend/notices/{notice_id}/read` | path：`notice_id` | 通知对象 | 标已读 |
+| `POST` | `/backend/notices/{notice_id}/unread` | path：`notice_id` | 通知对象 | 标未读 |
 | `DELETE` | `/backend/notices/{notice_id}` | path：`notice_id` | 通知对象 | 删除 |
 
 ### GET `/backend/notices`
 
-`page` 默认 `1`，`page_size` 默认 `20`。按 `created_at` 降序，再按 `id` 降序。
+`page` 默认 `1`，`page_size` 默认 `20`。`level` 为空返回全部；只接受 `system`。按 `created_at` 降序，再按 `id` 降序。
 
-入参（query）：`page`、`page_size`。
+入参（query）：`level`、`page`、`page_size`。
 
-出参 `data`：`items`（通知对象数组）、`total`、`page`、`page_size`。`message`：`Loaded notice list`。失败 `500`，`Failed to load notice list`。
+出参 `data`：`items`（通知对象数组）、`total`、`page`、`page_size`。`message`：`Loaded notice list`。失败 `500`，`Failed to load notice list`。`level` 非法同样失败。
 
-### GET `/backend/notices/unread`
+### POST `/backend/notices`
 
-统计 `read_at` 为空、且属于当前用户或 `user_id` 为空的行。
+`level` 只能是 `system`。`created_at` 可省略，省略时用当前时间。`ref_id` 可省略，省略时为 `null`。`read_at` 为 `null`。
+
+入参：`created_at`、`level`、`source`、`text`、`ref_id`。
+
+出参 `data`：通知对象。`message`：`Created notice`。失败 `500`，`Failed to create notice`。`level` 非法同样失败。
+
+### GET `/backend/notices/count`
+
+`system` 统计 `notice` 中 `read_at` 为空且 `level` 为 `system` 的行。`event` 统计 `event` 中 `read_at` 为空且 `level` 为 `alert` 的行。`total` 是两者之和。
 
 入参：无。
 
-出参 `data`：`total`。`message`：`Loaded unread notice count`。失败 `500`，`Failed to load unread notice count`。
+出参 `data`：`total`、`event`、`system`。`message`：`Loaded notice counts`。失败 `500`，`Failed to load notice counts`。
 
-### POST `/backend/notices/{notice_id}/read_at`
+### POST `/backend/notices/{notice_id}/read`
 
-入参：path `notice_id`；body `read_at`（时间戳文本）。
+`read_at` 写成当前时间。
 
-出参 `data`：更新后的通知对象。`message`：`Updated notice read time`。不存在 `500`，`Failed to update notice read time`。
+入参：path `notice_id`。
+
+出参 `data`：更新后的通知对象。`message`：`Marked notice read`。不存在 `500`，`Failed to mark notice read`。
+
+### POST `/backend/notices/{notice_id}/unread`
+
+`read_at` 写成 `null`。
+
+入参：path `notice_id`。
+
+出参 `data`：更新后的通知对象。`message`：`Marked notice unread`。不存在 `500`，`Failed to mark notice unread`。
 
 ### DELETE `/backend/notices/{notice_id}`
 
@@ -58,10 +76,9 @@ JSON 成功外壳：`{success, message, data}`。
 | `id` | UUID | 无（插入用 `gen_random_uuid()`） | PRIMARY KEY |
 | `created_at` | TIMESTAMPTZ | 无 | NOT NULL |
 | `read_at` | TIMESTAMPTZ | `NULL` | 可空 |
-| `user_id` | UUID | `NULL` | 可空，REFERENCES `"user"(id)` ON DELETE CASCADE |
 | `level` | VARCHAR(16) | 无 | NOT NULL |
 | `source` | VARCHAR(64) | 无 | NOT NULL |
 | `text` | TEXT | 无 | NOT NULL |
 | `ref_id` | UUID | `NULL` | 可空 |
 
-索引：`notice_user_id_created_at_idx`（`user_id`，`created_at`）。
+索引：`notice_created_at_id_idx`（`created_at`，`id`）、`notice_unread_idx`（`created_at`，`WHERE read_at IS NULL`）。

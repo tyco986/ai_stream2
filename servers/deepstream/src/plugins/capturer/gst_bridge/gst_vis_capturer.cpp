@@ -5,9 +5,7 @@
 #include "plugins/capturer/gst_bridge/gst_capturer_utils.hpp"
 
 enum {
-    PROP_CAPTURE_CODES = 1,
-    PROP_LABEL_TASK,
-    PROP_OUTPUT,
+    PROP_LABEL_TASK = 1,
 };
 
 static GParamFlags readWrite = static_cast<GParamFlags>(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
@@ -21,7 +19,7 @@ static VisCapturer* engineOf(GstVisCapturer* self) {
 
 static void renew(GstVisCapturer* self) {
     delete engineOf(self);
-    self->engine = new VisCapturer(self->captureCodes, self->labelTask, self->output);
+    self->engine = new VisCapturer(self->labelTask);
 }
 
 static void gst_vis_capturer_finalize(GObject* object);
@@ -45,58 +43,34 @@ static void gst_vis_capturer_class_init(GstVisCapturerClass* klass) {
     transformClass->transform_ip = gst_vis_capturer_transform_ip;
     g_object_class_install_property(
         objectClass,
-        PROP_CAPTURE_CODES,
-        g_param_spec_string("capture-codes", "Capture codes", "Event code characters that trigger dump, e.g. 1 or 12", capturer::DEFAULT_CAPTURE_CODES, readWrite));
-    g_object_class_install_property(
-        objectClass,
         PROP_LABEL_TASK,
         g_param_spec_string("label-task", "Label task", "det or seg; both write bbox labels", capturer::DEFAULT_LABEL_TASK, readWrite));
-    g_object_class_install_property(
-        objectClass,
-        PROP_OUTPUT,
-        g_param_spec_string("output", "Output", "Final dump directory; vis writes vis/, labels/, and labelme/", "", readWrite));
     capturerAddPads(elementClass);
     gst_element_class_set_details_simple(elementClass, "VisCapturer", "Filter/Video", capturer::ELEMENT_VIS_DETAIL, capturer::PLUGIN_PACKAGE);
 }
 
 static void gst_vis_capturer_init(GstVisCapturer* self) {
     capturerPrepare(GST_BASE_TRANSFORM(self));
-    self->captureCodes = g_strdup(capturer::DEFAULT_CAPTURE_CODES);
     self->labelTask = g_strdup(capturer::DEFAULT_LABEL_TASK);
-    self->output = g_strdup("");
-    self->engine = new VisCapturer(self->captureCodes, self->labelTask, self->output);
+    self->engine = new VisCapturer(self->labelTask);
 }
 
 static void gst_vis_capturer_finalize(GObject* object) {
     GstVisCapturer* self = GST_VIS_CAPTURER(object);
     delete engineOf(self);
     self->engine = nullptr;
-    g_free(self->captureCodes);
     g_free(self->labelTask);
-    g_free(self->output);
-    self->captureCodes = nullptr;
     self->labelTask = nullptr;
-    self->output = nullptr;
     G_OBJECT_CLASS(parent_class)->finalize(object);
 }
 
 static void gst_vis_capturer_set_property(GObject* object, guint propId, const GValue* value, GParamSpec* pspec) {
     GstVisCapturer* self = GST_VIS_CAPTURER(object);
     const gchar* text = nullptr;
-    if (propId == PROP_CAPTURE_CODES) {
-        text = g_value_get_string(value);
-        g_free(self->captureCodes);
-        self->captureCodes = g_strdup(text != nullptr ? text : capturer::DEFAULT_CAPTURE_CODES);
-        renew(self);
-    } else if (propId == PROP_LABEL_TASK) {
+    if (propId == PROP_LABEL_TASK) {
         text = g_value_get_string(value);
         g_free(self->labelTask);
         self->labelTask = g_strdup(text != nullptr ? text : capturer::DEFAULT_LABEL_TASK);
-        renew(self);
-    } else if (propId == PROP_OUTPUT) {
-        text = g_value_get_string(value);
-        g_free(self->output);
-        self->output = g_strdup(text != nullptr ? text : "");
         renew(self);
     } else {
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, propId, pspec);
@@ -105,12 +79,8 @@ static void gst_vis_capturer_set_property(GObject* object, guint propId, const G
 
 static void gst_vis_capturer_get_property(GObject* object, guint propId, GValue* value, GParamSpec* pspec) {
     GstVisCapturer* self = GST_VIS_CAPTURER(object);
-    if (propId == PROP_CAPTURE_CODES) {
-        g_value_set_string(value, self->captureCodes);
-    } else if (propId == PROP_LABEL_TASK) {
+    if (propId == PROP_LABEL_TASK) {
         g_value_set_string(value, self->labelTask);
-    } else if (propId == PROP_OUTPUT) {
-        g_value_set_string(value, self->output);
     } else {
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, propId, pspec);
     }

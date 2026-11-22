@@ -43,10 +43,10 @@ type SourceRow = {
   analyzer: string | null;
 };
 
-const SECTION_KEYS = ["logger", "drawer", "sahi", "event_coder", "capturer"] as const;
+const SECTION_KEYS = ["collector", "drawer", "sahi", "event_coder", "capturer"] as const;
 
 const FIELD_LABELS: Record<string, string> = {
-  logger: "pipeline.pureLogger",
+  collector: "pipeline.pureCollector",
   drawer: "pipeline.pureDrawer",
   sahi: "pipeline.pureSahi",
   preprocess: "pipeline.purePreprocess",
@@ -84,7 +84,9 @@ const FIELD_LABELS: Record<string, string> = {
   length: "pipeline.pureLength",
   threshold: "pipeline.pureThreshold",
   mode: "pipeline.pureMode",
-  capture_codes: "pipeline.pureCaptureCodes"
+  dump_codes: "pipeline.pureDumpCodes",
+  capturer_output: "pipeline.pureCapturerOutput",
+  label_task: "pipeline.pureLabelTask"
 };
 
 const fieldLabel = (key: string) => {

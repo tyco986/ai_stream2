@@ -12,7 +12,7 @@ VisVideoGenerator::VisVideoGenerator(
     std::optional<nlohmann::json> analyzer,
     nlohmann::json pgie,
     std::optional<nlohmann::json> tracker,
-    std::optional<nlohmann::json> logger,
+    std::optional<nlohmann::json> collector,
     std::optional<nlohmann::json> drawer)
     : BaseVideoGenerator(
           std::move(pipelineName),
@@ -20,7 +20,7 @@ VisVideoGenerator::VisVideoGenerator(
           std::move(analyzer),
           std::move(pgie),
           std::move(tracker),
-          std::move(logger),
+          std::move(collector),
           std::move(drawer)),
       filesinkOutput(std::filesystem::absolute(std::move(filesinkOutput))) {
 }
@@ -55,7 +55,7 @@ void VisVideoGenerator::add() {
             addNvtracker(subelement::TRACKER_LL_LIB, TRACKER_CONFIG_NAME, trackerWidth, trackerHeight, gpuId, operateOnClassIds));
     }
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
-    appendNode("detcollector", "detcollector", addCollector(logger.value("interval", 1)));
+    appendNode("detcollector", "detcollector", addCollector(collector.value("interval", 1)));
     appendNode("dslogger", "dslogger", addDslogger(pipeline::PAGE_DET));
     if (drawer.has_value()) {
         const std::string drawerName = nvdetDrawerElement();

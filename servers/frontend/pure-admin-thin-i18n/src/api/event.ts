@@ -3,6 +3,8 @@ import {
   PATH_EVENT_BATCH_READ,
   PATH_EVENT_BATCH_REMOVE,
   PATH_EVENT_BATCH_UNREAD,
+  PATH_EVENT_CONTENT,
+  PATH_EVENT_CONTENT_INFO,
   PATH_EVENT_ITEM,
   PATH_EVENT_LIST,
   PATH_EVENT_READ,
@@ -53,7 +55,37 @@ type EventBatchResult = {
   };
 };
 
+export type EventFileInfo = {
+  width: number | null;
+  height: number | null;
+  size: number | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
 const eventPath = (path: string, id: string) => path.replace("{event_id}", id);
+
+type EventFileInfoResult = {
+  success: boolean;
+  message: string;
+  data: EventFileInfo;
+};
+
+export const EVENT_KIND_VISUALIZATION = "visualization";
+
+export const getEventContent = (id: string, kind: string) => {
+  return http.request<Blob>("get", eventPath(PATH_EVENT_CONTENT, id), {
+    params: { kind },
+    responseType: "blob",
+    timeout: 0
+  });
+};
+
+export const getEventContentInfo = (id: string, kind: string) => {
+  return http.request<EventFileInfoResult>("get", eventPath(PATH_EVENT_CONTENT_INFO, id), {
+    params: { kind }
+  });
+};
 
 export const getEvents = (params?: object) => {
   return http.request<EventListResult>("get", PATH_EVENT_LIST, { params });

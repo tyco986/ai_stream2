@@ -14,7 +14,7 @@ TopdownPoseSahiVisRtspGenerator::TopdownPoseSahiVisRtspGenerator(
     nlohmann::json sgie,
     nlohmann::json sahi,
     std::optional<nlohmann::json> tracker,
-    std::optional<nlohmann::json> logger,
+    std::optional<nlohmann::json> collector,
     std::optional<nlohmann::json> drawer)
     : VisSahiRtspGenerator(
           std::move(pipelineName),
@@ -23,7 +23,7 @@ TopdownPoseSahiVisRtspGenerator::TopdownPoseSahiVisRtspGenerator(
           std::move(pgie),
           std::move(sahi),
           std::move(tracker),
-          std::move(logger),
+          std::move(collector),
           std::move(drawer)),
       sgie(std::move(sgie)) {
     generator = "TopdownPoseSahiVisRTSPGenerator";
@@ -90,7 +90,7 @@ void TopdownPoseSahiVisRtspGenerator::add() {
     appendNode("nvinfer", "sgie0", addNvinfer(TopdownPose::SGIE_CONFIG_NAME, pose->batchSize, pose->gpuId, true));
     appendNode("rtmposepostprocess", "nvrtmposepostprocess", addNvrtmposepostprocess(pose->uniqueId));
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
-    appendNode("detcollector", "detcollector", addCollector(logger.value("interval", 1)));
+    appendNode("detcollector", "detcollector", addCollector(collector.value("interval", 1)));
     appendNode("dslogger", "dslogger", addDslogger(pipeline::PAGE_DET));
     const std::string drawerElement = nvposeDrawerElement();
     if (drawer.has_value()) {

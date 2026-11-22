@@ -12,7 +12,7 @@ DetVisRtspPresenceGenerator::DetVisRtspPresenceGenerator(
     nlohmann::json pgie,
     nlohmann::json eventCoder,
     std::optional<nlohmann::json> tracker,
-    std::optional<nlohmann::json> logger,
+    std::optional<nlohmann::json> collector,
     std::optional<nlohmann::json> drawer,
     std::optional<nlohmann::json> capturer)
     : VisEventRtspGenerator(
@@ -23,7 +23,7 @@ DetVisRtspPresenceGenerator::DetVisRtspPresenceGenerator(
           std::move(pgie),
           std::move(eventCoder),
           std::move(tracker),
-          std::move(logger),
+          std::move(collector),
           std::move(drawer),
           std::move(capturer)) {
     generator = "DetVisRTSPPresenceGenerator";

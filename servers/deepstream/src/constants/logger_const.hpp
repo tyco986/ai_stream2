@@ -6,7 +6,7 @@ namespace request_log {
 
 inline constexpr const char* PATH = "/ai_stream2/deepstream/logs";
 inline constexpr const char* ROOT = "/root/logs/deepstream";
-inline constexpr const char* ANONYMOUS_DIR = "/root/logs";
+inline constexpr const char* ANONYMOUS_DIR = "/root/logs/deepstream_dev_api";
 inline constexpr const char* PAGE = "deepstream";
 inline constexpr const char* API_DIR = "api";
 inline constexpr const char* SUFFIX = ".jsonl";

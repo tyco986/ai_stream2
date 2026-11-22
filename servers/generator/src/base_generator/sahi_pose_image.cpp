@@ -11,7 +11,7 @@ SahiPoseImageGenerator::SahiPoseImageGenerator(
     std::optional<nlohmann::json> analyzer,
     nlohmann::json pgie,
     nlohmann::json sahi,
-    std::optional<nlohmann::json> logger,
+    std::optional<nlohmann::json> collector,
     std::optional<nlohmann::json> drawer)
     : SahiImageGenerator(
           std::move(pipelineName),
@@ -20,7 +20,7 @@ SahiPoseImageGenerator::SahiPoseImageGenerator(
           std::move(analyzer),
           std::move(pgie),
           std::move(sahi),
-          std::move(logger),
+          std::move(collector),
           std::move(drawer)) {
     sahiPostprocess = "nvsahipostprocesspose";
 }

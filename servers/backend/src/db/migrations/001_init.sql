@@ -302,6 +302,7 @@ CREATE INDEX event_media_id_idx ON event (media_id);
 CREATE INDEX event_pipeline_id_event_code_idx ON event (pipeline_id, event_code);
 CREATE INDEX event_level_occurred_at_id_idx ON event (level, occurred_at, id);
 CREATE INDEX event_read_at_idx ON event (read_at);
+CREATE INDEX event_unread_alert_idx ON event (read_at) WHERE read_at IS NULL AND level = 'alert';
 
 -- notice
 
@@ -309,11 +310,11 @@ CREATE TABLE notice (
   id UUID PRIMARY KEY,
   created_at TIMESTAMPTZ NOT NULL,
   read_at TIMESTAMPTZ,
-  user_id UUID REFERENCES "user" (id) ON DELETE CASCADE,
   level VARCHAR(16) NOT NULL,
   source VARCHAR(64) NOT NULL,
   text TEXT NOT NULL,
   ref_id UUID
 );
 
-CREATE INDEX notice_user_id_created_at_idx ON notice (user_id, created_at);
+CREATE INDEX notice_created_at_id_idx ON notice (created_at, id);
+CREATE INDEX notice_unread_idx ON notice (created_at) WHERE read_at IS NULL;

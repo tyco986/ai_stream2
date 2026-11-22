@@ -10,7 +10,7 @@ DetImageGenerator::DetImageGenerator(
     std::filesystem::path filesinkOutput,
     std::optional<nlohmann::json> analyzer,
     nlohmann::json pgie,
-    std::optional<nlohmann::json> logger,
+    std::optional<nlohmann::json> collector,
     std::optional<nlohmann::json> drawer)
     : BaseImageGenerator(
           std::move(pipelineName),
@@ -18,7 +18,7 @@ DetImageGenerator::DetImageGenerator(
           std::move(filesinkOutput),
           std::move(analyzer),
           std::move(pgie),
-          std::move(logger),
+          std::move(collector),
           std::move(drawer)) {
     generator = "DetImageGenerator";
 }

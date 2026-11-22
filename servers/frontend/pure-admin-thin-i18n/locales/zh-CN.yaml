@@ -180,7 +180,7 @@ pipeline:
   pureDirection: Direction detection
   pureOff: 关
   pureOn: 开
-  pureLogger: 日志
+  pureCollector: 采集
   pureDrawer: 绘制
   pureSahi: 切片
   purePreprocess: 预处理
@@ -217,7 +217,9 @@ pipeline:
   pureLength: 长度
   pureThreshold: 阈值
   pureMode: 模式
-  pureCaptureCodes: 抓拍码
+  pureDumpCodes: 落盘码
+  pureCapturerOutput: 抓拍目录
+  pureLabelTask: 标注任务
   pureSource: 源
   pureSizeMatch: 宽高必须一致
   pureStreamMatch: 宽、高、帧率必须一致
@@ -269,6 +271,12 @@ event:
   pureSource: 来源
   pureAnnotations: 标注
   pureOps: 操作
+  purePreview: 预览
+  pureWidth: 宽
+  pureHeight: 高
+  pureSize: 大小
+  pureCreatedAt: 创建时间
+  pureUpdatedAt: 修改时间
   pureRemove: 删除
   pureRead: 已读
   pureUnread: 未读

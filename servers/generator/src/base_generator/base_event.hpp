@@ -14,8 +14,9 @@ class BaseEventGenerator : public PipelineGenerator {
 public:
     BaseEventGenerator(std::string pipelineName, std::filesystem::path capturerOutput, nlohmann::json eventCoder, std::optional<nlohmann::json> capturer = std::nullopt);
 
-    std::string capturerCodes() const;
-    void appendEventCoder(int logInterval, const std::string& name = "presenceeventcoder");
+    std::string dumpCodes(const nlohmann::json& collector) const;
+    std::string labelTask() const;
+    void appendEventCoder(int interval, const nlohmann::json& collector, const std::string& name = "presenceeventcoder");
     std::string afterAnalytics(const std::string& teeName = "tee_msg") const;
     void linkEventCoder(YAML::Node edges, const std::string& teeName = "tee_msg") const;
 

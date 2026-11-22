@@ -23,6 +23,8 @@ class EventService {
   Json::Value setRead(const std::string& eventId, bool read);
   Json::Value remove(const std::string& eventId);
   Json::Value list(const std::string& search, const std::string& level, int page, long pageSize);
+  std::string contentPath(const std::string& eventId, const std::string& kind);
+  Json::Value contentInfo(const std::string& eventId, const std::string& kind);
 
  private:
   Json::Value row2json(const drogon::orm::Row& row);

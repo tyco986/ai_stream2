@@ -20,7 +20,7 @@ void VisEventRtspGenerator::appendAfterOsd(int index, int gpuId) {
     appendNode("queue", "queue_vis" + suffix, addQueue());
     appendNode("nvvideoconvert", "nvvideoconvert_vis" + suffix, addNvvideoconvert(gpuId));
     appendNode("capsfilter", "capsfilter_vis" + suffix, addCapsfilter("video/x-raw(memory:NVMM), format=RGB"));
-    appendNode("viscapturer", "viscapturer" + suffix, addViscapturer(capturerCodes(), capturerOutput.string()));
+    appendNode("viscapturer", "viscapturer" + suffix, addViscapturer(labelTask()));
     appendNode("fakesink", "fakesink_vis" + suffix, addFakesink(false, false));
     appendNode("queue", "queue_enc" + suffix, addQueue());
 

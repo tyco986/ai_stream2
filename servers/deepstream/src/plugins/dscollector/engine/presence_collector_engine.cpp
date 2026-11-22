@@ -1,5 +1,7 @@
 #include "plugins/dscollector/engine/presence_collector_engine.hpp"
 
+#include <cstring>
+#include <format>
 #include <iomanip>
 #include <string>
 
@@ -7,7 +9,27 @@
 #include "constants/event_meta_const.hpp"
 #include "constants/presenceeventcoder_const.hpp"
 
-PresenceCollectorEngine::PresenceCollectorEngine(int interval) : CollectorEngine(interval) {
+PresenceCollectorEngine::PresenceCollectorEngine(int interval)
+    : CollectorEngine(interval),
+      dumpCodes(collector::DEFAULT_DUMP_CODES),
+      capturerOutput(),
+      nextIds() {
+}
+
+void PresenceCollectorEngine::setDumpCodes(const char* codes) {
+    dumpCodes = (codes != nullptr && codes[0] != '\0') ? codes : collector::DEFAULT_DUMP_CODES;
+}
+
+void PresenceCollectorEngine::setCapturerOutput(const char* path) {
+    capturerOutput = path != nullptr ? path : "";
+}
+
+const std::string& PresenceCollectorEngine::getDumpCodes() const {
+    return dumpCodes;
+}
+
+const std::string& PresenceCollectorEngine::getCapturerOutput() const {
+    return capturerOutput;
 }
 
 const PresenceEventMeta* PresenceCollectorEngine::eventMeta(NvDsFrameMeta* frame) const {
@@ -23,6 +45,40 @@ const PresenceEventMeta* PresenceCollectorEngine::eventMeta(NvDsFrameMeta* frame
     return event;
 }
 
+bool PresenceCollectorEngine::codesHit(const PresenceEventMeta* event) const {
+    bool hit = false;
+    const unsigned count = slotCount(event);
+    for (unsigned index = 0; index < count; index++) {
+        const char code = event->event.slots[index].code;
+        hit = hit || (code != '\0' && std::strchr(dumpCodes.c_str(), code) != nullptr);
+    }
+    return hit;
+}
+
+std::string PresenceCollectorEngine::absolutePath(const std::string& relative) const {
+    std::string path = capturerOutput;
+    if (!path.empty() && path.back() != '/') {
+        path.push_back('/');
+    }
+    path += relative;
+    return path;
+}
+
+unsigned int PresenceCollectorEngine::takeId(int padIndex) {
+    const unsigned int id = nextIds[padIndex];
+    nextIds[padIndex] = id + 1;
+    return id;
+}
+
+void PresenceCollectorEngine::writePath(std::ostringstream& json, const char* key, const std::string& path) const {
+    json << ",\"" << key << "\":";
+    if (path.empty()) {
+        json << collector::JSON_NULL;
+    } else {
+        json << "\"" << path << "\"";
+    }
+}
+
 unsigned PresenceCollectorEngine::slotCount(const PresenceEventMeta* event) const {
     unsigned count = 0;
     if (event != nullptr) {
@@ -34,8 +90,16 @@ unsigned PresenceCollectorEngine::slotCount(const PresenceEventMeta* event) cons
     return count;
 }
 
-void PresenceCollectorEngine::appendExtra(std::ostringstream& json, NvDsFrameMeta* frame) const {
+void PresenceCollectorEngine::appendExtra(std::ostringstream& json, NvDsFrameMeta* frame) {
     const PresenceEventMeta* event = eventMeta(frame);
+    std::string rawPath;
+    std::string visPath;
+    if (frame != nullptr && frame->bInferDone && !capturerOutput.empty() && codesHit(event)) {
+        const unsigned int id = takeId(static_cast<int>(frame->pad_index));
+        const int pad = static_cast<int>(frame->pad_index);
+        rawPath = absolutePath(std::format(collector::RAW_RELATIVE, pad, id));
+        visPath = absolutePath(std::format(collector::VIS_RELATIVE, pad, id));
+    }
     json << ",\"event\":";
     if (event == nullptr) {
         json << collector::JSON_NULL;
@@ -98,6 +162,9 @@ void PresenceCollectorEngine::appendExtra(std::ostringstream& json, NvDsFrameMet
                 json << collector::JSON_NULL;
             }
         }
-        json << "]}}";
+        json << "]}";
+        writePath(json, collector::KEY_RAW_PATH, rawPath);
+        writePath(json, collector::KEY_VISUALIZATION_PATH, visPath);
+        json << "}";
     }
 }

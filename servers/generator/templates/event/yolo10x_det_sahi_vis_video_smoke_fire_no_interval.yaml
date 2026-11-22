@@ -12,9 +12,11 @@ pgie:
     all:
       conf: 0.25
 tracker: null
-analyzer: null
-logger:
+analyzer: null 
+collector:
   interval: 1
+  dump_codes: "12"
+  capturer_output: /root/events/yolo10x_smoke_fire_sahi_vis_video_no_interval
 drawer:
   interval: 1
   fade_time: 1
@@ -25,7 +27,7 @@ event_coder:
   threshold: 0.5
   mode: fold
 capturer:
-  capture_codes: "12"
+  label_task: det
 videos:
   - path: /root/attachments/videos/video1.mp4
     width: 1920
@@ -36,7 +38,6 @@ videos:
     height: 1080
     fps: 25
 filesink_output: /root/media/pipeline/yolo10x_smoke_fire_sahi_vis_video_no_interval
-capturer_output: /root/events/yolo10x_smoke_fire_sahi_vis_video_no_interval
 sahi:
   preprocess:
     slice_width: 640

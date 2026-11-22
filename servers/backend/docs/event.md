@@ -2,7 +2,7 @@
 
 前缀：`/backend/events`。全部接口经 `AuthFilter`。
 
-JSON 成功外壳：`{success, message, data}`。
+JSON 成功外壳：`{success, message, data}`。`GET /backend/events/{event_id}/content` 成功时直接返回原文件，不套这层外壳。
 
 事件对象键：`id`、`occurred_at`、`stream_id`、`stream_name`、`media_id`、`media_name`、`pipeline_id`、`pipeline_name`、`event_code`、`level`、`event_label`、`read_at`、`raw_path`、`visualization_path`、`annotations`。`level` 原样保存 DeepStream 消息中的值。路径、`stream_id`、`stream_name`、`media_id`、`media_name`、`pipeline_name`、`read_at` 和 `annotations` 为空时为 `null`。`read_at` 为 `null` 表示未读。RTSP 写 `stream_id`，image、video 写 `media_id`，两者只填一个。三个 name 读时分别关联 `stream`、`media`、`pipeline`，源已删除则为 `null`。
 
@@ -13,9 +13,11 @@ JSON 成功外壳：`{success, message, data}`。
 | 方法 | 路径 | 入参键 | 出参键（`data`） | 功能 |
 |------|------|--------|------------------|------|
 | `GET` | `/backend/events` | query：`search`、`page`、`page_size` | `items`、`total`、`page`、`page_size` | 分页列表 |
+| `GET` | `/backend/events/{event_id}/content` | path：`event_id`；query：`kind` | 文件字节 | 原文件 |
+| `GET` | `/backend/events/{event_id}/content/info` | path：`event_id`；query：`kind` | `width`、`height`、`size`、`created_at`、`updated_at` | MediaInfo 探测结果 |
 | `GET` | `/backend/events/ws` | WebSocket 握手 | 文本帧：事件对象 | 入库成功后把该行推给全部已连接客户端 |
-| `POST` | `/backend/events/{event_id}/read` | path：`event_id` | 事件对象 | 标已读，并给关联通知写 `read_at` |
-| `POST` | `/backend/events/{event_id}/unread` | path：`event_id` | 事件对象 | 标未读，并清空关联通知的 `read_at` |
+| `POST` | `/backend/events/{event_id}/read` | path：`event_id` | 事件对象 | 标已读 |
+| `POST` | `/backend/events/{event_id}/unread` | path：`event_id` | 事件对象 | 标未读 |
 | `DELETE` | `/backend/events/{event_id}` | path：`event_id` | 事件对象 | 删除 |
 | `POST` | `/backend/events/batch/read` | `ids` | `updated_rows`、`failed_rows`、`updated_count`、`failed_count` | 批量标已读 |
 | `POST` | `/backend/events/batch/unread` | `ids` | 同上 | 批量标未读 |
@@ -29,13 +31,29 @@ JSON 成功外壳：`{success, message, data}`。
 
 出参 `data`：`items`（事件对象数组）、`total`、`page`、`page_size`。`message`：`Loaded event list`。失败 `500`，`Failed to load event list`。
 
+### GET `/backend/events/{event_id}/content`
+
+`kind` 只能是 `raw` 或 `visualization`，分别取 `raw_path`、`visualization_path` 指向的磁盘文件，用 `newFileResponse` 原样返回。路径为空或 `kind` 非法时失败。文件字节不入库。
+
+入参：path `event_id`；query `kind`。
+
+失败 `500`，`Failed to load event content`。
+
+### GET `/backend/events/{event_id}/content/info`
+
+`kind` 与 content 相同。用 MediaInfo 读该文件。`width`、`height` 为整数像素，`size` 为 MB、保留一位小数，`created_at`、`updated_at` 是 UTC 的 `YYYY-MM-DDTHH:MM:SSZ`。这些结果不入库。
+
+入参：path `event_id`；query `kind`。
+
+出参 `data`：`width`、`height`、`size`、`created_at`、`updated_at`。`message`：`Loaded event content info`。失败 `500`，`Failed to load event content info`。
+
 ### GET `/backend/events/ws`
 
 WebSocket。握手走 `AuthFilter`，读权限与列表相同。请求头没有 `authorization` 时使用 cookie `authorized-token`。连接期间，Redis 入库成功后的那一行以一条文本帧发出，内容就是事件对象本身。
 
 ### POST `/backend/events/{event_id}/read`
 
-`read_at` 写成当前时间。`notice.source=event` 且 `ref_id` 等于该事件、尚未已读的通知同样写入 `read_at`。
+`read_at` 写成当前时间。
 
 入参：path `event_id`。
 
@@ -43,7 +61,7 @@ WebSocket。握手走 `AuthFilter`，读权限与列表相同。请求头没有 
 
 ### POST `/backend/events/{event_id}/unread`
 
-`read_at` 写成 `null`。上述关联通知的 `read_at` 也写成 `null`。
+`read_at` 写成 `null`。
 
 入参：path `event_id`。
 

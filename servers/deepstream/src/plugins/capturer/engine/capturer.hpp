@@ -7,13 +7,10 @@
 #include <mutex>
 #include <string>
 #include <thread>
-#include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 #include "gstnvdsmeta.h"
 #include "nvbufsurface.h"
-#include "plugins/eventmeta/event_meta.hpp"
 
 struct CaptureBox {
     float left;
@@ -29,13 +26,13 @@ struct CaptureJob {
     std::vector<CaptureBox> boxes;
     int width;
     int height;
-    int padIndex;
-    unsigned int captureId;
+    std::string rawPath;
+    std::string visualizationPath;
 };
 
 class Capturer {
 public:
-    Capturer(const char* captureCodes, const char* output);
+    Capturer();
     virtual ~Capturer();
 
     Capturer(const Capturer&) = delete;
@@ -44,18 +41,14 @@ public:
     bool capture(NvBufSurface* surface, NvDsFrameMeta* frame);
 
 protected:
-    std::string outputRoot() const;
+    virtual const char* dumpKey() const = 0;
     virtual void prepare(CaptureJob* job, NvDsFrameMeta* frame);
     virtual bool save(const CaptureJob& job) = 0;
     void stop();
 
-    std::string captureCodes;
-    std::string output;
-
 private:
-    bool codesHit(const EventMeta& event) const;
+    std::string eventPath(NvDsFrameMeta* frame, const char* key) const;
     bool shouldDump(NvDsFrameMeta* frame) const;
-    unsigned int takeId(int padIndex);
     bool copyRgb(NvBufSurface* surface, unsigned int batchId, std::vector<std::uint8_t>* rgb, int* width, int* height);
     bool copyCuda(NvBufSurfaceParams* params, int channels, bool swapRb, std::vector<std::uint8_t>* rgb);
     bool copyMapped(
@@ -76,8 +69,6 @@ private:
     void enqueue(CaptureJob job);
     void writerLoop();
 
-    std::unordered_set<char> codes;
-    std::unordered_map<int, unsigned int> ids;
     std::atomic<bool> stopWriter;
     std::mutex writerMutex;
     std::condition_variable writerCv;

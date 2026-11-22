@@ -23,7 +23,7 @@ export type PipelineSpec = {
   source: "image" | "video" | "rtsp";
   tracker: boolean;
   gie: Record<string, Record<string, boolean>>;
-  logger?: PipelineFields;
+  collector?: PipelineFields;
   drawer?: PipelineFields;
   sahi?: Record<string, PipelineFields>;
   event_coder?: PipelineFields;

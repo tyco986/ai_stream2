@@ -17,7 +17,7 @@ stgcnpp:
 tracker:
   class_id: 0
 analyzer: null
-logger:
+collector:
   interval: 1
 drawer: null
 streams:

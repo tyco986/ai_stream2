@@ -42,7 +42,7 @@ public:
         std::optional<nlohmann::json> analyzer,
         nlohmann::json pgie,
         std::optional<nlohmann::json> tracker = std::nullopt,
-        std::optional<nlohmann::json> logger = std::nullopt,
+        std::optional<nlohmann::json> collector = std::nullopt,
         std::optional<nlohmann::json> drawer = std::nullopt);
 
     virtual void applyPgieConfig() = 0;
@@ -73,7 +73,7 @@ public:
     std::optional<nlohmann::json> analyzer;
     std::optional<nlohmann::json> tracker;
     nlohmann::json pgie;
-    nlohmann::json logger;
+    nlohmann::json collector;
     std::optional<nlohmann::json> drawer;
     std::string generator;
     int width = 0;

@@ -21,13 +21,13 @@ public:
     void collect(NvDsBatchMeta* batch, NvDsFrameLatencyInfo* info, guint count);
 
 protected:
-    virtual void appendExtra(std::ostringstream& json, NvDsFrameMeta* frame) const;
+    virtual void appendExtra(std::ostringstream& json, NvDsFrameMeta* frame);
     virtual void appendObjectItem(std::ostringstream& json, NvDsObjectMeta* object) const;
     void appendDetFields(std::ostringstream& json, NvDsObjectMeta* object) const;
     std::string escapeLabel(const char* label) const;
 
 private:
-    std::string buildLine(NvDsFrameMeta* frame, double latencyMs) const;
+    std::string buildLine(NvDsFrameMeta* frame, double latencyMs);
     double latencyFor(NvDsFrameLatencyInfo* info, guint count, NvDsFrameMeta* frame) const;
 
     int sampleInterval;

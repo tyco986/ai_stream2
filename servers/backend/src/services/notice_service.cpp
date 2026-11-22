@@ -2,6 +2,7 @@
 
 #include "error_tracer/sql.hpp"
 
+#include "constants/event_const.hpp"
 #include "constants/notice_const.hpp"
 
 #include <stdexcept>
@@ -10,35 +11,34 @@
 namespace {
 
 const char* SELECT_ROW =
-    "id::text AS id, created_at, read_at, user_id::text AS user_id, level, source, text, "
+    "id::text AS id, created_at, read_at, level, source, text, "
     "ref_id::text AS ref_id ";
-
-const char* OWNED = "(user_id = $1::uuid OR user_id IS NULL) ";
 
 }
 
 NoticeService::NoticeService(drogon::orm::DbClientPtr dbClient) : dbClient(std::move(dbClient)) {}
 
 Json::Value NoticeService::create(const Json::Value& createdAt,
-                                  const Json::Value& userId,
                                   const Json::Value& level,
                                   const Json::Value& source,
                                   const Json::Value& text,
                                   const Json::Value& refId) {
+  const std::string levelText = level.isNull() ? "" : level.asString();
+  if (levelText != notice::LEVEL_SYSTEM) {
+    throw std::runtime_error(notice::ERR_LEVEL);
+  }
   Json::Value data = notice::ROW();
   data[notice::KEY_CREATED_AT] = createdAt.isNull() ? data[notice::KEY_CREATED_AT] : createdAt;
-  data[notice::KEY_USER_ID] = userId.isNull() ? data[notice::KEY_USER_ID] : userId;
-  data[notice::KEY_LEVEL] = level.isNull() ? data[notice::KEY_LEVEL] : level;
+  data[notice::KEY_LEVEL] = levelText;
   data[notice::KEY_SOURCE] = source.isNull() ? data[notice::KEY_SOURCE] : source;
   data[notice::KEY_TEXT] = text.isNull() ? data[notice::KEY_TEXT] : text;
   data[notice::KEY_REF_ID] = refId.isNull() ? data[notice::KEY_REF_ID] : refId;
   const auto rows = Sql::sync({}, dbClient, 
-      std::string("INSERT INTO notice (id, created_at, user_id, level, source, text, ref_id) "
-                  "VALUES (gen_random_uuid(), $1::timestamptz, NULLIF($2, '')::uuid, $3, $4, $5, "
-                  "NULLIF($6, '')::uuid) RETURNING ") +
+      std::string("INSERT INTO notice (id, created_at, level, source, text, ref_id) "
+                  "VALUES (gen_random_uuid(), COALESCE(NULLIF($1, '')::timestamptz, now()), $2, $3, $4, "
+                  "NULLIF($5, '')::uuid) RETURNING ") +
           SELECT_ROW,
       data[notice::KEY_CREATED_AT].isNull() ? "" : data[notice::KEY_CREATED_AT].asString(),
-      data[notice::KEY_USER_ID].isNull() ? "" : data[notice::KEY_USER_ID].asString(),
       data[notice::KEY_LEVEL].isNull() ? "" : data[notice::KEY_LEVEL].asString(),
       data[notice::KEY_SOURCE].isNull() ? "" : data[notice::KEY_SOURCE].asString(),
       data[notice::KEY_TEXT].isNull() ? "" : data[notice::KEY_TEXT].asString(),
@@ -47,23 +47,17 @@ Json::Value NoticeService::create(const Json::Value& createdAt,
   return data;
 }
 
-std::string NoticeService::token2UserId(const std::string& token) {
-  const auto rows = Sql::sync({}, dbClient, 
-      "SELECT id::text AS id FROM \"user\" WHERE token = $1 AND active", token);
-  if (rows.empty()) {
-    throw std::runtime_error(notice::ERR_NOT_FOUND);
+Json::Value NoticeService::list(const std::string& level, int page, long pageSize) {
+  if (!level.empty() && level != notice::LEVEL_SYSTEM) {
+    throw std::runtime_error(notice::ERR_LEVEL);
   }
-  const std::string id = rows[0]["id"].as<std::string>();
-  return id;
-}
-
-Json::Value NoticeService::list(const std::string& userId, int page, long pageSize) {
   const long offset = static_cast<long>(page - 1) * pageSize;
-  const std::string from = std::string("FROM notice WHERE ") + OWNED;
-  const auto counted = Sql::sync({}, dbClient, "SELECT count(*) AS total " + from, userId);
+  const auto counted = Sql::sync({}, dbClient, 
+      "SELECT count(*) AS total FROM notice WHERE ($1 = '' OR level = $1)", level);
   const auto rows = Sql::sync({}, dbClient, 
-      std::string("SELECT ") + SELECT_ROW + from + "ORDER BY created_at DESC, id DESC LIMIT $2 OFFSET $3",
-      userId,
+      std::string("SELECT ") + SELECT_ROW +
+          "FROM notice WHERE ($1 = '' OR level = $1) ORDER BY created_at DESC, id DESC LIMIT $2 OFFSET $3",
+      level,
       pageSize,
       offset);
   Json::Value items(Json::arrayValue);
@@ -88,18 +82,27 @@ Json::Value NoticeService::remove(const std::string& noticeId) {
   return data;
 }
 
-long NoticeService::countUnread(const std::string& userId) {
-  const auto rows = Sql::sync({}, dbClient, 
-      std::string("SELECT count(*) AS total FROM notice WHERE read_at IS NULL AND ") + OWNED, userId);
-  const long total = rows[0]["total"].as<long>();
-  return total;
+Json::Value NoticeService::count() {
+  const auto systemRows = Sql::sync({}, dbClient, 
+      "SELECT count(*) AS total FROM notice WHERE read_at IS NULL AND level = $1", notice::LEVEL_SYSTEM);
+  const auto eventRows = Sql::sync({}, dbClient, 
+      "SELECT count(*) AS total FROM event WHERE read_at IS NULL AND level = $1", event::LEVEL_ALERT);
+  const long system = systemRows[0]["total"].as<long>();
+  const long event = eventRows[0]["total"].as<long>();
+  Json::Value data;
+  data[notice::KEY_TOTAL] = static_cast<Json::Int64>(system + event);
+  data[notice::KEY_EVENT] = static_cast<Json::Int64>(event);
+  data[notice::KEY_SYSTEM] = static_cast<Json::Int64>(system);
+  return data;
 }
 
-Json::Value NoticeService::setReadAt(const std::string& noticeId, const std::string& readAt) {
+Json::Value NoticeService::setRead(const std::string& noticeId, bool read) {
   const auto rows = Sql::sync({}, dbClient, 
-      std::string("UPDATE notice SET read_at = $2::timestamptz WHERE id = $1::uuid RETURNING ") + SELECT_ROW,
+      std::string("UPDATE notice SET read_at = CASE WHEN $2::boolean THEN now() ELSE NULL END "
+                  "WHERE id = $1::uuid RETURNING ") +
+          SELECT_ROW,
       noticeId,
-      readAt);
+      read);
   if (rows.empty()) {
     throw std::runtime_error(notice::ERR_NOT_FOUND);
   }
@@ -112,7 +115,6 @@ Json::Value NoticeService::row2json(const drogon::orm::Row& row) {
   data[notice::KEY_ID] = row["id"].as<std::string>();
   data[notice::KEY_CREATED_AT] = row["created_at"].as<std::string>();
   data[notice::KEY_READ_AT] = row["read_at"].isNull() ? Json::Value() : row["read_at"].as<std::string>();
-  data[notice::KEY_USER_ID] = row["user_id"].isNull() ? Json::Value() : row["user_id"].as<std::string>();
   data[notice::KEY_LEVEL] = row["level"].as<std::string>();
   data[notice::KEY_SOURCE] = row["source"].as<std::string>();
   data[notice::KEY_TEXT] = row["text"].as<std::string>();

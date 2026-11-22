@@ -70,17 +70,17 @@ BaseVideoGenerator::BaseVideoGenerator(
     std::optional<nlohmann::json> analyzer,
     nlohmann::json pgie,
     std::optional<nlohmann::json> tracker,
-    std::optional<nlohmann::json> logger,
+    std::optional<nlohmann::json> collector,
     std::optional<nlohmann::json> drawer)
     : pipelineName(std::move(pipelineName)),
       videos(std::move(videos)),
       analyzer(std::move(analyzer)),
       tracker(std::move(tracker)),
       pgie(std::move(pgie)),
-      logger({{"interval", 1}}),
+      collector({{"interval", 1}}),
       drawer(std::move(drawer)) {
-    if (logger.has_value()) {
-        this->logger.update(*logger);
+    if (collector.has_value()) {
+        this->collector.update(*collector);
     }
 }
 
@@ -137,7 +137,7 @@ void BaseVideoGenerator::initParams() {
     params["pgie"] = jsonToYaml(pgie);
     params["analyzer"] = analyzer.has_value() ? jsonToYaml(*analyzer) : YAML::Node(YAML::NodeType::Null);
     params["tracker"] = tracker.has_value() ? jsonToYaml(*tracker) : YAML::Node(YAML::NodeType::Null);
-    params["logger"] = jsonToYaml(logger);
+    params["collector"] = jsonToYaml(collector);
     params["drawer"] = drawer.has_value() ? jsonToYaml(*drawer) : YAML::Node(YAML::NodeType::Null);
     files.insert_or_assign(PARAMS_CONFIG_NAME, ConfigFile(params));
 }
@@ -336,7 +336,7 @@ void BaseVideoGenerator::add() {
             addNvtracker(subelement::TRACKER_LL_LIB, TRACKER_CONFIG_NAME, trackerWidth, trackerHeight, gpuId, operateOnClassIds));
     }
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
-    appendNode("detcollector", "detcollector", addCollector(logger.value("interval", 1)));
+    appendNode("detcollector", "detcollector", addCollector(collector.value("interval", 1)));
     appendNode("dslogger", "dslogger", addDslogger(pipeline::PAGE_DET));
     appendNode("fakesink", "fakesink", addFakesink(false, false));
 }

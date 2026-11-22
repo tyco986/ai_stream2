@@ -22,6 +22,7 @@ class StreamGroupService {
   std::string exportCSV();
 
  private:
+  std::string groupRealm(const std::string& groupId);
   std::vector<std::string> subtreeIds(const std::string& groupId);
 
   Json::Value groupNode(const Json::Value& group,

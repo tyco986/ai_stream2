@@ -15,12 +15,20 @@ class EventController : public drogon::HttpController<EventController> {
 
   METHOD_LIST_BEGIN
   ADD_METHOD_TO(EventController::list, event::PATH_LIST, drogon::Get, "AuthFilter");
+  ADD_METHOD_TO(EventController::content, event::PATH_CONTENT, drogon::Get, "AuthFilter");
+  ADD_METHOD_TO(EventController::contentInfo, event::PATH_CONTENT_INFO, drogon::Get, "AuthFilter");
   ADD_METHOD_TO(EventController::read, event::PATH_READ, drogon::Post, "AuthFilter");
   ADD_METHOD_TO(EventController::unread, event::PATH_UNREAD, drogon::Post, "AuthFilter");
   ADD_METHOD_TO(EventController::remove, event::PATH_ITEM, drogon::Delete, "AuthFilter");
   METHOD_LIST_END
 
   void list(const drogon::HttpRequestPtr& request, std::function<void(const drogon::HttpResponsePtr&)>&& callback);
+  void content(const drogon::HttpRequestPtr& request,
+               std::function<void(const drogon::HttpResponsePtr&)>&& callback,
+               const std::string& event_id);
+  void contentInfo(const drogon::HttpRequestPtr& request,
+                   std::function<void(const drogon::HttpResponsePtr&)>&& callback,
+                   const std::string& event_id);
   void read(const drogon::HttpRequestPtr& request,
             std::function<void(const drogon::HttpResponsePtr&)>&& callback,
             const std::string& event_id);

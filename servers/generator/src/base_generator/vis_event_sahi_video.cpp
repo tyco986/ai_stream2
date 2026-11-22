@@ -14,7 +14,7 @@ VisEventSahiVideoGenerator::VisEventSahiVideoGenerator(
     nlohmann::json sahi,
     nlohmann::json eventCoder,
     std::optional<nlohmann::json> tracker,
-    std::optional<nlohmann::json> logger,
+    std::optional<nlohmann::json> collector,
     std::optional<nlohmann::json> drawer,
     std::optional<nlohmann::json> capturer)
     : VisEventVideoGenerator(
@@ -26,7 +26,7 @@ VisEventSahiVideoGenerator::VisEventSahiVideoGenerator(
           std::move(pgie),
           std::move(eventCoder),
           std::move(tracker),
-          std::move(logger),
+          std::move(collector),
           std::move(drawer),
           std::move(capturer)),
       sahi(std::move(sahi)) {

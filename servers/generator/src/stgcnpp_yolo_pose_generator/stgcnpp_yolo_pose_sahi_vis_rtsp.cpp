@@ -14,7 +14,7 @@ StgcnppYoloPoseSahiVisRtspGenerator::StgcnppYoloPoseSahiVisRtspGenerator(
     nlohmann::json stgcnpp,
     nlohmann::json sahi,
     std::optional<nlohmann::json> tracker,
-    std::optional<nlohmann::json> logger,
+    std::optional<nlohmann::json> collector,
     std::optional<nlohmann::json> drawer)
     : VisSahiPoseRtspGenerator(
           std::move(pipelineName),
@@ -23,7 +23,7 @@ StgcnppYoloPoseSahiVisRtspGenerator::StgcnppYoloPoseSahiVisRtspGenerator(
           std::move(pgie),
           std::move(sahi),
           std::move(tracker),
-          std::move(logger),
+          std::move(collector),
           std::move(drawer)),
       stgcnpp(std::move(stgcnpp)) {
     generator = "StgcnppYoloPoseSahiVisRTSPGenerator";
@@ -91,7 +91,7 @@ void StgcnppYoloPoseSahiVisRtspGenerator::add() {
     appendNode("nvinfer", "sgie1", addNvinfer(StgcnppYoloPose::CONFIG_NAME, model->batchSize, model->gpuId, true));
     appendNode("stgcnppactionlabel", "stgcnppactionlabel", addStgcnppactionlabel(model->uniqueId));
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
-    appendNode("stgcnppcollector", "stgcnppcollector", addCollector(logger.value("interval", 1)));
+    appendNode("stgcnppcollector", "stgcnppcollector", addCollector(collector.value("interval", 1)));
     appendNode("dslogger", "dslogger", addDslogger(pipeline::PAGE_STGCNPP));
     if (drawer.has_value()) {
         appendNode(StgcnppYoloPose::DRAWER_ELEMENT, StgcnppYoloPose::DRAWER_ELEMENT, StgcnppYoloPose::drawerProperties(*drawer));

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from "vue";
 import DeleteBin from "~icons/ri/delete-bin-line";
+import Eye from "~icons/ri/eye-line";
 import ListCheck from "~icons/ri/list-check";
 import Mail from "~icons/ri/mail-line";
 import MailOpen from "~icons/ri/mail-open-line";
@@ -28,6 +29,7 @@ import { $t, transformI18n } from "@/plugins/i18n";
 import { message } from "@/utils/message";
 import { formatLocalTime } from "@/utils/time";
 import { useColumnWidths } from "@/views/pipeline/columnWidth";
+import EventPreview from "./EventPreview.vue";
 
 defineOptions({
   name: "EventIndex"
@@ -40,6 +42,7 @@ const level = ref<(typeof EVENT_LEVELS)[number]>(EVENT_LEVEL_ALERT);
 const page = ref(1);
 const total = ref(0);
 const annotationsOpen = ref(false);
+const preview = ref<InstanceType<typeof EventPreview>>();
 const annotationText = ref("");
 let socket: WebSocket | null = null;
 
@@ -184,7 +187,10 @@ onUnmounted(() => {
         </template>
       </el-table-column>
       <el-table-column :label="transformI18n($t('event.pureOps'))" :width="listWidths.ops" :show-overflow-tooltip="false">
-        <template #default="{ row }">
+        <template #default="{ row, $index }">
+          <el-button link type="primary" :title="transformI18n($t('event.purePreview'))" @click="preview?.open(items, $index)">
+            <IconifyIconOffline :icon="Eye" />
+          </el-button>
           <el-button
             link
             type="primary"
@@ -207,6 +213,7 @@ onUnmounted(() => {
       :total="total"
       @current-change="onPage"
     />
+    <EventPreview ref="preview" />
     <el-dialog v-model="annotationsOpen" :title="transformI18n($t('event.pureAnnotations'))" :width="EVENT_ANNOTATION_DIALOG_WIDTH">
       <pre class="event-annotations">{{ annotationText }}</pre>
     </el-dialog>

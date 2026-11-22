@@ -88,6 +88,7 @@ inline const char* KEY_RTMPOSE = "rtmpose";
 inline const char* KEY_STGCNPP = "stgcnpp";
 inline const char* ANALYZER_STREAM_SUFFIX = "-stream";
 inline const char* KEY_EVENT_CODER = "event_coder";
+inline const char* KEY_COLLECTOR = "collector";
 inline const char* KEY_FILESINK_OUTPUT = "filesink_output";
 inline const char* KEY_CAPTURER_OUTPUT = "capturer_output";
 inline const char* FILESINK_DIR = "/root/media/pipeline";

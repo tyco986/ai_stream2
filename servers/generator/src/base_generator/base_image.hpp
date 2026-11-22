@@ -45,7 +45,7 @@ public:
         std::filesystem::path filesinkOutput,
         std::optional<nlohmann::json> analyzer,
         nlohmann::json pgie,
-        std::optional<nlohmann::json> logger = std::nullopt,
+        std::optional<nlohmann::json> collector = std::nullopt,
         std::optional<nlohmann::json> drawer = std::nullopt);
 
     virtual void applyPgieConfig() = 0;
@@ -77,7 +77,7 @@ protected:
     std::filesystem::path filesinkOutput;
     std::optional<nlohmann::json> analyzer;
     nlohmann::json pgie;
-    nlohmann::json logger;
+    nlohmann::json collector;
     std::optional<nlohmann::json> drawer;
     std::string generator;
     int width = 0;

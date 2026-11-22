@@ -13,6 +13,14 @@ inline constexpr int MISSING_OBJECT_ID = -1;
 inline constexpr double LATENCY_NONE = -1.0;
 inline constexpr int DEFAULT_INTERVAL = 1;
 inline constexpr const char* JSON_NULL = "null";
+inline constexpr const char* DEFAULT_DUMP_CODES = "12";
+inline constexpr const char* PROP_DUMP_CODES = "dump-codes";
+inline constexpr const char* RAW_RELATIVE = "images/raw_{:03d}_{:08d}.png";
+inline constexpr const char* VIS_RELATIVE = "vis/vis_{:03d}_{:08d}.jpg";
+inline constexpr const char* PROP_CAPTURER_OUTPUT = "capturer-output";
+inline constexpr const char* KEY_EVENT = "event";
+inline constexpr const char* KEY_RAW_PATH = "raw_path";
+inline constexpr const char* KEY_VISUALIZATION_PATH = "visualization_path";
 
 inline constexpr const char* ELEMENT_DET = "detcollector";
 inline constexpr const char* ELEMENT_PRESENCE = "presencecollector";

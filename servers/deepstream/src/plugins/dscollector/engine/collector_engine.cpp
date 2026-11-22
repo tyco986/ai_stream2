@@ -67,7 +67,7 @@ void CollectorEngine::collect(NvDsBatchMeta* batch, NvDsFrameLatencyInfo* info, 
     }
 }
 
-void CollectorEngine::appendExtra(std::ostringstream&, NvDsFrameMeta*) const {
+void CollectorEngine::appendExtra(std::ostringstream&, NvDsFrameMeta*) {
 }
 
 std::string CollectorEngine::escapeLabel(const char* label) const {
@@ -105,7 +105,7 @@ void CollectorEngine::appendObjectItem(std::ostringstream& json, NvDsObjectMeta*
     json << "]";
 }
 
-std::string CollectorEngine::buildLine(NvDsFrameMeta* frame, double latencyMs) const {
+std::string CollectorEngine::buildLine(NvDsFrameMeta* frame, double latencyMs) {
     std::ostringstream json;
     const std::time_t now = std::time(nullptr);
     std::tm local {};

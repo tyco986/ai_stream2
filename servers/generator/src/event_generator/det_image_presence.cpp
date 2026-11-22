@@ -12,7 +12,7 @@ DetImagePresenceGenerator::DetImagePresenceGenerator(
     std::optional<nlohmann::json> analyzer,
     nlohmann::json pgie,
     nlohmann::json eventCoder,
-    std::optional<nlohmann::json> logger,
+    std::optional<nlohmann::json> collector,
     std::optional<nlohmann::json> drawer,
     std::optional<nlohmann::json> capturer)
     : EventImageGenerator(
@@ -23,7 +23,7 @@ DetImagePresenceGenerator::DetImagePresenceGenerator(
           std::move(analyzer),
           std::move(pgie),
           std::move(eventCoder),
-          std::move(logger),
+          std::move(collector),
           std::move(drawer),
           std::move(capturer)) {
     generator = "DetImagePresenceGenerator";

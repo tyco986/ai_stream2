@@ -1,16 +1,13 @@
 #include "plugins/capturer/engine/capturer.hpp"
 
-#include "constants/capturer_const.hpp"
-#pragma push_macro("PACKAGE")
-#undef PACKAGE
-#include "plugins/presenceeventcoder/engine/presence_event_coder.hpp"
-#pragma pop_macro("PACKAGE")
-
-#include <cstring>
+#include <string>
 #include <utility>
 
 #include <cuda_runtime.h>
 #include <glib.h>
+
+#include "constants/collector_const.hpp"
+#include "plugins/dscollector/engine/collector_line.hpp"
 
 namespace {
 
@@ -41,18 +38,8 @@ bool cudaMemory(NvBufSurfaceMemType memType) {
 
 }  // namespace
 
-Capturer::Capturer(const char* captureCodes, const char* output) {
-    this->captureCodes = (captureCodes != nullptr && captureCodes[0] != '\0') ? captureCodes : capturer::DEFAULT_CAPTURE_CODES;
-    this->output = output != nullptr ? output : "";
+Capturer::Capturer() {
     stopWriter = false;
-    for (char item : this->captureCodes) {
-        if (item != ';' && item != ' ' && item != '\t') {
-            codes.insert(item);
-        }
-    }
-    if (codes.empty()) {
-        codes.insert(capturer::FALLBACK_CODE);
-    }
     writer = std::thread(&Capturer::writerLoop, this);
 }
 
@@ -63,10 +50,6 @@ Capturer::~Capturer() {
 void Capturer::prepare(CaptureJob* job, NvDsFrameMeta* frame) {
     (void)job;
     (void)frame;
-}
-
-std::string Capturer::outputRoot() const {
-    return output;
 }
 
 void Capturer::stop() {
@@ -80,41 +63,25 @@ void Capturer::stop() {
     }
 }
 
-bool Capturer::codesHit(const EventMeta& event) const {
-    bool hit = false;
-    unsigned int count = event.slotCount;
-    if (count > static_cast<unsigned int>(eventmeta::SLOT_COUNT)) {
-        count = static_cast<unsigned int>(eventmeta::SLOT_COUNT);
-    }
-    for (unsigned int index = 0; index < count; index++) {
-        if (codes.count(event.slots[index].code) > 0) {
-            hit = true;
+std::string Capturer::eventPath(NvDsFrameMeta* frame, const char* key) const {
+    std::string path;
+    const char* line = collectorLine(frame);
+    const std::string text = line != nullptr ? line : "";
+    const std::string marker = std::string("\"") + key + "\":\"";
+    const std::size_t start = text.find(marker);
+    if (start != std::string::npos) {
+        const std::size_t value = start + marker.size();
+        const std::size_t end = text.find('"', value);
+        if (end != std::string::npos) {
+            path = text.substr(value, end - value);
         }
     }
-    return hit;
+    return path;
 }
 
 bool Capturer::shouldDump(NvDsFrameMeta* frame) const {
-    const PresenceEventMeta* meta = nullptr;
-    bool dump = false;
-    if (frame != nullptr) {
-        for (NvDsMetaList* item = frame->frame_user_meta_list; item != nullptr; item = item->next) {
-            auto* userMeta = static_cast<NvDsUserMeta*>(item->data);
-            if (userMeta != nullptr && userMeta->base_meta.meta_type == presenceeventcoder::USER_META) {
-                meta = static_cast<const PresenceEventMeta*>(userMeta->user_meta_data);
-            }
-        }
-    }
-    if (frame != nullptr && frame->bInferDone && meta != nullptr) {
-        dump = codesHit(meta->event);
-    }
+    const bool dump = frame != nullptr && !eventPath(frame, dumpKey()).empty();
     return dump;
-}
-
-unsigned int Capturer::takeId(int padIndex) {
-    const unsigned int id = ids[padIndex];
-    ids[padIndex] = id + 1;
-    return id;
 }
 
 void Capturer::packRgb(
@@ -243,10 +210,10 @@ void Capturer::writerLoop() {
 
 bool Capturer::capture(NvBufSurface* surface, NvDsFrameMeta* frame) {
     bool ok = true;
-    if (!output.empty() && shouldDump(frame)) {
+    if (shouldDump(frame)) {
         CaptureJob job;
-        job.padIndex = static_cast<int>(frame->pad_index);
-        job.captureId = takeId(job.padIndex);
+        job.rawPath = eventPath(frame, collector::KEY_RAW_PATH);
+        job.visualizationPath = eventPath(frame, collector::KEY_VISUALIZATION_PATH);
         job.width = 0;
         job.height = 0;
         prepare(&job, frame);

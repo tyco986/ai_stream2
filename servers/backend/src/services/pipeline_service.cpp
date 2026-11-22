@@ -423,7 +423,10 @@ Json::Value PipelineService::addOutput(Json::Value input, const std::string& nam
     input[pipeline::KEY_FILESINK_OUTPUT] = filesinkPath;
   }
   if (capturer) {
-    input[pipeline::KEY_CAPTURER_OUTPUT] = capturerPath;
+    if (!input.isMember(pipeline::KEY_COLLECTOR) || !input[pipeline::KEY_COLLECTOR].isObject()) {
+      input[pipeline::KEY_COLLECTOR] = Json::objectValue;
+    }
+    input[pipeline::KEY_COLLECTOR][pipeline::KEY_CAPTURER_OUTPUT] = capturerPath;
   }
   return input;
 }

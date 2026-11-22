@@ -180,7 +180,7 @@ pipeline:
   pureDirection: Direction detection
   pureOff: Off
   pureOn: On
-  pureLogger: Logger
+  pureCollector: Collector
   pureDrawer: Drawer
   pureSahi: SAHI
   purePreprocess: Preprocess
@@ -217,7 +217,9 @@ pipeline:
   pureLength: Length
   pureThreshold: Threshold
   pureMode: Mode
-  pureCaptureCodes: Capture codes
+  pureDumpCodes: Dump codes
+  pureCapturerOutput: Capturer output
+  pureLabelTask: Label task
   pureSource: Source
   pureSizeMatch: Width and height must match
   pureStreamMatch: Width, height and fps must match
@@ -269,6 +271,12 @@ event:
   pureSource: Source
   pureAnnotations: Annotations
   pureOps: Ops
+  purePreview: Preview
+  pureWidth: Width
+  pureHeight: Height
+  pureSize: Size
+  pureCreatedAt: Created at
+  pureUpdatedAt: Updated at
   pureRemove: Remove
   pureRead: Read
   pureUnread: Unread

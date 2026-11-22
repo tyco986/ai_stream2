@@ -13,7 +13,7 @@ pgie:
       conf: 0.25
 tracker: null
 analyzer: null
-logger:
+collector:
   interval: 50
 drawer:
   interval: 50

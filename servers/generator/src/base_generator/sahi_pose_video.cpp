@@ -11,7 +11,7 @@ SahiPoseVideoGenerator::SahiPoseVideoGenerator(
     nlohmann::json pgie,
     nlohmann::json sahi,
     std::optional<nlohmann::json> tracker,
-    std::optional<nlohmann::json> logger,
+    std::optional<nlohmann::json> collector,
     std::optional<nlohmann::json> drawer)
     : SahiVideoGenerator(
           std::move(pipelineName),
@@ -20,7 +20,7 @@ SahiPoseVideoGenerator::SahiPoseVideoGenerator(
           std::move(pgie),
           std::move(sahi),
           std::move(tracker),
-          std::move(logger),
+          std::move(collector),
           std::move(drawer)) {
     sahiPostprocess = SAHI_POSE_POSTPROCESS;
 }

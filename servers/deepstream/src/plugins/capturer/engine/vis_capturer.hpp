@@ -7,10 +7,11 @@
 
 class VisCapturer : public Capturer {
 public:
-    VisCapturer(const char* captureCodes, const char* labelTask, const char* output);
+    explicit VisCapturer(const char* labelTask);
     ~VisCapturer() override;
 
 protected:
+    const char* dumpKey() const override;
     void prepare(CaptureJob* job, NvDsFrameMeta* frame) override;
     bool save(const CaptureJob& job) override;
 

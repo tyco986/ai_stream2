@@ -13,7 +13,7 @@ SegSahiImageGenerator::SegSahiImageGenerator(
     std::optional<nlohmann::json> analyzer,
     nlohmann::json pgie,
     nlohmann::json sahi,
-    std::optional<nlohmann::json> logger,
+    std::optional<nlohmann::json> collector,
     std::optional<nlohmann::json> drawer)
     : SahiImageGenerator(
           std::move(pipelineName),
@@ -22,7 +22,7 @@ SegSahiImageGenerator::SegSahiImageGenerator(
           std::move(analyzer),
           std::move(pgie),
           std::move(sahi),
-          std::move(logger),
+          std::move(collector),
           std::move(drawer)) {
     generator = "SegSahiImageGenerator";
 }
@@ -62,7 +62,7 @@ void SegSahiImageGenerator::add() {
     appendNode("queue", "queue_sahi", addQueue());
     appendNode(sahiPostprocess, sahiPostprocess, sahiPostprocessProperties(sahi.at("postprocess")));
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
-    appendNode("detcollector", "detcollector", addCollector(logger.value("interval", 1)));
+    appendNode("detcollector", "detcollector", addCollector(collector.value("interval", 1)));
     appendNode("dslogger", "dslogger", addDslogger(pipeline::PAGE_DET));
     const std::string drawerElement = nvsegDrawerElement();
     if (drawer.has_value()) {

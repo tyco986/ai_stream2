@@ -18,7 +18,7 @@ public:
         std::filesystem::path filesinkOutput,
         std::optional<nlohmann::json> analyzer,
         nlohmann::json pgie,
-        std::optional<nlohmann::json> logger = std::nullopt,
+        std::optional<nlohmann::json> collector = std::nullopt,
         std::optional<nlohmann::json> drawer = std::nullopt);
 
     void applyPgieConfig() override;

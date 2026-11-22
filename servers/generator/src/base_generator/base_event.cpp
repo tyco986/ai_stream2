@@ -12,21 +12,29 @@ BaseEventGenerator::BaseEventGenerator(
     : pipelineName(std::move(pipelineName)),
       capturerOutput(std::filesystem::absolute(std::move(capturerOutput))),
       eventCoder(std::move(eventCoder)),
-      capturer({{"capture_codes", pipeline::CAPTURE_CODES_DEFAULT}}) {
+      capturer({{pipeline::KEY_LABEL_TASK, pipeline::LABEL_TASK_DET}}) {
     if (capturer.has_value()) {
         this->capturer.update(*capturer);
     }
 }
 
-std::string BaseEventGenerator::capturerCodes() const {
-    const nlohmann::json value = capturer.contains("capture_codes")
-        ? capturer.at("capture_codes")
-        : nlohmann::json(pipeline::CAPTURE_CODES_DEFAULT);
+std::string BaseEventGenerator::dumpCodes(const nlohmann::json& collector) const {
+    const nlohmann::json value = collector.contains(pipeline::KEY_DUMP_CODES)
+        ? collector.at(pipeline::KEY_DUMP_CODES)
+        : nlohmann::json(pipeline::DUMP_CODES_DEFAULT);
     const std::string codes = value.is_string() ? value.get<std::string>() : value.dump();
     return codes;
 }
 
-void BaseEventGenerator::appendEventCoder(int logInterval, const std::string& name) {
+std::string BaseEventGenerator::labelTask() const {
+    const nlohmann::json value = capturer.contains(pipeline::KEY_LABEL_TASK)
+        ? capturer.at(pipeline::KEY_LABEL_TASK)
+        : nlohmann::json(pipeline::LABEL_TASK_DET);
+    const std::string task = value.is_string() ? value.get<std::string>() : value.dump();
+    return task;
+}
+
+void BaseEventGenerator::appendEventCoder(int interval, const nlohmann::json& collector, const std::string& name) {
     appendNode(
         "presenceeventcoder",
         name,
@@ -35,7 +43,7 @@ void BaseEventGenerator::appendEventCoder(int logInterval, const std::string& na
             eventCoder.value("length", pipeline::PRESENCE_LENGTH),
             eventCoder.value("threshold", pipeline::PRESENCE_THRESHOLD),
             eventCoder.value("mode", std::string(pipeline::PRESENCE_MODE_FOLD))));
-    appendNode("presencecollector", "presencecollector", addCollector(logInterval));
+    appendNode("presencecollector", "presencecollector", addPresenceCollector(interval, dumpCodes(collector), capturerOutput.string()));
     appendNode("dslogger", "dslogger", addDslogger(pipeline::PAGE_PRESENCE));
 }
 

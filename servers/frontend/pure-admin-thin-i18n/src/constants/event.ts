@@ -21,6 +21,6 @@ export const EVENT_LIST_COLUMN_PERCENTS = {
   eventLabel: 14,
   pipeline: 16,
   source: 16,
-  annotations: 16,
-  ops: 8
+  annotations: 14,
+  ops: 10
 };

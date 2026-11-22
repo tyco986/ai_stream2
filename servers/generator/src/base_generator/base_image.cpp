@@ -69,17 +69,17 @@ BaseImageGenerator::BaseImageGenerator(
     std::filesystem::path filesinkOutput,
     std::optional<nlohmann::json> analyzer,
     nlohmann::json pgie,
-    std::optional<nlohmann::json> logger,
+    std::optional<nlohmann::json> collector,
     std::optional<nlohmann::json> drawer)
     : pipelineName(std::move(pipelineName)),
       images(std::move(images)),
       filesinkOutput(std::filesystem::absolute(std::move(filesinkOutput))),
       analyzer(std::move(analyzer)),
       pgie(std::move(pgie)),
-      logger({{"interval", 1}}),
+      collector({{"interval", 1}}),
       drawer(std::move(drawer)) {
-    if (logger.has_value()) {
-        this->logger.update(*logger);
+    if (collector.has_value()) {
+        this->collector.update(*collector);
     }
 }
 
@@ -132,7 +132,7 @@ void BaseImageGenerator::initParams() {
     params["generator"] = generator;
     params["pgie"] = jsonToYaml(pgie);
     params["analyzer"] = analyzer.has_value() ? jsonToYaml(*analyzer) : YAML::Node(YAML::NodeType::Null);
-    params["logger"] = jsonToYaml(logger);
+    params["collector"] = jsonToYaml(collector);
     params["drawer"] = drawer.has_value() ? jsonToYaml(*drawer) : YAML::Node(YAML::NodeType::Null);
     files.insert_or_assign(PARAMS_CONFIG_NAME, ConfigFile(params));
 }
@@ -286,7 +286,7 @@ void BaseImageGenerator::add() {
     appendNode("nvstreammux", "nvstreammux", addNvstreammux(runtimeBatchSize, width, height, false, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId, false));
     appendNode("nvinfer", "pgie", addNvinfer(PGIE_CONFIG_NAME, pgieGenerator->config["property"]["batch-size"].as<int>(), gpuId));
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
-    appendNode("detcollector", "detcollector", addCollector(logger.value("interval", 1)));
+    appendNode("detcollector", "detcollector", addCollector(collector.value("interval", 1)));
     appendNode("dslogger", "dslogger", addDslogger(pipeline::PAGE_DET));
     if (drawer.has_value()) {
         const std::string drawerName = nvdetDrawerElement();

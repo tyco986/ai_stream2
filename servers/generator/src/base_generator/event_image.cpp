@@ -70,7 +70,7 @@ EventImageGenerator::EventImageGenerator(
     std::optional<nlohmann::json> analyzer,
     nlohmann::json pgie,
     nlohmann::json eventCoder,
-    std::optional<nlohmann::json> logger,
+    std::optional<nlohmann::json> collector,
     std::optional<nlohmann::json> drawer,
     std::optional<nlohmann::json> capturer)
     : BaseEventGenerator(pipelineName, std::move(capturerOutput), std::move(eventCoder), std::move(capturer)),
@@ -78,11 +78,12 @@ EventImageGenerator::EventImageGenerator(
       filesinkOutput(std::filesystem::absolute(std::move(filesinkOutput))),
       analyzer(std::move(analyzer)),
       pgie(std::move(pgie)),
-      logger({{"interval", 1}}),
+      collector({{"interval", 1}, {pipeline::KEY_DUMP_CODES, pipeline::DUMP_CODES_DEFAULT}}),
       drawer(std::move(drawer)) {
-    if (logger.has_value()) {
-        this->logger.update(*logger);
+    if (collector.has_value()) {
+        this->collector.update(*collector);
     }
+    this->collector[pipeline::KEY_CAPTURER_OUTPUT] = this->capturerOutput.string();
 }
 
 void EventImageGenerator::init() {
@@ -132,12 +133,11 @@ void EventImageGenerator::initParams() {
     params["pipeline_name"] = pipelineName;
     params["images"] = jsonToYaml(images);
     params["filesink_output"] = filesinkOutput.string();
-    params["capturer_output"] = capturerOutput.string();
     params["type"] = *pipelineType;
     params["generator"] = generator;
     params["pgie"] = jsonToYaml(pgie);
     params["analyzer"] = analyzer.has_value() ? jsonToYaml(*analyzer) : YAML::Node(YAML::NodeType::Null);
-    params["logger"] = jsonToYaml(logger);
+    params["collector"] = jsonToYaml(collector);
     params["drawer"] = drawer.has_value() ? jsonToYaml(*drawer) : YAML::Node(YAML::NodeType::Null);
     params["event_coder"] = jsonToYaml(eventCoder);
     params["capturer"] = jsonToYaml(capturer);
@@ -276,7 +276,7 @@ void EventImageGenerator::add() {
         addNvstreammux(runtimeBatchSize, width, height, false, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId, false));
     appendNode("nvinfer", "pgie", addNvinfer(PGIE_CONFIG_NAME, pgieGenerator->config["property"]["batch-size"].as<int>(), gpuId));
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
-    appendEventCoder(logger.value("interval", 1));
+    appendEventCoder(collector.value("interval", 1), collector);
     appendNode("tee", "tee_msg", addTee());
     appendNode("queue", "queue_msg", addQueue());
     appendNode("nvmsgconv", "nvmsgconv", addNvmsgconv(MSGCONV_CONFIG_NAME, msg2pLib, pipeline::PAYLOAD_DEEPSTREAM_MINIMAL, true));
@@ -299,7 +299,7 @@ void EventImageGenerator::add() {
         appendNode("queue", "queue_raw" + suffix, addQueue());
         appendNode("nvvideoconvert", "nvvideoconvert_raw" + suffix, addNvvideoconvert(gpuId));
         appendNode("capsfilter", "capsfilter_raw" + suffix, addCapsfilter("video/x-raw(memory:NVMM), format=RGB"));
-        appendNode("rawcapturer", "rawcapturer" + suffix, addRawcapturer(capturerCodes(), capturerOutput.string()));
+        appendNode("rawcapturer", "rawcapturer" + suffix, addRawcapturer());
         appendNode("fakesink", "fakesink_raw" + suffix, addFakesink(false, false));
         appendNode("queue", "queue_osd" + suffix, addQueue());
         appendNode("nvvideoconvert", "nvvideoconvert_osd" + suffix, addNvvideoconvert(gpuId, true));
@@ -308,7 +308,7 @@ void EventImageGenerator::add() {
         appendNode("queue", "queue_vis" + suffix, addQueue());
         appendNode("nvvideoconvert", "nvvideoconvert_vis" + suffix, addNvvideoconvert(gpuId));
         appendNode("capsfilter", "capsfilter_vis" + suffix, addCapsfilter("video/x-raw(memory:NVMM), format=RGB"));
-        appendNode("viscapturer", "viscapturer" + suffix, addViscapturer(capturerCodes(), capturerOutput.string()));
+        appendNode("viscapturer", "viscapturer" + suffix, addViscapturer(labelTask()));
         appendNode("fakesink", "fakesink_vis" + suffix, addFakesink(false, false));
         appendNode("queue", "queue_enc" + suffix, addQueue());
 

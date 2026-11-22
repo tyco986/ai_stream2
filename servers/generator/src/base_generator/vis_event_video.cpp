@@ -13,7 +13,7 @@ VisEventVideoGenerator::VisEventVideoGenerator(
     nlohmann::json pgie,
     nlohmann::json eventCoder,
     std::optional<nlohmann::json> tracker,
-    std::optional<nlohmann::json> logger,
+    std::optional<nlohmann::json> collector,
     std::optional<nlohmann::json> drawer,
     std::optional<nlohmann::json> capturer)
     : EventVideoGenerator(
@@ -24,7 +24,7 @@ VisEventVideoGenerator::VisEventVideoGenerator(
           std::move(pgie),
           std::move(eventCoder),
           std::move(tracker),
-          std::move(logger),
+          std::move(collector),
           std::move(drawer),
           std::move(capturer)),
       filesinkOutput(std::filesystem::absolute(std::move(filesinkOutput))) {
@@ -49,7 +49,7 @@ void VisEventVideoGenerator::appendAfterOsd(int index, int gpuId) {
     appendNode("queue", "queue_vis" + suffix, addQueue());
     appendNode("nvvideoconvert", "nvvideoconvert_vis" + suffix, addNvvideoconvert(gpuId));
     appendNode("capsfilter", "capsfilter_vis" + suffix, addCapsfilter("video/x-raw(memory:NVMM), format=RGB"));
-    appendNode("viscapturer", "viscapturer" + suffix, addViscapturer(capturerCodes(), capturerOutput.string()));
+    appendNode("viscapturer", "viscapturer" + suffix, addViscapturer(labelTask()));
     appendNode("fakesink", "fakesink_vis" + suffix, addFakesink(false, false));
     appendNode("queue", "queue_enc" + suffix, addQueue());
 

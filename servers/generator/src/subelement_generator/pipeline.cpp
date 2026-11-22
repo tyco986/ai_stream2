@@ -171,6 +171,13 @@ YAML::Node PipelineGenerator::addCollector(int interval) {
     return properties;
 }
 
+YAML::Node PipelineGenerator::addPresenceCollector(int interval, const std::string& dumpCodes, const std::string& capturerOutput) {
+    YAML::Node properties = addCollector(interval);
+    properties[pipeline::PROP_DUMP_CODES] = dumpCodes;
+    properties[pipeline::PROP_CAPTURER_OUTPUT] = capturerOutput;
+    return properties;
+}
+
 YAML::Node PipelineGenerator::addDslogger(const std::string& page) {
     YAML::Node properties;
     properties["page"] = page;
@@ -249,18 +256,14 @@ YAML::Node PipelineGenerator::addPresenceeventcoder(const std::string& eventSlot
     return properties;
 }
 
-YAML::Node PipelineGenerator::addRawcapturer(const std::string& captureCodes, const std::string& output) {
-    YAML::Node properties;
-    properties["capture-codes"] = captureCodes;
-    properties["output"] = output;
+YAML::Node PipelineGenerator::addRawcapturer() {
+    YAML::Node properties(YAML::NodeType::Map);
     return properties;
 }
 
-YAML::Node PipelineGenerator::addViscapturer(const std::string& captureCodes, const std::string& output, const std::string& labelTask) {
+YAML::Node PipelineGenerator::addViscapturer(const std::string& labelTask) {
     YAML::Node properties;
-    properties["capture-codes"] = captureCodes;
-    properties["output"] = output;
-    properties["label-task"] = labelTask;
+    properties[pipeline::PROP_LABEL_TASK] = labelTask;
     return properties;
 }
 

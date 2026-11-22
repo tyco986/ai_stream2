@@ -8,6 +8,16 @@
 #include "constants/response_const.hpp"
 #include "searcher/searcher.hpp"
 
+#include <MediaInfoDLL/MediaInfoDLL.h>
+
+#include <fcntl.h>
+#include <sys/stat.h>
+
+#include <charconv>
+#include <clocale>
+#include <cmath>
+#include <ctime>
+#include <filesystem>
 #include <stdexcept>
 #include <string>
 
@@ -24,6 +34,26 @@ const char* FROM_EVENT =
     "LEFT JOIN stream ON stream.id = event.stream_id "
     "LEFT JOIN media ON media.id = event.media_id "
     "LEFT JOIN pipeline ON pipeline.id = event.pipeline_id ";
+
+class MediaInfoBuffer {
+ public:
+  MediaInfoBuffer() : handle(nullptr) {
+    const bool loaded = MediaInfoDLL_Load() == 1;
+    handle = loaded ? MediaInfo_New() : nullptr;
+  }
+  ~MediaInfoBuffer() {
+    if (handle) {
+      MediaInfo_Delete(handle);
+    }
+  }
+  void* require() {
+    if (!handle) {
+      throw std::runtime_error(event::ERR_CONTENT);
+    }
+    return handle;
+  }
+  void* handle;
+};
 
 }
 
@@ -72,8 +102,8 @@ Json::Value EventService::createFromRedis(const Json::Value& message, const std:
                                eventNode[event::KEY_EVENT_CODE],
                                eventNode[event::KEY_LEVEL],
                                eventNode[event::KEY_EVENT_LABEL],
-                               Json::Value(),
-                               Json::Value(),
+                               eventNode[event::KEY_RAW_PATH],
+                               eventNode[event::KEY_VISUALIZATION_PATH],
                                annotations);
   return created;
 }
@@ -144,10 +174,6 @@ Json::Value EventService::setRead(const std::string& eventId, bool read) {
   if (rows.empty()) {
     throw std::runtime_error(event::ERR_NOT_FOUND);
   }
-  const char* noticeSql = read
-      ? "UPDATE notice SET read_at = now() WHERE source = $2 AND ref_id = $1::uuid AND read_at IS NULL"
-      : "UPDATE notice SET read_at = NULL WHERE source = $2 AND ref_id = $1::uuid";
-  Sql::sync({}, dbClient, noticeSql, eventId, event::NOTICE_SOURCE);
   Json::Value data = row2json(rows[0]);
   return data;
 }
@@ -216,4 +242,61 @@ Json::Value EventService::row2json(const drogon::orm::Row& row) {
       row["visualization_path"].isNull() ? Json::Value() : row["visualization_path"].as<std::string>();
   data[event::KEY_ANNOTATIONS] = annotations.isNull() ? Json::Value() : annotations;
   return data;
+}
+
+std::string EventService::contentPath(const std::string& eventId, const std::string& kind) {
+  const bool raw = kind == event::KIND_RAW;
+  const bool visualization = kind == event::KIND_VISUALIZATION;
+  if (!raw && !visualization) {
+    throw std::runtime_error(event::ERR_KIND);
+  }
+  const Json::Value row = get(eventId);
+  const Json::Value stored = raw ? row[event::KEY_RAW_PATH] : row[event::KEY_VISUALIZATION_PATH];
+  const std::string path = stored.isString() ? stored.asString() : "";
+  if (path.empty()) {
+    throw std::runtime_error(event::ERR_CONTENT);
+  }
+  return path;
+}
+
+Json::Value EventService::contentInfo(const std::string& eventId, const std::string& kind) {
+  const std::filesystem::path path(contentPath(eventId, kind));
+  struct statx status;
+  const int stated = statx(AT_FDCWD, path.c_str(), AT_STATX_SYNC_AS_STAT, STATX_BTIME | STATX_MTIME | STATX_SIZE, &status);
+  const bool localeReady = std::setlocale(LC_CTYPE, event::LOCALE_CTYPE) != nullptr;
+  MediaInfoBuffer mediaInfo;
+  void* handle = mediaInfo.require();
+  const std::size_t opened = stated == 0 && localeReady ? MediaInfo_Open(handle, path.c_str()) : 0;
+  if (stated != 0 || !localeReady || opened == 0) {
+    throw std::runtime_error(event::ERR_CONTENT);
+  }
+  const char* widthText = MediaInfo_Get(handle, MediaInfo_Stream_Image, 0, event::MEDIAINFO_WIDTH, MediaInfo_Info_Text, MediaInfo_Info_Name);
+  const char* heightText = MediaInfo_Get(handle, MediaInfo_Stream_Image, 0, event::MEDIAINFO_HEIGHT, MediaInfo_Info_Text, MediaInfo_Info_Name);
+  const bool imageSized = widthText != nullptr && heightText != nullptr && widthText[0] != '\0' && heightText[0] != '\0';
+  const MediaInfo_stream_C stream = imageSized ? MediaInfo_Stream_Image : MediaInfo_Stream_Video;
+  const char* widthSource = imageSized ? widthText : MediaInfo_Get(handle, stream, 0, event::MEDIAINFO_WIDTH, MediaInfo_Info_Text, MediaInfo_Info_Name);
+  const char* heightSource = imageSized ? heightText : MediaInfo_Get(handle, stream, 0, event::MEDIAINFO_HEIGHT, MediaInfo_Info_Text, MediaInfo_Info_Name);
+  const std::string widthValue = widthSource ? widthSource : "";
+  const std::string heightValue = heightSource ? heightSource : "";
+  int width = 0;
+  int height = 0;
+  const auto widthParsed = std::from_chars(widthValue.data(), widthValue.data() + widthValue.size(), width);
+  const auto heightParsed = std::from_chars(heightValue.data(), heightValue.data() + heightValue.size(), height);
+  const std::time_t mtime = static_cast<std::time_t>(status.stx_mtime.tv_sec);
+  const std::time_t born = (status.stx_mask & STATX_BTIME) != 0 ? static_cast<std::time_t>(status.stx_btime.tv_sec) : mtime;
+  std::tm utc{};
+  gmtime_r(&born, &utc);
+  char createdBuffer[40];
+  std::strftime(createdBuffer, sizeof(createdBuffer), event::TIME_UTC_FORMAT, &utc);
+  gmtime_r(&mtime, &utc);
+  char updatedBuffer[40];
+  std::strftime(updatedBuffer, sizeof(updatedBuffer), event::TIME_UTC_FORMAT, &utc);
+  const double megabytes = static_cast<double>(status.stx_size) / event::BYTES_PER_MB;
+  Json::Value info;
+  info[event::KEY_WIDTH] = widthParsed.ec == std::errc() ? Json::Value(width) : Json::Value();
+  info[event::KEY_HEIGHT] = heightParsed.ec == std::errc() ? Json::Value(height) : Json::Value();
+  info[event::KEY_SIZE] = Json::Value(std::round(megabytes * 10.0) / 10.0);
+  info[event::KEY_CREATED_AT] = createdBuffer;
+  info[event::KEY_UPDATED_AT] = updatedBuffer;
+  return info;
 }

@@ -3,13 +3,16 @@
 #include "constants/capturer_const.hpp"
 
 #include <cstdio>
+#include <filesystem>
 #include <format>
 #include <sstream>
 
 #include <glib.h>
 #include <glib/gstdio.h>
 
-VisCapturer::VisCapturer(const char* captureCodes, const char* labelTask, const char* output) : Capturer(captureCodes, output) {
+#include "constants/collector_const.hpp"
+
+VisCapturer::VisCapturer(const char* labelTask) : Capturer() {
     const std::string next = (labelTask != nullptr && labelTask[0] != '\0') ? labelTask : capturer::DEFAULT_LABEL_TASK;
     this->labelTask = capturer::DEFAULT_LABEL_TASK;
     if (next == capturer::DEFAULT_LABEL_TASK || next == capturer::LABEL_TASK_SEG) {
@@ -125,10 +128,15 @@ bool VisCapturer::writeLabelme(
     return ok;
 }
 
+const char* VisCapturer::dumpKey() const {
+    return collector::KEY_VISUALIZATION_PATH;
+}
+
 bool VisCapturer::writeLabels(const CaptureJob& job) {
-    const std::string stem = std::format("raw_{:03d}_{:08d}", job.padIndex, job.captureId);
-    const std::string yoloPath = std::format("{}/labels/{}.txt", outputRoot(), stem);
-    const std::string jsonPath = std::format("{}/labelme/{}.json", outputRoot(), stem);
+    const std::filesystem::path root = std::filesystem::path(job.rawPath).parent_path().parent_path();
+    const std::string stem = std::filesystem::path(job.rawPath).stem().string();
+    const std::string yoloPath = std::format("{}/labels/{}.txt", root.string(), stem);
+    const std::string jsonPath = std::format("{}/labelme/{}.json", root.string(), stem);
     const std::string imagePath = std::format("../images/{}.png", stem);
     const bool yoloOk = writeYolo(yoloPath, job.boxes, job.width, job.height);
     const bool jsonOk = writeLabelme(jsonPath, job.boxes, job.width, job.height, imagePath);
@@ -137,7 +145,7 @@ bool VisCapturer::writeLabels(const CaptureJob& job) {
 }
 
 bool VisCapturer::save(const CaptureJob& job) {
-    const std::string path = std::format("{}/vis/vis_{:03d}_{:08d}.jpg", outputRoot(), job.padIndex, job.captureId);
+    const std::string path = job.visualizationPath;
     const bool imageOk = jpeg.write(path, job.rgb, job.width, job.height);
     const bool labelsOk = writeLabels(job);
     const bool ok = imageOk && labelsOk;

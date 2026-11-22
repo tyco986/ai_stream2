@@ -5,6 +5,7 @@
 #include "constants/service_log.hpp"
 #include "constants/media_const.hpp"
 #include "constants/model_const.hpp"
+#include "constants/notice_const.hpp"
 #include "constants/pipeline_analyzer_const.hpp"
 #include "constants/pipeline_const.hpp"
 #include "constants/pipeline_gie_const.hpp"
@@ -140,6 +141,8 @@ inline const std::map<std::pair<drogon::HttpMethod, std::string>, CrudGate> CRUD
     {{drogon::Put, user::PATH_MEMBERS}, {user::KEY_USER_CRUD, CRUD_UPDATE}},
     // event
     {{drogon::Get, event::PATH_LIST}, {user::KEY_EVENT_CRUD, CRUD_READ}},
+    {{drogon::Get, event::PATH_CONTENT}, {user::KEY_EVENT_CRUD, CRUD_READ}},
+    {{drogon::Get, event::PATH_CONTENT_INFO}, {user::KEY_EVENT_CRUD, CRUD_READ}},
     {{drogon::Get, event::PATH_WS}, {user::KEY_EVENT_CRUD, CRUD_READ}},
     {{drogon::Post, event::PATH_READ}, {user::KEY_EVENT_CRUD, CRUD_UPDATE}},
     {{drogon::Post, event::PATH_UNREAD}, {user::KEY_EVENT_CRUD, CRUD_UPDATE}},
@@ -147,6 +150,13 @@ inline const std::map<std::pair<drogon::HttpMethod, std::string>, CrudGate> CRUD
     {{drogon::Post, event::PATH_BATCH_READ}, {user::KEY_EVENT_CRUD, CRUD_UPDATE}},
     {{drogon::Post, event::PATH_BATCH_UNREAD}, {user::KEY_EVENT_CRUD, CRUD_UPDATE}},
     {{drogon::Post, event::PATH_BATCH_REMOVE}, {user::KEY_EVENT_CRUD, CRUD_DELETE}},
+    // notice
+    {{drogon::Get, notice::PATH_LIST}, {user::KEY_EVENT_CRUD, CRUD_READ}},
+    {{drogon::Post, notice::PATH_LIST}, {user::KEY_EVENT_CRUD, CRUD_CREATE}},
+    {{drogon::Get, notice::PATH_COUNT}, {user::KEY_EVENT_CRUD, CRUD_READ}},
+    {{drogon::Post, notice::PATH_READ}, {user::KEY_EVENT_CRUD, CRUD_UPDATE}},
+    {{drogon::Post, notice::PATH_UNREAD}, {user::KEY_EVENT_CRUD, CRUD_UPDATE}},
+    {{drogon::Delete, notice::PATH_ITEM}, {user::KEY_EVENT_CRUD, CRUD_DELETE}},
     // log
     {{drogon::Get, service_log::PATH_LIST}, {user::KEY_EVENT_CRUD, CRUD_READ}},
     {{drogon::Delete, service_log::PATH_LIST}, {user::KEY_EVENT_CRUD, CRUD_DELETE}},

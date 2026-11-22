@@ -139,7 +139,7 @@ std::string buildVideo(const nlohmann::json& payload, const std::filesystem::pat
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER));
     generator.init();
     std::string archive = zipDocuments(generator.documents(configSaveDir));
@@ -155,7 +155,7 @@ std::string buildVisVideo(const nlohmann::json& payload, const std::filesystem::
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER));
     generator.init();
     std::string archive = zipDocuments(generator.documents(configSaveDir));
@@ -171,7 +171,7 @@ std::string buildSahiVideo(const nlohmann::json& payload, const std::filesystem:
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_SAHI),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER));
     generator.init();
     std::string archive = zipDocuments(generator.documents(configSaveDir));
@@ -188,7 +188,7 @@ std::string buildSahiVisVideo(const nlohmann::json& payload, const std::filesyst
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_SAHI),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER));
     generator.init();
     std::string archive = zipDocuments(generator.documents(configSaveDir));
@@ -203,7 +203,7 @@ std::string buildRtsp(const nlohmann::json& payload, const std::filesystem::path
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER));
     generator.init();
     std::string archive = zipDocuments(generator.documents(configSaveDir));
@@ -219,7 +219,7 @@ std::string buildSahiRtsp(const nlohmann::json& payload, const std::filesystem::
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_SAHI),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER));
     generator.init();
     std::string archive = zipDocuments(generator.documents(configSaveDir));
@@ -232,11 +232,11 @@ std::string buildEventImage(const nlohmann::json& payload, const std::filesystem
         payload.at(generator_manager::KEY_PIPELINE_NAME).get<std::string>(),
         payload.at(generator_manager::KEY_IMAGES),
         payload.at(generator_manager::KEY_FILESINK_OUTPUT).get<std::string>(),
-        payload.at(generator_manager::KEY_CAPTURER_OUTPUT).get<std::string>(),
+        payload.at(generator_manager::KEY_COLLECTOR).at(generator_manager::KEY_CAPTURER_OUTPUT).get<std::string>(),
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_EVENT_CODER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER),
         optionalJson(payload, generator_manager::KEY_CAPTURER));
     generator.init();
@@ -249,12 +249,12 @@ std::string buildEventVideo(const nlohmann::json& payload, const std::filesystem
     Generator generator(
         payload.at(generator_manager::KEY_PIPELINE_NAME).get<std::string>(),
         payload.at(generator_manager::KEY_VIDEOS),
-        payload.at(generator_manager::KEY_CAPTURER_OUTPUT).get<std::string>(),
+        payload.at(generator_manager::KEY_COLLECTOR).at(generator_manager::KEY_CAPTURER_OUTPUT).get<std::string>(),
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_EVENT_CODER),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER),
         optionalJson(payload, generator_manager::KEY_CAPTURER));
     generator.init();
@@ -268,12 +268,12 @@ std::string buildEventVisVideo(const nlohmann::json& payload, const std::filesys
         payload.at(generator_manager::KEY_PIPELINE_NAME).get<std::string>(),
         payload.at(generator_manager::KEY_VIDEOS),
         payload.at(generator_manager::KEY_FILESINK_OUTPUT).get<std::string>(),
-        payload.at(generator_manager::KEY_CAPTURER_OUTPUT).get<std::string>(),
+        payload.at(generator_manager::KEY_COLLECTOR).at(generator_manager::KEY_CAPTURER_OUTPUT).get<std::string>(),
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_EVENT_CODER),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER),
         optionalJson(payload, generator_manager::KEY_CAPTURER));
     generator.init();
@@ -287,13 +287,13 @@ std::string buildEventSahiVisVideo(const nlohmann::json& payload, const std::fil
         payload.at(generator_manager::KEY_PIPELINE_NAME).get<std::string>(),
         payload.at(generator_manager::KEY_VIDEOS),
         payload.at(generator_manager::KEY_FILESINK_OUTPUT).get<std::string>(),
-        payload.at(generator_manager::KEY_CAPTURER_OUTPUT).get<std::string>(),
+        payload.at(generator_manager::KEY_COLLECTOR).at(generator_manager::KEY_CAPTURER_OUTPUT).get<std::string>(),
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_SAHI),
         payload.at(generator_manager::KEY_EVENT_CODER),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER),
         optionalJson(payload, generator_manager::KEY_CAPTURER));
     generator.init();
@@ -306,12 +306,12 @@ std::string buildEventRtsp(const nlohmann::json& payload, const std::filesystem:
     Generator generator(
         payload.at(generator_manager::KEY_PIPELINE_NAME).get<std::string>(),
         payload.at(generator_manager::KEY_STREAMS),
-        payload.at(generator_manager::KEY_CAPTURER_OUTPUT).get<std::string>(),
+        payload.at(generator_manager::KEY_COLLECTOR).at(generator_manager::KEY_CAPTURER_OUTPUT).get<std::string>(),
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_EVENT_CODER),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER),
         optionalJson(payload, generator_manager::KEY_CAPTURER));
     generator.init();
@@ -324,13 +324,13 @@ std::string buildEventSahiRtsp(const nlohmann::json& payload, const std::filesys
     Generator generator(
         payload.at(generator_manager::KEY_PIPELINE_NAME).get<std::string>(),
         payload.at(generator_manager::KEY_STREAMS),
-        payload.at(generator_manager::KEY_CAPTURER_OUTPUT).get<std::string>(),
+        payload.at(generator_manager::KEY_COLLECTOR).at(generator_manager::KEY_CAPTURER_OUTPUT).get<std::string>(),
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_SAHI),
         payload.at(generator_manager::KEY_EVENT_CODER),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER),
         optionalJson(payload, generator_manager::KEY_CAPTURER));
     generator.init();
@@ -346,7 +346,7 @@ std::string buildImage(const nlohmann::json& payload, const std::filesystem::pat
         payload.at(generator_manager::KEY_FILESINK_OUTPUT).get<std::string>(),
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER));
     generator.init();
     std::string archive = zipDocuments(generator.documents(configSaveDir));
@@ -362,7 +362,7 @@ std::string buildSahiImage(const nlohmann::json& payload, const std::filesystem:
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_SAHI),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER));
     generator.init();
     std::string archive = zipDocuments(generator.documents(configSaveDir));
@@ -378,7 +378,7 @@ std::string buildTopdownVideo(const nlohmann::json& payload, const std::filesyst
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_SGIE),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER));
     generator.init();
     std::string archive = zipDocuments(generator.documents(configSaveDir));
@@ -395,7 +395,7 @@ std::string buildTopdownVisVideo(const nlohmann::json& payload, const std::files
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_SGIE),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER));
     generator.init();
     std::string archive = zipDocuments(generator.documents(configSaveDir));
@@ -412,7 +412,7 @@ std::string buildTopdownSahiVideo(const nlohmann::json& payload, const std::file
         payload.at(generator_manager::KEY_SGIE),
         payload.at(generator_manager::KEY_SAHI),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER));
     generator.init();
     std::string archive = zipDocuments(generator.documents(configSaveDir));
@@ -430,7 +430,7 @@ std::string buildTopdownSahiVisVideo(const nlohmann::json& payload, const std::f
         payload.at(generator_manager::KEY_SGIE),
         payload.at(generator_manager::KEY_SAHI),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER));
     generator.init();
     std::string archive = zipDocuments(generator.documents(configSaveDir));
@@ -446,7 +446,7 @@ std::string buildTopdownRtsp(const nlohmann::json& payload, const std::filesyste
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_SGIE),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER));
     generator.init();
     std::string archive = zipDocuments(generator.documents(configSaveDir));
@@ -463,7 +463,7 @@ std::string buildTopdownSahiRtsp(const nlohmann::json& payload, const std::files
         payload.at(generator_manager::KEY_SGIE),
         payload.at(generator_manager::KEY_SAHI),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER));
     generator.init();
     std::string archive = zipDocuments(generator.documents(configSaveDir));
@@ -479,7 +479,7 @@ std::string buildTopdownImage(const nlohmann::json& payload, const std::filesyst
         optionalJson(payload, generator_manager::KEY_ANALYZER),
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_SGIE),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER));
     generator.init();
     std::string archive = zipDocuments(generator.documents(configSaveDir));
@@ -496,7 +496,7 @@ std::string buildTopdownSahiImage(const nlohmann::json& payload, const std::file
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_SGIE),
         payload.at(generator_manager::KEY_SAHI),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER));
     generator.init();
     std::string archive = zipDocuments(generator.documents(configSaveDir));
@@ -512,7 +512,7 @@ std::string buildStgcnppVideo(const nlohmann::json& payload, const std::filesyst
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_STGCNPP),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER));
     generator.init();
     std::string archive = zipDocuments(generator.documents(configSaveDir));
@@ -529,7 +529,7 @@ std::string buildStgcnppVisVideo(const nlohmann::json& payload, const std::files
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_STGCNPP),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER));
     generator.init();
     std::string archive = zipDocuments(generator.documents(configSaveDir));
@@ -546,7 +546,7 @@ std::string buildStgcnppSahiVideo(const nlohmann::json& payload, const std::file
         payload.at(generator_manager::KEY_STGCNPP),
         payload.at(generator_manager::KEY_SAHI),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER));
     generator.init();
     std::string archive = zipDocuments(generator.documents(configSaveDir));
@@ -564,7 +564,7 @@ std::string buildStgcnppSahiVisVideo(const nlohmann::json& payload, const std::f
         payload.at(generator_manager::KEY_STGCNPP),
         payload.at(generator_manager::KEY_SAHI),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER));
     generator.init();
     std::string archive = zipDocuments(generator.documents(configSaveDir));
@@ -580,7 +580,7 @@ std::string buildStgcnppRtsp(const nlohmann::json& payload, const std::filesyste
         payload.at(generator_manager::KEY_PGIE),
         payload.at(generator_manager::KEY_STGCNPP),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER));
     generator.init();
     std::string archive = zipDocuments(generator.documents(configSaveDir));
@@ -597,7 +597,7 @@ std::string buildStgcnppSahiRtsp(const nlohmann::json& payload, const std::files
         payload.at(generator_manager::KEY_STGCNPP),
         payload.at(generator_manager::KEY_SAHI),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER));
     generator.init();
     std::string archive = zipDocuments(generator.documents(configSaveDir));
@@ -614,7 +614,7 @@ std::string buildRtmposeVideo(const nlohmann::json& payload, const std::filesyst
         payload.at(generator_manager::KEY_SGIE),
         payload.at(generator_manager::KEY_STGCNPP),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER));
     generator.init();
     std::string archive = zipDocuments(generator.documents(configSaveDir));
@@ -632,7 +632,7 @@ std::string buildRtmposeVisVideo(const nlohmann::json& payload, const std::files
         payload.at(generator_manager::KEY_SGIE),
         payload.at(generator_manager::KEY_STGCNPP),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER));
     generator.init();
     std::string archive = zipDocuments(generator.documents(configSaveDir));
@@ -650,7 +650,7 @@ std::string buildRtmposeSahiVideo(const nlohmann::json& payload, const std::file
         payload.at(generator_manager::KEY_STGCNPP),
         payload.at(generator_manager::KEY_SAHI),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER));
     generator.init();
     std::string archive = zipDocuments(generator.documents(configSaveDir));
@@ -669,7 +669,7 @@ std::string buildRtmposeSahiVisVideo(const nlohmann::json& payload, const std::f
         payload.at(generator_manager::KEY_STGCNPP),
         payload.at(generator_manager::KEY_SAHI),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER));
     generator.init();
     std::string archive = zipDocuments(generator.documents(configSaveDir));
@@ -686,7 +686,7 @@ std::string buildRtmposeRtsp(const nlohmann::json& payload, const std::filesyste
         payload.at(generator_manager::KEY_SGIE),
         payload.at(generator_manager::KEY_STGCNPP),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER));
     generator.init();
     std::string archive = zipDocuments(generator.documents(configSaveDir));
@@ -704,7 +704,7 @@ std::string buildRtmposeSahiRtsp(const nlohmann::json& payload, const std::files
         payload.at(generator_manager::KEY_STGCNPP),
         payload.at(generator_manager::KEY_SAHI),
         optionalJson(payload, generator_manager::KEY_TRACKER),
-        optionalJson(payload, generator_manager::KEY_LOGGER),
+        optionalJson(payload, generator_manager::KEY_COLLECTOR),
         optionalJson(payload, generator_manager::KEY_DRAWER));
     generator.init();
     std::string archive = zipDocuments(generator.documents(configSaveDir));

@@ -10,7 +10,7 @@ DetRtspGenerator::DetRtspGenerator(
     std::optional<nlohmann::json> analyzer,
     nlohmann::json pgie,
     std::optional<nlohmann::json> tracker,
-    std::optional<nlohmann::json> logger,
+    std::optional<nlohmann::json> collector,
     std::optional<nlohmann::json> drawer)
     : BaseRtspGenerator(
           std::move(pipelineName),
@@ -18,7 +18,7 @@ DetRtspGenerator::DetRtspGenerator(
           std::move(analyzer),
           std::move(pgie),
           std::move(tracker),
-          std::move(logger),
+          std::move(collector),
           std::move(drawer)) {
     generator = "DetRTSPGenerator";
 }

@@ -5,10 +5,11 @@
 
 class RawCapturer : public Capturer {
 public:
-    RawCapturer(const char* captureCodes, const char* output);
+    RawCapturer();
     ~RawCapturer() override;
 
 protected:
+    const char* dumpKey() const override;
     bool save(const CaptureJob& job) override;
 
 private:

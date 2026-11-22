@@ -70,7 +70,7 @@ EventVideoGenerator::EventVideoGenerator(
     nlohmann::json pgie,
     nlohmann::json eventCoder,
     std::optional<nlohmann::json> tracker,
-    std::optional<nlohmann::json> logger,
+    std::optional<nlohmann::json> collector,
     std::optional<nlohmann::json> drawer,
     std::optional<nlohmann::json> capturer)
     : BaseEventGenerator(pipelineName, std::move(capturerOutput), std::move(eventCoder), std::move(capturer)),
@@ -78,11 +78,12 @@ EventVideoGenerator::EventVideoGenerator(
       analyzer(std::move(analyzer)),
       tracker(std::move(tracker)),
       pgie(std::move(pgie)),
-      logger({{"interval", 1}}),
+      collector({{"interval", 1}, {pipeline::KEY_DUMP_CODES, pipeline::DUMP_CODES_DEFAULT}}),
       drawer(std::move(drawer)) {
-    if (logger.has_value()) {
-        this->logger.update(*logger);
+    if (collector.has_value()) {
+        this->collector.update(*collector);
     }
+    this->collector[pipeline::KEY_CAPTURER_OUTPUT] = this->capturerOutput.string();
 }
 
 void EventVideoGenerator::init() {
@@ -139,10 +140,9 @@ void EventVideoGenerator::initParams() {
     params["pgie"] = jsonToYaml(pgie);
     params["analyzer"] = analyzer.has_value() ? jsonToYaml(*analyzer) : YAML::Node(YAML::NodeType::Null);
     params["tracker"] = tracker.has_value() ? jsonToYaml(*tracker) : YAML::Node(YAML::NodeType::Null);
-    params["logger"] = jsonToYaml(logger);
+    params["collector"] = jsonToYaml(collector);
     params["drawer"] = drawer.has_value() ? jsonToYaml(*drawer) : YAML::Node(YAML::NodeType::Null);
     params["event_coder"] = jsonToYaml(eventCoder);
-    params["capturer_output"] = capturerOutput.string();
     params["capturer"] = jsonToYaml(capturer);
     files.insert_or_assign(PARAMS_CONFIG_NAME, ConfigFile(params));
 }
@@ -313,7 +313,7 @@ void EventVideoGenerator::appendAfterOsd(int index, int gpuId) {
     appendNode("queue", "queue_vis" + suffix, addQueue());
     appendNode("nvvideoconvert", "nvvideoconvert_vis" + suffix, addNvvideoconvert(gpuId));
     appendNode("capsfilter", "capsfilter_vis" + suffix, addCapsfilter("video/x-raw(memory:NVMM), format=RGB"));
-    appendNode("viscapturer", "viscapturer" + suffix, addViscapturer(capturerCodes(), capturerOutput.string()));
+    appendNode("viscapturer", "viscapturer" + suffix, addViscapturer(labelTask()));
     appendNode("fakesink", "fakesink_vis" + suffix, addFakesink(false, false));
 }
 
@@ -349,7 +349,7 @@ void EventVideoGenerator::add() {
             addNvtracker(subelement::TRACKER_LL_LIB, TRACKER_CONFIG_NAME, trackerWidth, trackerHeight, gpuId, operateOnClassIds));
     }
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
-    appendEventCoder(logger.value("interval", 1));
+    appendEventCoder(collector.value("interval", 1), collector);
     appendNode("tee", "tee_msg", addTee());
     appendNode("queue", "queue_msg", addQueue());
     appendNode("nvmsgconv", "nvmsgconv", addNvmsgconv(MSGCONV_CONFIG_NAME, msg2pLib, pipeline::PAYLOAD_DEEPSTREAM_MINIMAL, true));
@@ -370,7 +370,7 @@ void EventVideoGenerator::add() {
         appendNode("queue", "queue_raw" + suffix, addQueue());
         appendNode("nvvideoconvert", "nvvideoconvert_raw" + suffix, addNvvideoconvert(gpuId));
         appendNode("capsfilter", "capsfilter_raw" + suffix, addCapsfilter("video/x-raw(memory:NVMM), format=RGB"));
-        appendNode("rawcapturer", "rawcapturer" + suffix, addRawcapturer(capturerCodes(), capturerOutput.string()));
+        appendNode("rawcapturer", "rawcapturer" + suffix, addRawcapturer());
         appendNode("fakesink", "fakesink_raw" + suffix, addFakesink(false, false));
         appendNode("queue", "queue_osd" + suffix, addQueue());
         appendNode("nvvideoconvert", "nvvideoconvert_osd" + suffix, addNvvideoconvert(gpuId, true));

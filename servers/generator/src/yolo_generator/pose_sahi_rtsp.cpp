@@ -11,7 +11,7 @@ PoseSahiRtspGenerator::PoseSahiRtspGenerator(
     nlohmann::json pgie,
     nlohmann::json sahi,
     std::optional<nlohmann::json> tracker,
-    std::optional<nlohmann::json> logger,
+    std::optional<nlohmann::json> collector,
     std::optional<nlohmann::json> drawer)
     : SahiPoseRtspGenerator(
           std::move(pipelineName),
@@ -20,7 +20,7 @@ PoseSahiRtspGenerator::PoseSahiRtspGenerator(
           std::move(pgie),
           std::move(sahi),
           std::move(tracker),
-          std::move(logger),
+          std::move(collector),
           std::move(drawer)) {
     generator = "PoseSahiRTSPGenerator";
 }

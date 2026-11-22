@@ -11,7 +11,7 @@ pgie:
 tracker:
   class_id: 0
 analyzer: null
-logger:
+collector:
   interval: 50
 drawer: null
 streams:

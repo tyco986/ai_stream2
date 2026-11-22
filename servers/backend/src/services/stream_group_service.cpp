@@ -332,6 +332,24 @@ Json::Value StreamGroupService::update(
   return data;
 }
 
+std::string StreamGroupService::groupRealm(const std::string& groupId) {
+  const auto rows = Sql::sync({}, dbClient, 
+      "SELECT id::text AS id, parent_id::text AS parent_id FROM stream_group");
+  std::unordered_map<std::string, std::string> parentById;
+  for (const auto& row : rows) {
+    const auto id = row["id"].as<std::string>();
+    parentById[id] = row["parent_id"].isNull() ? "" : row["parent_id"].as<std::string>();
+  }
+  std::string cursor = parentById.count(groupId) == 0 ? "" : groupId;
+  std::unordered_set<std::string> seen;
+  while (!cursor.empty() && parentById[cursor] != stream_group::ALL_GROUP_ID && seen.insert(cursor).second) {
+    cursor = parentById[cursor];
+  }
+  const bool rooted = !cursor.empty() && parentById[cursor] == stream_group::ALL_GROUP_ID;
+  const std::string realm = rooted ? cursor : "";
+  return realm;
+}
+
 std::vector<std::string> StreamGroupService::subtreeIds(const std::string& groupId) {
   const auto rows = Sql::sync({}, dbClient, 
       "SELECT id::text AS id, parent_id::text AS parent_id FROM stream_group");

@@ -11,7 +11,13 @@ inline constexpr const char* LABEL_TASK_DET = "det";
 inline constexpr const char* PAGE_DET = "det";
 inline constexpr const char* PAGE_PRESENCE = "presence";
 inline constexpr const char* PAGE_STGCNPP = "stgcnpp";
-inline constexpr const char* CAPTURE_CODES_DEFAULT = "12";
+inline constexpr const char* DUMP_CODES_DEFAULT = "12";
+inline constexpr const char* PROP_DUMP_CODES = "dump-codes";
+inline constexpr const char* PROP_CAPTURER_OUTPUT = "capturer-output";
+inline constexpr const char* PROP_LABEL_TASK = "label-task";
+inline constexpr const char* KEY_DUMP_CODES = "dump_codes";
+inline constexpr const char* KEY_CAPTURER_OUTPUT = "capturer_output";
+inline constexpr const char* KEY_LABEL_TASK = "label_task";
 inline constexpr const char* TARGET_UNIQUE_IDS_DEFAULT = "1";
 inline constexpr const char* GIE_IDS_DEFAULT = "1";
 

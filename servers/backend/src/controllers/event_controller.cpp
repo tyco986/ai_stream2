@@ -29,6 +29,38 @@ void EventController::list(const drogon::HttpRequestPtr& request,
   }
 }
 
+void EventController::content(const drogon::HttpRequestPtr& request,
+                              std::function<void(const drogon::HttpResponsePtr&)>&& callback,
+                              const std::string& event_id) {
+  const auto started = std::chrono::steady_clock::now();
+  drogon::HttpResponsePtr response;
+  std::string errorText;
+  try {
+    response = drogon::HttpResponse::newFileResponse(service.contentPath(event_id, request->getParameter(event::QUERY_KIND)));
+  } catch (const std::exception& error) {
+    response = http::Response::error(drogon::k500InternalServerError, event::MSG_CONTENT_ERROR);
+    errorText = error.what();
+  }
+  logger.record(request, response, started, errorText);
+  callback(response);
+}
+
+void EventController::contentInfo(const drogon::HttpRequestPtr& request,
+                                  std::function<void(const drogon::HttpResponsePtr&)>&& callback,
+                                  const std::string& event_id) {
+  const auto started = std::chrono::steady_clock::now();
+  drogon::HttpResponsePtr response;
+  std::string errorText;
+  try {
+    response = http::Response::ok(service.contentInfo(event_id, request->getParameter(event::QUERY_KIND)), event::MSG_CONTENT_INFO_OK);
+  } catch (const std::exception& error) {
+    response = http::Response::error(drogon::k500InternalServerError, event::MSG_CONTENT_INFO_ERROR);
+    errorText = error.what();
+  }
+  logger.record(request, response, started, errorText);
+  callback(response);
+}
+
 void EventController::read(const drogon::HttpRequestPtr& request,
                            std::function<void(const drogon::HttpResponsePtr&)>&& callback,
                            const std::string& event_id) {

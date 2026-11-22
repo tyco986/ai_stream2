@@ -10,9 +10,11 @@ pgie:
     all:
       conf: 0.25
 tracker: null
-analyzer: null
-logger:
+analyzer: null 
+collector:
   interval: 50
+  dump_codes: "12"
+  capturer_output: /root/events/yolo10x_smoke_fire_vis_rtsp
 drawer:
   interval: 50
   fade_time: 1
@@ -22,9 +24,8 @@ event_coder:
   length: 5
   threshold: 0.5
   mode: fold
-capturer_output: /root/events/yolo10x_smoke_fire_vis_rtsp
 capturer:
-  capture_codes: "12"
+  label_task: det
 streams:
   video1:
     url: rtsp://ai_stream2_mediamtx:8554/video1

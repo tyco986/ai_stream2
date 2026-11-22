@@ -24,7 +24,7 @@ public:
         std::optional<nlohmann::json> analyzer,
         nlohmann::json pgie,
         nlohmann::json eventCoder,
-        std::optional<nlohmann::json> logger = std::nullopt,
+        std::optional<nlohmann::json> collector = std::nullopt,
         std::optional<nlohmann::json> drawer = std::nullopt,
         std::optional<nlohmann::json> capturer = std::nullopt);
 

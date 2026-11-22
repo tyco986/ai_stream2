@@ -12,7 +12,7 @@ SegImageGenerator::SegImageGenerator(
     std::filesystem::path filesinkOutput,
     std::optional<nlohmann::json> analyzer,
     nlohmann::json pgie,
-    std::optional<nlohmann::json> logger,
+    std::optional<nlohmann::json> collector,
     std::optional<nlohmann::json> drawer)
     : BaseImageGenerator(
           std::move(pipelineName),
@@ -20,7 +20,7 @@ SegImageGenerator::SegImageGenerator(
           std::move(filesinkOutput),
           std::move(analyzer),
           std::move(pgie),
-          std::move(logger),
+          std::move(collector),
           std::move(drawer)) {
     generator = "SegImageGenerator";
 }
@@ -40,7 +40,7 @@ void SegImageGenerator::add() {
     appendNode("nvstreammux", "nvstreammux", addNvstreammux(runtimeBatchSize, width, height, false, false, pipeline::BATCHED_PUSH_TIMEOUT_US, gpuId, false));
     appendNode("nvinfer", "pgie", addNvinfer(PGIE_CONFIG_NAME, pgieGenerator->config["property"]["batch-size"].as<int>(), gpuId));
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
-    appendNode("detcollector", "detcollector", addCollector(logger.value("interval", 1)));
+    appendNode("detcollector", "detcollector", addCollector(collector.value("interval", 1)));
     appendNode("dslogger", "dslogger", addDslogger(pipeline::PAGE_DET));
     const std::string drawerElement = nvsegDrawerElement();
     if (drawer.has_value()) {

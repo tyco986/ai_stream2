@@ -13,9 +13,7 @@ typedef struct _GstVisCapturerClass GstVisCapturerClass;
 struct _GstVisCapturer {
     GstBaseTransform base;
     gpointer engine;
-    gchar* captureCodes;
     gchar* labelTask;
-    gchar* output;
 };
 
 struct _GstVisCapturerClass {

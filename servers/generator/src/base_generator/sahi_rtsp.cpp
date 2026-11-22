@@ -12,7 +12,7 @@ SahiRtspGenerator::SahiRtspGenerator(
     nlohmann::json pgie,
     nlohmann::json sahi,
     std::optional<nlohmann::json> tracker,
-    std::optional<nlohmann::json> logger,
+    std::optional<nlohmann::json> collector,
     std::optional<nlohmann::json> drawer)
     : BaseRtspGenerator(
           std::move(pipelineName),
@@ -20,7 +20,7 @@ SahiRtspGenerator::SahiRtspGenerator(
           std::move(analyzer),
           std::move(pgie),
           std::move(tracker),
-          std::move(logger),
+          std::move(collector),
           std::move(drawer)),
       sahi(std::move(sahi)) {
 }
@@ -150,7 +150,7 @@ void SahiRtspGenerator::add() {
             addNvtracker(subelement::TRACKER_LL_LIB, TRACKER_CONFIG_NAME, trackerWidth, trackerHeight, gpuId, operateOnClassIds));
     }
     appendNode("nvdsanalytics", "nvdsanalytics", addNvdsanalytics(ANALYTICS_CONFIG_NAME));
-    appendNode("detcollector", "detcollector", addCollector(logger.value("interval", 1)));
+    appendNode("detcollector", "detcollector", addCollector(collector.value("interval", 1)));
     appendNode("dslogger", "dslogger", addDslogger(pipeline::PAGE_DET));
     appendNode("nvstreamdemux", "nvstreamdemux", addNvstreamdemux());
     for (int streamIndex = 0; streamIndex < muxBatchSize; ++streamIndex) {
