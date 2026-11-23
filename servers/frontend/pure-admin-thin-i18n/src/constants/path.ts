@@ -59,6 +59,7 @@ export const PATH_MODEL_BATCH_CREATE = "/backend/models/batch/create";
 export const PATH_MODEL_BATCH_REMOVE = "/backend/models/batch/remove";
 export const PATH_MODEL_TYPES = "/backend/models/types";
 export const PATH_DEVICE = "/backend/device";
+export const PATH_NOTICE_COUNT = "/backend/notices/count";
 export const PATH_EVENT_LIST = "/backend/events";
 export const PATH_EVENT_WS = "/backend/events/ws";
 export const PATH_EVENT_READ = "/backend/events/{event_id}/read";

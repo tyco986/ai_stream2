@@ -18,18 +18,17 @@ import {
 import {
   EVENT_ANNOTATION_DIALOG_WIDTH,
   EVENT_LEVEL_ALERT,
-  EVENT_LEVEL_ALL,
   EVENT_LEVEL_LABELS,
   EVENT_LEVELS,
   EVENT_LIST_COLUMN_PERCENTS,
   EVENT_LIST_PAGE_SIZE
 } from "@/constants/event";
-import { PATH_EVENT_WS } from "@/constants/path";
 import { $t, transformI18n } from "@/plugins/i18n";
 import { message } from "@/utils/message";
 import { formatLocalTime } from "@/utils/time";
 import { useColumnWidths } from "@/views/pipeline/columnWidth";
 import EventPreview from "./EventPreview.vue";
+import { isCurrent, nextStamp, registerEventPage } from "./refresh";
 
 defineOptions({
   name: "EventIndex"
@@ -44,13 +43,20 @@ const total = ref(0);
 const annotationsOpen = ref(false);
 const preview = ref<InstanceType<typeof EventPreview>>();
 const annotationText = ref("");
-let socket: WebSocket | null = null;
+let unregister = () => {};
+
+const applyList = (nextItems: EventItem[], nextTotal: number, nextPage: number) => {
+  items.value = nextItems;
+  total.value = nextTotal;
+  page.value = nextPage;
+};
 
 const load = () => {
+  const stamp = nextStamp();
   getEvents({ page: page.value, page_size: EVENT_LIST_PAGE_SIZE, level: level.value }).then(res => {
-    items.value = res.data.items;
-    total.value = res.data.total;
-    page.value = res.data.page;
+    if (isCurrent(stamp)) {
+      applyList(res.data.items, res.data.total, res.data.page);
+    }
   });
 };
 
@@ -74,16 +80,11 @@ const sourceName = (row: EventItem) => {
   return name;
 };
 
-const replaceRow = (row: EventItem) => {
-  items.value = items.value.map(item => (item.id === row.id ? row : item));
-};
-
 const selectedIds = () => selected.value.map(row => row.id);
 
 const onRead = (row: EventItem) => {
   const request = row.read_at ? unreadEvent(row.id) : readEvent(row.id);
   request.then(res => {
-    replaceRow(res.data);
     message(res.message, { type: "success" });
   });
 };
@@ -98,16 +99,12 @@ const onRemove = (row: EventItem) => {
 
 const onReadBatch = () => {
   readEvents(selectedIds()).then(res => {
-    const updated = new Map(res.data.updated_rows.map(row => [row.id, row]));
-    items.value = items.value.map(item => updated.get(item.id) ?? item);
     message(res.message, { type: "success" });
   });
 };
 
 const onUnreadBatch = () => {
   unreadEvents(selectedIds()).then(res => {
-    const updated = new Map(res.data.updated_rows.map(row => [row.id, row]));
-    items.value = items.value.map(item => updated.get(item.id) ?? item);
     message(res.message, { type: "success" });
   });
 };
@@ -121,25 +118,17 @@ const onRemoveBatch = () => {
   });
 };
 
-const onMessage = (messageEvent: MessageEvent) => {
-  const row = JSON.parse(String(messageEvent.data)) as EventItem;
-  const shown = level.value === EVENT_LEVEL_ALL || row.level === level.value;
-  const exists = shown && items.value.some(item => item.id === row.id);
-  total.value = shown && !exists ? total.value + 1 : total.value;
-  items.value =
-    shown && page.value === 1 && !exists ? [row, ...items.value].slice(0, EVENT_LIST_PAGE_SIZE) : items.value;
-};
-
 onMounted(() => {
   observe();
+  unregister = registerEventPage(
+    () => ({ level: level.value, page: page.value, pageSize: EVENT_LIST_PAGE_SIZE }),
+    applyList
+  );
   load();
-  const protocol = location.protocol === "https:" ? "wss" : "ws";
-  socket = new WebSocket(`${protocol}://${location.host}${PATH_EVENT_WS}`);
-  socket.onmessage = onMessage;
 });
 
 onUnmounted(() => {
-  socket?.close();
+  unregister();
 });
 </script>
 
@@ -197,7 +186,7 @@ onUnmounted(() => {
             :title="transformI18n($t(row.read_at ? 'event.pureUnread' : 'event.pureRead'))"
             @click="onRead(row)"
           >
-            <IconifyIconOffline :icon="row.read_at ? MailOpen : Mail" />
+            <IconifyIconOffline :key="row.read_at ?? 'unread'" :icon="row.read_at ? MailOpen : Mail" />
           </el-button>
           <el-button link type="primary" :title="transformI18n($t('event.pureRemove'))" @click="onRemove(row)">
             <IconifyIconOffline :icon="DeleteBin" />

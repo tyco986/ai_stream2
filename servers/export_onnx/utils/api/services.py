@@ -64,11 +64,18 @@ def history_data(parts: list[tuple[str, bytes]]) -> bytes:
     return body
 
 
+class OnnxExportSize(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    height: int = 640
+    width: int = 640
+
+
 class OnnxExportConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     type: str
-    size: int = 640
+    size: OnnxExportSize = Field(default_factory=OnnxExportSize)
     opset: int = 18
     batch_size: int | None = 1
     batch_mode: Literal["dynamic", "static"] = "static"
@@ -168,7 +175,8 @@ class ExportOnnxService:
         OnnxExporterManager().export(
             config.type,
             weights,
-            config.size,
+            config.size.height,
+            config.size.width,
             config.opset,
             config.batch_size,
             config.batch_mode,

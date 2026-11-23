@@ -1,5 +1,6 @@
 #include "controllers/event_controller.hpp"
 
+#include "auth/auth.hpp"
 #include "constants/event_const.hpp"
 #include "db/database.hpp"
 #include "response/response.hpp"
@@ -96,7 +97,7 @@ void EventController::setRead(const drogon::HttpRequestPtr& request,
                               const char* error) {
   const auto started = std::chrono::steady_clock::now();
   try {
-    const auto response = http::Response::ok(service.setRead(eventId, read), ok);
+    const auto response = http::Response::ok(service.setRead(eventId, read, service.token2UserId(AuthFilter::token(request))), ok);
     logger.record(request, response, started);
     callback(response);
   } catch (const std::exception& failure) {

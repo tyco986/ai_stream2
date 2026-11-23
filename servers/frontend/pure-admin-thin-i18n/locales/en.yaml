@@ -280,6 +280,9 @@ event:
   pureRemove: Remove
   pureRead: Read
   pureUnread: Unread
+  pureBellEvent: Event
+  pureBellSystem: System
+  pureHistory: History
 logger:
   pureTitle: Logs
 login:

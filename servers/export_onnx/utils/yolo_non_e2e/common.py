@@ -52,15 +52,15 @@ def set_dim_value(dim, value: int) -> None:
     dim.dim_value = value
 
 
-def fix_batch_only_dynamic(onnx_path: Path, size: int, max_det: int | None = None) -> None:
+def fix_batch_only_dynamic(onnx_path: Path, height: int, width: int, max_det: int | None = None) -> None:
     model = onnx.load(str(onnx_path))
     inp = model.graph.input[0]
     dims = inp.type.tensor_type.shape.dim
     if len(dims) != 4:
         raise ValueError(f"expected NCHW input, got {len(dims)} dims")
     set_dim_value(dims[1], 3)
-    set_dim_value(dims[2], size)
-    set_dim_value(dims[3], size)
+    set_dim_value(dims[2], height)
+    set_dim_value(dims[3], width)
 
     outputs = list(model.graph.output)
     if max_det is not None and len(outputs) == 1:

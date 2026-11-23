@@ -1,0 +1,11 @@
+# bash servers/export_onnx/scripts/3_export.sh --input models/source/yolo10x-fire-smoke.pt --config servers/export_onnx/templates/yolo10_det_dynamic.yaml
+type: YOLO10-DET
+size:
+  height: 640
+  width: 640
+opset: 18
+batch_size: null
+batch_mode: dynamic
+simplify: false
+max_det: 30
+conf: 0.25

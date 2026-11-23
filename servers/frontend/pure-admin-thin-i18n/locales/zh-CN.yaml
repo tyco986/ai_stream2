@@ -280,6 +280,9 @@ event:
   pureRemove: 删除
   pureRead: 已读
   pureUnread: 未读
+  pureBellEvent: 事件
+  pureBellSystem: 系统
+  pureHistory: 历史
 logger:
   pureTitle: 日志
 login:

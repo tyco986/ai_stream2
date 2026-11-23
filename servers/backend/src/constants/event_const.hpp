@@ -18,6 +18,8 @@ inline const char* KEY_EVENT_LABEL = "event_label";
 inline const char* LEVEL_ALL = "all";
 inline const char* LEVEL_ALERT = "alert";
 inline const char* KEY_READ_AT = "read_at";
+inline const char* KEY_READER_ID = "reader_id";
+inline const char* KEY_READER_NAME = "reader_name";
 inline const char* KEY_RAW_PATH = "raw_path";
 inline const char* KEY_VISUALIZATION_PATH = "visualization_path";
 inline const char* KEY_ANNOTATIONS = "annotations";
@@ -35,6 +37,17 @@ inline const char* ERR_PIPELINE = "event_err_pipeline";
 inline const char* ERR_PAD = "event_err_pad";
 inline const char* PATH_LIST = "/backend/events";
 inline const char* PATH_WS = "/backend/events/ws";
+inline const char* KEY_REFRESH = "refresh";
+inline const char* KEY_ACTION = "action";
+inline const char* KEY_EVENT = "event";
+inline const char* ACTION_INSERT = "insert";
+inline const char* ACTION_READ = "read";
+inline const char* ACTION_UNREAD = "unread";
+inline const char* ACTION_REMOVE = "remove";
+inline const char* ACTION_BATCH_READ = "batch_read";
+inline const char* ACTION_BATCH_UNREAD = "batch_unread";
+inline const char* ACTION_BATCH_REMOVE = "batch_remove";
+inline const double REFRESH_QUIET_SECONDS = 0.3;
 inline const char* PATH_READ = "/backend/events/{event_id}/read";
 inline const char* PATH_UNREAD = "/backend/events/{event_id}/unread";
 inline const char* PATH_ITEM = "/backend/events/{event_id}";
@@ -85,6 +98,27 @@ inline Json::Value BATCH_DATA() {
   return node;
 }
 
+inline Json::Value BANNER_EVENT(const Json::Value& row) {
+  Json::Value item;
+  item[KEY_ID] = row[KEY_ID];
+  item[KEY_OCCURRED_AT] = row[KEY_OCCURRED_AT];
+  item[KEY_EVENT_LABEL] = row[KEY_EVENT_LABEL];
+  item[KEY_STREAM_NAME] = row[KEY_STREAM_NAME];
+  item[KEY_MEDIA_NAME] = row[KEY_MEDIA_NAME];
+  item[KEY_PIPELINE_NAME] = row[KEY_PIPELINE_NAME];
+  item[KEY_READ_AT] = row[KEY_READ_AT];
+  item[KEY_READER_ID] = row[KEY_READER_ID];
+  item[KEY_READER_NAME] = row[KEY_READER_NAME];
+  return item;
+}
+
+inline Json::Value BANNER(const char* action, const Json::Value& event) {
+  Json::Value frame;
+  frame[KEY_ACTION] = action;
+  frame[KEY_EVENT] = event;
+  return frame;
+}
+
 inline Json::Value ROW() {
   Json::Value node;
   node[KEY_ID] = Json::Value();
@@ -99,6 +133,8 @@ inline Json::Value ROW() {
   node[KEY_LEVEL] = Json::Value();
   node[KEY_EVENT_LABEL] = Json::Value();
   node[KEY_READ_AT] = Json::Value();
+  node[KEY_READER_ID] = Json::Value();
+  node[KEY_READER_NAME] = Json::Value();
   node[KEY_RAW_PATH] = Json::Value();
   node[KEY_VISUALIZATION_PATH] = Json::Value();
   node[KEY_ANNOTATIONS] = Json::Value();

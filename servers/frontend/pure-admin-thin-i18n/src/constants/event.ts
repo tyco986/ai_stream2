@@ -1,4 +1,13 @@
 export const EVENT_LIST_PAGE_SIZE = 20;
+export const EVENT_BANNER_BATCH_MS = 8000;
+
+export const EVENT_ACTION_INSERT = "insert";
+export const EVENT_ACTION_READ = "read";
+export const EVENT_ACTION_UNREAD = "unread";
+export const EVENT_ACTION_REMOVE = "remove";
+export const EVENT_ACTION_BATCH_READ = "batch_read";
+export const EVENT_ACTION_BATCH_UNREAD = "batch_unread";
+export const EVENT_ACTION_BATCH_REMOVE = "batch_remove";
 
 export const EVENT_LEVEL_ALL = "all";
 export const EVENT_LEVEL_ALERT = "alert";

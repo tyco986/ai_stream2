@@ -73,15 +73,15 @@ def write_bundle_meta(
     )
 
 
-def fix_batch_only_dynamic(onnx_path: Path, size: int, max_det: int) -> None:
+def fix_batch_only_dynamic(onnx_path: Path, height: int, width: int, max_det: int) -> None:
     model = onnx.load(str(onnx_path))
     inp = model.graph.input[0]
     dims = inp.type.tensor_type.shape.dim
     if len(dims) != 4:
         raise ValueError(f"expected NCHW input, got {len(dims)} dims")
     set_dim_value(dims[1], 3)
-    set_dim_value(dims[2], size)
-    set_dim_value(dims[3], size)
+    set_dim_value(dims[2], height)
+    set_dim_value(dims[3], width)
 
     outputs = list(model.graph.output)
     if not outputs:
@@ -100,9 +100,8 @@ def fix_batch_only_dynamic(onnx_path: Path, size: int, max_det: int) -> None:
             raise ValueError(f"expected output1 rank 4, got {len(out1_dims)}")
         mask_channels = int(out1_dims[1].dim_value) if out1_dims[1].dim_value else 32
         set_dim_value(out1_dims[1], mask_channels)
-        mask_size = size // 4
-        set_dim_value(out1_dims[2], mask_size)
-        set_dim_value(out1_dims[3], mask_size)
+        set_dim_value(out1_dims[2], height // 4)
+        set_dim_value(out1_dims[3], width // 4)
         if out0_dims[2].dim_param or not out0_dims[2].dim_value:
             set_dim_value(out0_dims[2], 6 + mask_channels)
 
@@ -114,7 +113,7 @@ def pose_output_channels(num_keypoints: int) -> int:
 
 
 def fix_pose_batch_only_dynamic(
-    onnx_path: Path, size: int, max_det: int, channels: int
+    onnx_path: Path, height: int, width: int, max_det: int, channels: int
 ) -> None:
     model = onnx.load(str(onnx_path))
     inp = model.graph.input[0]
@@ -122,8 +121,8 @@ def fix_pose_batch_only_dynamic(
     if len(dims) != 4:
         raise ValueError(f"expected NCHW input, got {len(dims)} dims")
     set_dim_value(dims[1], 3)
-    set_dim_value(dims[2], size)
-    set_dim_value(dims[3], size)
+    set_dim_value(dims[2], height)
+    set_dim_value(dims[3], width)
 
     outputs = list(model.graph.output)
     if len(outputs) != 1:
@@ -152,15 +151,15 @@ def set_dim_value(dim, value: int) -> None:
     dim.dim_value = value
 
 
-def fix_batch_only_dynamic(onnx_path: Path, size: int, max_det: int) -> None:
+def fix_batch_only_dynamic(onnx_path: Path, height: int, width: int, max_det: int) -> None:
     model = onnx.load(str(onnx_path))
     inp = model.graph.input[0]
     dims = inp.type.tensor_type.shape.dim
     if len(dims) != 4:
         raise ValueError(f"expected NCHW input, got {len(dims)} dims")
     set_dim_value(dims[1], 3)
-    set_dim_value(dims[2], size)
-    set_dim_value(dims[3], size)
+    set_dim_value(dims[2], height)
+    set_dim_value(dims[3], width)
 
     outputs = list(model.graph.output)
     if not outputs:
@@ -179,9 +178,8 @@ def fix_batch_only_dynamic(onnx_path: Path, size: int, max_det: int) -> None:
             raise ValueError(f"expected output1 rank 4, got {len(out1_dims)}")
         mask_channels = int(out1_dims[1].dim_value) if out1_dims[1].dim_value else 32
         set_dim_value(out1_dims[1], mask_channels)
-        mask_size = size // 4
-        set_dim_value(out1_dims[2], mask_size)
-        set_dim_value(out1_dims[3], mask_size)
+        set_dim_value(out1_dims[2], height // 4)
+        set_dim_value(out1_dims[3], width // 4)
         if out0_dims[2].dim_param or not out0_dims[2].dim_value:
             set_dim_value(out0_dims[2], 6 + mask_channels)
 

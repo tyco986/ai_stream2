@@ -16,7 +16,8 @@ class YoloPoseE2EExporter:
     def export(
         self,
         weights: Path,
-        size: int,
+        height: int,
+        width: int,
         opset: int,
         batch_size: int,
         batch_mode: Literal["dynamic", "static"],
@@ -33,7 +34,7 @@ class YoloPoseE2EExporter:
 
         export_kwargs = {
             "format": "onnx",
-            "imgsz": size,
+            "imgsz": [height, width],
             "opset": opset,
             "simplify": simplify,
             "max_det": max_det,
@@ -56,4 +57,4 @@ class YoloPoseE2EExporter:
         num_keypoints = int(kpt_shape[0]) if kpt_shape else 17
         channels = pose_output_channels(num_keypoints)
         if batch_mode == "dynamic":
-            fix_pose_batch_only_dynamic(onnx_path, size, max_det, channels)
+            fix_pose_batch_only_dynamic(onnx_path, height, width, max_det, channels)

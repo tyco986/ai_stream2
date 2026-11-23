@@ -11,12 +11,22 @@
 namespace {
 
 const char* SELECT_ROW =
-    "id::text AS id, created_at, read_at, level, source, text, "
+    "id::text AS id, created_at, read_at, read_by::text AS read_by, level, source, text, "
     "ref_id::text AS ref_id ";
 
 }
 
 NoticeService::NoticeService(drogon::orm::DbClientPtr dbClient) : dbClient(std::move(dbClient)) {}
+
+std::string NoticeService::token2UserId(const std::string& token) {
+  const auto rows = Sql::sync({}, dbClient,
+      "SELECT id::text AS id FROM \"user\" WHERE token = $1 AND active", token);
+  if (rows.empty()) {
+    throw std::runtime_error(notice::ERR_NOT_FOUND);
+  }
+  const std::string id = rows[0]["id"].as<std::string>();
+  return id;
+}
 
 Json::Value NoticeService::create(const Json::Value& createdAt,
                                   const Json::Value& level,
@@ -96,13 +106,15 @@ Json::Value NoticeService::count() {
   return data;
 }
 
-Json::Value NoticeService::setRead(const std::string& noticeId, bool read) {
+Json::Value NoticeService::setRead(const std::string& noticeId, bool read, const std::string& userId) {
   const auto rows = Sql::sync({}, dbClient, 
-      std::string("UPDATE notice SET read_at = CASE WHEN $2::boolean THEN now() ELSE NULL END "
+      std::string("UPDATE notice SET read_at = CASE WHEN $2::boolean THEN now() ELSE NULL END, "
+                  "read_by = CASE WHEN $2::boolean THEN NULLIF($3, '')::uuid ELSE NULL END "
                   "WHERE id = $1::uuid RETURNING ") +
           SELECT_ROW,
       noticeId,
-      read);
+      read,
+      userId);
   if (rows.empty()) {
     throw std::runtime_error(notice::ERR_NOT_FOUND);
   }
@@ -115,6 +127,7 @@ Json::Value NoticeService::row2json(const drogon::orm::Row& row) {
   data[notice::KEY_ID] = row["id"].as<std::string>();
   data[notice::KEY_CREATED_AT] = row["created_at"].as<std::string>();
   data[notice::KEY_READ_AT] = row["read_at"].isNull() ? Json::Value() : row["read_at"].as<std::string>();
+  data[notice::KEY_READ_BY] = row["read_by"].isNull() ? Json::Value() : row["read_by"].as<std::string>();
   data[notice::KEY_LEVEL] = row["level"].as<std::string>();
   data[notice::KEY_SOURCE] = row["source"].as<std::string>();
   data[notice::KEY_TEXT] = row["text"].as<std::string>();

@@ -1,34 +1,67 @@
 <script setup lang="ts">
-import { useI18n } from "vue-i18n";
-import { ref, computed } from "vue";
-import { noticesData } from "./data";
-import NoticeList from "./components/NoticeList.vue";
+import { computed, onMounted, ref } from "vue";
 import BellIcon from "~icons/ep/bell";
+import Mail from "~icons/ri/mail-line";
+import MailOpen from "~icons/ri/mail-open-line";
+import { readEvent, unreadEvent, type EventItem } from "@/api/event";
+import { EVENT_LEVEL_ALERT } from "@/constants/event";
+import { $t, transformI18n } from "@/plugins/i18n";
+import { message } from "@/utils/message";
+import {
+  BELL_EVENT,
+  BELL_SYSTEM,
+  bellEvents,
+  bellOpen,
+  bellTab,
+  noticeCount,
+  reloadEvents,
+  startEventRefresh
+} from "@/views/event/refresh";
 
-const { t } = useI18n();
-const noticesNum = ref(0);
-const notices = ref(noticesData);
-const activeKey = ref(noticesData[0]?.key);
+const historyOpen = ref(false);
 
-notices.value.map(v => (noticesNum.value += v.list.length));
+const unread = computed(() => bellEvents.value.filter(row => row.read_at == null && row.level === EVENT_LEVEL_ALERT));
+const history = computed(() => bellEvents.value.filter(row => row.read_at != null));
 
-const getLabel = computed(
-  () => item =>
-    t(item.name) + (item.list.length > 0 ? `(${item.list.length})` : "")
-);
+const textOf = (row: EventItem) => {
+  const sourceName = row.stream_id ? row.stream_name ?? "" : row.media_name ?? "";
+  const pipelineName = row.pipeline_name ?? "";
+  const place = pipelineName && sourceName ? `, ${pipelineName}-${sourceName}` : "";
+  return `${row.occurred_at}: ${row.event_label} detected${place}`;
+};
+
+const onVisible = (visible: boolean) => {
+  bellOpen.value = visible;
+  if (visible) {
+    historyOpen.value = false;
+    bellTab.value = BELL_EVENT;
+    reloadEvents();
+  }
+};
+
+const onTab = (name: string | number) => {
+  bellTab.value = String(name);
+  if (bellTab.value === BELL_EVENT) {
+    reloadEvents();
+  }
+};
+
+const onToggle = (row: EventItem) => {
+  const request = row.read_at ? unreadEvent(row.id) : readEvent(row.id);
+  request.then(res => {
+    message(res.message, { type: "success" });
+  });
+};
+
+onMounted(() => {
+  startEventRefresh();
+});
 </script>
 
 <template>
-  <el-dropdown trigger="click" placement="bottom-end">
-    <span
-      :class="[
-        'dropdown-badge',
-        'navbar-bg-hover',
-        'select-none',
-        Number(noticesNum) !== 0 && 'mr-[10px]'
-      ]"
-    >
-      <el-badge :value="Number(noticesNum) === 0 ? '' : noticesNum" :max="99">
+  <el-dropdown trigger="click" placement="bottom-end" :hide-on-click="false" @visible-change="onVisible">
+    <span :class="['dropdown-badge', 'navbar-bg-hover', 'select-none', noticeCount.total !== 0 && 'mr-[10px]']">
+      <el-badge :value="noticeCount.total === 0 ? '' : noticeCount.total" :max="99">
         <span class="header-notice-icon">
           <IconifyIconOffline :icon="BellIcon" />
         </span>
@@ -36,28 +69,34 @@ const getLabel = computed(
     </span>
     <template #dropdown>
       <el-dropdown-menu>
-        <el-tabs
-          v-model="activeKey"
-          :stretch="true"
-          class="dropdown-tabs"
-          :style="{ width: notices.length === 0 ? '200px' : '330px' }"
-        >
-          <el-empty
-            v-if="notices.length === 0"
-            :description="t('status.pureNoMessage')"
-            :image-size="60"
-          />
-          <span v-else>
-            <template v-for="item in notices" :key="item.key">
-              <el-tab-pane :label="getLabel(item)" :name="`${item.key}`">
-                <el-scrollbar max-height="330px">
-                  <div class="noticeList-container">
-                    <NoticeList :list="item.list" :emptyText="item.emptyText" />
+        <el-tabs v-model="bellTab" :stretch="true" class="dropdown-tabs" @tab-change="onTab">
+          <el-tab-pane :label="`${transformI18n($t('event.pureBellEvent'))} ${noticeCount.event}`" :name="BELL_EVENT">
+            <el-scrollbar max-height="330px">
+              <div class="notice-list">
+                <el-empty v-if="unread.length === 0" :description="transformI18n($t('status.pureNoMessage'))" :image-size="60" />
+                <div v-for="row in unread" :key="row.id" class="notice-row">
+                  <span>{{ textOf(row) }}</span>
+                  <button type="button" class="notice-mail" @click.stop="onToggle(row)">
+                    <IconifyIconOffline :icon="Mail" />
+                  </button>
+                </div>
+                <button type="button" class="notice-history" @click.stop="historyOpen = !historyOpen">
+                  {{ historyOpen ? "▼" : "▶" }} {{ transformI18n($t("event.pureHistory")) }}
+                </button>
+                <template v-if="historyOpen">
+                  <div v-for="row in history" :key="row.id" class="notice-row">
+                    <span>{{ textOf(row) }}</span>
+                    <button type="button" class="notice-mail" @click.stop="onToggle(row)">
+                      <IconifyIconOffline :icon="MailOpen" />
+                    </button>
                   </div>
-                </el-scrollbar>
-              </el-tab-pane>
-            </template>
-          </span>
+                </template>
+              </div>
+            </el-scrollbar>
+          </el-tab-pane>
+          <el-tab-pane :label="`${transformI18n($t('event.pureBellSystem'))} ${noticeCount.system}`" :name="BELL_SYSTEM">
+            <el-empty :description="transformI18n($t('status.pureNoMessage'))" :image-size="60" />
+          </el-tab-pane>
         </el-tabs>
       </el-dropdown-menu>
     </template>
@@ -79,9 +118,7 @@ const getLabel = computed(
 }
 
 .dropdown-tabs {
-  .noticeList-container {
-    padding: 15px 24px 0;
-  }
+  width: 360px;
 
   :deep(.el-tabs__header) {
     margin: 0;
@@ -90,9 +127,38 @@ const getLabel = computed(
   :deep(.el-tabs__nav-wrap)::after {
     height: 1px;
   }
+}
 
-  :deep(.el-tabs__nav-wrap) {
-    padding: 0 36px;
-  }
+.notice-list {
+  padding: 8px 16px 12px;
+}
+
+.notice-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.notice-mail,
+.notice-history {
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+  background: none;
+  border: 0;
+}
+
+.notice-mail {
+  flex: none;
+  font-size: 16px;
+}
+
+.notice-history {
+  margin-top: 8px;
+  font-size: 13px;
 }
 </style>

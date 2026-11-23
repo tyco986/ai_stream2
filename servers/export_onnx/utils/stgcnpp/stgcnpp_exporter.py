@@ -18,7 +18,6 @@ class StgcnppExporter:
     def export(
         self,
         weights: Path,
-        size: int,
         opset: int,
         batch_size: int | None,
         batch_mode: Literal["dynamic", "static"],

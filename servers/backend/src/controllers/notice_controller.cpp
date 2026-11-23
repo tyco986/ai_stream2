@@ -1,5 +1,6 @@
 #include "controllers/notice_controller.hpp"
 
+#include "auth/auth.hpp"
 #include "constants/notice_const.hpp"
 #include "db/database.hpp"
 #include "response/response.hpp"
@@ -98,7 +99,7 @@ void NoticeController::setRead(const drogon::HttpRequestPtr& request,
                                const char* error) {
   const auto started = std::chrono::steady_clock::now();
   try {
-    const auto response = http::Response::ok(service.setRead(noticeId, read), ok);
+    const auto response = http::Response::ok(service.setRead(noticeId, read, service.token2UserId(AuthFilter::token(request))), ok);
     logger.record(request, response, started);
     callback(response);
   } catch (const std::exception& failure) {

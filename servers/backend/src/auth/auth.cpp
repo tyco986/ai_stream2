@@ -11,8 +11,7 @@
 void AuthFilter::doFilter(const drogon::HttpRequestPtr& request,
                           drogon::FilterCallback&& failed,
                           drogon::FilterChainCallback&& chain) {
-  const std::string header = request->getHeader("authorization");
-  const std::string token = header.empty() ? request->getCookie(auth::COOKIE_TOKEN) : header;
+  const std::string token = AuthFilter::token(request);
   const std::pair<drogon::HttpMethod, std::string> routeKey(request->method(),
                                                            request->matchedPathPattern());
   const auto route = auth::CRUD.find(routeKey);
@@ -41,4 +40,10 @@ void AuthFilter::doFilter(const drogon::HttpRequestPtr& request,
   } else {
     failed(http::Response::error(drogon::k401Unauthorized, auth::ERR_UNAUTHORIZED));
   }
+}
+
+std::string AuthFilter::token(const drogon::HttpRequestPtr& request) {
+  const std::string header = request->getHeader("authorization");
+  const std::string value = header.empty() ? request->getCookie(auth::COOKIE_TOKEN) : header;
+  return value;
 }

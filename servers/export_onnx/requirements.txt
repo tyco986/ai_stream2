@@ -4,4 +4,5 @@ pydantic==2.13.4
 python-multipart==0.0.32
 PyYAML==6.0.3
 onnxslim==0.1.96
+onnxruntime==1.18.1
 nuitka==4.3.1

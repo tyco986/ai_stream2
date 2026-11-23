@@ -86,7 +86,8 @@ class YoloDetNonE2EExporter:
     def export(
         self,
         weights: Path,
-        size: int,
+        height: int,
+        width: int,
         opset: int,
         batch_size: int,
         batch_mode: Literal["dynamic", "static"],
@@ -108,7 +109,7 @@ class YoloDetNonE2EExporter:
             DetNmsOutput(conf, iou, max_det),
         )
         onnx_path = output_dir / f"{weights.stem}.onnx"
-        onnx_input = torch.zeros(batch_size, 3, size, size, device=device)
+        onnx_input = torch.zeros(batch_size, 3, height, width, device=device)
         dynamic_axes = None
         if batch_mode == "dynamic":
             dynamic_axes = {"images": {0: "batch"}, "output0": {0: "batch"}}
@@ -128,4 +129,4 @@ class YoloDetNonE2EExporter:
         if simplify:
             onnx.save(onnxslim.slim(onnx.load(str(onnx_path))), str(onnx_path))
         if batch_mode == "dynamic":
-            fix_batch_only_dynamic(onnx_path, size, max_det)
+            fix_batch_only_dynamic(onnx_path, height, width, max_det)

@@ -83,21 +83,20 @@ class SegMaskOutput(nn.Module):
 class YoloSegNonE2EExporter:
     """YOLO11-Seg: EfficientNMSX_TRT + ROIAlignX_TRT → NvDsInferYoloMask blobs."""
 
-    def fix_batch_only_dynamic(self, onnx_path: Path, size: int, max_det: int) -> None:
+    def fix_batch_only_dynamic(self, onnx_path: Path, height: int, width: int, max_det: int) -> None:
         model = onnx.load(str(onnx_path))
         inp = model.graph.input[0]
         dims = inp.type.tensor_type.shape.dim
         if len(dims) != 4:
             raise ValueError(f"expected NCHW input, got {len(dims)} dims")
         set_dim_value(dims[1], 3)
-        set_dim_value(dims[2], size)
-        set_dim_value(dims[3], size)
+        set_dim_value(dims[2], height)
+        set_dim_value(dims[3], width)
 
         outputs = list(model.graph.output)
         if len(outputs) != 5:
             raise ValueError(f"expected 5 outputs, got {len(outputs)}")
-        mask_size = size // 4
-        mask_flat = mask_size * mask_size
+        mask_flat = (height // 4) * (width // 4)
         expected = [
             ("num_dets", [None, 1]),
             ("det_boxes", [None, max_det, 4]),
@@ -121,7 +120,8 @@ class YoloSegNonE2EExporter:
     def export(
         self,
         weights: Path,
-        size: int,
+        height: int,
+        width: int,
         opset: int,
         batch_size: int,
         batch_mode: Literal["dynamic", "static"],
@@ -143,7 +143,7 @@ class YoloSegNonE2EExporter:
             SegMaskOutput(len(yolo.names), conf, iou, max_det),
         )
         onnx_path = output_dir / f"{weights.stem}.onnx"
-        onnx_input = torch.zeros(batch_size, 3, size, size, device=device)
+        onnx_input = torch.zeros(batch_size, 3, height, width, device=device)
         output_names = ["num_dets", "det_boxes", "det_scores", "det_classes", "det_masks"]
         dynamic_axes = None
         if batch_mode == "dynamic":
@@ -164,4 +164,4 @@ class YoloSegNonE2EExporter:
         if simplify:
             onnx.save(onnxslim.slim(onnx.load(str(onnx_path))), str(onnx_path))
         if batch_mode == "dynamic":
-            self.fix_batch_only_dynamic(onnx_path, size, max_det)
+            self.fix_batch_only_dynamic(onnx_path, height, width, max_det)

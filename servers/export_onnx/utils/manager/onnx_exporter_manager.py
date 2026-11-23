@@ -10,6 +10,13 @@ from utils.yolo_non_e2e.yolo_det_non_e2e_exporter import YoloDetNonE2EExporter
 from utils.yolo_non_e2e.yolo_seg_non_e2e_exporter import YoloSegNonE2EExporter
 
 IOU_EXPORTERS = {YoloDetNonE2EExporter, YoloSegNonE2EExporter, YoloPoseE2EExporter}
+SPATIAL_EXPORTERS = {
+    YoloDetE2EExporter,
+    YoloDetNonE2EExporter,
+    YoloPoseE2EExporter,
+    YoloSegE2EExporter,
+    YoloSegNonE2EExporter,
+}
 
 
 class OnnxExporterManager:
@@ -33,7 +40,8 @@ class OnnxExporterManager:
         self,
         type: str,
         weights: Path,
-        size: int,
+        height: int,
+        width: int,
         opset: int,
         batch_size: int | None,
         batch_mode: Literal["dynamic", "static"],
@@ -46,7 +54,6 @@ class OnnxExporterManager:
         exporter_cls = self.EXPORTERS[type]
         kwargs = {
             "weights": weights,
-            "size": size,
             "opset": opset,
             "batch_size": batch_size or 1,
             "batch_mode": batch_mode,
@@ -55,6 +62,9 @@ class OnnxExporterManager:
             "conf": conf,
             "output_dir": output_dir,
         }
+        if exporter_cls in SPATIAL_EXPORTERS:
+            kwargs["height"] = height
+            kwargs["width"] = width
         if exporter_cls in IOU_EXPORTERS:
             kwargs["iou"] = iou
         exporter_cls().export(**kwargs)

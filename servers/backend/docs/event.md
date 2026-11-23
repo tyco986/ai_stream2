@@ -4,7 +4,7 @@
 
 JSON 成功外壳：`{success, message, data}`。`GET /backend/events/{event_id}/content` 成功时直接返回原文件，不套这层外壳。
 
-事件对象键：`id`、`occurred_at`、`stream_id`、`stream_name`、`media_id`、`media_name`、`pipeline_id`、`pipeline_name`、`event_code`、`level`、`event_label`、`read_at`、`raw_path`、`visualization_path`、`annotations`。`level` 原样保存 DeepStream 消息中的值。路径、`stream_id`、`stream_name`、`media_id`、`media_name`、`pipeline_name`、`read_at` 和 `annotations` 为空时为 `null`。`read_at` 为 `null` 表示未读。RTSP 写 `stream_id`，image、video 写 `media_id`，两者只填一个。三个 name 读时分别关联 `stream`、`media`、`pipeline`，源已删除则为 `null`。
+事件对象键：`id`、`occurred_at`、`stream_id`、`stream_name`、`media_id`、`media_name`、`pipeline_id`、`pipeline_name`、`event_code`、`level`、`event_label`、`read_at`、`read_by`、`raw_path`、`visualization_path`、`annotations`。`level` 原样保存 DeepStream 消息中的值。路径、`stream_id`、`stream_name`、`media_id`、`media_name`、`pipeline_name`、`read_at`、`read_by` 和 `annotations` 为空时为 `null`。`read_at` 为 `null` 表示未读。`read_by` 为最后一次标已读的用户 id。RTSP 写 `stream_id`，image、video 写 `media_id`，两者只填一个。三个 name 读时分别关联 `stream`、`media`、`pipeline`，源已删除则为 `null`。
 
 ---
 
@@ -15,7 +15,7 @@ JSON 成功外壳：`{success, message, data}`。`GET /backend/events/{event_id}
 | `GET` | `/backend/events` | query：`search`、`page`、`page_size` | `items`、`total`、`page`、`page_size` | 分页列表 |
 | `GET` | `/backend/events/{event_id}/content` | path：`event_id`；query：`kind` | 文件字节 | 原文件 |
 | `GET` | `/backend/events/{event_id}/content/info` | path：`event_id`；query：`kind` | `width`、`height`、`size`、`created_at`、`updated_at` | MediaInfo 探测结果 |
-| `GET` | `/backend/events/ws` | WebSocket 握手 | 文本帧：事件对象 | 入库成功后把该行推给全部已连接客户端 |
+| `GET` | `/backend/events/ws` | WebSocket 握手 | 文本帧：`{"refresh": true}` 或 `{"action","event"}` | 入库、已读、未读、删除后通知全部已连接客户端 |
 | `POST` | `/backend/events/{event_id}/read` | path：`event_id` | 事件对象 | 标已读 |
 | `POST` | `/backend/events/{event_id}/unread` | path：`event_id` | 事件对象 | 标未读 |
 | `DELETE` | `/backend/events/{event_id}` | path：`event_id` | 事件对象 | 删除 |
@@ -49,11 +49,11 @@ JSON 成功外壳：`{success, message, data}`。`GET /backend/events/{event_id}
 
 ### GET `/backend/events/ws`
 
-WebSocket。握手走 `AuthFilter`，读权限与列表相同。请求头没有 `authorization` 时使用 cookie `authorized-token`。连接期间，Redis 入库成功后的那一行以一条文本帧发出，内容就是事件对象本身。
+WebSocket。握手走 `AuthFilter`，读权限与列表相同。请求头没有 `authorization` 时使用 cookie `authorized-token`。入库、已读、未读、删除提交成功后发两种文本帧。`{"refresh": true}` 在连续变更静默 `0.3` 秒后发一帧，供列表和角标重新拉取。横幅帧立刻发，不进入这 `0.3` 秒合并。单条 `action` 为 `insert`、`read`、`unread`、`remove`，`event` 是对象。批量 `action` 为 `batch_read`、`batch_unread`、`batch_remove`，`event` 是成功行的数组；没有成功行不发横幅。`event` 每项只含 `id`、`occurred_at`、`event_label`、`stream_name`、`media_name`、`pipeline_name`、`read_at`、`read_by`。
 
 ### POST `/backend/events/{event_id}/read`
 
-`read_at` 写成当前时间。
+`read_at` 写成当前时间，`read_by` 写成当前用户 id。
 
 入参：path `event_id`。
 
@@ -61,7 +61,7 @@ WebSocket。握手走 `AuthFilter`，读权限与列表相同。请求头没有 
 
 ### POST `/backend/events/{event_id}/unread`
 
-`read_at` 写成 `null`。
+`read_at`、`read_by` 写成 `null`。
 
 入参：path `event_id`。
 
@@ -96,6 +96,7 @@ WebSocket。握手走 `AuthFilter`，读权限与列表相同。请求头没有 
 | `level` | VARCHAR(16) | 无 | NOT NULL；原样保存消息中的值 |
 | `event_label` | VARCHAR(150) | 无 | NOT NULL |
 | `read_at` | TIMESTAMPTZ | `NULL` | 可空；`NULL` 为未读 |
+| `read_by` | UUID | `NULL` | 可空；REFERENCES `"user"` (`id`) ON DELETE SET NULL；最后一次标已读的用户 |
 | `raw_path` | TEXT | `NULL` | 可空 |
 | `visualization_path` | TEXT | `NULL` | 可空 |
 | `annotations` | JSONB | `NULL` | 可空 |

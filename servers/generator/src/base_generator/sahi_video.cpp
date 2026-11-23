@@ -37,7 +37,7 @@ void SahiVideoGenerator::initVideos() {
         preprocess.at("overlap_width_ratio").get<double>(),
         preprocess.at("overlap_height_ratio").get<double>(),
         preprocess.value("enable_full_frame", true));
-    runtimeBatchSize = sahiInfo.num;
+    runtimeBatchSize = sahiInfo.num * muxBatchSize;
 }
 
 void SahiVideoGenerator::initParams() {

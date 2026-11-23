@@ -3,7 +3,6 @@
 #include "constants/redis_const.hpp"
 #include "db/database.hpp"
 #include "logger/redis_logger.hpp"
-#include "services/event_hub.hpp"
 
 #include <drogon/drogon.h>
 #include <hiredis/hiredis.h>
@@ -174,8 +173,7 @@ void Redis::handle(const std::string& stream, const std::string& id, const std::
 
 void Redis::dispatch(const Json::Value& message, const std::string& stream) {
   try {
-    const Json::Value row = service.createFromRedis(message, stream);
-    EventHub::shared().publish(row);
+    service.createFromRedis(message, stream);
   } catch (const std::exception& error) {
     spdlog::error("{}", error.what());
   }

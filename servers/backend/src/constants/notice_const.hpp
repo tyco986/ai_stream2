@@ -7,6 +7,7 @@ namespace notice {
 inline const char* KEY_ID = "id";
 inline const char* KEY_CREATED_AT = "created_at";
 inline const char* KEY_READ_AT = "read_at";
+inline const char* KEY_READ_BY = "read_by";
 inline const char* KEY_LEVEL = "level";
 inline const char* KEY_SOURCE = "source";
 inline const char* KEY_TEXT = "text";
@@ -48,6 +49,7 @@ inline Json::Value ROW() {
   node[KEY_ID] = Json::Value();
   node[KEY_CREATED_AT] = Json::Value();
   node[KEY_READ_AT] = Json::Value();
+  node[KEY_READ_BY] = Json::Value();
   node[KEY_LEVEL] = Json::Value();
   node[KEY_SOURCE] = Json::Value();
   node[KEY_TEXT] = Json::Value();

@@ -4,7 +4,7 @@
 
 JSON 成功外壳：`{success, message, data}`。
 
-通知对象键：`id`、`created_at`、`read_at`、`level`、`source`、`text`、`ref_id`。`read_at`、`ref_id` 为空时为 `null`。通知全员可见。`read_at` 为 `null` 表示未读。
+通知对象键：`id`、`created_at`、`read_at`、`read_by`、`level`、`source`、`text`、`ref_id`。`read_at`、`read_by`、`ref_id` 为空时为 `null`。通知全员可见。`read_at` 为 `null` 表示未读。`read_by` 为最后一次标已读的用户 id。
 
 ---
 
@@ -29,7 +29,7 @@ JSON 成功外壳：`{success, message, data}`。
 
 ### POST `/backend/notices`
 
-`level` 只能是 `system`。`created_at` 可省略，省略时用当前时间。`ref_id` 可省略，省略时为 `null`。`read_at` 为 `null`。
+`level` 只能是 `system`。`created_at` 可省略，省略时用当前时间。`ref_id` 可省略，省略时为 `null`。`read_at`、`read_by` 为 `null`。
 
 入参：`created_at`、`level`、`source`、`text`、`ref_id`。
 
@@ -45,7 +45,7 @@ JSON 成功外壳：`{success, message, data}`。
 
 ### POST `/backend/notices/{notice_id}/read`
 
-`read_at` 写成当前时间。
+`read_at` 写成当前时间，`read_by` 写成当前用户 id。
 
 入参：path `notice_id`。
 
@@ -53,7 +53,7 @@ JSON 成功外壳：`{success, message, data}`。
 
 ### POST `/backend/notices/{notice_id}/unread`
 
-`read_at` 写成 `null`。
+`read_at`、`read_by` 写成 `null`。
 
 入参：path `notice_id`。
 
@@ -76,6 +76,7 @@ JSON 成功外壳：`{success, message, data}`。
 | `id` | UUID | 无（插入用 `gen_random_uuid()`） | PRIMARY KEY |
 | `created_at` | TIMESTAMPTZ | 无 | NOT NULL |
 | `read_at` | TIMESTAMPTZ | `NULL` | 可空 |
+| `read_by` | UUID | `NULL` | 可空；REFERENCES `"user"` (`id`) ON DELETE SET NULL；最后一次标已读的用户 |
 | `level` | VARCHAR(16) | 无 | NOT NULL |
 | `source` | VARCHAR(64) | 无 | NOT NULL |
 | `text` | TEXT | 无 | NOT NULL |

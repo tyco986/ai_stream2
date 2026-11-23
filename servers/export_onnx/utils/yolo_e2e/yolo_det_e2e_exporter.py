@@ -11,7 +11,8 @@ class YoloDetE2EExporter:
     def export(
         self,
         weights: Path,
-        size: int,
+        height: int,
+        width: int,
         opset: int,
         batch_size: int,
         batch_mode: Literal["dynamic", "static"],
@@ -27,7 +28,7 @@ class YoloDetE2EExporter:
 
         export_kwargs = {
             "format": "onnx",
-            "imgsz": size,
+            "imgsz": [height, width],
             "opset": opset,
             "simplify": simplify,
             "max_det": max_det,
@@ -47,4 +48,4 @@ class YoloDetE2EExporter:
         if produced_data.is_file():
             shutil.move(produced_data, output_dir / produced_data.name)
         if batch_mode == "dynamic":
-            fix_batch_only_dynamic(onnx_path, size, max_det)
+            fix_batch_only_dynamic(onnx_path, height, width, max_det)

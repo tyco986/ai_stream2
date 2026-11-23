@@ -7,6 +7,7 @@
 #include "constants/pipeline_const.hpp"
 #include "constants/response_const.hpp"
 #include "searcher/searcher.hpp"
+#include "services/event_hub.hpp"
 
 #include <MediaInfoDLL/MediaInfoDLL.h>
 
@@ -14,6 +15,7 @@
 #include <sys/stat.h>
 
 #include <charconv>
+#include <exception>
 #include <clocale>
 #include <cmath>
 #include <ctime>
@@ -27,13 +29,15 @@ const char* SELECT_ROW =
     "event.id::text AS id, event.occurred_at, event.stream_id::text AS stream_id, stream.name AS stream_name, "
     "event.media_id::text AS media_id, media.name AS media_name, event.pipeline_id::text AS pipeline_id, "
     "pipeline.name AS pipeline_name, event.event_code, event.level, event.event_label, event.read_at, "
+    "event.reader_id::text AS reader_id, reader.username AS reader_name, "
     "event.raw_path, event.visualization_path, event.annotations::text AS annotations ";
 
 const char* FROM_EVENT =
     "FROM event "
     "LEFT JOIN stream ON stream.id = event.stream_id "
     "LEFT JOIN media ON media.id = event.media_id "
-    "LEFT JOIN pipeline ON pipeline.id = event.pipeline_id ";
+    "LEFT JOIN pipeline ON pipeline.id = event.pipeline_id "
+    "LEFT JOIN \"user\" AS reader ON reader.id = event.reader_id ";
 
 class MediaInfoBuffer {
  public:
@@ -58,6 +62,16 @@ class MediaInfoBuffer {
 }
 
 EventService::EventService(drogon::orm::DbClientPtr dbClient) : dbClient(std::move(dbClient)) {}
+
+std::string EventService::token2UserId(const std::string& token) {
+  const auto rows = Sql::sync({}, dbClient,
+      "SELECT id::text AS id FROM \"user\" WHERE token = $1 AND active", token);
+  if (rows.empty()) {
+    throw std::runtime_error(event::ERR_NOT_FOUND);
+  }
+  const std::string id = rows[0]["id"].as<std::string>();
+  return id;
+}
 
 Json::Value EventService::get(const std::string& eventId) {
   const auto rows = Sql::sync({}, dbClient, 
@@ -144,7 +158,7 @@ Json::Value EventService::create(const Json::Value& occurredAt,
                   "$4::uuid, $5, $6, $7, NULLIF($8, ''), NULLIF($9, ''), "
                   "CASE WHEN $10 = '' THEN NULL ELSE $10::jsonb END) "
                   "RETURNING id, occurred_at, stream_id, media_id, pipeline_id, event_code, level, event_label, read_at, "
-                  "raw_path, visualization_path, annotations) "
+                  "reader_id, raw_path, visualization_path, annotations) "
                   "SELECT ") +
           SELECT_ROW + FROM_EVENT,
       data[event::KEY_OCCURRED_AT].isNull() ? "" : data[event::KEY_OCCURRED_AT].asString(),
@@ -158,19 +172,23 @@ Json::Value EventService::create(const Json::Value& occurredAt,
       data[event::KEY_VISUALIZATION_PATH].isNull() ? "" : data[event::KEY_VISUALIZATION_PATH].asString(),
       annotationsText);
   data = row2json(rows[0]);
+  notify(event::ACTION_INSERT, event::BANNER_EVENT(data));
   return data;
 }
 
-Json::Value EventService::setRead(const std::string& eventId, bool read) {
+Json::Value EventService::readRow(const std::string& eventId, bool read, const std::string& userId) {
   const auto rows = Sql::sync({}, dbClient, 
       std::string("WITH event AS ("
-                  "UPDATE event SET read_at = CASE WHEN $2::boolean THEN now() ELSE NULL END WHERE id = $1::uuid "
+                  "UPDATE event SET read_at = CASE WHEN $2::boolean THEN now() ELSE NULL END, "
+                  "reader_id = CASE WHEN $2::boolean THEN NULLIF($3, '')::uuid ELSE NULL END "
+                  "WHERE id = $1::uuid "
                   "RETURNING id, occurred_at, stream_id, media_id, pipeline_id, event_code, level, event_label, read_at, "
-                  "raw_path, visualization_path, annotations) "
+                  "reader_id, raw_path, visualization_path, annotations) "
                   "SELECT ") +
           SELECT_ROW + FROM_EVENT,
       eventId,
-      read);
+      read,
+      userId);
   if (rows.empty()) {
     throw std::runtime_error(event::ERR_NOT_FOUND);
   }
@@ -178,12 +196,12 @@ Json::Value EventService::setRead(const std::string& eventId, bool read) {
   return data;
 }
 
-Json::Value EventService::remove(const std::string& eventId) {
+Json::Value EventService::removeRow(const std::string& eventId) {
   const auto rows = Sql::sync({}, dbClient, 
       std::string("WITH event AS ("
                   "DELETE FROM event WHERE id = $1::uuid "
                   "RETURNING id, occurred_at, stream_id, media_id, pipeline_id, event_code, level, event_label, read_at, "
-                  "raw_path, visualization_path, annotations) "
+                  "reader_id, raw_path, visualization_path, annotations) "
                   "SELECT ") +
           SELECT_ROW + FROM_EVENT,
       eventId);
@@ -191,6 +209,71 @@ Json::Value EventService::remove(const std::string& eventId) {
     throw std::runtime_error(event::ERR_NOT_FOUND);
   }
   Json::Value data = row2json(rows[0]);
+  return data;
+}
+
+void EventService::notify(const char* action, const Json::Value& event) {
+  EventHub::shared().banner(action, event);
+  EventHub::shared().refresh();
+}
+
+Json::Value EventService::setRead(const std::string& eventId, bool read, const std::string& userId) {
+  Json::Value data = readRow(eventId, read, userId);
+  notify(read ? event::ACTION_READ : event::ACTION_UNREAD, event::BANNER_EVENT(data));
+  return data;
+}
+
+Json::Value EventService::batchSetRead(const Json::Value& ids, bool read, const std::string& userId) {
+  Json::Value data = event::BATCH_DATA();
+  Json::Value events(Json::arrayValue);
+  if (ids.isArray()) {
+    for (const auto& node : ids) {
+      try {
+        const Json::Value row = readRow(node.asString(), read, userId);
+        data[event::KEY_UPDATED_ROWS].append(row);
+        events.append(event::BANNER_EVENT(row));
+      } catch (const std::exception&) {
+        Json::Value failed;
+        failed[event::KEY_ID] = node.asString();
+        data[event::KEY_FAILED_ROWS].append(failed);
+      }
+    }
+  }
+  data[event::KEY_UPDATED_COUNT] = static_cast<Json::UInt64>(data[event::KEY_UPDATED_ROWS].size());
+  data[event::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[event::KEY_FAILED_ROWS].size());
+  if (!events.empty()) {
+    notify(read ? event::ACTION_BATCH_READ : event::ACTION_BATCH_UNREAD, events);
+  }
+  return data;
+}
+
+Json::Value EventService::remove(const std::string& eventId) {
+  Json::Value data = removeRow(eventId);
+  notify(event::ACTION_REMOVE, event::BANNER_EVENT(data));
+  return data;
+}
+
+Json::Value EventService::batchRemove(const Json::Value& ids) {
+  Json::Value data = event::BATCH_DATA();
+  Json::Value events(Json::arrayValue);
+  if (ids.isArray()) {
+    for (const auto& node : ids) {
+      try {
+        const Json::Value row = removeRow(node.asString());
+        data[event::KEY_UPDATED_ROWS].append(row);
+        events.append(event::BANNER_EVENT(row));
+      } catch (const std::exception&) {
+        Json::Value failed;
+        failed[event::KEY_ID] = node.asString();
+        data[event::KEY_FAILED_ROWS].append(failed);
+      }
+    }
+  }
+  data[event::KEY_UPDATED_COUNT] = static_cast<Json::UInt64>(data[event::KEY_UPDATED_ROWS].size());
+  data[event::KEY_FAILED_COUNT] = static_cast<Json::UInt64>(data[event::KEY_FAILED_ROWS].size());
+  if (!events.empty()) {
+    notify(event::ACTION_BATCH_REMOVE, events);
+  }
   return data;
 }
 
@@ -237,6 +320,8 @@ Json::Value EventService::row2json(const drogon::orm::Row& row) {
   data[event::KEY_LEVEL] = row["level"].as<std::string>();
   data[event::KEY_EVENT_LABEL] = row["event_label"].as<std::string>();
   data[event::KEY_READ_AT] = row["read_at"].isNull() ? Json::Value() : row["read_at"].as<std::string>();
+  data[event::KEY_READER_ID] = row["reader_id"].isNull() ? Json::Value() : row["reader_id"].as<std::string>();
+  data[event::KEY_READER_NAME] = row["reader_name"].isNull() ? Json::Value() : row["reader_name"].as<std::string>();
   data[event::KEY_RAW_PATH] = row["raw_path"].isNull() ? Json::Value() : row["raw_path"].as<std::string>();
   data[event::KEY_VISUALIZATION_PATH] =
       row["visualization_path"].isNull() ? Json::Value() : row["visualization_path"].as<std::string>();
