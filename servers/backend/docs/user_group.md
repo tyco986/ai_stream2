@@ -4,7 +4,7 @@
 
 JSON 成功外壳：`{success, message, data}`。
 
-组对象键：`id`、`name`、`stream_crud`、`model_crud`、`preview_crud`、`pipeline_crud`、`recording_crud`、`device_crud`、`user_crud`、`event_crud`。每个 CRUD 值为 4 个字符，下标依次是 create、read、update、delete，`1` 表示允许。
+组对象键：`id`、`name`、`stream_crud`、`model_crud`、`preview_crud`、`pipeline_crud`、`recording_crud`、`node_crud`、`user_crud`、`event_crud`。每个 CRUD 值为 4 个字符，下标依次是 create、read、update、delete，`1` 表示允许。
 
 admin 组固定 `id` = `00000000-0000-4000-8000-000000000003`。不可改、不可删。
 
@@ -24,7 +24,7 @@ admin 组固定 `id` = `00000000-0000-4000-8000-000000000003`。不可改、不�
 | `GET` | `/backend/users/groups/{group_id}/candidates` | path：`group_id` | `{用户名: id}` | 不在该组的用户 |
 | `PUT` | `/backend/users/groups/{group_id}/members` | `user_ids` | `{用户名: id}` | 设置组成员 |
 
-CRUD 键：`stream_crud`、`model_crud`、`preview_crud`、`pipeline_crud`、`recording_crud`、`device_crud`、`user_crud`、`event_crud`。
+CRUD 键：`stream_crud`、`model_crud`、`preview_crud`、`pipeline_crud`、`recording_crud`、`node_crud`、`user_crud`、`event_crud`。
 
 ### GET `/backend/users/groups`
 
@@ -103,7 +103,7 @@ CRUD 键：`stream_crud`、`model_crud`、`preview_crud`、`pipeline_crud`、`re
 | `preview_crud` | CHAR(4) | 无 | NOT NULL |
 | `pipeline_crud` | CHAR(4) | 无 | NOT NULL |
 | `recording_crud` | CHAR(4) | 无 | NOT NULL |
-| `device_crud` | CHAR(4) | 无 | NOT NULL |
+| `node_crud` | CHAR(4) | 无 | NOT NULL |
 | `user_crud` | CHAR(4) | 无 | NOT NULL |
 | `event_crud` | CHAR(4) | 无 | NOT NULL |
 

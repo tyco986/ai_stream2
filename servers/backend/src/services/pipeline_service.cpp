@@ -379,6 +379,31 @@ Json::Value PipelineService::assembleInput(Json::Value input) {
   return input;
 }
 
+void PipelineService::removeArtifact(const drogon::orm::Row& row) {
+  const std::string name = row["name"].as<std::string>();
+  // /root/logs/deepstream/{name}
+  std::filesystem::remove_all(std::filesystem::path(pipeline::DEEPSTREAM_LOG_DIR) / name);
+  // /root/events/{name}
+  std::filesystem::remove_all(std::filesystem::path(pipeline::EVENT_DIR) / name);
+  // /root/media/pipeline/{name}-{timestamp}-{suffix}
+  const std::filesystem::path mediaRoot(pipeline::FILESINK_DIR);
+  const std::string prefix = name + "-";
+  const bool hasMedia = std::filesystem::exists(mediaRoot);
+  if (hasMedia) {
+    for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(mediaRoot)) {
+      const bool matched = entry.is_directory() && entry.path().filename().string().rfind(prefix, 0) == 0;
+      if (matched) {
+        std::filesystem::remove_all(entry.path());
+      }
+    }
+  }
+  // config zip at config_path
+  const bool hasPath = !row["config_path"].isNull();
+  if (hasPath) {
+    std::filesystem::remove(row["config_path"].as<std::string>());
+  }
+}
+
 bool PipelineService::reserveOutputDirectory(const std::filesystem::path& path) {
   std::filesystem::create_directories(path.parent_path());
   const bool created = std::filesystem::create_directory(path);
@@ -542,10 +567,7 @@ Json::Value PipelineService::remove(const std::string& pipelineId) {
   if (rows.empty()) {
     throw std::runtime_error("pipeline not removed");
   }
-  const bool hasPath = !rows[0]["config_path"].isNull();
-  if (hasPath) {
-    std::filesystem::remove(rows[0]["config_path"].as<std::string>());
-  }
+  removeArtifact(rows[0]);
   Json::Value result = row2json(rows[0]);
   return result;
 }

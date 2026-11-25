@@ -31,6 +31,7 @@ inline const nlohmann::json STATIC_PLUGIN = {
 };
 
 inline constexpr const char* KEY_TYPE = "type";
+inline constexpr const char* KEY_NAME = "name";
 inline constexpr const char* KEY_BATCH_SIZE = "batch_size";
 inline constexpr const char* KEY_BATCH_MODE = "batch_mode";
 inline constexpr const char* KEY_INPUT_TENSORS = "input_tensors";
@@ -55,6 +56,7 @@ inline constexpr const char* KEY_TRT_VERSION = "trt_version";
 
 inline const nlohmann::json RESULT = {
     {KEY_TYPE, nullptr},
+    {KEY_NAME, nullptr},
     {KEY_BATCH_SIZE, 1},
     {KEY_BATCH_MODE, BATCH_MODE_DYNAMIC},
     {KEY_INPUT_TENSORS, nullptr},

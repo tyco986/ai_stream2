@@ -67,7 +67,7 @@ inline const char* KEY_MODEL_CRUD = "model_crud";
 inline const char* KEY_PREVIEW_CRUD = "preview_crud";
 inline const char* KEY_PIPELINE_CRUD = "pipeline_crud";
 inline const char* KEY_RECORDING_CRUD = "recording_crud";
-inline const char* KEY_DEVICE_CRUD = "device_crud";
+inline const char* KEY_NODE_CRUD = "node_crud";
 inline const char* KEY_USER_CRUD = "user_crud";
 inline const char* KEY_EVENT_CRUD = "event_crud";
 inline const char* KEY_USER_IDS = "user_ids";
@@ -102,7 +102,7 @@ inline const char* SQL_USER_FROM =
 
 inline const char* SQL_ROW =
     "id::text AS id, name, stream_crud, model_crud, preview_crud, pipeline_crud, "
-    "recording_crud, device_crud, user_crud, event_crud";
+    "recording_crud, node_crud, user_crud, event_crud";
 
 inline Json::Value BATCH_DATA() {
   Json::Value node;
@@ -124,7 +124,7 @@ inline Json::Value ROW() {
   node[KEY_PREVIEW_CRUD] = Json::Value();
   node[KEY_PIPELINE_CRUD] = Json::Value();
   node[KEY_RECORDING_CRUD] = Json::Value();
-  node[KEY_DEVICE_CRUD] = Json::Value();
+  node[KEY_NODE_CRUD] = Json::Value();
   node[KEY_USER_CRUD] = Json::Value();
   node[KEY_EVENT_CRUD] = Json::Value();
   return node;

@@ -1,8 +1,8 @@
 {
   "auth_forbidden": "无权限",
   "auth_unauthorized": "未登录",
-  "device_list_error": "加载设备失败",
-  "device_list_ok": "已加载设备",
+  "node_list_error": "加载节点失败",
+  "node_list_ok": "已加载节点",
   "event_batch_read_ok": "已批量标为已读",
   "event_batch_remove_ok": "已批量删除事件",
   "event_batch_unread_ok": "已批量标为未读",

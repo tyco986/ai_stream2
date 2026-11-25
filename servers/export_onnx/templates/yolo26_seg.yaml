@@ -1,5 +1,6 @@
 # bash servers/export_onnx/scripts/3_export.sh --input models/pt/yolo26n-seg.pt --config servers/export_onnx/templates/yolo26_seg.yaml
 type: YOLO26-SEG
+name: null
 size:
   height: 640
   width: 640

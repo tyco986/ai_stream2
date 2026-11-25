@@ -23,11 +23,15 @@ Exporter::Exporter() : trtLogger() {}
 ExportResult Exporter::exportModel(const std::string& fileName, const std::string& fileContent, const nlohmann::json& config) {
     const std::filesystem::path file(std::filesystem::path(fileName).filename());
     const ExportInput input = exportStart(fileContent);
-    const std::string fileNameOut = file.stem().string() + exporter::ZIP_SUFFIX;
+    const bool named = config.contains(exporter::KEY_NAME) && config[exporter::KEY_NAME].is_string() &&
+        !config[exporter::KEY_NAME].get<std::string>().empty();
+    const std::string bundle = named ? config[exporter::KEY_NAME].get<std::string>() : file.stem().string();
+    const std::string fileNameOut = bundle + exporter::ZIP_SUFFIX;
     nlohmann::json result = exporter::RESULT;
     const nlohmann::json meta = input.meta;
     
     result[exporter::KEY_TYPE] = config[exporter::KEY_TYPE];
+    result[exporter::KEY_NAME] = bundle;
     result[exporter::KEY_BATCH_SIZE] = config[exporter::KEY_BATCH_SIZE];
     result[exporter::KEY_PRECISION] = config[exporter::KEY_PRECISION];
     result[exporter::KEY_OPT_LEVEL] = config[exporter::KEY_OPT_LEVEL];

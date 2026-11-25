@@ -21,7 +21,7 @@ void AuthFilter::doFilter(const drogon::HttpRequestPtr& request,
   if (!token.empty()) {
     const auto access = Sql::sync({}, Database::client(), 
         "SELECT user_group.stream_crud, user_group.model_crud, user_group.preview_crud, "
-        "user_group.pipeline_crud, user_group.recording_crud, user_group.device_crud, "
+        "user_group.pipeline_crud, user_group.recording_crud, user_group.node_crud, "
         "user_group.user_crud, user_group.event_crud FROM \"user\" "
         "LEFT JOIN user_group ON user_group.id = \"user\".group_id "
         "WHERE \"user\".token = $1 AND \"user\".active",

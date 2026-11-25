@@ -1,8 +1,8 @@
 {
   "auth_forbidden": "Forbidden",
   "auth_unauthorized": "Unauthorized",
-  "device_list_error": "Failed to load devices",
-  "device_list_ok": "Loaded devices",
+  "node_list_error": "Failed to load nodes",
+  "node_list_ok": "Loaded nodes",
   "event_batch_read_ok": "Marked events read",
   "event_batch_remove_ok": "Removed events",
   "event_batch_unread_ok": "Marked events unread",

@@ -100,7 +100,7 @@ multipart 表单。必填：`name`、`type`、`batch_size`、`batch_mode`、`pre
 
 ### POST `/backend/models/{model_id}/build`
 
-须已有 `source_path` 且当前不是 `building`，否则 `500`（已在构建时 `409`，`model is building`）。先把 `status` 写成 `building`，再把源文件与 recipe yaml 交给 `POST /ai_stream2/export_onnx/export`，再把 onnx 结果交给 `POST /ai_stream2/export_trt/export`。成功写回张量、类别、`engine_path`（backend 保存到 `/root/models/engine/<zip>`）、`source_path`、`source_name`、`engine_name`（后三者取自 `export_trt` 的 `data`）、`status=built`、`built_at`、`trt_version`、`ever_built=true`。中途失败会结束构建状态。
+须已有 `source_path` 且当前不是 `building`，否则 `500`（已在构建时 `409`，`model is building`）。先把 `status` 写成 `building`，再把源文件与 recipe yaml 交给 `POST /ai_stream2/export_onnx/export`，再把 onnx 结果交给 `POST /ai_stream2/export_trt/export`。两段 yaml 的 `name` 写成当前模型名，导出 zip 与 `meta.json` 的 `name` 都用它。成功写回张量、类别、`engine_path`（backend 保存到 `/root/models/engine/<zip>`）、`source_path`、`source_name`、`engine_name`（后三者取自 `export_trt` 的 `data`）、`status=built`、`built_at`、`trt_version`、`ever_built=true`。中途失败会结束构建状态。
 
 入参：path `model_id`。
 

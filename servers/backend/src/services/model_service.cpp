@@ -95,14 +95,7 @@ Json::Value ModelService::remove(const std::string& modelId) {
     const bool building = current[model::KEY_STATUS].asString() == model::STATUS_BUILDING;
     throw std::runtime_error(building ? model::ERR_BUILDING : "model not removed");
   }
-  const bool hasSource = !rows[0]["source_path"].isNull();
-  const bool hasEngine = !rows[0]["engine_path"].isNull();
-  if (hasSource) {
-    std::filesystem::remove(rows[0]["source_path"].as<std::string>());
-  }
-  if (hasEngine) {
-    std::filesystem::remove(rows[0]["engine_path"].as<std::string>());
-  }
+  removeArtifact(rows[0]);
   Json::Value data = row2json(rows[0]);
   return data;
 }
@@ -219,6 +212,7 @@ BuildStart ModelService::buildStart(const std::string& modelId) {
   const std::string type = current[model::KEY_TYPE].asString();
   for (const auto& name : sections.getMemberNames()) {
     sections[name][model::KEY_TYPE] = type;
+    sections[name][model::KEY_NAME] = current[model::KEY_NAME].asString();
     sections[name][model::KEY_BATCH_SIZE] = batchSize;
     sections[name][model::KEY_BATCH_MODE] = batchMode;
     if (name == model::SECTION_EXPORT_TRT) {
@@ -739,6 +733,19 @@ bool ModelService::createCheck(const std::string& name,
       batchSize >= model::AVAILABLE_BATCH_RANGE[0] && batchSize <= model::AVAILABLE_BATCH_RANGE[1];
   const bool valid = !name.empty() && knownType && knownMode && knownSize && knownPrecision;
   return valid;
+}
+
+void ModelService::removeArtifact(const drogon::orm::Row& row) {
+  // source file at source_path
+  const bool hasSource = !row["source_path"].isNull();
+  if (hasSource) {
+    std::filesystem::remove(row["source_path"].as<std::string>());
+  }
+  // engine file at engine_path
+  const bool hasEngine = !row["engine_path"].isNull();
+  if (hasEngine) {
+    std::filesystem::remove(row["engine_path"].as<std::string>());
+  }
 }
 
 Json::Value ModelService::row2json(const drogon::orm::Row& row) {

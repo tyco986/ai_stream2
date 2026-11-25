@@ -22,7 +22,7 @@ Json::Value UserGroupService::row2json(const drogon::orm::Row& row) {
   data[user::KEY_PREVIEW_CRUD] = row["preview_crud"].as<std::string>();
   data[user::KEY_PIPELINE_CRUD] = row["pipeline_crud"].as<std::string>();
   data[user::KEY_RECORDING_CRUD] = row["recording_crud"].as<std::string>();
-  data[user::KEY_DEVICE_CRUD] = row["device_crud"].as<std::string>();
+  data[user::KEY_NODE_CRUD] = row["node_crud"].as<std::string>();
   data[user::KEY_USER_CRUD] = row["user_crud"].as<std::string>();
   data[user::KEY_EVENT_CRUD] = row["event_crud"].as<std::string>();
   return data;
@@ -31,7 +31,7 @@ Json::Value UserGroupService::row2json(const drogon::orm::Row& row) {
 Json::Value UserGroupService::list(const std::string& search, int page, long pageSize) {
   const long offset = static_cast<long>(page - 1) * pageSize;
   const std::string match = Searcher::clause(
-      {"id", "name", "stream_crud", "model_crud", "preview_crud", "pipeline_crud", "recording_crud", "device_crud",
+      {"id", "name", "stream_crud", "model_crud", "preview_crud", "pipeline_crud", "recording_crud", "node_crud",
        "user_crud", "event_crud"},
       1);
   const std::string from = "FROM user_group WHERE " + match + " ";
@@ -79,12 +79,12 @@ Json::Value UserGroupService::create(const Json::Value& name,
                                      const Json::Value& previewCrud,
                                      const Json::Value& pipelineCrud,
                                      const Json::Value& recordingCrud,
-                                     const Json::Value& deviceCrud,
+                                     const Json::Value& nodeCrud,
                                      const Json::Value& userCrud,
                                      const Json::Value& eventCrud) {
   const auto rows = Sql::sync({}, dbClient, 
       std::string("INSERT INTO user_group (id, name, stream_crud, model_crud, preview_crud, pipeline_crud, "
-                  "recording_crud, device_crud, user_crud, event_crud) "
+                  "recording_crud, node_crud, user_crud, event_crud) "
                   "VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING ") +
           user::SQL_ROW,
       name.asString(),
@@ -93,7 +93,7 @@ Json::Value UserGroupService::create(const Json::Value& name,
       previewCrud.asString(),
       pipelineCrud.asString(),
       recordingCrud.asString(),
-      deviceCrud.asString(),
+      nodeCrud.asString(),
       userCrud.asString(),
       eventCrud.asString());
   Json::Value data = row2json(rows[0]);
@@ -107,7 +107,7 @@ Json::Value UserGroupService::update(const std::string& groupId,
                                      const Json::Value& previewCrud,
                                      const Json::Value& pipelineCrud,
                                      const Json::Value& recordingCrud,
-                                     const Json::Value& deviceCrud,
+                                     const Json::Value& nodeCrud,
                                      const Json::Value& userCrud,
                                      const Json::Value& eventCrud) {
   if (groupId == user::ADMIN_GROUP_ID) {
@@ -115,7 +115,7 @@ Json::Value UserGroupService::update(const std::string& groupId,
   }
   const auto rows = Sql::sync({}, dbClient, 
       std::string("UPDATE user_group SET name = $1, stream_crud = $2, model_crud = $3, preview_crud = $4, "
-                  "pipeline_crud = $5, recording_crud = $6, device_crud = $7, user_crud = $8, event_crud = $9 "
+                  "pipeline_crud = $5, recording_crud = $6, node_crud = $7, user_crud = $8, event_crud = $9 "
                   "WHERE id = $10::uuid RETURNING ") +
           user::SQL_ROW,
       name.asString(),
@@ -124,7 +124,7 @@ Json::Value UserGroupService::update(const std::string& groupId,
       previewCrud.asString(),
       pipelineCrud.asString(),
       recordingCrud.asString(),
-      deviceCrud.asString(),
+      nodeCrud.asString(),
       userCrud.asString(),
       eventCrud.asString(),
       groupId);

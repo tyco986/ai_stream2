@@ -83,6 +83,7 @@ class OnnxExportConfig(BaseModel):
     max_det: int = 30
     conf: float = Field(default=0.25, gt=0, le=1)
     iou: float | None = Field(default=None, gt=0, le=1)
+    name: str | None = None
 
 
 class ExportOnnxService:
@@ -134,13 +135,13 @@ class ExportOnnxService:
             weights = stored
         return weights
 
-    def pack(self, work_dir: Path, stem: str) -> tuple[Path, dict]:
+    def pack(self, work_dir: Path, stem: str, bundle: str) -> tuple[Path, dict]:
         onnx_path = work_dir / f"{stem}.onnx"
         labels_path = work_dir / "labels.txt"
         meta_path = work_dir / "meta.json"
         if not onnx_path.is_file() or not labels_path.is_file():
             raise AppError("export did not produce onnx and labels.txt")
-        built = work_dir / f"{stem}.zip"
+        built = work_dir / f"{bundle}.zip"
         completed = subprocess.run(
             ["zip", "-j", str(built), str(onnx_path), str(labels_path), str(meta_path)],
             capture_output=True,
@@ -186,6 +187,7 @@ class ExportOnnxService:
             work_dir,
             config.iou,
         )
+        bundle = config.name or stem
         write_bundle_meta(
             work_dir,
             work_dir / f"{stem}.onnx",
@@ -197,8 +199,9 @@ class ExportOnnxService:
             iou=config.iou,
             batch_mode=config.batch_mode,
             batch_size=config.batch_size or 1,
+            name=bundle,
         )
-        zip_path, meta = self.pack(work_dir, stem)
+        zip_path, meta = self.pack(work_dir, stem, bundle)
         body = multipart_body(meta, "", zip_path, MULTIPART_BOUNDARY)
         if not ExportOnnxService.history_enabled:
             shutil.rmtree(work_dir)

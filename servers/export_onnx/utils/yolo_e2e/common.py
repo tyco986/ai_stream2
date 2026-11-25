@@ -41,6 +41,7 @@ def write_bundle_meta(
     iou: float | None,
     batch_mode: Literal["dynamic", "static"],
     batch_size: int,
+    name: str,
 ) -> None:
     model = onnx.load(str(onnx_path))
     classes = [
@@ -58,6 +59,7 @@ def write_bundle_meta(
         },
         "classes": classes,
         "num_class": len(classes),
+        "name": name,
         "source_path": str(source_path),
         "source_name": source_path.name,
         "batch_size": None if batch_mode == "dynamic" else batch_size,

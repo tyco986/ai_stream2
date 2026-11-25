@@ -145,43 +145,43 @@ inline Json::Value BATCH_DATA() {
 inline const char* RECIPE_TEXT = R"({
   "YOLO10-DET": {
     "source_suffixes": [".pt", ".pth"],
-    "export_onnx": {"size": "640", "opset": "18", "batch_size": "null", "batch_mode": "dynamic", "simplify": "false", "max_det": "30", "conf": "0.25", "iou": "null"},
-    "export_trt": {"batch_size": "18", "device": "0", "precision": "fp16", "opt_level": "0"}
+    "export_onnx": {"name": "null", "size": "640", "opset": "18", "batch_size": "null", "batch_mode": "dynamic", "simplify": "false", "max_det": "30", "conf": "0.25", "iou": "null"},
+    "export_trt": {"name": "null", "batch_size": "18", "device": "0", "precision": "fp16", "opt_level": "0"}
   },
   "YOLO11-DET": {
     "source_suffixes": [".pt", ".pth"],
-    "export_onnx": {"size": "640", "opset": "18", "batch_size": "null", "batch_mode": "dynamic", "simplify": "false", "max_det": "30", "conf": "0.25", "iou": "0.45"},
-    "export_trt": {"batch_size": "18", "device": "0", "precision": "fp16", "opt_level": "3"}
+    "export_onnx": {"name": "null", "size": "640", "opset": "18", "batch_size": "null", "batch_mode": "dynamic", "simplify": "false", "max_det": "30", "conf": "0.25", "iou": "0.45"},
+    "export_trt": {"name": "null", "batch_size": "18", "device": "0", "precision": "fp16", "opt_level": "3"}
   },
   "YOLO11-SEG": {
     "source_suffixes": [".pt", ".pth"],
-    "export_onnx": {"size": "640", "opset": "18", "batch_size": "null", "batch_mode": "dynamic", "simplify": "false", "max_det": "30", "conf": "0.25", "iou": "0.45"},
-    "export_trt": {"batch_size": "18", "device": "0", "precision": "fp16", "opt_level": "3"}
+    "export_onnx": {"name": "null", "size": "640", "opset": "18", "batch_size": "null", "batch_mode": "dynamic", "simplify": "false", "max_det": "30", "conf": "0.25", "iou": "0.45"},
+    "export_trt": {"name": "null", "batch_size": "18", "device": "0", "precision": "fp16", "opt_level": "3"}
   },
   "YOLO26-DET": {
     "source_suffixes": [".pt", ".pth"],
-    "export_onnx": {"size": "640", "opset": "18", "batch_size": "null", "batch_mode": "dynamic", "simplify": "false", "max_det": "30", "conf": "0.25", "iou": "null"},
-    "export_trt": {"batch_size": "18", "device": "0", "precision": "fp16", "opt_level": "3"}
+    "export_onnx": {"name": "null", "size": "640", "opset": "18", "batch_size": "null", "batch_mode": "dynamic", "simplify": "false", "max_det": "30", "conf": "0.25", "iou": "null"},
+    "export_trt": {"name": "null", "batch_size": "18", "device": "0", "precision": "fp16", "opt_level": "3"}
   },
   "YOLO26-SEG": {
     "source_suffixes": [".pt", ".pth"],
-    "export_onnx": {"size": "640", "opset": "18", "batch_size": "null", "batch_mode": "dynamic", "simplify": "false", "max_det": "30", "conf": "0.25", "iou": "null"},
-    "export_trt": {"batch_size": "18", "device": "0", "precision": "fp16", "opt_level": "3"}
+    "export_onnx": {"name": "null", "size": "640", "opset": "18", "batch_size": "null", "batch_mode": "dynamic", "simplify": "false", "max_det": "30", "conf": "0.25", "iou": "null"},
+    "export_trt": {"name": "null", "batch_size": "18", "device": "0", "precision": "fp16", "opt_level": "3"}
   },
   "YOLO26-POSE": {
     "source_suffixes": [".pt", ".pth"],
-    "export_onnx": {"size": "640", "opset": "18", "batch_size": "null", "batch_mode": "dynamic", "simplify": "false", "max_det": "30", "conf": "0.25", "iou": "null"},
-    "export_trt": {"batch_size": "18", "device": "0", "precision": "fp16", "opt_level": "3"}
+    "export_onnx": {"name": "null", "size": "640", "opset": "18", "batch_size": "null", "batch_mode": "dynamic", "simplify": "false", "max_det": "30", "conf": "0.25", "iou": "null"},
+    "export_trt": {"name": "null", "batch_size": "18", "device": "0", "precision": "fp16", "opt_level": "3"}
   },
   "STGCNPP": {
     "source_suffixes": [".zip"],
-    "export_onnx": {"size": "null", "opset": "18", "batch_size": "null", "batch_mode": "dynamic", "simplify": "false", "max_det": "null", "conf": "null", "iou": "null"},
-    "export_trt": {"batch_size": "64", "device": "0", "precision": "fp16", "opt_level": "null"}
+    "export_onnx": {"name": "null", "size": "null", "opset": "18", "batch_size": "null", "batch_mode": "dynamic", "simplify": "false", "max_det": "null", "conf": "null", "iou": "null"},
+    "export_trt": {"name": "null", "batch_size": "64", "device": "0", "precision": "fp16", "opt_level": "null"}
   },
   "RTMPOSE": {
     "source_suffixes": [".onnx"],
-    "export_onnx": {"size": "null", "opset": "18", "batch_size": "null", "batch_mode": "dynamic", "simplify": "false", "max_det": "null", "conf": "null", "iou": "null"},
-    "export_trt": {"batch_size": "64", "device": "0", "precision": "fp16", "opt_level": "null"}
+    "export_onnx": {"name": "null", "size": "null", "opset": "18", "batch_size": "null", "batch_mode": "dynamic", "simplify": "false", "max_det": "null", "conf": "null", "iou": "null"},
+    "export_trt": {"name": "null", "batch_size": "64", "device": "0", "precision": "fp16", "opt_level": "null"}
   }
 })";
 

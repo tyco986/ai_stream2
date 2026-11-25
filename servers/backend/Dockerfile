@@ -26,13 +26,6 @@ RUN rm -f /etc/apt/sources.list.d/debian.sources \
       libmediainfo-dev \
       libyaml-cpp-dev \
       zlib1g-dev \
-      curl \
-    && curl -fsSL -o /tmp/cuda-keyring.deb https://developer.download.nvidia.cn/compute/cuda/repos/debian12/x86_64/cuda-keyring_1.1-1_all.deb \
-    && dpkg -i /tmp/cuda-keyring.deb \
-    && rm /tmp/cuda-keyring.deb \
-    && sed -i 's|developer.download.nvidia.com|developer.download.nvidia.cn|g' /etc/apt/sources.list.d/cuda*.list \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends cuda-nvml-dev-13-4 \
     && rm -rf /var/lib/apt/lists/* \
     && git config --global url."https://gh-proxy.com/https://github.com/".insteadOf "https://github.com/" \
     && git clone --depth 1 --branch v1.7.3 https://github.com/nih-at/libzip.git /tmp/libzip \

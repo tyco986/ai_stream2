@@ -58,6 +58,7 @@ class PipelineService {
   void expandMedia(Json::Value& input, Json::Value& analyzer);
   void expandAnalyzer(Json::Value& source, int index, Json::Value& analyzer);
   bool reserveOutputDirectory(const std::filesystem::path& path);
+  void removeArtifact(const drogon::orm::Row& row);
 
   drogon::orm::DbClientPtr dbClient;
 };

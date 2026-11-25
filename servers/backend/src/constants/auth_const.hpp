@@ -120,7 +120,7 @@ inline const std::map<std::pair<drogon::HttpMethod, std::string>, CrudGate> CRUD
     {{drogon::Delete, pipeline_analyzer::PATH_ITEM}, {user::KEY_PIPELINE_CRUD, CRUD_DELETE}},
     {{drogon::Post, pipeline_analyzer::PATH_BATCH_REMOVE}, {user::KEY_PIPELINE_CRUD, CRUD_DELETE}},
     // device
-    {{drogon::Get, device::PATH_LIST}, {user::KEY_DEVICE_CRUD, CRUD_READ}},
+    {{drogon::Get, device::PATH_LIST}, {user::KEY_NODE_CRUD, CRUD_READ}},
     // user
     {{drogon::Get, user::PATH_USER_LIST}, {user::KEY_USER_CRUD, CRUD_READ}},
     {{drogon::Get, user::PATH_USER_MAP}, {user::KEY_USER_CRUD, CRUD_READ}},

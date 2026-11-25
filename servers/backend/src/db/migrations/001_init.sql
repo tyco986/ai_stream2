@@ -8,7 +8,7 @@ CREATE TABLE user_group (
   preview_crud CHAR(4) NOT NULL,
   pipeline_crud CHAR(4) NOT NULL,
   recording_crud CHAR(4) NOT NULL,
-  device_crud CHAR(4) NOT NULL,
+  node_crud CHAR(4) NOT NULL,
   user_crud CHAR(4) NOT NULL,
   event_crud CHAR(4) NOT NULL
 );
@@ -23,7 +23,7 @@ CREATE TABLE "user" (
   last_login TIMESTAMPTZ
 );
 
-INSERT INTO user_group (id, name, stream_crud, model_crud, preview_crud, pipeline_crud, recording_crud, device_crud, user_crud, event_crud)
+INSERT INTO user_group (id, name, stream_crud, model_crud, preview_crud, pipeline_crud, recording_crud, node_crud, user_crud, event_crud)
 VALUES (
   '00000000-0000-4000-8000-000000000003',
   'admin',

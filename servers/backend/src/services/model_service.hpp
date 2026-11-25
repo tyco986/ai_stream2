@@ -72,6 +72,7 @@ class ModelService {
   Json::Value recipeNumber(const std::string& text);
   bool uploadCheck(const std::string& path);
   bool importCheck(const std::string& bytes, Json::Value& meta);
+  void removeArtifact(const drogon::orm::Row& row);
 
   drogon::orm::DbClientPtr dbClient;
 };

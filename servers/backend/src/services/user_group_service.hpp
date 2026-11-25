@@ -17,7 +17,7 @@ class UserGroupService {
                      const Json::Value& previewCrud,
                      const Json::Value& pipelineCrud,
                      const Json::Value& recordingCrud,
-                     const Json::Value& deviceCrud,
+                     const Json::Value& nodeCrud,
                      const Json::Value& userCrud,
                      const Json::Value& eventCrud);
   Json::Value update(const std::string& groupId,
@@ -27,7 +27,7 @@ class UserGroupService {
                      const Json::Value& previewCrud,
                      const Json::Value& pipelineCrud,
                      const Json::Value& recordingCrud,
-                     const Json::Value& deviceCrud,
+                     const Json::Value& nodeCrud,
                      const Json::Value& userCrud,
                      const Json::Value& eventCrud);
   Json::Value members(const std::string& groupId);
