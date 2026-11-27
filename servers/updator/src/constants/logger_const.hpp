@@ -1,0 +1,29 @@
+#pragma once
+
+namespace request_log {
+
+inline constexpr const char* PATH = "/ai_stream2/updator/logs";
+inline constexpr const char* PATH_ENABLE = "/ai_stream2/updator/logs/enable";
+inline constexpr const char* PATH_DISABLE = "/ai_stream2/updator/logs/disable";
+inline constexpr const char* ROOT = "/root/logs/updator";
+inline constexpr const char* PAGE = "updator";
+inline constexpr const char* SUFFIX = ".jsonl";
+inline constexpr int MAX_DAYS = 90;
+inline constexpr const char* HEADERS[] = {"authorization", "accept-language"};
+inline constexpr const char* STARTED = "started";
+inline constexpr const char* ERROR = "error";
+inline constexpr const char* KEY_TS = "ts";
+inline constexpr const char* KEY_METHOD = "method";
+inline constexpr const char* KEY_URL = "url";
+inline constexpr const char* KEY_CODE = "code";
+inline constexpr const char* KEY_INPUT = "input";
+inline constexpr const char* KEY_OUTPUT = "output";
+inline constexpr const char* KEY_LATENCY = "latency";
+inline constexpr const char* KEY_IP = "ip";
+inline constexpr const char* KEY_IN_BYTES = "in_bytes";
+inline constexpr const char* KEY_OUT_BYTES = "out_bytes";
+inline constexpr const char* KEY_ERROR = "error";
+inline constexpr const char* KEY_HEADER = "header";
+inline constexpr const char* LATENCY_PLACEHOLDER = "\"latency\":0";
+
+}
