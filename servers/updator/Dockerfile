@@ -40,7 +40,7 @@ RUN printf '%s\n' \
         'Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg' \
         > /etc/apt/sources.list.d/debian.sources \
     && apt-get update \
-    && apt-get install -y --no-install-recommends libstdc++6 libzip5t64 libspdlog1.15 libfmt10 ca-certificates \
+    && apt-get install -y --no-install-recommends libstdc++6 libzip5 libspdlog1.15 libfmt10 ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
