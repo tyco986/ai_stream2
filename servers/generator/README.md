@@ -112,7 +112,7 @@ multipart。`input` 是 YAML 文件，至少含 `generator`。
 |------|------|------|
 | `scripts/0_pull_base_image.sh` | 无 | 拉取 `debian:bookworm-slim` |
 | `scripts/1_build_image.sh` | 无 | 用本目录 `Dockerfile` 构建 `ai_stream2_generator` |
-| `scripts/2_run_container.sh` | 无 | 重建并启动容器，挂载仓库根的 `models`、`history`、`logs`、`attachments` |
+| `scripts/2_run_dev_container.sh` | 无 | 重建并启动容器，挂载仓库根的 `models`、`history`、`logs`、`attachments` |
 | `scripts/3_health.sh` | 无 | `GET /health` |
 | `scripts/3_generate.sh` | `--yaml` | `POST /generate` |
 | `scripts/3_generate_all.sh` | 无 | 对 `templates` 下每个 yaml 调用 `3_generate.sh` |
@@ -133,7 +133,7 @@ multipart。`input` 是 YAML 文件，至少含 `generator`。
 
 构建上下文是 `servers/generator`，标签 `ai_stream2_generator`。
 
-### `2_run_container.sh`
+### `2_run_dev_container.sh`
 
 先建网络 `ai_stream2`，删掉同名旧容器再 `docker run -d`。`-p 8091:8091`，挂载 `/etc/localtime` 以及仓库根的 `models`、`history`、`logs`、`attachments` 到容器 `/root/models`、`/root/history`、`/root/logs`、`/root/attachments`。结束后打印 `http://127.0.0.1:8091/ai_stream2/generator/health`。
 

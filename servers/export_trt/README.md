@@ -116,7 +116,7 @@ multipart。`input` 是 zip 文件，内含一个 `.onnx`、`labels.txt`、`meta
 |------|------|------|
 | `scripts/0_pull_base_image.sh` | 无 | 拉取 `nvcr.io/nvidia/deepstream:9.0-triton-multiarch` |
 | `scripts/1_build_image.sh` | 无 | 用本目录 `Dockerfile` 构建 `ai_stream2_export_trt` |
-| `scripts/2_run_container.sh` | 无 | 重建并启动容器，挂载仓库根的 `models`、`history`、`logs` |
+| `scripts/2_run_dev_container.sh` | 无 | 重建并启动容器，挂载仓库根的 `models`、`history`、`logs` |
 | `scripts/3_health.sh` | 无 | `GET /health` |
 | `scripts/3_export.sh` | `--input`、`--config` | `POST /export` |
 | `scripts/3_export_all.sh` | 无 | 按模板把 `history/export_onnx` 里的 onnx zip 编成 engine |
@@ -137,7 +137,7 @@ multipart。`input` 是 zip 文件，内含一个 `.onnx`、`labels.txt`、`meta
 
 构建上下文是 `servers/export_trt`，标签 `ai_stream2_export_trt`。
 
-### `2_run_container.sh`
+### `2_run_dev_container.sh`
 
 先建网络 `ai_stream2`，删掉同名旧容器再 `docker run -d`。`--gpus all`，`-p 8092:8092`，挂载 `/etc/localtime` 以及仓库根的 `models`、`history`、`logs` 到容器 `/root/models`、`/root/history`、`/root/logs`。结束后打印健康检查和 `http://127.0.0.1:8092/docs`。
 

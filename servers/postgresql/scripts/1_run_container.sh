@@ -1,22 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_NAME=ai_stream2
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 
-docker network create "${PROJECT_NAME}" 2>/dev/null || true
-docker volume create "${PROJECT_NAME}_postgresql" >/dev/null
-docker rm -f "${PROJECT_NAME}_postgresql" 2>/dev/null || true
+docker compose -f "${ROOT}/docker-compose.yml" up -d postgresql
 
-docker run -d \
-  --name "${PROJECT_NAME}_postgresql" \
-  --ulimit core=0 \
-  --network "${PROJECT_NAME}" \
-  -e POSTGRES_DB="${PROJECT_NAME}" \
-  -e POSTGRES_USER="${PROJECT_NAME}" \
-  -e POSTGRES_PASSWORD="${PROJECT_NAME}" \
-  -v /etc/localtime:/etc/localtime:ro \
-  -v "${PROJECT_NAME}_postgresql:/var/lib/postgresql/data" \
-  -p 5432:5432 \
-  postgres:15
-
-echo "PostgreSQL: ${PROJECT_NAME}_postgresql port 5432"
+echo "PostgreSQL: ai_stream2_postgresql port 5432"

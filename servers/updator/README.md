@@ -75,7 +75,7 @@ JSON。`file_path` 可省略，省略时为 `/root/updator/update.zip`。有 `ai
 |------|------|------|
 | `scripts/0_pull_base_image.sh` | 无 | 拉取 `debian:13-slim` |
 | `scripts/1_build_image.sh` | 无 | 用本目录 `Dockerfile` 构建 `ai_stream2_updator` |
-| `scripts/2_run_container.sh` | 无 | 重建并启动容器，挂载 `output`、`logs` |
+| `scripts/2_run_dev_container.sh` | 无 | 重建并启动容器，挂载 `output`、`logs` |
 | `scripts/3_pack.sh` | JSON 字符串 | `POST /pack` |
 | `scripts/3_update.sh` | `--file-path`（可省略） | `POST /update` |
 
@@ -87,7 +87,7 @@ JSON。`file_path` 可省略，省略时为 `/root/updator/update.zip`。有 `ai
 
 构建上下文是 `servers/updator`，标签 `ai_stream2_updator`。
 
-### `2_run_container.sh`
+### `2_run_dev_container.sh`
 
 先建网络 `ai_stream2`，删掉同名旧容器再 `docker run -d`。`-p 8095:8095`，挂载 `/etc/localtime`、`servers/updator/output` 到 `/root/updator`、仓库根 `logs` 到 `/root/logs`。结束后打印健康检查地址。
 

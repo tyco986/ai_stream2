@@ -47,7 +47,7 @@ services:
     environment:
       POSTGRES_DB: ai_stream2
       POSTGRES_USER: ai_stream2
-      POSTGRES_PASSWORD: ai_stream2
+      POSTGRES_PASSWORD: "88888888"
     volumes:
       - *localtime
       - postgresql:/var/lib/postgresql/data
@@ -220,13 +220,13 @@ services:
       - postgresql
     command:
       - --url
-      - postgres://ai_stream2:ai_stream2@ai_stream2_postgresql:5432/ai_stream2?sslmode=disable
+      - postgres://ai_stream2:88888888@ai_stream2_postgresql:5432/ai_stream2?sslmode=disable
     ports:
       - "8081:8081"
 
-  beszel:
+  beszel_hub:
     image: henrygd/beszel:latest
-    container_name: ai_stream2_beszel
+    container_name: ai_stream2_beszel_hub
     ulimits:
       core: 0
     environment:
@@ -241,16 +241,38 @@ services:
     ports:
       - "8093:8090"
 
+  beszel_agent:
+    image: henrygd/beszel-agent-nvidia:latest
+    container_name: ai_stream2_beszel_localhost
+    ulimits:
+      core: 0
+    gpus: all
+    cap_add:
+      - SYS_RAWIO
+    depends_on:
+      - beszel_hub
+    entrypoint: ["/bin/bash", "/agent_start.sh"]
+    environment:
+      HUB_URL: http://beszel_hub:8090
+      SYSTEM_NAME: localhost
+      USER_EMAIL: admin@example.com
+      USER_PASSWORD: "88888888"
+    volumes:
+      - *localtime
+      - ./servers/beszel/scripts/5_agent_start.sh:/agent_start.sh:ro
+      - beszel_agent:/var/lib/beszel-agent
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /dev:/dev
+      - /sys:/sys:ro
+
   docker_socket_proxy:
     image: tecnativa/docker-socket-proxy:latest
     container_name: ai_stream2_docker_socket_proxy
     ulimits:
       core: 0
-    entrypoint: ["sh", "-c"]
-    command:
-      - mkdir -p /logs/docker_socket_proxy && sed -i "s|\$${LOG_LEVEL}|debug|g" /usr/local/etc/haproxy/haproxy.cfg.template && exec /usr/local/bin/docker-entrypoint.sh haproxy -f /tmp/haproxy.cfg >> /logs/docker_socket_proxy/docker_socket_proxy.log 2>&1
+    logging:
+      driver: "none"
     environment:
-      LOG_LEVEL: debug
       CONTAINERS: "1"
       POST: "1"
       ALLOW_START: "1"
@@ -264,6 +286,5 @@ services:
     volumes:
       - *localtime
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - logs:/logs
     ports:
       - "127.0.0.1:2375:2375"

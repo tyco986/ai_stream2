@@ -112,7 +112,7 @@ multipart。`input` 后缀须对应该 `type`：YOLO 系列 `.pt` / `.pth`，`ST
 |------|------|------|
 | `scripts/0_pull_base_image.sh` | 无 | 拉取 `ultralytics/ultralytics:latest` |
 | `scripts/1_build_image.sh` | 无 | 用本目录 `Dockerfile` 构建 `ai_stream2_export_onnx` |
-| `scripts/2_run_container.sh` | 无 | 重建并启动容器，挂载仓库根的 `history`、`logs` |
+| `scripts/2_run_dev_container.sh` | 无 | 重建并启动容器，挂载仓库根的 `history`、`logs` |
 | `scripts/3_health.sh` | 无 | `GET /health` |
 | `scripts/3_export.sh` | `--input`、`--config` | `POST /export` |
 | `scripts/export_all.sh` | 无 | 按模板导出 `models/source` 里能对上的权重 |
@@ -134,7 +134,7 @@ multipart。`input` 后缀须对应该 `type`：YOLO 系列 `.pt` / `.pth`，`ST
 
 构建上下文是仓库根，标签 `ai_stream2_export_onnx`。构建中会执行 `4_nuitka.sh`。
 
-### `2_run_container.sh`
+### `2_run_dev_container.sh`
 
 先建网络 `ai_stream2`，删掉同名旧容器再 `docker run -d`。`-p 8090:8090`，挂载 `/etc/localtime` 以及仓库根的 `history`、`logs` 到容器 `/root/history`、`/root/logs`。结束后打印 `http://127.0.0.1:8090/ai_stream2/export_onnx/health`。
 
