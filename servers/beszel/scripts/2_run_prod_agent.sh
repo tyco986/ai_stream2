@@ -4,4 +4,4 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 
-docker compose -f "${ROOT}/docker-compose.yml" up -d beszel_agent
+docker compose -f "${ROOT}/docker-compose-control-node.yml" up -d beszel_agent

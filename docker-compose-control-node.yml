@@ -78,7 +78,7 @@ services:
       core: 0
     volumes:
       - *localtime
-      - ./servers/mediamtx/configs/mediamtx_dev.yml:/mediamtx.yml:ro
+      - ./servers/mediamtx/configs/mediamtx_prod.yml:/mediamtx.yml:ro
       - logs:/logs
       - recordings:/recordings
     ports:
@@ -107,8 +107,6 @@ services:
       - events:/root/events
       - configs:/root/configs
       - tmp:/root/tmp
-    ports:
-      - "8001:8000"
 
   frontend:
     image: ai_stream2_frontend_dev

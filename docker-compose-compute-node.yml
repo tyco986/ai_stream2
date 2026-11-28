@@ -1,0 +1,98 @@
+name: ai_stream2
+
+networks:
+  default:
+    name: ai_stream2
+
+volumes:
+  logs:
+    name: ai_stream2_logs
+  models:
+    name: ai_stream2_models
+  tmp:
+    name: ai_stream2_tmp
+  runtime:
+    name: ai_stream2_runtime
+  history:
+    name: ai_stream2_history
+  updator:
+    name: ai_stream2_updator
+  beszel_agent:
+    name: ai_stream2_beszel_agent
+
+x-localtime: &localtime /etc/localtime:/etc/localtime:ro
+
+services:
+  deepstream:
+    image: ai_stream2_deepstream
+    container_name: ai_stream2_deepstream
+    gpus: all
+    ulimits:
+      core: 0
+    volumes:
+      - *localtime
+      - logs:/root/logs
+      - runtime:/root/runtime
+    ports:
+      - "8094:8094"
+
+  export_onnx:
+    image: ai_stream2_export_onnx
+    container_name: ai_stream2_export_onnx
+    ulimits:
+      core: 0
+    volumes:
+      - *localtime
+      - logs:/root/logs
+      - history:/root/history
+      - models:/root/models
+      - tmp:/root/tmp
+    ports:
+      - "8090:8090"
+
+  export_trt:
+    image: ai_stream2_export_trt
+    container_name: ai_stream2_export_trt
+    gpus: all
+    ulimits:
+      core: 0
+    volumes:
+      - *localtime
+      - logs:/root/logs
+      - history:/root/history
+    ports:
+      - "8092:8092"
+
+  updator:
+    image: ai_stream2_updator
+    container_name: ai_stream2_updator
+    ulimits:
+      core: 0
+    volumes:
+      - *localtime
+      - logs:/root/logs
+      - updator:/root/updator
+    ports:
+      - "8095:8095"
+
+  beszel_agent:
+    image: henrygd/beszel-agent-nvidia:latest
+    container_name: ai_stream2_beszel_localhost
+    ulimits:
+      core: 0
+    gpus: all
+    cap_add:
+      - SYS_RAWIO
+    entrypoint: ["/bin/bash", "/agent_start.sh"]
+    environment:
+      HUB_URL: http://beszel_hub:8090
+      SYSTEM_NAME: localhost
+      USER_EMAIL: admin@example.com
+      USER_PASSWORD: "88888888"
+    volumes:
+      - *localtime
+      - ./servers/beszel/scripts/5_agent_start.sh:/agent_start.sh:ro
+      - beszel_agent:/var/lib/beszel-agent
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /dev:/dev
+      - /sys:/sys:ro

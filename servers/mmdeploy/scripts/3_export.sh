@@ -13,7 +13,7 @@ CKPT_HOST="${ROOT}/models/pt/${MODEL_NAME}.pth"
 mkdir -p "${ROOT}/models/pt" "${ROOT}/models/onnx" "${ROOT}/logs"
 
 docker inspect -f '{{.State.Running}}' "${NAME}" 2>/dev/null | grep -qx true || {
-  echo "container not running: ${NAME}; run servers/mmdeploy/scripts/1_run_container.sh" >&2
+  echo "container not running: ${NAME}; run servers/mmdeploy/scripts/1_run_prod_container.sh" >&2
   exit 1
 }
 

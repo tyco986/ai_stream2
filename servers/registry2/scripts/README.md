@@ -9,7 +9,7 @@
 | 脚本 | 作用 |
 |------|------|
 | `scripts/0_pull_base_image.sh` | 拉取 `registry:2` |
-| `scripts/1_run_container.sh` | 启动 `${PROJECT_NAME}_registry2`，数据卷 `ai_stream2_registry2`，允许按 digest 删除 |
+| `scripts/1_run_prod_container.sh` | 启动 `${PROJECT_NAME}_registry2`，数据卷 `ai_stream2_registry2`，允许按 digest 删除 |
 | `scripts/2_list_registry2_image.sh` | 列出仓库里的 `name:tag` |
 | `scripts/2_push_registry2_image.sh` | 把本机镜像推入仓库 |
 | `scripts/2_pull_registry2_image.sh` | 把仓库镜像拉回本机 |
@@ -17,7 +17,7 @@
 
 ```bash
 bash servers/registry2/scripts/0_pull_base_image.sh
-bash servers/registry2/scripts/1_run_container.sh
+bash servers/registry2/scripts/1_run_prod_container.sh
 
 bash servers/registry2/scripts/2_push_registry2_image.sh debian:13-slim
 bash servers/registry2/scripts/2_push_registry2_image.sh debian:13-slim my/debian:13-slim
