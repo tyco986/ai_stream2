@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Pull base images used by pure-admin-thin-i18n/Dockerfile.
+# Pull the base image used by servers/frontend/Dockerfile.
 set -euo pipefail
 
-docker pull node:20-alpine
-docker pull nginx:stable-alpine
+docker pull node:22-bookworm-slim

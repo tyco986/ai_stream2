@@ -5,6 +5,6 @@ set -euo pipefail
 PROJECT_NAME=ai_stream2
 
 docker build \
-  -f servers/frontend/pure-admin-thin-i18n/Dockerfile \
+  -f servers/frontend/Dockerfile \
   -t "${PROJECT_NAME}_frontend_dev" \
-  servers/frontend/pure-admin-thin-i18n
+  servers/frontend

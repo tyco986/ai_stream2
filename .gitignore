@@ -40,6 +40,7 @@ Thumbs.db
 
 # Node.js (frontend)
 node_modules/
+.pnpm-store/
 
 # Django
 *.sqlite3
@@ -68,3 +69,6 @@ recordings/
 attachments/coco_2017_val/
 # Runtime secrets (vendor private keys, site age keys, postgres data)
 secrets/
+data/
+tmp/
+runtime/
