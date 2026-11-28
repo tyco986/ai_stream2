@@ -3,7 +3,7 @@ set -euo pipefail
 
 BUILD="${1:-/tmp/build}"
 mkdir -p /app /opt/ai_stream2/servers/deepstream/libs
-cp "${BUILD}/deepstream" /usr/local/bin/deepstream
+cp "${BUILD}/deepstream" /app/deepstream
 cp "${BUILD}/src/plugins/boxsnapshot/libgstboxsnapshot.so" "${GST_PLUGIN_PATH}/"
 cp "${BUILD}/src/plugins/fadedrawer/libgstfadedrawer.so" "${GST_PLUGIN_PATH}/"
 cp "${BUILD}/src/plugins/presenceeventcoder/libgstpresenceeventcoder.so" "${GST_PLUGIN_PATH}/"

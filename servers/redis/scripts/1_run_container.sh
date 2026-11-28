@@ -5,17 +5,17 @@ PROJECT_NAME=ai_stream2
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 
 mkdir -p "${ROOT}/logs/redis"
-docker network create "${PROJECT_NAME}_default" 2>/dev/null || true
-docker volume create "${PROJECT_NAME}_redis_data" >/dev/null
+docker network create "${PROJECT_NAME}" 2>/dev/null || true
+docker volume create "${PROJECT_NAME}_redis" >/dev/null
 docker rm -f "${PROJECT_NAME}_redis" 2>/dev/null || true
 
 docker run -d \
   --name "${PROJECT_NAME}_redis" \
   --ulimit core=0 \
-  --network "${PROJECT_NAME}_default" \
+  --network "${PROJECT_NAME}" \
   --entrypoint /bin/sh \
   -v /etc/localtime:/etc/localtime:ro \
-  -v "${PROJECT_NAME}_redis_data:/data" \
+  -v "${PROJECT_NAME}_redis:/data" \
   -v "${ROOT}/logs/redis:/logs/redis" \
   -v "${ROOT}/servers/redis/scripts/stream_log.sh:/stream_log.sh:ro" \
   -p 6379:6379 \

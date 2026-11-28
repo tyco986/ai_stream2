@@ -136,7 +136,7 @@ multipart。`input` 后缀须对应该 `type`：YOLO 系列 `.pt` / `.pth`，`ST
 
 ### `2_run_container.sh`
 
-先建网络 `ai_stream2_default`，删掉同名旧容器再 `docker run -d`。`-p 8090:8090`，挂载 `/etc/localtime` 以及仓库根的 `history`、`logs` 到容器 `/root/history`、`/root/logs`。结束后打印 `http://127.0.0.1:8090/ai_stream2/export_onnx/health`。
+先建网络 `ai_stream2`，删掉同名旧容器再 `docker run -d`。`-p 8090:8090`，挂载 `/etc/localtime` 以及仓库根的 `history`、`logs` 到容器 `/root/history`、`/root/logs`。结束后打印 `http://127.0.0.1:8090/ai_stream2/export_onnx/health`。
 
 ### `3_health.sh`
 

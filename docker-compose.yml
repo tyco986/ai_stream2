@@ -1,0 +1,269 @@
+name: ai_stream2
+
+networks:
+  default:
+    name: ai_stream2
+
+volumes:
+  postgresql:
+    name: ai_stream2_postgresql
+  redis:
+    name: ai_stream2_redis
+  logs:
+    name: ai_stream2_logs
+  models:
+    name: ai_stream2_models
+  media:
+    name: ai_stream2_media
+  events:
+    name: ai_stream2_events
+  configs:
+    name: ai_stream2_configs
+  tmp:
+    name: ai_stream2_tmp
+  runtime:
+    name: ai_stream2_runtime
+  history:
+    name: ai_stream2_history
+  recordings:
+    name: ai_stream2_recordings
+  updator:
+    name: ai_stream2_updator
+  registry2:
+    name: ai_stream2_registry2
+  beszel_hub:
+    name: ai_stream2_beszel_hub
+  beszel_agent:
+    name: ai_stream2_beszel_agent
+
+x-localtime: &localtime /etc/localtime:/etc/localtime:ro
+
+services:
+  postgresql:
+    image: postgres:15
+    container_name: ai_stream2_postgresql
+    ulimits:
+      core: 0
+    environment:
+      POSTGRES_DB: ai_stream2
+      POSTGRES_USER: ai_stream2
+      POSTGRES_PASSWORD: ai_stream2
+    volumes:
+      - *localtime
+      - postgresql:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    container_name: ai_stream2_redis
+    ulimits:
+      core: 0
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - sh /stream_log.sh & exec /usr/local/bin/docker-entrypoint.sh redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy noeviction
+    volumes:
+      - *localtime
+      - redis:/data
+      - logs:/logs
+      - ./servers/redis/scripts/stream_log.sh:/stream_log.sh:ro
+    ports:
+      - "6379:6379"
+
+  mediamtx:
+    image: bluenviron/mediamtx:1.17.1
+    container_name: ai_stream2_mediamtx
+    ulimits:
+      core: 0
+    volumes:
+      - *localtime
+      - ./servers/mediamtx/configs/mediamtx_dev.yml:/mediamtx.yml:ro
+      - logs:/logs
+      - recordings:/recordings
+    ports:
+      - "8554:8554"
+      - "8889:8889"
+      - "9996:9996"
+      - "9997:9997"
+      - "8189:8189/udp"
+      - "8189:8189/tcp"
+
+  backend:
+    image: ai_stream2_backend
+    container_name: ai_stream2_backend
+    ulimits:
+      core: 0
+    depends_on:
+      - postgresql
+      - redis
+    environment:
+      PROJECT_NAME: ai_stream2
+    volumes:
+      - *localtime
+      - logs:/root/logs
+      - models:/root/models
+      - media:/root/media
+      - events:/root/events
+      - configs:/root/configs
+      - tmp:/root/tmp
+    ports:
+      - "8001:8000"
+
+  frontend:
+    image: ai_stream2_frontend_dev
+    container_name: ai_stream2_frontend
+    ulimits:
+      core: 0
+    volumes:
+      - *localtime
+      - ./servers/frontend/pure-admin-thin-i18n:/app
+      - /app/node_modules
+    ports:
+      - "8848:8848"
+
+  deepstream:
+    image: ai_stream2_deepstream
+    container_name: ai_stream2_deepstream
+    gpus: all
+    ulimits:
+      core: 0
+    volumes:
+      - *localtime
+      - logs:/root/logs
+      - runtime:/root/runtime
+    ports:
+      - "8094:8094"
+
+  ffmpeg:
+    image: ai_stream2_ffmpeg
+    container_name: ai_stream2_ffmpeg
+    ulimits:
+      core: 0
+    volumes:
+      - *localtime
+    ports:
+      - "8080:8080"
+
+  generator:
+    image: ai_stream2_generator
+    container_name: ai_stream2_generator
+    ulimits:
+      core: 0
+    volumes:
+      - *localtime
+      - logs:/root/logs
+      - history:/root/history
+      - media:/root/media
+      - runtime:/root/runtime
+    ports:
+      - "8091:8091"
+
+  export_onnx:
+    image: ai_stream2_export_onnx
+    container_name: ai_stream2_export_onnx
+    ulimits:
+      core: 0
+    volumes:
+      - *localtime
+      - logs:/root/logs
+      - history:/root/history
+      - models:/root/models
+      - tmp:/root/tmp
+    ports:
+      - "8090:8090"
+
+  export_trt:
+    image: ai_stream2_export_trt
+    container_name: ai_stream2_export_trt
+    gpus: all
+    ulimits:
+      core: 0
+    volumes:
+      - *localtime
+      - logs:/root/logs
+      - history:/root/history
+    ports:
+      - "8092:8092"
+
+  updator:
+    image: ai_stream2_updator
+    container_name: ai_stream2_updator
+    ulimits:
+      core: 0
+    volumes:
+      - *localtime
+      - logs:/root/logs
+      - updator:/root/updator
+    ports:
+      - "8095:8095"
+
+  registry2:
+    image: registry:2
+    container_name: ai_stream2_registry2
+    ulimits:
+      core: 0
+    environment:
+      REGISTRY_STORAGE_DELETE_ENABLED: "true"
+    volumes:
+      - *localtime
+      - registry2:/var/lib/registry
+    ports:
+      - "5000:5000"
+
+  pgweb:
+    image: sosedoff/pgweb
+    container_name: ai_stream2_pgweb
+    ulimits:
+      core: 0
+    depends_on:
+      - postgresql
+    command:
+      - --url
+      - postgres://ai_stream2:ai_stream2@ai_stream2_postgresql:5432/ai_stream2?sslmode=disable
+    ports:
+      - "8081:8081"
+
+  beszel:
+    image: henrygd/beszel:latest
+    container_name: ai_stream2_beszel
+    ulimits:
+      core: 0
+    environment:
+      APP_URL: http://127.0.0.1:8093
+      USER_EMAIL: admin@example.com
+      USER_PASSWORD: "88888888"
+      AUTO_LOGIN: admin@example.com
+      HEARTBEAT_INTERVAL: "60"
+    volumes:
+      - *localtime
+      - beszel_hub:/beszel_data
+    ports:
+      - "8093:8090"
+
+  docker_socket_proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    container_name: ai_stream2_docker_socket_proxy
+    ulimits:
+      core: 0
+    entrypoint: ["sh", "-c"]
+    command:
+      - mkdir -p /logs/docker_socket_proxy && sed -i "s|\$${LOG_LEVEL}|debug|g" /usr/local/etc/haproxy/haproxy.cfg.template && exec /usr/local/bin/docker-entrypoint.sh haproxy -f /tmp/haproxy.cfg >> /logs/docker_socket_proxy/docker_socket_proxy.log 2>&1
+    environment:
+      LOG_LEVEL: debug
+      CONTAINERS: "1"
+      POST: "1"
+      ALLOW_START: "1"
+      ALLOW_STOP: "1"
+      ALLOW_RESTARTS: "1"
+      LOGS: "1"
+      NETWORKS: "1"
+      IMAGES: "1"
+      INFO: "1"
+      VOLUMES: "1"
+    volumes:
+      - *localtime
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - logs:/logs
+    ports:
+      - "127.0.0.1:2375:2375"

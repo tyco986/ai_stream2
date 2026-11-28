@@ -6,7 +6,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 PROJECT_NAME=ai_stream2
 NAME="${NETDATA_CONTAINER_NAME:-${PROJECT_NAME}_netdata}"
-NET="${NETDATA_NETWORK:-${PROJECT_NAME}_default}"
+NET="${NETDATA_NETWORK:-${PROJECT_NAME}}"
 IMG="${NETDATA_IMAGE:-netdata/netdata:stable}"
 HOST_PORT="${NETDATA_HOST_PORT:-19999}"
 VOL_CONFIG="${PROJECT_NAME}_netdata_config"

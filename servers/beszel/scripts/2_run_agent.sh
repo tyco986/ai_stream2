@@ -12,9 +12,9 @@ PROJECT_NAME=ai_stream2
 
 NAME="${BESZEL_AGENT_NAME:-${PROJECT_NAME}_beszel_localhost}"
 HUB_NAME="${BESZEL_HUB_NAME:-${PROJECT_NAME}_beszel}"
-NET="${BESZEL_NETWORK:-${PROJECT_NAME}_default}"
+NET="${BESZEL_NETWORK:-${PROJECT_NAME}}"
 IMG="${BESZEL_AGENT_IMAGE:-henrygd/beszel-agent-nvidia:latest}"
-VOL_AGENT="${PROJECT_NAME}_beszel_agent_data"
+VOL_AGENT="${PROJECT_NAME}_beszel_agent"
 SYSTEM_NAME=localhost
 SMART_DEVICES="$(lsblk -dn -o NAME,TYPE,TRAN | awk '
 $2 != "disk" { next }

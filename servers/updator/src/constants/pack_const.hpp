@@ -3,7 +3,7 @@
 namespace pack {
 
 inline constexpr const char* PACK_PATH = "/ai_stream2/updator/pack";
-inline constexpr const char* UPDATE_PATH = "/ai_stream2/updator/update";
+inline constexpr const char* UPDATE_PATH = "/ai_stream2/updator/update/offline";
 inline constexpr const char* DOCKER_HOST = "ai_stream2_docker_socket_proxy";
 inline constexpr int DOCKER_PORT = 2375;
 inline constexpr const char* REGISTRY_HOST = "ai_stream2_registry2";

@@ -20,7 +20,7 @@ zip 顶层每个镜像一个目录（名里的 `/` 换成 `_`）。目录内为 
 |------|------|--------|------------------|------|
 | `GET` | `/ai_stream2/updator/health` | 无 | 空对象 | 健康检查 |
 | `POST` | `/ai_stream2/updator/pack` | 镜像名 → `{from, to}` | `file_path` 与各镜像的 `tag`、`from`、`to` | 差分打成 `update.zip` |
-| `POST` | `/ai_stream2/updator/update` | `file_path`（可省略） | 同 `pack` | 用 zip 写入 registry2 并 pull |
+| `POST` | `/ai_stream2/updator/update/offline` | `file_path`（可省略） | 同 `pack` | 用 zip 写入 registry2 并 pull |
 | `POST` | `/ai_stream2/updator/logs/enable` | 无 | 空对象 | 打开请求日志 |
 | `POST` | `/ai_stream2/updator/logs/disable` | 无 | 空对象 | 关闭请求日志 |
 | `DELETE` | `/ai_stream2/updator/logs` | 无 | 空对象 | 清空日志目录下的日志文件 |
@@ -39,7 +39,7 @@ JSON。键是仓库名，值是 `{from, to}`。`to` 必填。`from` 可省略。
 
 出参 `data`：`file_path` 与各镜像的 `tag`、`from`、`to`。`message`：空。`file`：`null`。失败抛出运行时错误，连接中断或 `500`。
 
-### POST `/ai_stream2/updator/update`
+### POST `/ai_stream2/updator/update/offline`
 
 JSON。`file_path` 可省略，省略时为 `/root/updator/update.zip`。有 `ai_stream2.from` 时先确认旧层都在仓库，缺层则失败。已有 blob 跳过上传。写完 tag 后 pull `127.0.0.1:5000/<name>:<tag>`。
 
@@ -89,7 +89,7 @@ JSON。`file_path` 可省略，省略时为 `/root/updator/update.zip`。有 `ai
 
 ### `2_run_container.sh`
 
-先建网络 `ai_stream2_default`，删掉同名旧容器再 `docker run -d`。`-p 8095:8095`，挂载 `/etc/localtime`、`servers/updator/output` 到 `/root/updator`、仓库根 `logs` 到 `/root/logs`。结束后打印健康检查地址。
+先建网络 `ai_stream2`，删掉同名旧容器再 `docker run -d`。`-p 8095:8095`，挂载 `/etc/localtime`、`servers/updator/output` 到 `/root/updator`、仓库根 `logs` 到 `/root/logs`。结束后打印健康检查地址。
 
 ### `3_pack.sh`
 

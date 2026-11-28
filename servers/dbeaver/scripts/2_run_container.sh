@@ -4,13 +4,13 @@ set -euo pipefail
 PROJECT_NAME=ai_stream2
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
-docker network create "${PROJECT_NAME}_default" 2>/dev/null || true
+docker network create "${PROJECT_NAME}" 2>/dev/null || true
 docker rm -f "${PROJECT_NAME}_cloudbeaver" 2>/dev/null || true
 
 docker run -d \
   --name "${PROJECT_NAME}_cloudbeaver" \
   --ulimit core=0 \
-  --network "${PROJECT_NAME}_default" \
+  --network "${PROJECT_NAME}" \
   -p 8978:8978 \
   -e CB_SERVER_NAME=ai_stream2 \
   -e CB_SERVER_URL=http://127.0.0.1:8978/ \

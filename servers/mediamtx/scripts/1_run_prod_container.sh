@@ -7,10 +7,10 @@ PROJECT_NAME=ai_stream2
 cd "$ROOT"
 mkdir -p recordings
 
-docker network create "${PROJECT_NAME}_default" 2>/dev/null || true
+docker network create "${PROJECT_NAME}" 2>/dev/null || true
 docker rm -f "${PROJECT_NAME}_mediamtx" 2>/dev/null || true
 
-docker run -d --name "${PROJECT_NAME}_mediamtx" --ulimit core=0 --network "${PROJECT_NAME}_default" \
+docker run -d --name "${PROJECT_NAME}_mediamtx" --ulimit core=0 --network "${PROJECT_NAME}" \
   -p 8554:8554 -p 8889:8889 -p 9996:9996 -p 9997:9997 \
   -p 8189:8189/udp -p 8189:8189/tcp \
   -v /etc/localtime:/etc/localtime:ro \
@@ -19,7 +19,7 @@ docker run -d --name "${PROJECT_NAME}_mediamtx" --ulimit core=0 --network "${PRO
   bluenviron/mediamtx:1.17.1
 
 cat <<EOF
-${PROJECT_NAME}_mediamtx (${PROJECT_NAME}_default)
+${PROJECT_NAME}_mediamtx (${PROJECT_NAME})
   8554 -> RTSP publish/read (e.g. rtsp://${PROJECT_NAME}_mediamtx:8554/video1_B0)
   8889 -> WebRTC http://127.0.0.1:8889/<path>/
   8189 -> WebRTC ICE (UDP/TCP media)

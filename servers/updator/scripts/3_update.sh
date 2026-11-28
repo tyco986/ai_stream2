@@ -2,7 +2,7 @@
 set -euo pipefail
 
 HOST_PORT="${UPDATOR_HOST_PORT:-8095}"
-ENDPOINT="http://127.0.0.1:${HOST_PORT}/ai_stream2/updator/update"
+ENDPOINT="http://127.0.0.1:${HOST_PORT}/ai_stream2/updator/update/offline"
 FILE_PATH=""
 
 while [[ $# -gt 0 ]]; do

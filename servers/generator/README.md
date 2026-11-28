@@ -135,7 +135,7 @@ multipart。`input` 是 YAML 文件，至少含 `generator`。
 
 ### `2_run_container.sh`
 
-先建网络 `ai_stream2_default`，删掉同名旧容器再 `docker run -d`。`-p 8091:8091`，挂载 `/etc/localtime` 以及仓库根的 `models`、`history`、`logs`、`attachments` 到容器 `/root/models`、`/root/history`、`/root/logs`、`/root/attachments`。结束后打印 `http://127.0.0.1:8091/ai_stream2/generator/health`。
+先建网络 `ai_stream2`，删掉同名旧容器再 `docker run -d`。`-p 8091:8091`，挂载 `/etc/localtime` 以及仓库根的 `models`、`history`、`logs`、`attachments` 到容器 `/root/models`、`/root/history`、`/root/logs`、`/root/attachments`。结束后打印 `http://127.0.0.1:8091/ai_stream2/generator/health`。
 
 ### `3_health.sh`
 

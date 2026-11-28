@@ -10,12 +10,12 @@ NAME="${PROJECT_NAME}_ffmpeg"
 
 mkdir -p "${ROOT}/media" "${ROOT}/attachments"
 
-docker network create "${PROJECT_NAME}_default" 2>/dev/null || true
+docker network create "${PROJECT_NAME}" 2>/dev/null || true
 docker rm -f "${NAME}" 2>/dev/null || true
 docker run -d \
   --name "${NAME}" \
   --ulimit core=0 \
-  --network "${PROJECT_NAME}_default" \
+  --network "${PROJECT_NAME}" \
   -p 8080:8080 \
   -v /etc/localtime:/etc/localtime:ro \
   -v "${ROOT}/media:/root/media" \

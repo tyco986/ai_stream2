@@ -50,10 +50,11 @@ EXPOSE 8000
 
 FROM base AS build
 
-COPY servers/backend /app
-RUN cmake -S /app -B /tmp/build -DCMAKE_BUILD_TYPE=Release \
+COPY servers/backend /src
+RUN cmake -S /src -B /tmp/build -DCMAKE_BUILD_TYPE=Release \
     && cmake --build /tmp/build -j"$(nproc)" \
-    && cp /tmp/build/backend /usr/local/bin/backend
+    && mkdir -p /app \
+    && cp /tmp/build/backend /app/backend
 
 
 FROM build AS dev
@@ -61,5 +62,7 @@ FROM build AS dev
 
 FROM base AS prod
 
-COPY --from=build /usr/local/bin/backend /usr/local/bin/backend
-CMD ["backend"]
+COPY --from=build /app/backend /app/backend
+COPY --from=build /src/locales /app/locales
+COPY --from=build /src/src/db/migrations /app/migrations
+CMD ["/app/backend"]

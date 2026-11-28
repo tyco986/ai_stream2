@@ -139,7 +139,7 @@ multipart。`input` 是 zip 文件，内含一个 `.onnx`、`labels.txt`、`meta
 
 ### `2_run_container.sh`
 
-先建网络 `ai_stream2_default`，删掉同名旧容器再 `docker run -d`。`--gpus all`，`-p 8092:8092`，挂载 `/etc/localtime` 以及仓库根的 `models`、`history`、`logs` 到容器 `/root/models`、`/root/history`、`/root/logs`。结束后打印健康检查和 `http://127.0.0.1:8092/docs`。
+先建网络 `ai_stream2`，删掉同名旧容器再 `docker run -d`。`--gpus all`，`-p 8092:8092`，挂载 `/etc/localtime` 以及仓库根的 `models`、`history`、`logs` 到容器 `/root/models`、`/root/history`、`/root/logs`。结束后打印健康检查和 `http://127.0.0.1:8092/docs`。
 
 ### `3_health.sh`
 

@@ -11,13 +11,13 @@ IMAGE="openmmlab/mmdeploy:ubuntu20.04-cuda11.8-mmdeploy1.3.1"
 
 mkdir -p "${ROOT}/models" "${ROOT}/logs"
 
-docker network create "${PROJECT_NAME}_default" 2>/dev/null || true
+docker network create "${PROJECT_NAME}" 2>/dev/null || true
 docker rm -f "${NAME}" 2>/dev/null || true
 
 docker run -d \
   --name "${NAME}" \
   --ulimit core=0 \
-  --network "${PROJECT_NAME}_default" \
+  --network "${PROJECT_NAME}" \
   -e TZ="${TZ:-$(cat /etc/timezone 2>/dev/null || echo UTC)}" \
   -v /etc/localtime:/etc/localtime:ro \
   -v "${ROOT}/models:/root/models" \

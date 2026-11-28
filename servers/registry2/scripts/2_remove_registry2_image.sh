@@ -2,10 +2,9 @@
 # Run from project root. Delete one tag, every platform manifest under it, then unreferenced blobs.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 PROJECT_NAME=ai_stream2
 CONTAINER="${PROJECT_NAME}_registry2"
-DATA="${ROOT}/servers/registry2/data"
+VOLUME="${PROJECT_NAME}_registry2"
 BASE="http://127.0.0.1:5000"
 ACCEPT="application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.manifest.v1+json"
 
@@ -39,7 +38,7 @@ fi
 docker stop "${CONTAINER}"
 set +e
 docker run --rm \
-  -v "${DATA}:/var/lib/registry" \
+  -v "${VOLUME}:/var/lib/registry" \
   registry:2 \
   garbage-collect --delete-untagged /etc/docker/registry/config.yml
 STATUS=$?

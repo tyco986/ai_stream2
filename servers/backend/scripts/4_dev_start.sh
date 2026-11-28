@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-cp /tmp/build/backend /usr/local/bin/backend
-exec backend
+cp /tmp/build/backend /app/backend
+exec /app/backend

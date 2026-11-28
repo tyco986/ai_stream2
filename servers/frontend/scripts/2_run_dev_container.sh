@@ -7,13 +7,13 @@ PROJECT_NAME=ai_stream2
 IMAGE="${PROJECT_NAME}_frontend_dev"
 APP="${ROOT}/servers/frontend/pure-admin-thin-i18n"
 
-docker network create "${PROJECT_NAME}_default" 2>/dev/null || true
+docker network create "${PROJECT_NAME}" 2>/dev/null || true
 docker rm -f "${PROJECT_NAME}_frontend" 2>/dev/null || true
 
 docker run -d \
   --name "${PROJECT_NAME}_frontend" \
   --ulimit core=0 \
-  --network "${PROJECT_NAME}_default" \
+  --network "${PROJECT_NAME}" \
   -p 8848:8848 \
   -v /etc/localtime:/etc/localtime:ro \
   -v "${APP}:/app" \

@@ -8,12 +8,12 @@ NAME="${PROJECT_NAME}_export_trt"
 
 mkdir -p "${ROOT}/models" "${ROOT}/history/export_trt" "${ROOT}/logs"
 
-docker network create "${PROJECT_NAME}_default" 2>/dev/null || true
+docker network create "${PROJECT_NAME}" 2>/dev/null || true
 docker rm -f "${NAME}" 2>/dev/null || true
 docker run -d \
   --name "${NAME}" \
   --ulimit core=0 \
-  --network "${PROJECT_NAME}_default" \
+  --network "${PROJECT_NAME}" \
   --gpus all \
   -p 8092:8092 \
   -v /etc/localtime:/etc/localtime:ro \

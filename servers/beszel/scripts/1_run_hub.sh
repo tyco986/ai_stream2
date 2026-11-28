@@ -3,17 +3,17 @@
 # Docker Desktop/WSL: publish a host port (default 8093; 8090 is used by export_onnx).
 set -euo pipefail
 
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 PROJECT_NAME=ai_stream2
 
-NAME="${BESZEL_HUB_NAME:-${PROJECT_NAME}_beszel}"
-AGENT_NAME="${BESZEL_AGENT_NAME:-${PROJECT_NAME}_beszel_localhost}"
-NET="${BESZEL_NETWORK:-${PROJECT_NAME}_default}"
-IMG="${BESZEL_HUB_IMAGE:-henrygd/beszel:latest}"
-AGENT_IMG="${BESZEL_AGENT_IMAGE:-henrygd/beszel-agent-nvidia:latest}"
-HOST_PORT="${BESZEL_HOST_PORT:-8093}"
-VOL_DATA="${PROJECT_NAME}_beszel_data"
-VOL_AGENT="${PROJECT_NAME}_beszel_agent_data"
-APP_URL="${BESZEL_APP_URL:-http://127.0.0.1:${HOST_PORT}}"
+NAME="${PROJECT_NAME}_beszel"
+AGENT_NAME="${PROJECT_NAME}_beszel_localhost"
+NET="${PROJECT_NAME}"
+IMG="henrygd/beszel:latest"
+AGENT_IMG="henrygd/beszel-agent-nvidia:latest"
+HOST_PORT=8093
+VOL_AGENT="${PROJECT_NAME}_beszel_agent"
+APP_URL="http://127.0.0.1:${HOST_PORT}"
 HEARTBEAT_INTERVAL=60
 USER_EMAIL=admin@example.com
 USER_PASSWORD=88888888
@@ -45,25 +45,7 @@ END { printf "%s", out }
 ')"
 
 # Hub: start the UI, log in as a users record, and fetch the agent key and token.
-docker network create "${NET}" 2>/dev/null || true
-docker rm -f "${NAME}" 2>/dev/null || true
-docker volume rm "${VOL_DATA}" >/dev/null 2>&1 || true
-docker volume create "${VOL_DATA}" >/dev/null
-
-docker run -d \
-  --name "${NAME}" \
-  --ulimit core=0 \
-  --network "${NET}" \
-  --restart unless-stopped \
-  -e "APP_URL=${APP_URL}" \
-  -e "USER_EMAIL=${USER_EMAIL}" \
-  -e "USER_PASSWORD=${USER_PASSWORD}" \
-  -e "AUTO_LOGIN=${USER_EMAIL}" \
-  -e "HEARTBEAT_INTERVAL=${HEARTBEAT_INTERVAL}" \
-  -p "${HOST_PORT}:8090" \
-  -v /etc/localtime:/etc/localtime:ro \
-  -v "${VOL_DATA}:/beszel_data" \
-  "${IMG}"
+docker compose -f "${ROOT}/docker-compose.yml" up -d beszel
 
 AUTH_BODY="$(printf '{"identity":"%s","password":"%s"}' "${USER_EMAIL}" "${USER_PASSWORD}")"
 for _ in $(seq 1 40); do
